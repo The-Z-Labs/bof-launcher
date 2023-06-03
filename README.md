@@ -28,11 +28,13 @@ Being a zero-dependency, drop-in C/C++ compiler that supports cross-compilation 
 To ease the whole process even more, the [zigupdate.sh](utils/zigupdate.sh) script can be used for getting Zig and building bof-launcher on Linux machines:
 
 ```
-TODO: curl -O zigupdate.sh
-update PATH
+wget https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/utils/zigupdate.sh
+chmod +x zigupdate.sh; ./zigupdate.sh
+<update PATH>
 git clone https://github.com/The-Z-Labs/bof-launcher
 cd bof-launcher
 zig build
+zig test
 ```
 
 Build artifacts will show up in `zig-out/bin` folder.
