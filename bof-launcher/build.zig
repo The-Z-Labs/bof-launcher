@@ -24,7 +24,7 @@ pub fn build(b: *std.build.Builder, options: Options) *std.Build.CompileStep {
     static_lib.addModule("bofapi", bofapi);
     buildLib(static_lib);
 
-    if (false and options.target.getCpuArch() != .x86) { // TODO: Shared library fails to build on x86.
+    if (options.target.getCpuArch() != .x86) { // TODO: Shared library fails to build on x86.
         const shared_lib = b.addSharedLibrary(.{
             .name = std.mem.join(b.allocator, "_", &.{
                 "bof-launcher",
