@@ -52,4 +52,3 @@ Build artifacts will show up in `zig-out/bin` folder.
 *Integrating bof-launcher in program written in C*
 
 [integration-with-c](examples/integration-with-c) - simple example showing how to integrate bof-launcher in a application written in C/C++.
-
