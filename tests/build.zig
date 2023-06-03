@@ -23,7 +23,7 @@ pub fn runTests(b: *std.build.Builder, options: Options) *std.build.Step {
     });
     tests.addModule("bofapi", bofapi);
 
-    tests.step.dependOn(b.getInstallStep());
+    tests.step.dependOn(&lib.step);
     tests.step.dependOn(buildTestObjs(b, options));
 
     return &b.addRunArtifact(tests).step;

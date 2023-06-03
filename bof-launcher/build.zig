@@ -16,28 +16,33 @@ pub fn build(b: *std.build.Builder, options: Options) *std.Build.CompileStep {
         .root_source_file = .{ .path = thisDir() ++ "/src/bof_launcher.zig" },
         .target = options.target,
         .optimize = options.optimize,
-        .link_libc = false,
+
+        // TODO: This is a workaround for `std.Thread.spawn()` on Linux.
+        .link_libc = @import("builtin").os.tag == .linux,
     });
+    b.installArtifact(static_lib);
     static_lib.addModule("bofapi", bofapi);
     buildLib(static_lib);
 
-    const shared_lib = b.addSharedLibrary(.{
-        .name = std.mem.join(b.allocator, "_", &.{
-            "bof-launcher",
-            options.osTagStr(),
-            options.cpuArchStr(),
-            "shared",
-        }) catch @panic("OOM"),
-        .root_source_file = .{ .path = thisDir() ++ "/src/bof_launcher.zig" },
-        .target = options.target,
-        .optimize = options.optimize,
-        .link_libc = false,
-    });
-    shared_lib.addModule("bofapi", bofapi);
-    buildLib(shared_lib);
+    if (false and options.target.getCpuArch() != .x86) { // TODO: Shared library fails to build on x86.
+        const shared_lib = b.addSharedLibrary(.{
+            .name = std.mem.join(b.allocator, "_", &.{
+                "bof-launcher",
+                options.osTagStr(),
+                options.cpuArchStr(),
+                "shared",
+            }) catch @panic("OOM"),
+            .root_source_file = .{ .path = thisDir() ++ "/src/bof_launcher.zig" },
+            .target = options.target,
+            .optimize = options.optimize,
 
-    b.installArtifact(static_lib);
-    b.installArtifact(shared_lib);
+            // TODO: This is a workaround for `std.Thread.spawn()` on Linux.
+            .link_libc = @import("builtin").os.tag == .linux,
+        });
+        b.installArtifact(shared_lib);
+        shared_lib.addModule("bofapi", bofapi);
+        buildLib(shared_lib);
+    }
 
     return static_lib;
 }

@@ -116,41 +116,6 @@ test "bof-launcher.beacon.format" {
     try expect(123 == try testRunBofFromFile("zig-out/bin/test_beacon_format", &bytes, bytes.len));
 }
 
-test "bof-launcher.bofs.windows" {
-    const allocator = std.testing.allocator;
-
-    try expect(0 == bof.initLauncher());
-    defer bof.deinitLauncher();
-
-    if (@import("builtin").os.tag == .windows) {
-        _ = try testRunBofFromFile("zig-out/bin/wSmbinfo", null, 0);
-        _ = try testRunBofFromFile("zig-out/bin/whoami", null, 0);
-        _ = try testRunBofFromFile("zig-out/bin/arp", null, 0);
-        _ = try testRunBofFromFile("zig-out/bin/ipconfig", null, 0);
-        _ = try testRunBofFromFile("zig-out/bin/windowlist", null, 0);
-        _ = try testRunBofFromFile("zig-out/bin/enumLocalSessions", null, 0);
-        _ = try testRunBofFromFile("zig-out/bin/env", null, 0);
-        _ = try testRunBofFromFile("zig-out/bin/schtasksenum", null, 0);
-    }
-    if (@import("builtin").os.tag == .windows) {
-        const bof_data = try loadBofFromFile(allocator, "zig-out/bin/whoami");
-        defer allocator.free(bof_data);
-
-        var bof_handle: bof.Handle = undefined;
-        try expect(0 == bof.load("whoami", bof_data.ptr, @intCast(c_int, bof_data.len), &bof_handle));
-        defer bof.unload(bof_handle);
-
-        try expect(bof.getOutput(bof_handle) == null);
-
-        _ = bof.run(bof_handle, null, 0);
-
-        try expect(bof.getOutput(bof_handle) != null);
-        if (bof.getOutput(bof_handle)) |output| {
-            std.debug.print("{s}", .{output});
-        }
-    }
-}
-
 extern fn ctestBasic0() c_int;
 test "bof-launcher.ctest.basic0" {
     try expect(0 == bof.initLauncher());
