@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
         p += ret;
     }
 
-    int bof_result = bofRun((unsigned char*)buf, ret, NULL, 0, NULL);
+    int bof_result = bofLoadAndRun("bof", (unsigned char*)buf, ret, NULL, 0, NULL);
 
     return 0;
 }
