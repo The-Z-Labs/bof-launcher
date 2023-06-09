@@ -3,7 +3,11 @@ const bof_launcher = @import("../bof-launcher/build.zig");
 
 const Options = @import("../build.zig").Options;
 
-pub fn runTests(b: *std.build.Builder, options: Options) *std.build.Step {
+pub fn runTests(
+    b: *std.build.Builder,
+    options: Options,
+    bof_launcher_lib: *std.Build.CompileStep,
+) *std.build.Step {
     const tests = b.addTest(.{
         .name = "bof-launcher-tests",
         .root_source_file = .{ .path = thisDir() ++ "/src/tests.zig" },
@@ -11,10 +15,8 @@ pub fn runTests(b: *std.build.Builder, options: Options) *std.build.Step {
         .optimize = options.optimize,
     });
 
-    const lib = bof_launcher.build(b, options);
-
     tests.addIncludePath(thisDir() ++ "/../include");
-    tests.linkLibrary(lib);
+    tests.linkLibrary(bof_launcher_lib);
     tests.addCSourceFile(thisDir() ++ "/src/tests.c", &.{"-std=c99"});
     tests.linkLibC();
 
@@ -23,7 +25,7 @@ pub fn runTests(b: *std.build.Builder, options: Options) *std.build.Step {
     });
     tests.addModule("bofapi", bofapi);
 
-    tests.step.dependOn(&lib.step);
+    tests.step.dependOn(&bof_launcher_lib.step);
     tests.step.dependOn(buildTestObjs(b, options));
 
     return &b.addRunArtifact(tests).step;

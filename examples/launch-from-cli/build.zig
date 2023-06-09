@@ -4,7 +4,11 @@ const bof_launcher = @import("../../bof-launcher/build.zig");
 
 const Options = @import("../../build.zig").Options;
 
-pub fn build(b: *std.build.Builder, options: Options) void {
+pub fn build(
+    b: *std.build.Builder,
+    options: Options,
+    bof_launcher_lib: *std.Build.CompileStep,
+) void {
     const exe = b.addExecutable(.{
         .name = std.mem.join(b.allocator, "_", &.{
             "example-cli-launcher",
@@ -18,10 +22,9 @@ pub fn build(b: *std.build.Builder, options: Options) void {
     if (options.optimize == .ReleaseSmall)
         exe.strip = true;
 
-    const lib = bof_launcher.build(b, options);
-    exe.step.dependOn(&lib.step);
+    exe.step.dependOn(&bof_launcher_lib.step);
 
-    exe.linkLibrary(lib);
+    exe.linkLibrary(bof_launcher_lib);
 
     const bofapi = b.createModule(.{
         .source_file = .{ .path = thisDir() ++ "/../../include/bofapi.zig" },

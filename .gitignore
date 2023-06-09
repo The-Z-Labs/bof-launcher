@@ -1,0 +1,22 @@
+# Ignore all files by default, but scan all directories
+
+!*.c
+!*.cpp
+!*.inl
+!*.zig
+!*.h
+!LICENSE*
+
+!*.ini
+!*.txt
+!*.md
+
+!.ignore
+!.gitkeep
+!.gitignore
+!.gitattributes
+
+# Ignore some special directories
+zig-cache
+zig-out
+backup

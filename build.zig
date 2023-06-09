@@ -42,7 +42,7 @@ pub fn build(b: *std.build.Builder) void {
     //
     // Bof-launcher library
     //
-    _ = @import("bof-launcher/build.zig").build(b, options);
+    const bof_launcher_lib = @import("bof-launcher/build.zig").build(b, options);
 
     //
     // Bofs
@@ -52,11 +52,11 @@ pub fn build(b: *std.build.Builder) void {
     //
     // Examples
     //
-    @import("examples/launch-from-cli/build.zig").build(b, options);
+    @import("examples/launch-from-cli/build.zig").build(b, options, bof_launcher_lib);
 
     //
     // Tests
     //
     const test_step = b.step("test", "Run all tests");
-    test_step.dependOn(@import("tests/build.zig").runTests(b, options));
+    test_step.dependOn(@import("tests/build.zig").runTests(b, options, bof_launcher_lib));
 }

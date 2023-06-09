@@ -7,6 +7,8 @@ pub fn build(b: *std.build.Builder, options: Options) *std.Build.CompileStep {
         .source_file = .{ .path = thisDir() ++ "/../include/bofapi.zig" },
     });
 
+    //const remove_lib = b.addRemoveDirTree("zig-cache");
+
     const static_lib = b.addStaticLibrary(.{
         .name = std.mem.join(b.allocator, "_", &.{
             "bof-launcher",
@@ -20,9 +22,9 @@ pub fn build(b: *std.build.Builder, options: Options) *std.Build.CompileStep {
         // TODO: This is a workaround for `std.Thread.spawn()` on Linux.
         .link_libc = @import("builtin").os.tag == .linux,
     });
-    b.installArtifact(static_lib);
     static_lib.addModule("bofapi", bofapi);
     buildLib(static_lib);
+    b.installArtifact(static_lib);
 
     if (options.target.getCpuArch() != .x86) { // TODO: Shared library fails to build on x86.
         const shared_lib = b.addSharedLibrary(.{
@@ -39,9 +41,9 @@ pub fn build(b: *std.build.Builder, options: Options) *std.Build.CompileStep {
             // TODO: This is a workaround for `std.Thread.spawn()` on Linux.
             .link_libc = @import("builtin").os.tag == .linux,
         });
-        b.installArtifact(shared_lib);
         shared_lib.addModule("bofapi", bofapi);
         buildLib(shared_lib);
+        b.installArtifact(shared_lib);
     }
 
     return static_lib;

@@ -1,0 +1,8 @@
+*.cpp text
+*.c text
+*.h text
+*.inl text
+*.zig text
+*.txt text
+
+* text eol=lf

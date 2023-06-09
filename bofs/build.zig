@@ -58,12 +58,20 @@ pub fn build(b: *std.build.Builder, _: Options) void {
         .source_file = .{ .path = thisDir() ++ "/../include/bofapi.zig" },
     });
 
-    inline for (bofs) |bof| {
+    for (bofs) |bof| {
+        const bof_src_path = std.mem.join(
+            b.allocator,
+            "",
+            &.{ thisDir(), "/src/", bof.dir, bof.name },
+        ) catch unreachable;
+
         const target = bof.getCrossTarget();
         const obj = switch (bof.lang) {
             .zig => b.addObject(.{
                 .name = bof.name,
-                .root_source_file = .{ .path = thisDir() ++ "/src/" ++ bof.dir ++ bof.name ++ ".zig" },
+                .root_source_file = .{
+                    .path = std.mem.join(b.allocator, "", &.{ bof_src_path, ".zig" }) catch unreachable,
+                },
                 .target = target,
                 .optimize = .ReleaseSmall,
             }),
@@ -73,17 +81,19 @@ pub fn build(b: *std.build.Builder, _: Options) void {
                     .target = target,
                     .optimize = .ReleaseSmall,
                 });
-                @setEvalBranchQuota(5001);
-                obj.addCSourceFile(thisDir() ++ "/src/" ++ bof.dir ++ bof.name ++ ".c", &.{
-                    "-DWINBASEAPI=",
-                    "-D_CRTIMP=",
-                    "-DLDAPAPI=",
-                    "-DBOF",
-                    "-std=c99",
-                    "-masm=intel",
-                    "-inline-asm=intel",
-                    if (bof.format == .coff) "-DDECLSPEC_IMPORT=" else "",
-                });
+                obj.addCSourceFile(
+                    std.mem.join(b.allocator, "", &.{ bof_src_path, ".c" }) catch unreachable,
+                    &.{
+                        "-DWINBASEAPI=",
+                        "-D_CRTIMP=",
+                        "-DLDAPAPI=",
+                        "-DBOF",
+                        "-std=c99",
+                        "-masm=intel",
+                        "-inline-asm=intel",
+                        if (bof.format == .coff) "-DDECLSPEC_IMPORT=" else "",
+                    },
+                );
                 if (bof.format == .coff)
                     obj.addIncludePath(windows_include_dir);
                 break :blk obj;
@@ -96,7 +106,18 @@ pub fn build(b: *std.build.Builder, _: Options) void {
         obj.strip = true;
 
         b.getInstallStep().dependOn(
-            &b.addInstallFile(obj.getOutputSource(), "bin/" ++ comptime bof.getFullName()).step,
+            &b.addInstallFile(
+                obj.getOutputSource(),
+                std.mem.join(b.allocator, "", &.{
+                    "bin/",
+                    bof.name,
+                    ".",
+                    @tagName(bof.format),
+                    ".",
+                    @tagName(bof.arch),
+                    ".o",
+                }) catch unreachable,
+            ).step,
         );
     }
 }
