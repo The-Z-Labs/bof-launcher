@@ -9,26 +9,22 @@ const BofArch = enum { x64, x86 };
 const Bof = struct {
     dir: []const u8,
     name: []const u8,
-    lang: BofLang,
-    format: BofFormat,
-    arch: BofArch,
+    langs: []const BofLang,
+    formats: []const BofFormat,
+    archs: []const BofArch,
 
-    fn getCrossTarget(bof: Bof) std.zig.CrossTarget {
+    fn getCrossTarget(format: BofFormat, arch: BofArch) std.zig.CrossTarget {
         return .{
-            .cpu_arch = switch (bof.arch) {
+            .cpu_arch = switch (arch) {
                 .x64 => .x86_64,
                 .x86 => .x86,
             },
-            .os_tag = switch (bof.format) {
+            .os_tag = switch (format) {
                 .coff => .windows,
                 .elf => .linux,
             },
             .abi = .gnu,
         };
-    }
-
-    fn getFullName(comptime bof: Bof) []const u8 {
-        return bof.name ++ "." ++ @tagName(bof.format) ++ "." ++ @tagName(bof.arch) ++ ".o";
     }
 };
 
@@ -37,13 +33,8 @@ const Bof = struct {
 // l* - Linux-only BOFs
 // w* - Windows-only BOFs
 const bofs = [_]Bof{
-    .{ .dir = "", .name = "lUname", .lang = .zig, .format = .elf, .arch = .x64 },
-    .{ .dir = "", .name = "lUname", .lang = .zig, .format = .elf, .arch = .x86 },
-
-    .{ .dir = "", .name = "cUDPscan", .lang = .zig, .format = .elf, .arch = .x64 },
-    .{ .dir = "", .name = "cUDPscan", .lang = .zig, .format = .elf, .arch = .x86 },
-    .{ .dir = "", .name = "cUDPscan", .lang = .zig, .format = .coff, .arch = .x64 },
-    .{ .dir = "", .name = "cUDPscan", .lang = .zig, .format = .coff, .arch = .x86 },
+    .{ .dir = "", .name = "lUname", .langs = &.{.zig}, .formats = &.{.elf}, .archs = &.{ .x64, .x86 } },
+    .{ .dir = "", .name = "cUDPscan", .langs = &.{.zig}, .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86 } },
 };
 
 pub fn build(b: *std.build.Builder, _: Options) void {
@@ -65,60 +56,70 @@ pub fn build(b: *std.build.Builder, _: Options) void {
             &.{ thisDir(), "/src/", bof.dir, bof.name },
         ) catch unreachable;
 
-        const target = bof.getCrossTarget();
-        const obj = switch (bof.lang) {
-            .zig => b.addObject(.{
-                .name = bof.name,
-                .root_source_file = .{
-                    .path = std.mem.join(b.allocator, "", &.{ bof_src_path, ".zig" }) catch unreachable,
-                },
-                .target = target,
-                .optimize = .ReleaseSmall,
-            }),
-            .c => blk: {
-                const obj = b.addObject(.{
-                    .name = bof.name,
-                    .target = target,
-                    .optimize = .ReleaseSmall,
-                });
-                obj.addCSourceFile(
-                    std.mem.join(b.allocator, "", &.{ bof_src_path, ".c" }) catch unreachable,
-                    &.{
-                        "-DWINBASEAPI=",
-                        "-D_CRTIMP=",
-                        "-DLDAPAPI=",
-                        "-DBOF",
-                        "-std=c99",
-                        "-masm=intel",
-                        "-inline-asm=intel",
-                        if (bof.format == .coff) "-DDECLSPEC_IMPORT=" else "",
-                    },
-                );
-                if (bof.format == .coff)
-                    obj.addIncludePath(windows_include_dir);
-                break :blk obj;
-            },
-        };
-        obj.addModule("bofapi", bofapi);
-        obj.addIncludePath(thisDir() ++ "/../include");
-        obj.force_pic = true;
-        obj.single_threaded = true;
-        obj.strip = true;
+        for (bof.langs) |lang| {
+            for (bof.formats) |format| {
+                for (bof.archs) |arch| {
+                    const target = Bof.getCrossTarget(format, arch);
+                    const obj = switch (lang) {
+                        .zig => b.addObject(.{
+                            .name = bof.name,
+                            .root_source_file = .{
+                                .path = std.mem.join(
+                                    b.allocator,
+                                    "",
+                                    &.{ bof_src_path, ".zig" },
+                                ) catch unreachable,
+                            },
+                            .target = target,
+                            .optimize = .ReleaseSmall,
+                        }),
+                        .c => blk: {
+                            const obj = b.addObject(.{
+                                .name = bof.name,
+                                .target = target,
+                                .optimize = .ReleaseSmall,
+                            });
+                            obj.addCSourceFile(
+                                std.mem.join(b.allocator, "", &.{ bof_src_path, ".c" }) catch unreachable,
+                                &.{
+                                    "-DWINBASEAPI=",
+                                    "-D_CRTIMP=",
+                                    "-DLDAPAPI=",
+                                    "-DBOF",
+                                    "-std=c99",
+                                    "-masm=intel",
+                                    "-inline-asm=intel",
+                                    if (format == .coff) "-DDECLSPEC_IMPORT=" else "",
+                                },
+                            );
+                            if (format == .coff)
+                                obj.addIncludePath(windows_include_dir);
+                            break :blk obj;
+                        },
+                    };
+                    obj.addModule("bofapi", bofapi);
+                    obj.addIncludePath(thisDir() ++ "/../include");
+                    obj.force_pic = true;
+                    obj.single_threaded = true;
+                    obj.strip = true;
 
-        b.getInstallStep().dependOn(
-            &b.addInstallFile(
-                obj.getOutputSource(),
-                std.mem.join(b.allocator, "", &.{
-                    "bin/",
-                    bof.name,
-                    ".",
-                    @tagName(bof.format),
-                    ".",
-                    @tagName(bof.arch),
-                    ".o",
-                }) catch unreachable,
-            ).step,
-        );
+                    b.getInstallStep().dependOn(
+                        &b.addInstallFile(
+                            obj.getOutputSource(),
+                            std.mem.join(b.allocator, "", &.{
+                                "bin/",
+                                bof.name,
+                                ".",
+                                @tagName(format),
+                                ".",
+                                @tagName(arch),
+                                ".o",
+                            }) catch unreachable,
+                        ).step,
+                    );
+                }
+            }
+        }
     }
 }
 
