@@ -7,7 +7,7 @@ const BofFormat = enum { coff, elf };
 const BofArch = enum { x64, x86 };
 
 const Bof = struct {
-    dir: []const u8,
+    dir: ?[]const u8 = null,
     name: []const u8,
     langs: []const BofLang,
     formats: []const BofFormat,
@@ -33,8 +33,8 @@ const Bof = struct {
 // l* - Linux-only BOFs
 // w* - Windows-only BOFs
 const bofs = [_]Bof{
-    .{ .dir = "", .name = "lUname", .langs = &.{.zig}, .formats = &.{.elf}, .archs = &.{ .x64, .x86 } },
-    .{ .dir = "", .name = "cUDPscan", .langs = &.{.zig}, .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86 } },
+    .{ .name = "lUname", .langs = &.{.zig}, .formats = &.{.elf}, .archs = &.{ .x64, .x86 } },
+    .{ .name = "cUDPscan", .langs = &.{.zig}, .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86 } },
 };
 
 pub fn build(b: *std.build.Builder, _: Options) void {
@@ -43,7 +43,6 @@ pub fn build(b: *std.build.Builder, _: Options) void {
         b.allocator,
         &.{ std.fs.path.dirname(b.zig_exe).?, "/lib/libc/include/any-windows-any" },
     ) catch unreachable;
-    defer b.allocator.free(windows_include_dir);
 
     const bofapi = b.createModule(.{
         .source_file = .{ .path = thisDir() ++ "/../include/bofapi.zig" },
@@ -53,7 +52,7 @@ pub fn build(b: *std.build.Builder, _: Options) void {
         const bof_src_path = std.mem.join(
             b.allocator,
             "",
-            &.{ thisDir(), "/src/", bof.dir, bof.name },
+            &.{ thisDir(), "/src/", if (bof.dir) |dir| dir else "", bof.name },
         ) catch unreachable;
 
         for (bof.langs) |lang| {
