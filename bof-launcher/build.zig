@@ -7,8 +7,6 @@ pub fn build(b: *std.build.Builder, options: Options) *std.Build.CompileStep {
         .source_file = .{ .path = thisDir() ++ "/../include/bofapi.zig" },
     });
 
-    //const remove_lib = b.addRemoveDirTree("zig-cache");
-
     const static_lib = b.addStaticLibrary(.{
         .name = std.mem.join(b.allocator, "_", &.{
             "bof-launcher",

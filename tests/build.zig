@@ -25,18 +25,14 @@ pub fn runTests(
     });
     tests.addModule("bofapi", bofapi);
 
-    tests.step.dependOn(buildTestObjs(b, options));
+    tests.step.dependOn(buildTestObjs(b, options, bofapi));
 
     return &b.addRunArtifact(tests).step;
 }
 
-fn buildTestObjs(b: *std.build.Builder, options: Options) *std.build.Step {
+fn buildTestObjs(b: *std.build.Builder, options: Options, bofapi: *std.Build.Module) *std.build.Step {
     const parent_step = b.allocator.create(std.Build.Step) catch @panic("OOM");
     parent_step.* = std.Build.Step.init(.{ .id = .custom, .name = "bof-launcher-tests-objs", .owner = b });
-
-    const bofapi = b.createModule(.{
-        .source_file = .{ .path = thisDir() ++ "/../include/bofapi.zig" },
-    });
 
     // Cross-platform (Windows, Linux) tests written in Zig
     inline for (.{
