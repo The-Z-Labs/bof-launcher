@@ -25,7 +25,6 @@ pub fn runTests(
     });
     tests.addModule("bofapi", bofapi);
 
-    tests.step.dependOn(&bof_launcher_lib.step);
     tests.step.dependOn(buildTestObjs(b, options));
 
     return &b.addRunArtifact(tests).step;

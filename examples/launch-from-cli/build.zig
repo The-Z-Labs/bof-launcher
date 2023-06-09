@@ -22,8 +22,6 @@ pub fn build(
     if (options.optimize == .ReleaseSmall)
         exe.strip = true;
 
-    exe.step.dependOn(&bof_launcher_lib.step);
-
     exe.linkLibrary(bof_launcher_lib);
 
     const bofapi = b.createModule(.{
