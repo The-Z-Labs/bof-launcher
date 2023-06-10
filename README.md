@@ -24,6 +24,8 @@ Being a zero-dependency, drop-in C/C++ compiler that supports cross-compilation 
 
     zig build
 
+Build artifacts will show up in `zig-out/bin` and `zig-out/lib` folders.
+
 To build the project for a specific target use `-Dtarget` option, for example:
 
     zig build -Dtarget=x86-windows-gnu
@@ -44,8 +46,6 @@ cd bof-launcher
 zig build
 zig test
 ```
-
-Build artifacts will show up in `zig-out/bin` and `zig-out/lib` folders.
 
 ## Example BOFs
 
@@ -106,7 +106,7 @@ unsigned char go(unsigned char* arg_data, int arg_len) {
 
 ## BOF Launcher Library
 
-We provide an open-source library that can be used to execute arbitrary BOF build with this project. We expose both [C API](include/bof.h) and [Zig API](include/bof.zig).
+We provide an open-source library that can be used to execute arbitrary BOF build with this project. We expose both [C API](include/bof.h) and [Zig API](include/bof.zig). Library parses COFF/ELF object data, does the relocations, loads all needed symbols and handles BOF output for you. See the API and tests for details.
 
 ## Example usage scenarios
 
