@@ -1,6 +1,5 @@
 # bof-launcher
 
-
 ## Introduction
 
 [Cobalt Strike 4.1](https://www.cobaltstrike.com/blog/cobalt-strike-4-1-the-mark-of-injection/) released on 25 June 2020, introduced a novel (for that time) capability of running so called [Beacon Object Files](https://hstechdocs.helpsystems.com/manuals/cobaltstrike/current/userguide/content/topics/beacon-object-files_main.htm) - *small post-ex capabilities that execute in [Beacon](https://www.cobaltstrike.com/), parse arguments, call a few Win32 APIs, report output, and exit*. Since that time BOFs became very popular and the demand to launch/execute them in other environments than [Cobalt Strike's Beacon](https://www.cobaltstrike.com/) has appeared. 
@@ -54,6 +53,11 @@ Below you can see the same BOF written in Zig and in C. When compiled, Zig versi
 
 For an example of larger and cross-platform BOF please see our [UDP port scanner](bofs/src/cUDPscan.zig).
 
+To run a BOF you can use our [cli-bof-launcher](examples/launch-from-cli), for example:
+
+    .\zig-out\bin\example-cli-launcher_win_x64.exe .\zig-out\bin\wWinver.coff.x64.o
+    .\zig-out\bin\example-cli-launcher_win_x64.exe .\zig-out\bin\cUDPscan.coff.x64.o 162.159.200.1-5:123,88
+
 ```zig
 const w32 = @import("bofapi").win32;
 const beacon = @import("bofapi").beacon;
@@ -99,6 +103,10 @@ unsigned char go(unsigned char* arg_data, int arg_len) {
     return 0;
 }
 ```
+
+## BOF Launcher Library
+
+We provide an open-source library that can be used to execute arbitrary BOF build with this project. We expose both [C API](include/bof.h) and [Zig API](include/bof.zig).
 
 ## Example usage scenarios
 
