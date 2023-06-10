@@ -629,3 +629,324 @@ pub const MEM_DECOMMIT = 0x4000;
 pub const MEM_RELEASE = 0x8000;
 
 pub extern "kernel32" fn GetLastError() callconv(WINAPI) Win32Error;
+
+pub const TEB = extern struct {
+    Reserved1: [12]PVOID,
+    ProcessEnvironmentBlock: *PEB,
+    Reserved2: [399]PVOID,
+    Reserved3: [1952]u8,
+    TlsSlots: [64]PVOID,
+    Reserved4: [8]u8,
+    Reserved5: [26]PVOID,
+    ReservedForOle: PVOID,
+    Reserved6: [4]PVOID,
+    TlsExpansionSlots: PVOID,
+};
+
+/// Process Environment Block
+/// Microsoft documentation of this is incomplete, the fields here are taken from various resources including:
+///  - https://github.com/wine-mirror/wine/blob/1aff1e6a370ee8c0213a0fd4b220d121da8527aa/include/winternl.h#L269
+///  - https://www.geoffchappell.com/studies/windows/win32/ntdll/structs/peb/index.htm
+pub const PEB = extern struct {
+    // Versions: All
+    InheritedAddressSpace: BOOLEAN,
+
+    // Versions: 3.51+
+    ReadImageFileExecOptions: BOOLEAN,
+    BeingDebugged: BOOLEAN,
+
+    // Versions: 5.2+ (previously was padding)
+    BitField: UCHAR,
+
+    // Versions: all
+    Mutant: HANDLE,
+    ImageBaseAddress: HMODULE,
+    Ldr: *PEB_LDR_DATA,
+    ProcessParameters: *RTL_USER_PROCESS_PARAMETERS,
+    SubSystemData: PVOID,
+    ProcessHeap: HANDLE,
+
+    // Versions: 5.1+
+    FastPebLock: *RTL_CRITICAL_SECTION,
+
+    // Versions: 5.2+
+    AtlThunkSListPtr: PVOID,
+    IFEOKey: PVOID,
+
+    // Versions: 6.0+
+
+    /// https://www.geoffchappell.com/studies/windows/win32/ntdll/structs/peb/crossprocessflags.htm
+    CrossProcessFlags: ULONG,
+
+    // Versions: 6.0+
+    union1: extern union {
+        KernelCallbackTable: PVOID,
+        UserSharedInfoPtr: PVOID,
+    },
+
+    // Versions: 5.1+
+    SystemReserved: ULONG,
+
+    // Versions: 5.1, (not 5.2, not 6.0), 6.1+
+    AtlThunkSListPtr32: ULONG,
+
+    // Versions: 6.1+
+    ApiSetMap: PVOID,
+
+    // Versions: all
+    TlsExpansionCounter: ULONG,
+    // note: there is padding here on 64 bit
+    TlsBitmap: *RTL_BITMAP,
+    TlsBitmapBits: [2]ULONG,
+    ReadOnlySharedMemoryBase: PVOID,
+
+    // Versions: 1703+
+    SharedData: PVOID,
+
+    // Versions: all
+    ReadOnlyStaticServerData: *PVOID,
+    AnsiCodePageData: PVOID,
+    OemCodePageData: PVOID,
+    UnicodeCaseTableData: PVOID,
+
+    // Versions: 3.51+
+    NumberOfProcessors: ULONG,
+    NtGlobalFlag: ULONG,
+
+    // Versions: all
+    CriticalSectionTimeout: LARGE_INTEGER,
+
+    // End of Original PEB size
+
+    // Fields appended in 3.51:
+    HeapSegmentReserve: ULONG_PTR,
+    HeapSegmentCommit: ULONG_PTR,
+    HeapDeCommitTotalFreeThreshold: ULONG_PTR,
+    HeapDeCommitFreeBlockThreshold: ULONG_PTR,
+    NumberOfHeaps: ULONG,
+    MaximumNumberOfHeaps: ULONG,
+    ProcessHeaps: *PVOID,
+
+    // Fields appended in 4.0:
+    GdiSharedHandleTable: PVOID,
+    ProcessStarterHelper: PVOID,
+    GdiDCAttributeList: ULONG,
+    // note: there is padding here on 64 bit
+    LoaderLock: *RTL_CRITICAL_SECTION,
+    OSMajorVersion: ULONG,
+    OSMinorVersion: ULONG,
+    OSBuildNumber: USHORT,
+    OSCSDVersion: USHORT,
+    OSPlatformId: ULONG,
+    ImageSubSystem: ULONG,
+    ImageSubSystemMajorVersion: ULONG,
+    ImageSubSystemMinorVersion: ULONG,
+    // note: there is padding here on 64 bit
+    ActiveProcessAffinityMask: KAFFINITY,
+    GdiHandleBuffer: [
+        switch (@sizeOf(usize)) {
+            4 => 0x22,
+            8 => 0x3C,
+            else => unreachable,
+        }
+    ]ULONG,
+
+    // Fields appended in 5.0 (Windows 2000):
+    PostProcessInitRoutine: PVOID,
+    TlsExpansionBitmap: *RTL_BITMAP,
+    TlsExpansionBitmapBits: [32]ULONG,
+    SessionId: ULONG,
+    // note: there is padding here on 64 bit
+    // Versions: 5.1+
+    AppCompatFlags: ULARGE_INTEGER,
+    AppCompatFlagsUser: ULARGE_INTEGER,
+    ShimData: PVOID,
+    // Versions: 5.0+
+    AppCompatInfo: PVOID,
+    CSDVersion: UNICODE_STRING,
+
+    // Fields appended in 5.1 (Windows XP):
+    ActivationContextData: *const ACTIVATION_CONTEXT_DATA,
+    ProcessAssemblyStorageMap: *ASSEMBLY_STORAGE_MAP,
+    SystemDefaultActivationData: *const ACTIVATION_CONTEXT_DATA,
+    SystemAssemblyStorageMap: *ASSEMBLY_STORAGE_MAP,
+    MinimumStackCommit: ULONG_PTR,
+
+    // Fields appended in 5.2 (Windows Server 2003):
+    FlsCallback: *FLS_CALLBACK_INFO,
+    FlsListHead: LIST_ENTRY,
+    FlsBitmap: *RTL_BITMAP,
+    FlsBitmapBits: [4]ULONG,
+    FlsHighIndex: ULONG,
+
+    // Fields appended in 6.0 (Windows Vista):
+    WerRegistrationData: PVOID,
+    WerShipAssertPtr: PVOID,
+
+    // Fields appended in 6.1 (Windows 7):
+    pUnused: PVOID, // previously pContextData
+    pImageHeaderHash: PVOID,
+
+    /// TODO: https://www.geoffchappell.com/studies/windows/win32/ntdll/structs/peb/tracingflags.htm
+    TracingFlags: ULONG,
+
+    // Fields appended in 6.2 (Windows 8):
+    CsrServerReadOnlySharedMemoryBase: ULONGLONG,
+
+    // Fields appended in 1511:
+    TppWorkerpListLock: ULONG,
+    TppWorkerpList: LIST_ENTRY,
+    WaitOnAddressHashTable: [0x80]PVOID,
+
+    // Fields appended in 1709:
+    TelemetryCoverageHeader: PVOID,
+    CloudFileFlags: ULONG,
+};
+
+/// The `PEB_LDR_DATA` structure is the main record of what modules are loaded in a process.
+/// It is essentially the head of three double-linked lists of `LDR_DATA_TABLE_ENTRY` structures which each represent one loaded module.
+///
+/// Microsoft documentation of this is incomplete, the fields here are taken from various resources including:
+///  - https://www.geoffchappell.com/studies/windows/win32/ntdll/structs/peb_ldr_data.htm
+pub const PEB_LDR_DATA = extern struct {
+    // Versions: 3.51 and higher
+    /// The size in bytes of the structure
+    Length: ULONG,
+
+    /// TRUE if the structure is prepared.
+    Initialized: BOOLEAN,
+
+    SsHandle: PVOID,
+    InLoadOrderModuleList: LIST_ENTRY,
+    InMemoryOrderModuleList: LIST_ENTRY,
+    InInitializationOrderModuleList: LIST_ENTRY,
+
+    // Versions: 5.1 and higher
+
+    /// No known use of this field is known in Windows 8 and higher.
+    EntryInProgress: PVOID,
+
+    // Versions: 6.0 from Windows Vista SP1, and higher
+    ShutdownInProgress: BOOLEAN,
+
+    /// Though ShutdownThreadId is declared as a HANDLE,
+    /// it is indeed the thread ID as suggested by its name.
+    /// It is picked up from the UniqueThread member of the CLIENT_ID in the
+    /// TEB of the thread that asks to terminate the process.
+    ShutdownThreadId: HANDLE,
+};
+
+pub const RTL_USER_PROCESS_PARAMETERS = extern struct {
+    AllocationSize: ULONG,
+    Size: ULONG,
+    Flags: ULONG,
+    DebugFlags: ULONG,
+    ConsoleHandle: HANDLE,
+    ConsoleFlags: ULONG,
+    hStdInput: HANDLE,
+    hStdOutput: HANDLE,
+    hStdError: HANDLE,
+    CurrentDirectory: CURDIR,
+    DllPath: UNICODE_STRING,
+    ImagePathName: UNICODE_STRING,
+    CommandLine: UNICODE_STRING,
+    Environment: [*:0]WCHAR,
+    dwX: ULONG,
+    dwY: ULONG,
+    dwXSize: ULONG,
+    dwYSize: ULONG,
+    dwXCountChars: ULONG,
+    dwYCountChars: ULONG,
+    dwFillAttribute: ULONG,
+    dwFlags: ULONG,
+    dwShowWindow: ULONG,
+    WindowTitle: UNICODE_STRING,
+    Desktop: UNICODE_STRING,
+    ShellInfo: UNICODE_STRING,
+    RuntimeInfo: UNICODE_STRING,
+    DLCurrentDirectory: [0x20]RTL_DRIVE_LETTER_CURDIR,
+};
+
+pub const LIST_ENTRY = extern struct {
+    Flink: *LIST_ENTRY,
+    Blink: *LIST_ENTRY,
+};
+
+pub const RTL_CRITICAL_SECTION_DEBUG = extern struct {
+    Type: WORD,
+    CreatorBackTraceIndex: WORD,
+    CriticalSection: *RTL_CRITICAL_SECTION,
+    ProcessLocksList: LIST_ENTRY,
+    EntryCount: DWORD,
+    ContentionCount: DWORD,
+    Flags: DWORD,
+    CreatorBackTraceIndexHigh: WORD,
+    SpareWORD: WORD,
+};
+
+pub const RTL_CRITICAL_SECTION = extern struct {
+    DebugInfo: *RTL_CRITICAL_SECTION_DEBUG,
+    LockCount: LONG,
+    RecursionCount: LONG,
+    OwningThread: HANDLE,
+    LockSemaphore: HANDLE,
+    SpinCount: ULONG_PTR,
+};
+
+pub const RTL_BITMAP = opaque {};
+pub const KAFFINITY = usize;
+pub const ACTIVATION_CONTEXT_DATA = opaque {};
+pub const ASSEMBLY_STORAGE_MAP = opaque {};
+pub const FLS_CALLBACK_INFO = opaque {};
+
+pub const UNICODE_STRING = extern struct {
+    Length: c_ushort,
+    MaximumLength: c_ushort,
+    Buffer: [*]WCHAR,
+};
+
+pub const CURDIR = extern struct {
+    DosPath: UNICODE_STRING,
+    Handle: HANDLE,
+};
+
+pub const RTL_DRIVE_LETTER_CURDIR = extern struct {
+    Flags: c_ushort,
+    Length: c_ushort,
+    TimeStamp: ULONG,
+    DosPath: UNICODE_STRING,
+};
+
+pub fn teb() *TEB {
+    return switch (native_arch) {
+        .x86 => blk: {
+            if (builtin.zig_backend == .stage2_c) {
+                @compileError("unsupported backend");
+            } else {
+                break :blk asm volatile (
+                    \\ movl %%fs:0x18, %[ptr]
+                    : [ptr] "=r" (-> *TEB),
+                );
+            }
+        },
+        .x86_64 => blk: {
+            if (builtin.zig_backend == .stage2_c) {
+                @compileError("unsupported backend");
+            } else {
+                break :blk asm volatile (
+                    \\ movq %%gs:0x30, %[ptr]
+                    : [ptr] "=r" (-> *TEB),
+                );
+            }
+        },
+        .aarch64 => asm volatile (
+            \\ mov %[ptr], x18
+            : [ptr] "=r" (-> *TEB),
+        ),
+        else => @compileError("unsupported arch"),
+    };
+}
+
+pub fn peb() *PEB {
+    return teb().ProcessEnvironmentBlock;
+}
