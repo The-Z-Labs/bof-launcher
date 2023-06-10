@@ -11,8 +11,8 @@ We at [Z-Labs](https://z-labs.eu) saw a big potential in BOFs and decided to ext
 
 [bof-launcher](https://github.com/The-Z-Labs/bof-launcher) is an open-source library for loading, relocating and launching BOFs on Windows and UNIX/Linux systems. It's alternative to Trustedsec's [COFFLoader](https://github.com/trustedsec/COFFLoader) and [ELFLoader](https://github.com/trustedsec/ELFLoader) with some very interesting features:
 
-- Fully compatibile with [Cobalt Strike's Beacon](https://www.cobaltstrike.com/). Capable of running every BOF available at [Cobalt Strike Community Kit](https://cobalt-strike.github.io/community_kit/) and every other open-source BOF that adheres to [generic BOF template](https://github.com/Cobalt-Strike/bof_template).
-- Distributed as a fully standalone library with zero dependency (it does not even use libc).
+- Fully compatibile with [Cobalt Strike's Beacon](https://www.cobaltstrike.com/). Can compile and run every BOF available at [Cobalt Strike Community Kit](https://cobalt-strike.github.io/community_kit/) and every other open-source BOF that adheres to [generic BOF template](https://github.com/Cobalt-Strike/bof_template).
+- Distributed as a fully standalone library with zero dependency (it does not even use `libc`).
 - Fully integrable with programs written in C/C++ and/or [Zig](https://ziglang.org/) progamming languages.
 - Adds capability to write BOFs in [Zig programming language](https://ziglang.org/) - which is a low-level langauge with a goal of being a "better C". All the features of the language and rich standard library can be used in BOFs (hash maps and other data structures, cross-platform OS layer, http, networking, threading, crypto and more).
 - Asynchronous BOF execution - additional capability to launch more time-consuming BOFs in a separate thread. 
@@ -21,7 +21,7 @@ We at [Z-Labs](https://z-labs.eu) saw a big potential in BOFs and decided to ext
 
 ## Building
 
-Being a zero-dependency, drop-in C/C++ compiler that supports cross-compilation out-of-the-box, [Zig](https://ziglang.org/) can be used to build this project. To do so [Zig's tarball](https://ziglang.org/download/) needs to be downloaded and dropped in the directory of choice. After adding that directory to `PATH` environment variable, buliding whole project is as easy as running:
+Being a zero-dependency, drop-in C/C++ compiler that supports cross-compilation out-of-the-box, [Zig](https://ziglang.org/) can be used to build this project. To do so [Zig's tarball (master)](https://ziglang.org/download/) needs to be downloaded and dropped in the directory of choice. After adding that directory to `PATH` environment variable, buliding whole project is as easy as running:
 
     zig build
 
