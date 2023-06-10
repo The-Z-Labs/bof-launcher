@@ -14,16 +14,21 @@ We at [Z-Labs](https://z-labs.eu) saw a big potential in BOFs and decided to ext
 - Fully compatibile with [Cobalt Strike's Beacon](https://www.cobaltstrike.com/). Capable of running every BOF available at [Cobalt Strike Community Kit](https://cobalt-strike.github.io/community_kit/) and every other open-source BOF that adheres to [generic BOF template](https://github.com/Cobalt-Strike/bof_template).
 - Distributed as a fully standalone library with zero dependency (it does not even use libc).
 - Fully integrable with programs written in C/C++ and/or [Zig](https://ziglang.org/) progamming languages.
-- Adds capability to write BOFs in [Zig programming language](https://ziglang.org/) - imperative, general-purpose, statically typed, compiled system programming language intended to be a replacement for the C language, with the goals of being smaller and simpler to program in while also offering modern features and **rich standard library**.
+- Adds capability to write BOFs in [Zig programming language](https://ziglang.org/) - which is a low-level langauge with a goal of being a "better C". All the features of the language and rich standard library can be used in BOFs (hash maps and other data structures, cross-platform OS layer, http, networking, threading, crypto and more).
 - Asynchronous BOF execution - additional capability to launch more time-consuming BOFs in a separate thread. 
 - Seamless support for either Windows COFF format and UNIX/Linux ELF format.
-- ARM 64/32 support (in development). 
+- ARM 64/32 support (in development).
 
 ## Building
 
-Being a zero-dependency, drop-in C/C++ compiler that supports cross-compilation out-of-the-box, [Zig](https://ziglang.org/) can be used to build this this project. To do so [Zig's tarball](https://ziglang.org/download/) needs to be downloaded and dropped in the directory of choice. After adding that directory to `PATH` environment variable, buliding whole project is as easy as running:
+Being a zero-dependency, drop-in C/C++ compiler that supports cross-compilation out-of-the-box, [Zig](https://ziglang.org/) can be used to build this project. To do so [Zig's tarball](https://ziglang.org/download/) needs to be downloaded and dropped in the directory of choice. After adding that directory to `PATH` environment variable, buliding whole project is as easy as running:
 
     zig build
+
+To build the project for a specific target use `-Dtarget` option, for example:
+
+    zig build -Dtarget=x86-windows-gnu
+    zig build -Dtarget=x86_64-linux-gnu
 
 To ease the whole process even more, the [zigupdate.sh](utils/zigupdate.sh) script can be used for getting Zig and building bof-launcher on Linux machines:
 
@@ -37,7 +42,7 @@ zig build
 zig test
 ```
 
-Build artifacts will show up in `zig-out/bin` folder.
+Build artifacts will show up in `zig-out/bin` and `zig-out/lib` folders.
 
 ## Example usage scenarios
 
