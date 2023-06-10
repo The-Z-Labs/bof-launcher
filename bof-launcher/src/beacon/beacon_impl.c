@@ -10,11 +10,11 @@ void BeaconPrintf(int type, char* fmt, ...) {
 
     if (fmt[0] == '%' && fmt[1] == 'l' && fmt[2] == 's' && fmt[3] == '\0') {
         va_start(args, fmt);
-        const unsigned short* str_utf16 = va_arg(args, char *);
+        const unsigned short* str_utf16 = (unsigned short *)va_arg(args, char *);
         va_end(args);
 
         int len = 0;
-        unsigned short* str = str_utf16;
+        const unsigned short* str = str_utf16;
         while (*str) {
             if (*str < 0x80) {
                 str += 1;
