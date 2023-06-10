@@ -1,5 +1,5 @@
-const beacon = @import("bofapi").beacon;
 const w32 = @import("bofapi").win32;
+const beacon = @import("bofapi").beacon;
 
 pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
     var version_info: w32.RTL_OSVERSIONINFOW = undefined;
