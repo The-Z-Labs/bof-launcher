@@ -384,6 +384,7 @@ pub const RTL_OSVERSIONINFOW = extern struct {
     dwPlatformId: ULONG,
     szCSDVersion: [128]WCHAR,
 };
+pub const OSVERSIONINFOW = RTL_OSVERSIONINFOW;
 
 pub const INT8 = i8;
 pub const UINT8 = u8;

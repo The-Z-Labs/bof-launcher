@@ -63,7 +63,7 @@ const w32 = @import("bofapi").win32;
 const beacon = @import("bofapi").beacon;
 
 pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
-    var version_info: w32.RTL_OSVERSIONINFOW = undefined;
+    var version_info: w32.OSVERSIONINFOW = undefined;
     version_info.dwOSVersionInfoSize = @sizeOf(@TypeOf(version_info));
 
     if (w32.RtlGetVersion(&version_info) != .SUCCESS)
@@ -104,9 +104,9 @@ unsigned char go(unsigned char* arg_data, int arg_len) {
 }
 ```
 
-## BOF Launcher Library
+## BOF launcher library
 
-We provide an open-source library that can be used to execute arbitrary BOF build with this project. We expose both [C API](include/bof.h) and [Zig API](include/bof.zig). Library parses COFF/ELF object data, does the relocations, loads all needed symbols and handles BOF output for you. See the API and tests for details.
+We provide an open-source and standalone library that can be used to execute any BOF build with this project, it exposes both [C API](include/bof.h) and [Zig API](include/bof.zig). Library parses COFF/ELF object data, does the relocations, loads all needed symbols and handles BOF output for you. See the API and tests for details.
 
 ## Example usage scenarios
 

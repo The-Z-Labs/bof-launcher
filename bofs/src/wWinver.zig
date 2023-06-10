@@ -2,7 +2,7 @@ const w32 = @import("bofapi").win32;
 const beacon = @import("bofapi").beacon;
 
 pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
-    var version_info: w32.RTL_OSVERSIONINFOW = undefined;
+    var version_info: w32.OSVERSIONINFOW = undefined;
     version_info.dwOSVersionInfoSize = @sizeOf(@TypeOf(version_info));
 
     if (w32.RtlGetVersion(&version_info) != .SUCCESS)
