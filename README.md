@@ -52,6 +52,8 @@ Build artifacts will show up in `zig-out/bin` and `zig-out/lib` folders.
 
 Below you can see the same BOF written in Zig and in C. When compiled, Zig version weights 860 bytes, C version weights 916 bytes.
 
+For an example of larger and cross-platform BOF please see our [UDP port scanner](bofs/src/cUDPscan.zig).
+
 ```zig
 const w32 = @import("bofapi").win32;
 const beacon = @import("bofapi").beacon;
