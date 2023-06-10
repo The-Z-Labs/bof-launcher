@@ -9,7 +9,7 @@
 
 We at [Z-Labs](https://z-labs.eu) saw a big potential in BOFs and decided to extend its capabilities, versatility and usefulness even further. That's how this project came to live.
 
-[bof-launcher](https://github.com/The-Z-Labs/bof-launcher) is an open-source library for loading, relocating and launching BOFs on Windows and UNIX/Linux systems. It's alternative to Trustedsec's [COFFLoader](https://github.com/trustedsec/COFFLoader) and [ELFLoader](https://github.com/trustedsec/ELFLoader) with some very interesting features:
+[bof-launcher](https://github.com/The-Z-Labs/bof-launcher) is an open-source library for loading, relocating and launching BOFs on Windows and UNIX/Linux systems. It's an alternative to Trustedsec's [COFFLoader](https://github.com/trustedsec/COFFLoader) and [ELFLoader](https://github.com/trustedsec/ELFLoader) with some very interesting features:
 
 - Fully compatibile with [Cobalt Strike's Beacon](https://www.cobaltstrike.com/). Can compile and run every BOF available at [Cobalt Strike Community Kit](https://cobalt-strike.github.io/community_kit/) and every other open-source BOF that adheres to [generic BOF template](https://github.com/Cobalt-Strike/bof_template).
 - Distributed as a fully standalone library with zero dependency (it does not even use `libc`).
@@ -21,7 +21,7 @@ We at [Z-Labs](https://z-labs.eu) saw a big potential in BOFs and decided to ext
 
 ## Building
 
-Being a zero-dependency, drop-in C/C++ compiler that supports cross-compilation out-of-the-box, [Zig](https://ziglang.org/) can be used to build this project. To do so [Zig's tarball (master)](https://ziglang.org/download/) needs to be downloaded and dropped in the directory of choice. After adding that directory to `PATH` environment variable, buliding whole project is as easy as running:
+Being a zero-dependency, drop-in C/C++ compiler that supports cross-compilation out-of-the-box, [Zig](https://ziglang.org/) can be used to build this project. To do so [Zig's tarball (master)](https://ziglang.org/download/) needs to be downloaded and dropped in the directory of choice. After adding that directory to the `PATH` environment variable, buliding the whole project is as easy as running:
 
     zig build
 
@@ -29,6 +29,10 @@ To build the project for a specific target use `-Dtarget` option, for example:
 
     zig build -Dtarget=x86-windows-gnu
     zig build -Dtarget=x86_64-linux-gnu
+
+To build and run test BOFs do:
+
+    zig build test
 
 To ease the whole process even more, the [zigupdate.sh](utils/zigupdate.sh) script can be used for getting Zig and building bof-launcher on Linux machines:
 
