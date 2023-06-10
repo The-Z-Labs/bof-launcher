@@ -1,5 +1,19 @@
-const std = @import("std");
+// -----------------------------------------------------------------------------
+// BOF TABLE
+// -----------------------------------------------------------------------------
+// Add new BOFs here. Naming convention:
+// c* - cross platform BOFs
+// l* - Linux-only BOFs
+// w* - Windows-only BOFs
+const bofs = [_]Bof{
+    .{ .name = "lUname", .formats = &.{.elf}, .archs = &.{ .x64, .x86 } },
+    .{ .name = "cUDPscan", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86 } },
+    .{ .name = "wWinver", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+};
+// -----------------------------------------------------------------------------
 
+const std = @import("std");
 const Options = @import("../build.zig").Options;
 
 const BofLang = enum { zig, c };
@@ -25,17 +39,6 @@ const Bof = struct {
             .abi = .gnu,
         };
     }
-};
-
-// Naming convention:
-// c* - cross platform BOFs
-// l* - Linux-only BOFs
-// w* - Windows-only BOFs
-const bofs = [_]Bof{
-    .{ .name = "lUname", .formats = &.{.elf}, .archs = &.{ .x64, .x86 } },
-    .{ .name = "cUDPscan", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86 } },
-    .{ .name = "wWinver", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
-    .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
 };
 
 pub fn build(b: *std.build.Builder, _: Options) void {
