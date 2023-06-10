@@ -35,6 +35,7 @@ const Bof = struct {
 const bofs = [_]Bof{
     .{ .name = "lUname", .langs = &.{.zig}, .formats = &.{.elf}, .archs = &.{ .x64, .x86 } },
     .{ .name = "cUDPscan", .langs = &.{.zig}, .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86 } },
+    .{ .name = "wWinver", .langs = &.{.zig}, .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
 };
 
 pub fn build(b: *std.build.Builder, _: Options) void {

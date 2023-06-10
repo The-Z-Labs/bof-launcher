@@ -347,7 +347,7 @@ pub extern "kernel32" fn DeleteCriticalSection(lpCriticalSection: *CRITICAL_SECT
 
 pub extern "kernel32" fn Sleep(dwMilliseconds: DWORD) callconv(WINAPI) void;
 
-pub extern "ntdll" fn RtlGetVersion(lpVersionInformation: *OSVERSIONINFOW) callconv(WINAPI) NTSTATUS;
+pub extern "ntdll" fn RtlGetVersion(lpVersionInformation: *RTL_OSVERSIONINFOW) callconv(WINAPI) NTSTATUS;
 
 pub const WNDPROC = *const fn (hwnd: HWND, uMsg: UINT, wParam: WPARAM, lParam: LPARAM) callconv(WINAPI) LRESULT;
 
@@ -376,7 +376,7 @@ pub const WNDCLASSEXA = extern struct {
     hIconSm: ?HICON,
 };
 
-pub const OSVERSIONINFOW = extern struct {
+pub const RTL_OSVERSIONINFOW = extern struct {
     dwOSVersionInfoSize: ULONG,
     dwMajorVersion: ULONG,
     dwMinorVersion: ULONG,
