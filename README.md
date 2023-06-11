@@ -58,27 +58,7 @@ To run a BOF you can use our [cli-bof-launcher](examples/launch-from-cli), for e
     .\zig-out\bin\example-cli-launcher_win_x64.exe .\zig-out\bin\wWinver.coff.x64.o
     .\zig-out\bin\example-cli-launcher_win_x64.exe .\zig-out\bin\cUDPscan.coff.x64.o 162.159.200.1-5:123,88
 
-```zig
-const w32 = @import("bofapi").win32;
-const beacon = @import("bofapi").beacon;
-
-pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
-    var version_info: w32.OSVERSIONINFOW = undefined;
-    version_info.dwOSVersionInfoSize = @sizeOf(@TypeOf(version_info));
-
-    if (w32.RtlGetVersion(&version_info) != .SUCCESS)
-        return 1;
-
-    _ = beacon.printf(
-        0,
-        "Windows version: %d.%d, OS build number: %d\n",
-        version_info.dwMajorVersion,
-        version_info.dwMinorVersion,
-        version_info.dwBuildNumber,
-    );
-    return 0;
-}
-```
+https://github.com/The-Z-Labs/bof-launcher/blob/ba4d4a5a3f0dceac2d7e7ec1a82ceba15ada7a7a/bofs/src/wWinver.zig#LL1C3-L1C3
 
 ```c
 #include <windows.h>
