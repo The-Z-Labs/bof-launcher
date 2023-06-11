@@ -1,7 +1,5 @@
 # bof-launcher
 
-https://github.com/The-Z-Labs/bof-launcher/blob/074d002720702248efd3343fae7fb7501be8fc81/bofs/src/wWinver.zig#L1-L19
-
 ## Introduction
 
 [Cobalt Strike 4.1](https://www.cobaltstrike.com/blog/cobalt-strike-4-1-the-mark-of-injection/) released on 25 June 2020, introduced a novel (for that time) capability of running so called [Beacon Object Files](https://hstechdocs.helpsystems.com/manuals/cobaltstrike/current/userguide/content/topics/beacon-object-files_main.htm) - *small post-ex capabilities that execute in [Beacon](https://www.cobaltstrike.com/), parse arguments, call a few Win32 APIs, report output, and exit*. Since that time BOFs became very popular and the demand to launch/execute them in other environments than [Cobalt Strike's Beacon](https://www.cobaltstrike.com/) has emerged.
@@ -60,51 +58,9 @@ To run a BOF you can use our [cli-bof-launcher](examples/launch-from-cli), for e
     .\zig-out\bin\example-cli-launcher_win_x64.exe .\zig-out\bin\wWinver.coff.x64.o
     .\zig-out\bin\example-cli-launcher_win_x64.exe .\zig-out\bin\cUDPscan.coff.x64.o 162.159.200.1-5:123,88
 
-```zig
-const w32 = @import("bofapi").win32;
-const beacon = @import("bofapi").beacon;
+https://github.com/The-Z-Labs/bof-launcher/blob/074d002720702248efd3343fae7fb7501be8fc81/bofs/src/wWinver.zig#L1-L19
 
-pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
-    var version_info: w32.OSVERSIONINFOW = undefined;
-    version_info.dwOSVersionInfoSize = @sizeOf(@TypeOf(version_info));
-
-    if (w32.RtlGetVersion(&version_info) != .SUCCESS)
-        return 1;
-
-    _ = beacon.printf(
-        0,
-        "Windows version: %d.%d, OS build number: %d\n",
-        version_info.dwMajorVersion,
-        version_info.dwMinorVersion,
-        version_info.dwBuildNumber,
-    );
-    return 0;
-}
-```
-
-```c
-#include <windows.h>
-#include "beacon.h"
-
-WINBASEAPI NTSTATUS WINAPI NTDLL$RtlGetVersion(OSVERSIONINFOW* lpVersionInformation);
-
-unsigned char go(unsigned char* arg_data, int arg_len) {
-    OSVERSIONINFOW version_info;
-    version_info.dwOSVersionInfoSize = sizeof(version_info);
-
-    if (NTDLL$RtlGetVersion(&version_info) != 0)
-        return 1;
-
-    BeaconPrintf(
-        0,
-        "Windows version: %d.%d, OS build number: %d\n",
-        version_info.dwMajorVersion,
-        version_info.dwMinorVersion,
-        version_info.dwBuildNumber
-    );
-    return 0;
-}
-```
+https://github.com/The-Z-Labs/bof-launcher/blob/06e7d8c4cf941c22557eca5d97dcab6eab038003/bofs/src/wWinverC.c#L1-L21
 
 ## BOF launcher library
 
