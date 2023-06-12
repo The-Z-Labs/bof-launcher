@@ -1,4 +1,4 @@
-# bof-launcher
+# Beacon Object File (BOF) launcher
 
 ## Introduction
 
