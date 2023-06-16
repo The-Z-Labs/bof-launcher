@@ -10,6 +10,7 @@ const bofs = [_]Bof{
     .{ .name = "cUDPscan", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWinver", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    .{ .name = "wWhoami", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
 };
 // -----------------------------------------------------------------------------
 

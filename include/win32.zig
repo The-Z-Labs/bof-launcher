@@ -951,3 +951,103 @@ pub fn teb() *TEB {
 pub fn peb() *PEB {
     return teb().ProcessEnvironmentBlock;
 }
+
+pub extern "advapi32" fn OpenProcessToken(
+    ProcessHandle: HANDLE,
+    DesiredAccess: DWORD,
+    TokenHandle: *HANDLE,
+) callconv(WINAPI) BOOL;
+
+pub const READ_CONTROL = 0x00020000;
+
+pub const STANDARD_RIGHTS_REQUIRED = 0x000F0000;
+
+pub const STANDARD_RIGHTS_READ = READ_CONTROL;
+pub const STANDARD_RIGHTS_WRITE = READ_CONTROL;
+pub const STANDARD_RIGHTS_EXECUTE = READ_CONTROL;
+
+pub const STANDARD_RIGHTS_ALL = 0x001F0000;
+
+pub const SPECIFIC_RIGHTS_ALL = 0x0000FFFF;
+
+pub const TOKEN_ASSIGN_PRIMARY = 0x0001;
+pub const TOKEN_DUPLICATE = 0x0002;
+pub const TOKEN_IMPERSONATE = 0x0004;
+pub const TOKEN_QUERY = 0x0008;
+pub const TOKEN_QUERY_SOURCE = 0x0010;
+pub const TOKEN_ADJUST_PRIVILEGES = 0x0020;
+pub const TOKEN_ADJUST_GROUPS = 0x0040;
+pub const TOKEN_ADJUST_DEFAULT = 0x0080;
+pub const TOKEN_ADJUST_SESSIONID = 0x0100;
+
+pub const TOKEN_READ = STANDARD_RIGHTS_READ | TOKEN_QUERY;
+
+pub const TOKEN_INFORMATION_CLASS = enum(u32) {
+    TokenUser = 1,
+    TokenGroups,
+    TokenPrivileges,
+    TokenOwner,
+    TokenPrimaryGroup,
+    TokenDefaultDacl,
+    TokenSource,
+    TokenType,
+    TokenImpersonationLevel,
+    TokenStatistics,
+    TokenRestrictedSids,
+    TokenSessionId,
+    TokenGroupsAndPrivileges,
+    TokenSessionReference,
+    TokenSandBoxInert,
+    TokenAuditPolicy,
+    TokenOrigin,
+    TokenElevationType,
+    TokenLinkedToken,
+    TokenElevation,
+    TokenHasRestrictions,
+    TokenAccessInformation,
+    TokenVirtualizationAllowed,
+    TokenVirtualizationEnabled,
+    TokenIntegrityLevel,
+    TokenUIAccess,
+    TokenMandatoryPolicy,
+    TokenLogonSid,
+    TokenIsAppContainer,
+    TokenCapabilities,
+    TokenAppContainerSid,
+    TokenAppContainerNumber,
+    TokenUserClaimAttributes,
+    TokenDeviceClaimAttributes,
+    TokenRestrictedUserClaimAttributes,
+    TokenRestrictedDeviceClaimAttributes,
+    TokenDeviceGroups,
+    TokenRestrictedDeviceGroups,
+    TokenSecurityAttributes,
+    TokenIsRestricted,
+    TokenProcessTrustLevel,
+    TokenPrivateNameSpace,
+    TokenSingletonAttributes,
+    TokenBnoIsolation,
+    TokenChildProcessFlags,
+    TokenIsLessPrivilegedAppContainer,
+    TokenIsSandboxed,
+    MaxTokenInfoClass, // MaxTokenInfoClass should always be the last enum
+};
+
+pub extern "advapi32" fn GetTokenInformation(
+    TokenHandle: HANDLE,
+    TokenInformationClass: TOKEN_INFORMATION_CLASS,
+    TokenInformation: ?LPVOID,
+    TokenInformationLength: DWORD,
+    ReturnLength: *DWORD,
+) callconv(WINAPI) BOOL;
+
+pub const PSID = *anyopaque;
+
+pub const SID_AND_ATTRIBUTES = extern struct {
+    Sid: PSID,
+    Attributes: DWORD,
+};
+
+pub const TOKEN_USER = extern struct {
+    User: SID_AND_ATTRIBUTES,
+};
