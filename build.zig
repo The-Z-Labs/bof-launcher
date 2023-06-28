@@ -50,9 +50,14 @@ pub fn build(b: *std.build.Builder) void {
     @import("bofs/build.zig").build(b, options);
 
     //
-    // Examples
+    // Examples: command linie launcher
     //
     @import("examples/launch-from-cli/build.zig").build(b, options, bof_launcher_lib);
+
+    //
+    // Examples: baby stager
+    //
+    @import("examples/baby-stager/build.zig").build(b, options, bof_launcher_lib);
 
     //
     // Tests

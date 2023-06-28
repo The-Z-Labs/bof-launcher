@@ -6,8 +6,8 @@
 // l* - Linux-only BOFs
 // w* - Windows-only BOFs
 const bofs = [_]Bof{
-    .{ .name = "lUname", .formats = &.{.elf}, .archs = &.{ .x64, .x86 } },
-    .{ .name = "cUDPscan", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86 } },
+    .{ .name = "uname", .formats = &.{.elf}, .archs = &.{ .x64, .x86 } },
+    .{ .name = "udpScanner", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWinver", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWhoami", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },

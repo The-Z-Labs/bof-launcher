@@ -79,3 +79,9 @@ We provide an open-source and standalone library that can be used to execute any
 *Integrating bof-launcher in program written in C*
 
 [integration-with-c](examples/integration-with-c) - simple example showing how to integrate bof-launcher in a application written in C/C++.
+
+### Simple C2 solution with BOF execution capabilities
+
+*Implementing custom, cross-platform C2 solutions capable of running BOFs*
+
+[baby-stager](examples/baby-stager) - example of simple C2 solution that uses BOFs as its post-exploitation modules and communicates over HTTP with the C2 server.

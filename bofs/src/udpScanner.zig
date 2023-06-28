@@ -155,7 +155,7 @@ fn extractIPs(allocator: mem.Allocator, ip_spec: []const u8) ![][]const u8 {
 /// cUDPScan 102.168.1.1-32:22-32,427
 pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     if (args_len == 0) {
-        _ = beacon.printf(0, "Usage: cUDPscan <IPs>:<ports>\n");
+        _ = beacon.printf(0, "Usage: cUDPscan <IPs>:<ports> <file:filename>\n");
         return 1;
     }
 
@@ -257,6 +257,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
                     var scanned_addr = net.Address.parseIp(IP, port) catch continue;
                     if (sa.eql(scanned_addr)) {
                         std.debug.print("Host: {s}\tPort: {d}\tState: open\n", .{ IP, port });
+                        _ = beacon.printf(0, "Host: %s\tPort: %d\tState: open\n", IP.ptr, port);
                     }
                 }
             }
