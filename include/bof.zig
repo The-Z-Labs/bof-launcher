@@ -60,7 +60,7 @@ pub fn getOutput(bof_handle: Handle) ?[]const u8 {
     var len: c_int = 0;
     const ptr = bofGetOutput(bof_handle, &len);
     if (ptr == null) return null;
-    return ptr.?[0..@intCast(usize, len)];
+    return ptr.?[0..@as(usize, @intCast(len))];
 }
 extern fn bofGetOutput(bof_handle: Handle, out_output_len: ?*c_int) ?[*:0]const u8;
 

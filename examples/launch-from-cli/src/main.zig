@@ -19,7 +19,7 @@ fn runBofFromFile(
     const result = bof.loadAndRun(
         bof_name,
         file_data.ptr,
-        @intCast(i32, file_data.len),
+        @as(i32, @intCast(file_data.len)),
         arg_data_ptr,
         arg_data_len,
         &bof_handle,
@@ -88,12 +88,12 @@ pub fn main() !u8 {
 
             params.original = params_blob.ptr;
             params.buffer = params_blob.ptr + 4;
-            params.length = @intCast(i32, params_blob.len - 4);
-            params.size = @intCast(i32, params_blob.len);
+            params.length = @as(i32, @intCast(params_blob.len - 4));
+            params.size = @as(i32, @intCast(params_blob.len));
 
             initialized = true;
         }
-        _ = bof.packArg(&params, arg.ptr, @intCast(c_int, arg.len));
+        _ = bof.packArg(&params, arg.ptr, @as(c_int, @intCast(arg.len)));
     }
 
     if (initialized) {
@@ -116,5 +116,5 @@ pub fn main() !u8 {
         return error.BofError;
     }
 
-    return @intCast(u8, result);
+    return @as(u8, @intCast(result));
 }

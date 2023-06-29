@@ -15,7 +15,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
 
     beacon.dataParse(&parser, args, args_len);
     const opt = beacon.dataExtract(&parser, &opt_size);
-    const optS = opt.?[0..@intCast(usize, opt_size - 1)];
+    const optS = opt.?[0..@as(usize, @intCast(opt_size - 1))];
     //const optS = std.mem.sliceTo(opt, 0);
 
     if (std.mem.eql(u8, optS, "-a")) {

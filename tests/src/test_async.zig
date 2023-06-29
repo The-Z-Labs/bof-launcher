@@ -12,5 +12,5 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
         std.time.sleep(10e6);
     }
 
-    return @intCast(u8, id);
+    return @as(u8, @intCast(id));
 }

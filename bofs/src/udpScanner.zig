@@ -170,7 +170,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     const targets_spec = beacon.dataExtract(&parser, &opt_len);
 
     // creating slice without terminating 0
-    const sTargets_spec = targets_spec.?[0..@intCast(usize, opt_len - 1)];
+    const sTargets_spec = targets_spec.?[0..@as(usize, @intCast(opt_len - 1))];
 
     // spliting arguemnts to IPs and ports parts
     var iter = mem.split(u8, sTargets_spec, ":");
@@ -197,7 +197,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     var sl: os.socklen_t = @sizeOf(os.sockaddr.in);
     var family: os.sa_family_t = os.AF.INET;
     var sa: net.Address = undefined;
-    @memset(@ptrCast([*]u8, &sa)[0..@sizeOf(net.Address)], 0);
+    @memset(@as([*]u8, @ptrCast(&sa))[0..@sizeOf(net.Address)], 0);
     sa.any.family = family;
     os.bind(fd, &sa.any, sl) catch return 1;
 
@@ -226,7 +226,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
         return 0;
 
     for (sIPs) |IP| {
-        var dest_addr = net.Address.parseIp(IP, @intCast(u16, 0)) catch return 1;
+        var dest_addr = net.Address.parseIp(IP, @as(u16, @intCast(0))) catch return 1;
 
         for (sPorts) |port| {
             if (ports_data_map.get(port)) |pkt_content| {
@@ -240,12 +240,12 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
 
     // Handling responses
     const timeout = 1000 * 3;
-    var t2: u64 = @bitCast(u64, std.time.milliTimestamp());
+    var t2: u64 = @as(u64, @bitCast(std.time.milliTimestamp()));
     var t0 = t2;
 
     var answer_buf = [_]u8{0} ** 512;
 
-    while (t2 - t0 < timeout) : (t2 = @bitCast(u64, std.time.milliTimestamp())) {
+    while (t2 - t0 < timeout) : (t2 = @as(u64, @bitCast(std.time.milliTimestamp()))) {
         while (true) {
             const rlen = os.recvfrom(fd, &answer_buf, 0, &sa.any, &sl) catch break;
 

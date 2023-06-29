@@ -35,7 +35,7 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
 
     if (beacon.dataLength(&parser) != 2 * @sizeOf(usize)) return 1;
 
-    const data = @intToPtr([*]i32, beacon.dataUSize(&parser))[0..beacon.dataUSize(&parser)];
+    const data = @as([*]i32, @ptrFromInt(beacon.dataUSize(&parser)))[0..beacon.dataUSize(&parser)];
     data[0] += 1;
     data[50] = 0x70de_c0de;
     data[99] -= 10;

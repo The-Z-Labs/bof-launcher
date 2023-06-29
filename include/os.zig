@@ -28,7 +28,7 @@ pub fn sendto(
     addrlen: socklen_t,
 ) SendToError!usize {
     if (builtin.os.tag == .windows) {
-        switch (windows.ws2_32.sendto(sockfd, buf.ptr, @intCast(i32, buf.len), @intCast(i32, flags), dest_addr.?, @intCast(i32, addrlen))) {
+        switch (windows.ws2_32.sendto(sockfd, buf.ptr, @as(i32, @intCast(buf.len)), @as(i32, @intCast(flags)), dest_addr.?, @as(i32, @intCast(addrlen)))) {
             windows.ws2_32.SOCKET_ERROR => switch (windows.ws2_32.WSAGetLastError()) {
                 .WSAEACCES => return error.AccessDenied,
                 .WSAEADDRNOTAVAIL => return error.AddressNotAvailable,
@@ -51,13 +51,13 @@ pub fn sendto(
                 .WSANOTINITIALISED => unreachable, // A successful WSAStartup call must occur before using this function.
                 else => |err| return windows.unexpectedWSAError(err),
             },
-            else => |rc| return @intCast(usize, rc),
+            else => |rc| return @as(usize, @intCast(rc)),
         }
     }
     while (true) {
         const rc = system.sendto(sockfd, buf.ptr, buf.len, flags, dest_addr, addrlen);
         switch (errno(rc)) {
-            .SUCCESS => return @intCast(usize, rc),
+            .SUCCESS => return @as(usize, @intCast(rc)),
 
             .ACCES => return error.AccessDenied,
             .AGAIN => return error.WouldBlock,
@@ -97,7 +97,7 @@ pub fn recvfrom(
     addrlen: ?*socklen_t,
 ) RecvFromError!usize {
     if (builtin.os.tag == .windows) {
-        switch (windows.ws2_32.recvfrom(sockfd, buf.ptr, @intCast(i32, buf.len), @intCast(i32, flags), src_addr, @ptrCast(?*i32, addrlen))) {
+        switch (windows.ws2_32.recvfrom(sockfd, buf.ptr, @as(i32, @intCast(buf.len)), @as(i32, @intCast(flags)), src_addr, @as(?*i32, @ptrCast(addrlen)))) {
             windows.ws2_32.SOCKET_ERROR => switch (windows.ws2_32.WSAGetLastError()) {
                 .WSANOTINITIALISED => unreachable,
                 .WSAECONNRESET => return error.ConnectionResetByPeer,
@@ -109,13 +109,13 @@ pub fn recvfrom(
                 // TODO: handle more errors
                 else => |err| return windows.unexpectedWSAError(err),
             },
-            else => |rc| return @intCast(usize, rc),
+            else => |rc| return @as(usize, @intCast(rc)),
         }
     }
     while (true) {
         const rc = system.recvfrom(sockfd, buf.ptr, buf.len, flags, src_addr, addrlen);
         switch (errno(rc)) {
-            .SUCCESS => return @intCast(usize, rc),
+            .SUCCESS => return @as(usize, @intCast(rc)),
             .BADF => unreachable, // always a race condition
             .FAULT => unreachable,
             .INVAL => unreachable,

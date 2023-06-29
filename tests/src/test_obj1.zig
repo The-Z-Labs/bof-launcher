@@ -38,7 +38,7 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) i32 {
         _ = beacon.printf(0, "Length: (from go): %d\n", len);
 
         const stdout = std.io.getStdErr().writer();
-        const slice = arg_data.?[0..@intCast(usize, arg_len)];
+        const slice = arg_data.?[0..@as(usize, @intCast(arg_len))];
         const str = fmt.fmtSliceHexLower(slice);
         stdout.print("arg_data (slice): {any}\n", .{str}) catch unreachable;
 

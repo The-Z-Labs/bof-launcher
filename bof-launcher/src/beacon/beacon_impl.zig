@@ -104,7 +104,7 @@ pub export fn BeaconDataExtract(parser: ?*datap, size: ?*i32) callconv(.C) ?[*]u
     }
     parser.?.length -= 4;
     parser.?.length -= length;
-    parser.?.buffer += @intCast(usize, length);
+    parser.?.buffer += @as(usize, @intCast(length));
     if (size != null and outdata != null) {
         size.?.* = length;
     }
@@ -115,14 +115,14 @@ pub export fn BeaconFormatAlloc(format: ?*formatp, maxsz: i32) callconv(.C) void
     if (format == null)
         return;
 
-    format.?.original = @ptrCast([*]u8, allocateAndZeroMemory(@intCast(usize, maxsz), 1));
+    format.?.original = @as([*]u8, @ptrCast(allocateAndZeroMemory(@as(usize, @intCast(maxsz)), 1)));
     format.?.buffer = format.?.original;
     format.?.length = 0;
     format.?.size = maxsz;
 }
 
 pub export fn BeaconFormatReset(format: ?*formatp) callconv(.C) void {
-    @memset(format.?.original.?[0..@intCast(usize, format.?.size)], 0);
+    @memset(format.?.original.?[0..@as(usize, @intCast(format.?.size))], 0);
     format.?.buffer = format.?.original;
     format.?.length = 0;
 }
@@ -141,8 +141,8 @@ pub export fn BeaconFormatFree(format: ?*formatp) callconv(.C) void {
 }
 
 pub export fn BeaconFormatAppend(format: ?*formatp, text: [*]u8, len: i32) callconv(.C) void {
-    mem.copy(u8, format.?.buffer.?[0..@intCast(usize, len)], text[0..@intCast(usize, len)]);
-    format.?.buffer.? += @intCast(usize, len);
+    mem.copy(u8, format.?.buffer.?[0..@as(usize, @intCast(len))], text[0..@as(usize, @intCast(len))]);
+    format.?.buffer.? += @as(usize, @intCast(len));
     format.?.length += len;
 }
 

@@ -61,7 +61,7 @@ const Bof = struct {
             gstate.currently_running_bof = bof;
             const res = bof.entry_point.?(
                 if (arg_data) |ad| ad.ptr else null,
-                if (arg_data) |ad| @intCast(i32, ad.len) else 0,
+                if (arg_data) |ad| @as(i32, @intCast(ad.len)) else 0,
             );
             gstate.currently_running_bof = null;
 
@@ -143,11 +143,11 @@ const Bof = struct {
                 w32.MEM_COMMIT | w32.MEM_RESERVE | w32.MEM_TOP_DOWN,
                 w32.PAGE_EXECUTE_READWRITE,
             );
-            break :blk @ptrCast([*]align(page_size) u8, @alignCast(page_size, addr))[0..size];
+            break :blk @as([*]align(page_size) u8, @ptrCast(@alignCast(addr)))[0..size];
         };
         bof.all_sections_mem = all_sections_mem;
 
-        const got_base_addr = @ptrToInt(all_sections_mem.ptr);
+        const got_base_addr = @intFromPtr(all_sections_mem.ptr);
         var num_got_entries: u32 = 0;
 
         var section_offset: usize = max_section_size;
@@ -166,7 +166,7 @@ const Bof = struct {
                     file_data[section_header.pointer_to_raw_data..][0..section_header.size_of_raw_data],
                 );
 
-                try section_mappings.append(@alignCast(page_size, section_data));
+                try section_mappings.append(@alignCast(section_data));
 
                 section_offset += max_section_size;
             } else {
@@ -181,9 +181,9 @@ const Bof = struct {
             const section_name = parser.getSectionName(&section_header);
             print("SECTION NAME: {s} ({d})", .{ section_name, section_index });
 
-            const relocs = @ptrCast(
+            const relocs = @as(
                 [*]align(1) const coff.Reloc,
-                file_data[section_header.pointer_to_relocations..],
+                @ptrCast(file_data[section_header.pointer_to_relocations..]),
             )[0..section_header.number_of_relocations];
 
             for (relocs) |reloc| {
@@ -205,7 +205,7 @@ const Bof = struct {
                 var maybe_func_addr = gstate.func_lookup.get(sym_name);
 
                 if (maybe_func_addr == null and
-                    @enumToInt(sym.symbol.section_number) == 0 and
+                    @intFromEnum(sym.symbol.section_number) == 0 and
                     std.mem.indexOfScalar(u8, sym_name, '$') != null)
                 {
                     var it = std.mem.split(u8, sym_name, "$");
@@ -241,12 +241,12 @@ const Bof = struct {
                         w32.LoadLibraryA(dll_name_z).?;
 
                     maybe_func_addr = if (w32.GetProcAddress(dll, func_name_z)) |addr|
-                        @ptrToInt(addr)
+                        @intFromPtr(addr)
                     else
                         null;
                 }
 
-                if (maybe_func_addr == null and @enumToInt(sym.symbol.section_number) == 0) {
+                if (maybe_func_addr == null and @intFromEnum(sym.symbol.section_number) == 0) {
                     var it = std.mem.split(u8, sym_name, "@");
                     const func_name = it.first();
 
@@ -279,7 +279,7 @@ const Bof = struct {
                             w32.LoadLibraryA(lib).?;
 
                         maybe_func_addr = if (w32.GetProcAddress(dll, func_name_z)) |addr|
-                            @ptrToInt(addr)
+                            @intFromPtr(addr)
                         else
                             null;
                         if (maybe_func_addr != null) break;
@@ -289,11 +289,11 @@ const Bof = struct {
                         maybe_func_addr = if (w32.GetProcAddress(
                             w32.GetModuleHandleA(null).?,
                             func_name_z,
-                        )) |addr| @ptrToInt(addr) else null;
+                        )) |addr| @intFromPtr(addr) else null;
                     }
                 }
 
-                if (maybe_func_addr == null and @enumToInt(sym.symbol.section_number) == 0) {
+                if (maybe_func_addr == null and @intFromEnum(sym.symbol.section_number) == 0) {
                     print("SYMBOL NAME: {s} NOT FOUND!", .{sym_name});
                     return error.UnknownFunction;
                 }
@@ -304,7 +304,7 @@ const Bof = struct {
                             u64,
                             section_mappings.items[section_index][reloc.virtual_address..],
                         );
-                        const s = @ptrToInt(section_mappings.items[@enumToInt(sym.symbol.section_number) - 1].ptr);
+                        const s = @intFromPtr(section_mappings.items[@intFromEnum(sym.symbol.section_number) - 1].ptr);
 
                         print("S ADDR: 0x{x}", .{s});
                         print("OFFSET: 0x{x}", .{offset});
@@ -322,24 +322,24 @@ const Bof = struct {
                         const func_map_addr = got_base_addr + num_got_entries * thunk_trampoline.len;
 
                         // mov rax, func_addr
-                        @intToPtr(*align(1) u8, func_map_addr).* = 0x48;
-                        @intToPtr(*align(1) u8, func_map_addr + 1).* = 0xb8;
-                        @intToPtr(*align(1) usize, func_map_addr + 2).* = func_addr;
+                        @as(*align(1) u8, @ptrFromInt(func_map_addr)).* = 0x48;
+                        @as(*align(1) u8, @ptrFromInt(func_map_addr + 1)).* = 0xb8;
+                        @as(*align(1) usize, @ptrFromInt(func_map_addr + 2)).* = func_addr;
                         // jmp rax
-                        @intToPtr(*align(1) u8, func_map_addr + 10).* = 0xff;
-                        @intToPtr(*align(1) u8, func_map_addr + 11).* = 0xe0;
+                        @as(*align(1) u8, @ptrFromInt(func_map_addr + 10)).* = 0xff;
+                        @as(*align(1) u8, @ptrFromInt(func_map_addr + 11)).* = 0xe0;
 
-                        const p = @ptrToInt(section_mappings.items[section_index].ptr) + reloc.virtual_address;
+                        const p = @intFromPtr(section_mappings.items[section_index].ptr) + reloc.virtual_address;
 
                         print("FUNC MAP ADDR: 0x{x}", .{func_map_addr});
                         print("P ADDR: 0x{x}", .{p});
                         print("FUNC ADDR: 0x{x}", .{func_addr});
 
-                        const addr = @intCast(i32, @intCast(isize, func_map_addr) - @intCast(isize, p) - 4);
+                        const addr = @as(i32, @intCast(@as(isize, @intCast(func_map_addr)) - @as(isize, @intCast(p)) - 4));
 
                         print("ADDR: 0x{x}", .{addr});
 
-                        @intToPtr(*align(1) i32, p).* = addr;
+                        @as(*align(1) i32, @ptrFromInt(p)).* = addr;
 
                         //std.mem.copy(
                         //    u8,
@@ -354,16 +354,16 @@ const Bof = struct {
                             i32,
                             section_mappings.items[section_index][reloc.virtual_address..],
                         );
-                        const s = @ptrToInt(section_mappings.items[@enumToInt(sym.symbol.section_number) - 1].ptr);
-                        const p = @ptrToInt(section_mappings.items[section_index].ptr) + reloc.virtual_address;
+                        const s = @intFromPtr(section_mappings.items[@intFromEnum(sym.symbol.section_number) - 1].ptr);
+                        const p = @intFromPtr(section_mappings.items[section_index].ptr) + reloc.virtual_address;
 
                         print("FUNC OFFSET: 0x{x}", .{offset});
                         print("P ADDR: 0x{x}", .{p});
                         print("S ADDR: 0x{x}", .{s});
 
-                        const addr = offset + @intCast(
+                        const addr = offset + @as(
                             i32,
-                            @intCast(isize, s) + @intCast(i32, sym.symbol.value) - @intCast(isize, p) - 4,
+                            @intCast(@as(isize, @intCast(s)) + @as(i32, @intCast(sym.symbol.value)) - @as(isize, @intCast(p)) - 4),
                         );
                         print("ADDR: 0x{x}", .{addr});
                         std.mem.copy(
@@ -376,10 +376,10 @@ const Bof = struct {
                         //    u32,
                         //    section_mappings.items[section_index][reloc.virtual_address..],
                         //);
-                        const s = @ptrToInt(section_mappings.items[@enumToInt(sym.symbol.section_number) - 1].ptr);
-                        const p = @ptrToInt(section_mappings.items[section_index].ptr) + reloc.virtual_address;
+                        const s = @intFromPtr(section_mappings.items[@intFromEnum(sym.symbol.section_number) - 1].ptr);
+                        const p = @intFromPtr(section_mappings.items[section_index].ptr) + reloc.virtual_address;
 
-                        const addr = @intCast(i32, @intCast(isize, s) - @intCast(isize, p) - 4);
+                        const addr = @as(i32, @intCast(@as(isize, @intCast(s)) - @as(isize, @intCast(p)) - 4));
                         std.mem.copy(
                             u8,
                             section_mappings.items[section_index][reloc.virtual_address..],
@@ -392,12 +392,12 @@ const Bof = struct {
                             i32,
                             section_mappings.items[section_index][reloc.virtual_address..],
                         );
-                        const s = @ptrToInt(section_mappings.items[@enumToInt(sym.symbol.section_number) - 1].ptr);
+                        const s = @intFromPtr(section_mappings.items[@intFromEnum(sym.symbol.section_number) - 1].ptr);
 
                         print("S ADDR: 0x{x}", .{s});
                         print("OFFSET: 0x{x}", .{offset});
 
-                        const addr = offset + @intCast(i32, s) + @intCast(i32, sym.symbol.value);
+                        const addr = offset + @as(i32, @intCast(s)) + @as(i32, @intCast(sym.symbol.value));
                         print("ADDR: 0x{x}", .{addr});
 
                         std.mem.copy(
@@ -410,24 +410,24 @@ const Bof = struct {
                         const func_map_addr = got_base_addr + num_got_entries * 7;
 
                         // mov eax, func_addr
-                        @intToPtr(*align(1) u8, func_map_addr).* = 0xb8;
-                        @intToPtr(*align(1) usize, func_map_addr + 1).* = func_addr;
+                        @as(*align(1) u8, @ptrFromInt(func_map_addr)).* = 0xb8;
+                        @as(*align(1) usize, @ptrFromInt(func_map_addr + 1)).* = func_addr;
 
                         // jmp eax
-                        @intToPtr(*align(1) u8, func_map_addr + 5).* = 0xff;
-                        @intToPtr(*align(1) u8, func_map_addr + 6).* = 0xe0;
+                        @as(*align(1) u8, @ptrFromInt(func_map_addr + 5)).* = 0xff;
+                        @as(*align(1) u8, @ptrFromInt(func_map_addr + 6)).* = 0xe0;
 
-                        const p = @ptrToInt(section_mappings.items[section_index].ptr) + reloc.virtual_address;
+                        const p = @intFromPtr(section_mappings.items[section_index].ptr) + reloc.virtual_address;
 
                         print("FUNC MAP ADDR: 0x{x}", .{func_map_addr});
                         print("P ADDR: 0x{x}", .{p});
                         print("FUNC ADDR: 0x{x}", .{func_addr});
 
-                        const addr = @intCast(i32, @intCast(isize, func_map_addr) - @intCast(isize, p) - 4);
+                        const addr = @as(i32, @intCast(@as(isize, @intCast(func_map_addr)) - @as(isize, @intCast(p)) - 4));
 
                         print("ADDR: 0x{x}", .{addr});
 
-                        @intToPtr(*align(1) i32, p).* = addr;
+                        @as(*align(1) i32, @ptrFromInt(p)).* = addr;
 
                         num_got_entries += 1;
                         assert(num_got_entries < max_num_external_functions);
@@ -436,12 +436,12 @@ const Bof = struct {
                             i32,
                             section_mappings.items[section_index][reloc.virtual_address..],
                         );
-                        const s = @ptrToInt(section_mappings.items[@enumToInt(sym.symbol.section_number) - 1].ptr);
-                        const p = @ptrToInt(section_mappings.items[section_index].ptr) + reloc.virtual_address;
+                        const s = @intFromPtr(section_mappings.items[@intFromEnum(sym.symbol.section_number) - 1].ptr);
+                        const p = @intFromPtr(section_mappings.items[section_index].ptr) + reloc.virtual_address;
 
-                        const addr = offset + @intCast(
+                        const addr = offset + @as(
                             i32,
-                            @intCast(isize, s) + @intCast(i32, sym.symbol.value) - @intCast(isize, p) - 4,
+                            @intCast(@as(isize, @intCast(s)) + @as(i32, @intCast(sym.symbol.value)) - @as(isize, @intCast(p)) - 4),
                         );
                         print("ADDR: 0x{x}", .{addr});
                         std.mem.copy(
@@ -471,11 +471,11 @@ const Bof = struct {
             if ((sym_name.len == 2 and sym_name[0] == 'g' and sym_name[1] == 'o') or // 64-bit
                 (sym_name.len == 3 and sym_name[0] == '_' and sym_name[1] == 'g' and sym_name[2] == 'o')) // 32-bit
             {
-                const section_index = @enumToInt(sym.symbol.section_number) - 1;
+                const section_index = @intFromEnum(sym.symbol.section_number) - 1;
                 print("go() section index: {d}", .{section_index});
-                go = @intToPtr(
+                go = @as(
                     @TypeOf(go),
-                    @ptrToInt(section_mappings.items[section_index].ptr) + sym.symbol.value,
+                    @ptrFromInt(@intFromPtr(section_mappings.items[section_index].ptr) + sym.symbol.value),
                 );
                 break;
             }
@@ -546,8 +546,8 @@ const Bof = struct {
             print("\tLink is {d}", .{section.sh_link});
             print("\tInfo is {d}", .{section.sh_info});
 
-            const section_offset = @intCast(usize, section.sh_offset);
-            const section_size = @intCast(usize, section.sh_size);
+            const section_offset = @as(usize, @intCast(section.sh_offset));
+            const section_size = @as(usize, @intCast(section.sh_size));
 
             if ((section.sh_type == std.elf.SHT_PROGBITS or
                 section.sh_type == std.elf.SHT_NOBITS or
@@ -555,7 +555,7 @@ const Bof = struct {
             {
                 const img = all_sections_mem[map_offset .. map_offset + section_size];
 
-                try section_mappings.append(@alignCast(page_size, img));
+                try section_mappings.append(@alignCast(img));
 
                 std.mem.copy(u8, img, file_data[section_offset..][0..section_size]);
 
@@ -570,14 +570,14 @@ const Bof = struct {
                     print("\t\tString Table: {s}", .{section_string_table});
                 },
                 std.elf.SHT_SYMTAB => {
-                    symbol_table = @ptrCast(
+                    symbol_table = @as(
                         [*]const std.elf.Sym,
-                        @alignCast(@sizeOf(usize), &file_data[section_offset]),
-                    )[0..@divExact(section_size, @intCast(usize, section.sh_entsize))];
+                        @ptrCast(@alignCast(&file_data[section_offset])),
+                    )[0..@divExact(section_size, @as(usize, @intCast(section.sh_entsize)))];
 
                     const link = &section_headers.items[section.sh_link];
-                    const link_offset = @intCast(usize, link.sh_offset);
-                    const link_size = @intCast(usize, link.sh_size);
+                    const link_offset = @as(usize, @intCast(link.sh_offset));
+                    const link_size = @as(usize, @intCast(link.sh_size));
                     string_table = file_data[link_offset..][0..link_size];
 
                     print("\t\tSymbol Table", .{});
@@ -593,28 +593,28 @@ const Bof = struct {
         const ElfRel = if (@import("builtin").cpu.arch == .x86_64) std.elf.Rela else std.elf.Rel;
 
         for (section_headers.items, 0..) |section, section_index| {
-            const section_offset = @intCast(usize, section.sh_offset);
-            const section_size = @intCast(usize, section.sh_size);
+            const section_offset = @as(usize, @intCast(section.sh_offset));
+            const section_size = @as(usize, @intCast(section.sh_size));
 
             if (section.sh_type == sht_rel_type) {
                 print("\tREL(A) ENTRIES (Section Index: {d})", .{section_index});
 
-                const relocs = @ptrCast(
+                const relocs = @as(
                     [*]const ElfRel,
-                    @alignCast(@sizeOf(usize), &file_data[section_offset]),
+                    @ptrCast(@alignCast(&file_data[section_offset])),
                 )[0..@divExact(section_size, @sizeOf(ElfRel))];
 
                 for (relocs) |reloc| {
                     const symbol = &symbol_table[reloc.r_sym()];
 
-                    const addr_p = @ptrToInt(section_mappings.items[section.sh_info].ptr) + reloc.r_offset;
-                    const addr_s = @ptrToInt(section_mappings.items[symbol.st_shndx].ptr) + symbol.st_value;
+                    const addr_p = @intFromPtr(section_mappings.items[section.sh_info].ptr) + reloc.r_offset;
+                    const addr_s = @intFromPtr(section_mappings.items[symbol.st_shndx].ptr) + symbol.st_value;
                     const addend = if (@import("builtin").cpu.arch == .x86)
-                        @intToPtr(*align(1) isize, addr_p).*
+                        @as(*align(1) isize, @ptrFromInt(addr_p)).*
                     else
                         reloc.r_addend;
 
-                    const reloc_str = @ptrCast([*:0]const u8, &string_table[symbol.st_name]);
+                    const reloc_str = @as([*:0]const u8, @ptrCast(&string_table[symbol.st_name]));
                     print("\t\tSymbol: {s}", .{reloc_str});
                     print("\t\tReloc type: 0x{x}", .{reloc.r_type()});
                     print("\t\tSymbol Value: 0x{x}", .{symbol.st_value});
@@ -629,12 +629,12 @@ const Bof = struct {
                         // _GLOBAL_OFFSET_TABLE_
                         // GOT + A - P
 
-                        const relative_offset = @intCast(
+                        const relative_offset = @as(
                             i32,
-                            @intCast(i64, @ptrToInt(got.ptr)) + addend - @intCast(i64, addr_p),
+                            @intCast(@as(i64, @intCast(@intFromPtr(got.ptr))) + addend - @as(i64, @intCast(addr_p))),
                         );
 
-                        @intToPtr(*align(1) i32, addr_p).* = relative_offset;
+                        @as(*align(1) i32, @ptrFromInt(addr_p)).* = relative_offset;
                     } else if (symbol.st_shndx == 0) {
                         const func_name = reloc_str[0..std.mem.len(reloc_str)];
                         const maybe_func_ptr = gstate.func_lookup.get(func_name);
@@ -653,17 +653,17 @@ const Bof = struct {
 
                         std.mem.copy(u8, trampoline[thunk_offset..], std.mem.asBytes(&func_ptr));
 
-                        const a1 = @ptrToInt(got.ptr) + (num_got_entries * thunk_trampoline.len);
+                        const a1 = @intFromPtr(got.ptr) + (num_got_entries * thunk_trampoline.len);
 
                         // Copy the trampoline bytes over to the `temp_offset_table` so relocations work.
-                        std.mem.copy(u8, @intToPtr([*]u8, a1)[0..thunk_trampoline.len], trampoline[0..]);
+                        std.mem.copy(u8, @as([*]u8, @ptrFromInt(a1))[0..thunk_trampoline.len], trampoline[0..]);
 
-                        const relative_offset = @intCast(
+                        const relative_offset = @as(
                             i32,
-                            @intCast(i64, a1) + addend - @intCast(i64, addr_p),
+                            @intCast(@as(i64, @intCast(a1)) + addend - @as(i64, @intCast(addr_p))),
                         );
 
-                        @intToPtr(*align(1) i32, addr_p).* = relative_offset;
+                        @as(*align(1) i32, @ptrFromInt(addr_p)).* = relative_offset;
 
                         num_got_entries += 1;
                         assert(num_got_entries < max_num_external_functions);
@@ -672,28 +672,28 @@ const Bof = struct {
                             0x1 => {
                                 // R_X86_64_64 (0x1)
 
-                                @intToPtr(*align(1) usize, addr_p).* =
-                                    @intCast(usize, @bitCast(u64, @intCast(i64, addr_s) + addend));
+                                @as(*align(1) usize, @ptrFromInt(addr_p)).* =
+                                    @as(usize, @intCast(@as(u64, @bitCast(@as(i64, @intCast(addr_s)) + addend))));
                             },
                             0x2, 0x4 => {
                                 // R_X86_64_PC32 (0x2)
                                 // R_X86_64_PLT32 (0x4)
 
-                                const relative_offset = @intCast(
+                                const relative_offset = @as(
                                     i32,
-                                    @intCast(i64, addr_s) + addend - @intCast(i64, addr_p),
+                                    @intCast(@as(i64, @intCast(addr_s)) + addend - @as(i64, @intCast(addr_p))),
                                 );
 
-                                @intToPtr(*align(1) i32, addr_p).* = relative_offset;
+                                @as(*align(1) i32, @ptrFromInt(addr_p)).* = relative_offset;
                             },
                             0x9 => {
                                 // S + A - GOT
-                                const relative_offset = @intCast(
+                                const relative_offset = @as(
                                     i32,
-                                    @intCast(i64, addr_s) + addend - @intCast(i64, @ptrToInt(got.ptr)),
+                                    @intCast(@as(i64, @intCast(addr_s)) + addend - @as(i64, @intCast(@intFromPtr(got.ptr)))),
                                 );
 
-                                @intToPtr(*align(1) i32, addr_p).* = relative_offset;
+                                @as(*align(1) i32, @ptrFromInt(addr_p)).* = relative_offset;
                             },
                             else => {},
                         }
@@ -708,15 +708,15 @@ const Bof = struct {
         var go: ?*const fn (arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 = null;
         for (symbol_table) |sym| {
             if (sym.st_shndx != 0 and sym.st_size != 0 and sym.st_shndx < section_headers.items.len) {
-                const name = @ptrCast([*:0]const u8, &string_table[sym.st_name]);
+                const name = @as([*:0]const u8, @ptrCast(&string_table[sym.st_name]));
                 print(
                     "\tName: {s: <50} Address(real): 0x{x}",
-                    .{ name, @ptrToInt(section_mappings.items[sym.st_shndx].ptr) + sym.st_value },
+                    .{ name, @intFromPtr(section_mappings.items[sym.st_shndx].ptr) + sym.st_value },
                 );
                 if (name[0] == 'g' and name[1] == 'o' and name[2] == 0) {
-                    go = @intToPtr(
+                    go = @as(
                         @TypeOf(go),
-                        @ptrToInt(section_mappings.items[sym.st_shndx].ptr) + sym.st_value,
+                        @ptrFromInt(@intFromPtr(section_mappings.items[sym.st_shndx].ptr) + sym.st_value),
                     );
                 }
             }
@@ -770,7 +770,7 @@ const BofPool = struct {
 
         pool.bofs[slot_idx].is_allocated = true;
         return .{
-            .index = @intCast(u16, slot_idx),
+            .index = @as(u16, @intCast(slot_idx)),
             .generation = blk: {
                 pool.generations[slot_idx] += 1;
                 break :blk pool.generations[slot_idx];
@@ -807,7 +807,7 @@ pub export fn bofPackArg(
     arg_len: c_int,
 ) callconv(.C) c_int {
     // function checks if we're dealing with an integer or with a string, then it packs data in params
-    const sArg = arg[0..@intCast(usize, arg_len)];
+    const sArg = arg[0..@as(usize, @intCast(arg_len))];
 
     // attempt to treat argument as a short int
     const res = std.fmt.parseUnsigned(u16, sArg, 10);
@@ -826,13 +826,13 @@ pub export fn bofPackArg(
         params.length -= 4;
         params.buffer += 4;
 
-        std.mem.copy(u8, params.buffer[0..@intCast(usize, arg_len)], arg[0..@intCast(usize, arg_len)]);
+        std.mem.copy(u8, params.buffer[0..@as(usize, @intCast(arg_len))], arg[0..@as(usize, @intCast(arg_len))]);
         params.length -= arg_len;
-        params.buffer += @intCast(usize, arg_len);
+        params.buffer += @as(usize, @intCast(arg_len));
 
         params.buffer[0] = 0;
         params.length -= 1;
-        params.buffer += @intCast(usize, 1);
+        params.buffer += @as(usize, @intCast(1));
     } else if (res == std.fmt.ParseIntError.Overflow) {
         // if there was overflow when parsing it to short integer than treat it as a u32 integer
 
@@ -874,7 +874,7 @@ pub export fn bofLoad(
     var bof_handle = gstate.bof_pool.allocateBofHandle();
     var bof = gstate.bof_pool.getBofPtrIfValid(bof_handle).?;
 
-    bof.load(bof_name_or_id, file_data_ptr[0..@intCast(usize, file_data_len)]) catch {
+    bof.load(bof_name_or_id, file_data_ptr[0..@as(usize, @intCast(file_data_len))]) catch {
         print("Failed to load BOF. Aborting.", .{});
         return -1;
     };
@@ -892,7 +892,7 @@ pub export fn bofUnload(bof_handle: BofHandle) callconv(.C) void {
 pub export fn bofIsLoaded(bof_handle: BofHandle) callconv(.C) c_int {
     if (!gstate.is_valid) return 0;
 
-    return @boolToInt(gstate.bof_pool.isBofValid(bof_handle));
+    return @intFromBool(gstate.bof_pool.isBofValid(bof_handle));
 }
 
 pub export fn bofRun(
@@ -903,7 +903,7 @@ pub export fn bofRun(
     if (!gstate.is_valid) return -1;
 
     if (gstate.bof_pool.getBofPtrIfValid(bof_handle)) |bof| {
-        bof.run(if (arg_data_ptr) |ptr| ptr[0..@intCast(usize, arg_data_len)] else null);
+        bof.run(if (arg_data_ptr) |ptr| ptr[0..@as(usize, @intCast(arg_data_len))] else null);
         return bof.last_run_result;
     }
     return -1;
@@ -942,10 +942,10 @@ fn bofThread(
     completion_cb: ?@import("bofapi").bof.CompletionCallback,
     user_context: ?*anyopaque,
 ) void {
-    bof.run(if (arg_data_ptr) |ptr| ptr[0..@intCast(usize, arg_data_len)] else null);
+    bof.run(if (arg_data_ptr) |ptr| ptr[0..@as(usize, @intCast(arg_data_len))] else null);
     if (completion_cb) |callback| {
         callback(
-            @bitCast(@import("bofapi").bof.Handle, bof_handle),
+            @as(@import("bofapi").bof.Handle, @bitCast(bof_handle)),
             bof.last_run_result,
             user_context,
         );
@@ -980,7 +980,7 @@ pub export fn bofGetOutput(bof_handle: BofHandle, len: ?*c_int) callconv(.C) ?[*
     if (bof == null) return null;
 
     const output_len = @min(bof.?.output_ring_num_written_bytes, Bof.max_output_len);
-    if (len != null) len.?.* = @intCast(c_int, output_len);
+    if (len != null) len.?.* = @as(c_int, @intCast(output_len));
     if (output_len == 0) return null;
 
     const slice = bof.?.output_ring.sliceLast(output_len);
@@ -992,7 +992,7 @@ pub export fn bofGetOutput(bof_handle: BofHandle, len: ?*c_int) callconv(.C) ?[*
     bof.?.output.items.len += 1;
     bof.?.output.items[output_len] = 0;
 
-    return @ptrCast([*:0]const u8, bof.?.output.items.ptr);
+    return @as([*:0]const u8, @ptrCast(bof.?.output.items.ptr));
 }
 
 pub export fn bofClearOutput(bof_handle: BofHandle) callconv(.C) void {
@@ -1057,7 +1057,7 @@ export fn allocateMemory(size: usize) callconv(.C) ?*anyopaque {
         size,
     ) catch @panic("out of memory");
 
-    gstate.allocations.?.put(@ptrToInt(mem.ptr), size) catch @panic("out of memory");
+    gstate.allocations.?.put(@intFromPtr(mem.ptr), size) catch @panic("out of memory");
 
     return mem.ptr;
 }
@@ -1067,8 +1067,8 @@ export fn freeMemory(maybe_ptr: ?*anyopaque) callconv(.C) void {
         gstate.mutex.lock();
         defer gstate.mutex.unlock();
 
-        const size = gstate.allocations.?.fetchRemove(@ptrToInt(ptr)).?.value;
-        const mem = @ptrCast([*]align(mem_alignment) u8, @alignCast(mem_alignment, ptr))[0..size];
+        const size = gstate.allocations.?.fetchRemove(@intFromPtr(ptr)).?.value;
+        const mem = @as([*]align(mem_alignment) u8, @ptrCast(@alignCast(ptr)))[0..size];
         gstate.allocator.?.free(mem);
     }
 }
@@ -1076,7 +1076,7 @@ export fn freeMemory(maybe_ptr: ?*anyopaque) callconv(.C) void {
 export fn allocateAndZeroMemory(num: usize, size: usize) callconv(.C) ?*anyopaque {
     const ptr = allocateMemory(num * size);
     if (ptr != null) {
-        @memset(@ptrCast([*]u8, ptr)[0 .. num * size], 0);
+        @memset(@as([*]u8, @ptrCast(ptr))[0 .. num * size], 0);
         return ptr;
     }
     return null;
@@ -1088,7 +1088,7 @@ export fn outputBofData(_: i32, data: [*]u8, len: i32, free_mem: i32) void {
 
     var bof = gstate.currently_running_bof.?;
 
-    const slice = data[0..@intCast(usize, len)];
+    const slice = data[0..@as(usize, @intCast(len))];
 
     bof.output_ring.writeSliceAssumeCapacity(slice);
     bof.output_ring_num_written_bytes += slice.len;
@@ -1156,91 +1156,91 @@ fn init() !void {
     const impl = @import("beacon/beacon_impl.zig");
     const is32w = @import("builtin").cpu.arch == .x86 and @import("builtin").os.tag == .windows;
 
-    try gstate.func_lookup.put(if (is32w) "_BeaconPrintf" else "BeaconPrintf", @ptrToInt(&impl.BeaconPrintf));
-    try gstate.func_lookup.put(if (is32w) "_BeaconOutput" else "BeaconOutput", @ptrToInt(&impl.BeaconOutput));
+    try gstate.func_lookup.put(if (is32w) "_BeaconPrintf" else "BeaconPrintf", @intFromPtr(&impl.BeaconPrintf));
+    try gstate.func_lookup.put(if (is32w) "_BeaconOutput" else "BeaconOutput", @intFromPtr(&impl.BeaconOutput));
     try gstate.func_lookup.put(
         if (is32w) "_BeaconDataParse" else "BeaconDataParse",
-        @ptrToInt(&impl.BeaconDataParse),
+        @intFromPtr(&impl.BeaconDataParse),
     );
-    try gstate.func_lookup.put(if (is32w) "_BeaconDataInt" else "BeaconDataInt", @ptrToInt(&impl.BeaconDataInt));
+    try gstate.func_lookup.put(if (is32w) "_BeaconDataInt" else "BeaconDataInt", @intFromPtr(&impl.BeaconDataInt));
     try gstate.func_lookup.put(
         if (is32w) "_BeaconDataShort" else "BeaconDataShort",
-        @ptrToInt(&impl.BeaconDataShort),
+        @intFromPtr(&impl.BeaconDataShort),
     );
     try gstate.func_lookup.put(
         if (is32w) "_BeaconDataUSize" else "BeaconDataUSize",
-        @ptrToInt(&impl.BeaconDataUSize),
+        @intFromPtr(&impl.BeaconDataUSize),
     );
     try gstate.func_lookup.put(
         if (is32w) "_BeaconDataExtract" else "BeaconDataExtract",
-        @ptrToInt(&impl.BeaconDataExtract),
+        @intFromPtr(&impl.BeaconDataExtract),
     );
     try gstate.func_lookup.put(
         if (is32w) "_BeaconDataLength" else "BeaconDataLength",
-        @ptrToInt(&impl.BeaconDataLength),
+        @intFromPtr(&impl.BeaconDataLength),
     );
     try gstate.func_lookup.put(
         if (is32w) "_BeaconFormatAlloc" else "BeaconFormatAlloc",
-        @ptrToInt(&impl.BeaconFormatAlloc),
+        @intFromPtr(&impl.BeaconFormatAlloc),
     );
     try gstate.func_lookup.put(
         if (is32w) "_BeaconFormatReset" else "BeaconFormatReset",
-        @ptrToInt(&impl.BeaconFormatReset),
+        @intFromPtr(&impl.BeaconFormatReset),
     );
     try gstate.func_lookup.put(
         if (is32w) "_BeaconFormatFree" else "BeaconFormatFree",
-        @ptrToInt(&impl.BeaconFormatFree),
+        @intFromPtr(&impl.BeaconFormatFree),
     );
     try gstate.func_lookup.put(
         if (is32w) "_BeaconFormatAppend" else "BeaconFormatAppend",
-        @ptrToInt(&impl.BeaconFormatAppend),
+        @intFromPtr(&impl.BeaconFormatAppend),
     );
     try gstate.func_lookup.put(
         if (is32w) "_BeaconFormatPrintf" else "BeaconFormatPrintf",
-        @ptrToInt(&impl.BeaconFormatPrintf),
+        @intFromPtr(&impl.BeaconFormatPrintf),
     );
     try gstate.func_lookup.put(
         if (is32w) "_BeaconFormatToString" else "BeaconFormatToString",
-        @ptrToInt(&impl.BeaconFormatToString),
+        @intFromPtr(&impl.BeaconFormatToString),
     );
     try gstate.func_lookup.put(
         if (is32w) "_BeaconFormatInt" else "BeaconFormatInt",
-        @ptrToInt(&impl.BeaconFormatInt),
+        @intFromPtr(&impl.BeaconFormatInt),
     );
-    try gstate.func_lookup.put(if (is32w) "_getOSName" else "getOSName", @ptrToInt(&impl.getOSName));
-    try gstate.func_lookup.put(if (is32w) "_getEnviron" else "getEnviron", @ptrToInt(&impl.getEnviron));
-    try gstate.func_lookup.put(if (is32w) "_memset" else "memset", @ptrToInt(&memset));
-    try gstate.func_lookup.put(if (is32w) "_memcpy" else "memcpy", @ptrToInt(&memcpy));
-    try gstate.func_lookup.put(if (is32w) "_calloc" else "calloc", @ptrToInt(&allocateAndZeroMemory));
-    try gstate.func_lookup.put(if (is32w) "_free" else "free", @ptrToInt(&freeMemory));
-    try gstate.func_lookup.put(if (is32w) "___ashlti3" else "__ashlti3", @ptrToInt(&__ashlti3));
-    try gstate.func_lookup.put(if (is32w) "___ashldi3" else "__ashldi3", @ptrToInt(&__ashldi3));
-    try gstate.func_lookup.put(if (is32w) "___udivdi3" else "__udivdi3", @ptrToInt(&__udivdi3));
-    try gstate.func_lookup.put(if (is32w) "___divti3" else "__divti3", @ptrToInt(&__divti3));
-    try gstate.func_lookup.put(if (is32w) "___divdi3" else "__divdi3", @ptrToInt(&__divdi3));
-    try gstate.func_lookup.put(if (is32w) "___modti3" else "__modti3", @ptrToInt(&__modti3));
+    try gstate.func_lookup.put(if (is32w) "_getOSName" else "getOSName", @intFromPtr(&impl.getOSName));
+    try gstate.func_lookup.put(if (is32w) "_getEnviron" else "getEnviron", @intFromPtr(&impl.getEnviron));
+    try gstate.func_lookup.put(if (is32w) "_memset" else "memset", @intFromPtr(&memset));
+    try gstate.func_lookup.put(if (is32w) "_memcpy" else "memcpy", @intFromPtr(&memcpy));
+    try gstate.func_lookup.put(if (is32w) "_calloc" else "calloc", @intFromPtr(&allocateAndZeroMemory));
+    try gstate.func_lookup.put(if (is32w) "_free" else "free", @intFromPtr(&freeMemory));
+    try gstate.func_lookup.put(if (is32w) "___ashlti3" else "__ashlti3", @intFromPtr(&__ashlti3));
+    try gstate.func_lookup.put(if (is32w) "___ashldi3" else "__ashldi3", @intFromPtr(&__ashldi3));
+    try gstate.func_lookup.put(if (is32w) "___udivdi3" else "__udivdi3", @intFromPtr(&__udivdi3));
+    try gstate.func_lookup.put(if (is32w) "___divti3" else "__divti3", @intFromPtr(&__divti3));
+    try gstate.func_lookup.put(if (is32w) "___divdi3" else "__divdi3", @intFromPtr(&__divdi3));
+    try gstate.func_lookup.put(if (is32w) "___modti3" else "__modti3", @intFromPtr(&__modti3));
 
     if (@import("builtin").os.tag == .windows) {
         switch (@import("builtin").cpu.arch) {
             .x86_64 => {
-                try gstate.func_lookup.put("WriteFile", @ptrToInt(&w32.WriteFile));
-                try gstate.func_lookup.put("GetLastError", @ptrToInt(&w32.GetLastError));
-                try gstate.func_lookup.put("ExitProcess", @ptrToInt(&w32.ExitProcess));
-                try gstate.func_lookup.put("VirtualAlloc", @ptrToInt(&w32.VirtualAlloc));
-                try gstate.func_lookup.put("VirtualFree", @ptrToInt(&w32.VirtualFree));
-                try gstate.func_lookup.put("LoadLibraryA", @ptrToInt(&w32.LoadLibraryA));
-                try gstate.func_lookup.put("GetModuleHandleA", @ptrToInt(&w32.GetModuleHandleA));
-                try gstate.func_lookup.put("GetProcAddress", @ptrToInt(&w32.GetProcAddress));
+                try gstate.func_lookup.put("WriteFile", @intFromPtr(&w32.WriteFile));
+                try gstate.func_lookup.put("GetLastError", @intFromPtr(&w32.GetLastError));
+                try gstate.func_lookup.put("ExitProcess", @intFromPtr(&w32.ExitProcess));
+                try gstate.func_lookup.put("VirtualAlloc", @intFromPtr(&w32.VirtualAlloc));
+                try gstate.func_lookup.put("VirtualFree", @intFromPtr(&w32.VirtualFree));
+                try gstate.func_lookup.put("LoadLibraryA", @intFromPtr(&w32.LoadLibraryA));
+                try gstate.func_lookup.put("GetModuleHandleA", @intFromPtr(&w32.GetModuleHandleA));
+                try gstate.func_lookup.put("GetProcAddress", @intFromPtr(&w32.GetProcAddress));
             },
             .x86 => {
-                try gstate.func_lookup.put("_WriteFile@20", @ptrToInt(&w32.WriteFile));
-                try gstate.func_lookup.put("_GetLastError@0", @ptrToInt(&w32.GetLastError));
-                try gstate.func_lookup.put("_ExitProcess@4", @ptrToInt(&w32.ExitProcess));
-                try gstate.func_lookup.put("_VirtualAlloc@16", @ptrToInt(&w32.VirtualAlloc));
-                try gstate.func_lookup.put("_VirtualFree@12", @ptrToInt(&w32.VirtualFree));
-                try gstate.func_lookup.put("_LoadLibraryA@4", @ptrToInt(&w32.LoadLibraryA));
-                try gstate.func_lookup.put("_GetModuleHandleA@4", @ptrToInt(&w32.GetModuleHandleA));
-                try gstate.func_lookup.put("_GetProcAddress@8", @ptrToInt(&w32.GetProcAddress));
+                try gstate.func_lookup.put("_WriteFile@20", @intFromPtr(&w32.WriteFile));
+                try gstate.func_lookup.put("_GetLastError@0", @intFromPtr(&w32.GetLastError));
+                try gstate.func_lookup.put("_ExitProcess@4", @intFromPtr(&w32.ExitProcess));
+                try gstate.func_lookup.put("_VirtualAlloc@16", @intFromPtr(&w32.VirtualAlloc));
+                try gstate.func_lookup.put("_VirtualFree@12", @intFromPtr(&w32.VirtualFree));
+                try gstate.func_lookup.put("_LoadLibraryA@4", @intFromPtr(&w32.LoadLibraryA));
+                try gstate.func_lookup.put("_GetModuleHandleA@4", @intFromPtr(&w32.GetModuleHandleA));
+                try gstate.func_lookup.put("_GetProcAddress@8", @intFromPtr(&w32.GetProcAddress));
             },
             else => unreachable,
         }
