@@ -49,8 +49,6 @@ pub fn build(b: *std.build.Builder, options: Options) *std.Build.CompileStep {
 
 fn buildLib(lib: *std.Build.CompileStep) void {
     lib.force_pic = true;
-    lib.strip = true;
-
     lib.addIncludePath(thisDir() ++ "/../include");
     lib.addCSourceFile(thisDir() ++ "/src/beacon/beacon_impl.c", &.{"-std=c99"});
     lib.addCSourceFile(thisDir() ++ "/src/beacon/stb_sprintf.c", &.{ "-std=c99", "-fno-sanitize=undefined" });
