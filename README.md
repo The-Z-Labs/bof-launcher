@@ -1,5 +1,9 @@
 # Beacon Object File (BOF) launcher
 
+<p align="center">
+  <img src="https://github.com/The-Z-Labs/bof-launcher/assets/4785347/2d43ec3f-c230-426b-8f0f-b7ead45442b5" />
+</p>
+
 ## Introduction
 
 [Cobalt Strike 4.1](https://www.cobaltstrike.com/blog/cobalt-strike-4-1-the-mark-of-injection/) released on 25 June 2020, introduced a novel (for that time) capability of running so called [Beacon Object Files](https://hstechdocs.helpsystems.com/manuals/cobaltstrike/current/userguide/content/topics/beacon-object-files_main.htm) - *small post-ex capabilities that execute in [Beacon](https://www.cobaltstrike.com/), parse arguments, call a few Win32 APIs, report output, and exit*. Since that time BOFs became very popular and the demand to launch/execute them in other environments than [Cobalt Strike's Beacon](https://www.cobaltstrike.com/) has emerged.
