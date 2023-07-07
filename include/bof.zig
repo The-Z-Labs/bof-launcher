@@ -1,5 +1,18 @@
 pub const Handle = packed struct(u32) { bits: u32 };
 
+pub const Event = opaque {
+    pub const release = bofEventRelease;
+    extern fn bofEventRelease(event: *Event) callconv(.C) void;
+
+    pub fn isComplete(event: *Event) bool {
+        return bofEventIsComplete(event) != 0;
+    }
+    extern fn bofEventIsComplete(event: *Event) callconv(.C) c_int;
+
+    pub const wait = bofEventWait;
+    extern fn bofEventWait(event: *Event) callconv(.C) void;
+};
+
 pub const CompletionCallback = *const fn (
     bof_handle: Handle,
     run_result: c_int,
@@ -30,6 +43,16 @@ extern fn bofIsLoaded(bof_handle: Handle) c_int;
 pub const run = bofRun;
 extern fn bofRun(bof_handle: Handle, arg_data_ptr: ?[*]u8, arg_data_len: c_int) callconv(.C) c_int;
 
+pub const runAsync = bofRunAsync;
+extern fn bofRunAsync(
+    bof_handle: Handle,
+    arg_data_ptr: ?[*]u8,
+    arg_data_len: c_int,
+    completion_cb: ?CompletionCallback,
+    completion_cb_context: ?*anyopaque,
+    out_event: ?**Event,
+) callconv(.C) c_int;
+
 /// Returns value returned from bof (zero or greater)
 /// Returns negative value when error occurs
 pub const loadAndRun = bofLoadAndRun;
@@ -40,15 +63,6 @@ extern fn bofLoadAndRun(
     arg_data_ptr: ?[*]u8,
     arg_data_len: c_int,
     out_bof_handle: ?*Handle,
-) callconv(.C) c_int;
-
-pub const runAsync = bofRunAsync;
-extern fn bofRunAsync(
-    bof_handle: Handle,
-    arg_data_ptr: ?[*]u8,
-    arg_data_len: c_int,
-    completion_cb: ?CompletionCallback,
-    user_context: ?*anyopaque,
 ) callconv(.C) c_int;
 
 /// Returns zero on success

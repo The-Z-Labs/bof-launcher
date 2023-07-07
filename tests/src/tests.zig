@@ -279,19 +279,24 @@ test "bof-launcher.bofs.runAsync" {
     var context2 = UserContext{ .id = 2 };
     var context3 = UserContext{ .id = 3 };
 
+    var event1: *bof.Event = undefined;
     try expect(0 == bof.runAsync(
         bof_handle,
         @as([*]u8, @ptrCast(@constCast(std.mem.asBytes(&[_]i32{ 8, context1.id })))),
         8,
-        completionCallback,
-        @as(*UserContext, @ptrCast(&context1)),
+        null,
+        null,
+        &event1,
     ));
+    defer event1.release();
+
     try expect(0 == bof.runAsync(
         bof_handle,
         @as([*]u8, @ptrCast(@constCast(std.mem.asBytes(&[_]i32{ 8, context2.id })))),
         8,
         completionCallback,
         @as(*UserContext, @ptrCast(&context2)),
+        null,
     ));
     try expect(0 == bof.runAsync(
         bof_handle,
@@ -299,9 +304,10 @@ test "bof-launcher.bofs.runAsync" {
         8,
         completionCallback,
         @as(*UserContext, @ptrCast(&context3)),
+        null,
     ));
 
-    context1.done_event.wait();
+    event1.wait();
     context2.done_event.wait();
     context3.done_event.wait();
 

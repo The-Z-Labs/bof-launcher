@@ -5,6 +5,7 @@ extern "C" {
 #endif
 
 typedef struct BofHandle { unsigned int bits; } BofHandle;
+typedef void BofEvent;
 
 typedef void (*BofCompletionCallback)(BofHandle bof_handle, int run_result, void* user_context);
 
@@ -30,6 +31,17 @@ int bofIsLoaded(BofHandle bof_handle);
 /// Returns negative value when error occurs
 int bofRun(BofHandle bof_handle, unsigned char* arg_data_ptr, int arg_data_len);
 
+int bofRunAsync(BofHandle bof_handle,
+                unsigned char* arg_data_ptr,
+                int arg_data_len,
+                BofCompletionCallback completion_cb, // optional (can be NULL)
+                void* completion_cb_context, // optional (can be NULL)
+                BofEvent** out_event); // optional (can be NULL)
+
+int bofEventIsComplete(BofEvent* event);
+void bofEventWait(BofEvent* event);
+void bofEventRelease(BofEvent* event);
+
 /// Returns value returned from bof (zero or greater)
 /// Returns negative value when error occurs
 int bofLoadAndRun(const char* bof_name_or_id,
@@ -39,17 +51,12 @@ int bofLoadAndRun(const char* bof_name_or_id,
                   int arg_data_len,
                   BofHandle* out_bof_handle); // optional (can be NULL)
 
-int bofRunAsync(BofHandle bof_handle,
-                unsigned char* arg_data_ptr,
-                int arg_data_len,
-                BofCompletionCallback completion_cb,
-                void* user_context);
-
 /// Returns zero on success
 /// Returns negative value when error occurs
 int bofPackArg(BofArgData* data, unsigned char* arg, int arg_len);
 
-const char* bofGetOutput(BofHandle bof_handle, int *out_output_len);
+const char* bofGetOutput(BofHandle bof_handle,
+                         int *out_output_len); // optional (can be NULL)
 
 void bofClearOutput(BofHandle bof_handle);
 
