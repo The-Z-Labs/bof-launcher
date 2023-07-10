@@ -1,16 +1,16 @@
 pub const Handle = packed struct(u32) { bits: u32 };
 
-pub const Event = opaque {
-    pub const release = bofEventRelease;
-    extern fn bofEventRelease(event: *Event) callconv(.C) void;
+pub const Context = opaque {
+    pub const release = bofContextRelease;
+    extern fn bofContextRelease(context: *Context) callconv(.C) void;
 
-    pub fn isComplete(event: *Event) bool {
-        return bofEventIsComplete(event) != 0;
+    pub fn isRunning(context: *Context) bool {
+        return bofContextIsRunning(context) != 0;
     }
-    extern fn bofEventIsComplete(event: *Event) callconv(.C) c_int;
+    extern fn bofContextIsRunning(context: *Context) callconv(.C) c_int;
 
-    pub const wait = bofEventWait;
-    extern fn bofEventWait(event: *Event) callconv(.C) void;
+    pub const wait = bofContextWait;
+    extern fn bofContextWait(context: *Context) callconv(.C) void;
 };
 
 pub const CompletionCallback = *const fn (
@@ -50,19 +50,7 @@ extern fn bofRunAsync(
     arg_data_len: c_int,
     completion_cb: ?CompletionCallback,
     completion_cb_context: ?*anyopaque,
-    out_event: ?**Event,
-) callconv(.C) c_int;
-
-/// Returns value returned from bof (zero or greater)
-/// Returns negative value when error occurs
-pub const loadAndRun = bofLoadAndRun;
-extern fn bofLoadAndRun(
-    bof_name_or_id: [*:0]const u8,
-    file_data_ptr: [*]const u8,
-    file_data_len: c_int,
-    arg_data_ptr: ?[*]u8,
-    arg_data_len: c_int,
-    out_bof_handle: ?*Handle,
+    out_context: **Context,
 ) callconv(.C) c_int;
 
 /// Returns zero on success

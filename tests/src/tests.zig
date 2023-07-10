@@ -14,14 +14,11 @@ fn runBofFromFile(
     const file_data = file.reader().readAllAlloc(allocator, 16 * 1024 * 1024) catch unreachable;
     defer allocator.free(file_data);
 
-    return bof.loadAndRun(
-        bof_name,
-        file_data.ptr,
-        @as(i32, @intCast(file_data.len)),
-        arg_data_ptr,
-        arg_data_len,
-        null,
-    );
+    var bof_handle: bof.Handle = undefined;
+    _ = bof.load(bof_name, file_data.ptr, @intCast(file_data.len), &bof_handle);
+    defer bof.unload(bof_handle);
+
+    return bof.run(bof_handle, arg_data_ptr, arg_data_len);
 }
 
 fn testRunBofFromFile(
@@ -133,7 +130,7 @@ test "bof-launcher.ctest.basic1" {
     const bof_data = try loadBofFromFile(allocator, "zig-out/bin/test_obj0");
     defer allocator.free(bof_data);
 
-    try expect(ctestBasic1(bof_data.ptr, @as(c_int, @intCast(bof_data.len))) == 1);
+    try expect(ctestBasic1(bof_data.ptr, @intCast(bof_data.len)) == 1);
 }
 
 extern fn ctestBasic2(file_data: [*]const u8, file_size: c_int) c_int;
@@ -145,7 +142,7 @@ test "bof-launcher.ctest.basic2" {
     const bof_data = try loadBofFromFile(allocator, "zig-out/bin/test_obj0");
     defer allocator.free(bof_data);
 
-    try expect(ctestBasic2(bof_data.ptr, @as(c_int, @intCast(bof_data.len))) == 1);
+    try expect(ctestBasic2(bof_data.ptr, @intCast(bof_data.len)) == 1);
 }
 
 test "bof-launcher.bofs.load_run" {
@@ -160,11 +157,11 @@ test "bof-launcher.bofs.load_run" {
     defer allocator.free(bof_data1);
 
     var bof_handle0: bof.Handle = undefined;
-    try expect(0 == bof.load("test_obj1", bof_data0.ptr, @as(c_int, @intCast(bof_data0.len)), &bof_handle0));
+    try expect(0 == bof.load("test_obj1", bof_data0.ptr, @intCast(bof_data0.len), &bof_handle0));
     defer bof.unload(bof_handle0);
 
     var bof_handle1: bof.Handle = undefined;
-    try expect(0 == bof.load("test_obj2", bof_data1.ptr, @as(c_int, @intCast(bof_data1.len)), &bof_handle1));
+    try expect(0 == bof.load("test_obj2", bof_data1.ptr, @intCast(bof_data1.len), &bof_handle1));
     defer bof.unload(bof_handle1);
 
     try expect(1 == bof.isLoaded(bof_handle0));
@@ -177,11 +174,11 @@ test "bof-launcher.bofs.load_run" {
     try expect(bof.getOutput(bof_handle0) == null);
     try expect(bof.getOutput(bof_handle1) == null);
 
-    try expect(6 == bof.run(bof_handle0, &bytes, @as(c_int, @intCast(bytes.len))));
-    try expect(15 == bof.run(bof_handle1, &bytes, @as(c_int, @intCast(bytes.len))));
-    try expect(15 == bof.run(bof_handle1, &bytes, @as(c_int, @intCast(bytes.len))));
-    try expect(6 == bof.run(bof_handle0, &bytes, @as(c_int, @intCast(bytes.len))));
-    try expect(15 == bof.run(bof_handle1, &bytes, @as(c_int, @intCast(bytes.len))));
+    try expect(6 == bof.run(bof_handle0, &bytes, @intCast(bytes.len)));
+    try expect(15 == bof.run(bof_handle1, &bytes, @intCast(bytes.len)));
+    try expect(15 == bof.run(bof_handle1, &bytes, @intCast(bytes.len)));
+    try expect(6 == bof.run(bof_handle0, &bytes, @intCast(bytes.len)));
+    try expect(15 == bof.run(bof_handle1, &bytes, @intCast(bytes.len)));
 
     try expect(bof.getOutput(bof_handle0) != null);
     if (bof.getOutput(bof_handle0)) |output| {
@@ -191,19 +188,19 @@ test "bof-launcher.bofs.load_run" {
     bof.clearOutput(bof_handle0);
     try expect(bof.getOutput(bof_handle0) == null);
 
-    try expect(6 == bof.run(bof_handle0, &bytes, @as(c_int, @intCast(bytes.len))));
+    try expect(6 == bof.run(bof_handle0, &bytes, @intCast(bytes.len)));
     try expect(bof.getOutput(bof_handle0) != null);
     if (bof.getOutput(bof_handle0)) |output| {
         std.debug.print("{s}", .{output});
     }
 
     bof.unload(bof_handle0);
-    try expect(bof.run(bof_handle0, &bytes, @as(c_int, @intCast(bytes.len))) < 0);
+    try expect(bof.run(bof_handle0, &bytes, @intCast(bytes.len)) < 0);
     try expect(bof.getOutput(bof_handle0) == null);
 
     bof.unload(bof_handle1);
     bof.unload(bof_handle1);
-    try expect(bof.run(bof_handle1, &bytes, @as(c_int, @intCast(bytes.len))) < 0);
+    try expect(bof.run(bof_handle1, &bytes, @intCast(bytes.len)) < 0);
     try expect(bof.getOutput(bof_handle1) == null);
 
     try expect(0 == bof.isLoaded(bof_handle0));
@@ -221,42 +218,24 @@ test "bof-launcher.stress" {
 
     for (0..64) |i| {
         var bof_handle: bof.Handle = undefined;
-        try expect(0 == bof.loadAndRun(
+        try expect(0 == bof.load(
             "test",
             bof_data.ptr,
-            @as(c_int, @intCast(bof_data.len)),
-            null,
-            0,
+            @intCast(bof_data.len),
             &bof_handle,
         ));
+        try expect(0 == bof.run(bof_handle, null, 0));
         if (i == 63) {
             bof.unload(bof_handle);
-            try expect(0 == bof.loadAndRun(
+            try expect(0 == bof.load(
                 "test",
                 bof_data.ptr,
-                @as(c_int, @intCast(bof_data.len)),
-                null,
-                0,
+                @intCast(bof_data.len),
                 &bof_handle,
             ));
+            try expect(0 == bof.run(bof_handle, null, 0));
         }
     }
-}
-
-const UserContext = struct {
-    id: i32,
-    done_event: std.Thread.ResetEvent = .{},
-};
-
-fn completionCallback(
-    bof_handle: bof.Handle,
-    run_result: c_int,
-    user_context: ?*anyopaque,
-) callconv(.C) void {
-    _ = bof_handle;
-    _ = run_result;
-    const context = @as(*UserContext, @ptrCast(@alignCast(user_context)));
-    context.done_event.set();
 }
 
 test "bof-launcher.bofs.runAsync" {
@@ -268,48 +247,53 @@ test "bof-launcher.bofs.runAsync" {
     defer allocator.free(bof_data);
 
     var bof_handle: bof.Handle = undefined;
-    try expect(0 == bof.load("test_async", bof_data.ptr, @as(c_int, @intCast(bof_data.len)), &bof_handle));
+    try expect(0 == bof.load("test_async", bof_data.ptr, @intCast(bof_data.len), &bof_handle));
     defer bof.unload(bof_handle);
 
     try expect(1 == bof.isLoaded(bof_handle));
 
     try expect(bof.getOutput(bof_handle) == null);
 
-    var context1 = UserContext{ .id = 1 };
-    var context2 = UserContext{ .id = 2 };
-    var context3 = UserContext{ .id = 3 };
-
-    var event1: *bof.Event = undefined;
+    var bof_context1: *bof.Context = undefined;
     try expect(0 == bof.runAsync(
         bof_handle,
-        @as([*]u8, @ptrCast(@constCast(std.mem.asBytes(&[_]i32{ 8, context1.id })))),
+        @ptrCast(@constCast(std.mem.asBytes(&[_]i32{ 8, 1 }))),
         8,
         null,
         null,
-        &event1,
+        &bof_context1,
     ));
-    defer event1.release();
+    defer bof_context1.release();
 
+    var bof_context2: *bof.Context = undefined;
     try expect(0 == bof.runAsync(
         bof_handle,
-        @as([*]u8, @ptrCast(@constCast(std.mem.asBytes(&[_]i32{ 8, context2.id })))),
+        @ptrCast(@constCast(std.mem.asBytes(&[_]i32{ 8, 2 }))),
         8,
-        completionCallback,
-        @as(*UserContext, @ptrCast(&context2)),
         null,
+        null,
+        &bof_context2,
     ));
+    defer bof_context2.release();
+
+    var bof_context3: *bof.Context = undefined;
     try expect(0 == bof.runAsync(
         bof_handle,
-        @as([*]u8, @ptrCast(@constCast(std.mem.asBytes(&[_]i32{ 8, context3.id })))),
+        @ptrCast(@constCast(std.mem.asBytes(&[_]i32{ 8, 3 }))),
         8,
-        completionCallback,
-        @as(*UserContext, @ptrCast(&context3)),
         null,
+        null,
+        &bof_context3,
     ));
+    defer bof_context3.release();
 
-    event1.wait();
-    context2.done_event.wait();
-    context3.done_event.wait();
+    bof_context1.wait();
+    bof_context2.wait();
+    bof_context3.wait();
+
+    try expect(bof_context1.isRunning() == false);
+    try expect(bof_context2.isRunning() == false);
+    try expect(bof_context3.isRunning() == false);
 
     std.debug.print("{s}", .{bof.getOutput(bof_handle).?});
 }
@@ -348,15 +332,19 @@ test "bof-launcher.info" {
     defer allocator.free(bof_data);
 
     var bof_handle: bof.Handle = undefined;
-    try expect(0 == bof.loadAndRun(
+    try expect(0 == bof.load(
         "test_obj3",
         bof_data.ptr,
-        @as(c_int, @intCast(bof_data.len)),
-        written.ptr,
-        @as(i32, @intCast(written.len)),
+        @intCast(bof_data.len),
         &bof_handle,
     ));
     defer bof.unload(bof_handle);
+
+    try expect(0 == bof.run(
+        bof_handle,
+        written.ptr,
+        @intCast(written.len),
+    ));
 
     std.debug.print("{s}", .{bof.getOutput(bof_handle).?});
 

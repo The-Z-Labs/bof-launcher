@@ -909,52 +909,28 @@ pub export fn bofRun(
     return -1;
 }
 
-pub export fn bofLoadAndRun(
-    bof_name_or_id: [*:0]const u8,
-    file_data_ptr: [*]const u8,
-    file_data_len: c_int,
-    arg_data_ptr: ?[*]u8,
-    arg_data_len: c_int,
-    out_bof_handle: ?*BofHandle,
-) callconv(.C) c_int {
-    var bof_handle: BofHandle = undefined;
-
-    const load_result = bofLoad(bof_name_or_id, file_data_ptr, file_data_len, &bof_handle);
-    if (load_result < 0) return load_result;
-
-    const run_result = bofRun(bof_handle, arg_data_ptr, arg_data_len);
-    if (run_result < 0) return run_result;
-
-    if (out_bof_handle == null) {
-        gstate.bof_pool.unloadBofAndDeallocateHandle(bof_handle);
-    } else {
-        out_bof_handle.?.* = bof_handle;
-    }
-
-    return run_result;
-}
-
 fn bofThread(
     bof: *Bof,
     arg_data: ?[]u8,
     bof_handle: BofHandle,
     completion_cb: ?@import("bofapi").bof.CompletionCallback,
     completion_cb_context: ?*anyopaque,
-    event: ?*std.Thread.ResetEvent,
+    context: *BofContext,
 ) void {
     bof.run(arg_data);
     if (arg_data) |ad| gstate.allocator.?.free(ad);
 
     if (completion_cb) |callback| {
-        callback(
-            @as(@import("bofapi").bof.Handle, @bitCast(bof_handle)),
-            bof.last_run_result,
-            completion_cb_context,
-        );
+        callback(@bitCast(bof_handle), bof.last_run_result, completion_cb_context);
     }
 
-    if (event) |evt| evt.set();
+    context.done_event.set();
 }
+
+const BofContext = struct {
+    done_event: std.Thread.ResetEvent = .{},
+    handle: BofHandle,
+};
 
 fn runAsync(
     bof_handle: BofHandle,
@@ -962,16 +938,16 @@ fn runAsync(
     arg_data_len: c_int,
     completion_cb: ?@import("bofapi").bof.CompletionCallback,
     completion_cb_context: ?*anyopaque,
-    out_event: ?**@import("bofapi").bof.Event,
+    out_context: **@import("bofapi").bof.Context,
 ) !void {
-    const event = if (out_event != null) blk: {
-        const event_ptr = try gstate.allocator.?.create(std.Thread.ResetEvent);
-        event_ptr.* = std.Thread.ResetEvent{};
-        out_event.?.* = @ptrCast(event_ptr);
-        break :blk event_ptr;
-    } else null;
+    const context = blk: {
+        const context_ptr = try gstate.allocator.?.create(BofContext);
+        context_ptr.* = .{ .handle = bof_handle };
+        out_context.* = @ptrCast(context_ptr);
+        break :blk context_ptr;
+    };
     errdefer {
-        if (event) |evt| gstate.allocator.?.destroy(evt);
+        gstate.allocator.?.destroy(context);
     }
 
     const arg_data = if (arg_data_ptr) |ptr| blk: {
@@ -987,7 +963,7 @@ fn runAsync(
         const thread = try std.Thread.spawn(
             .{},
             bofThread,
-            .{ bof, arg_data, bof_handle, completion_cb, completion_cb_context, event },
+            .{ bof, arg_data, bof_handle, completion_cb, completion_cb_context, context },
         );
         thread.detach();
     } else unreachable;
@@ -999,7 +975,7 @@ pub export fn bofRunAsync(
     arg_data_len: c_int,
     completion_cb: ?@import("bofapi").bof.CompletionCallback,
     completion_cb_context: ?*anyopaque,
-    out_event: ?**@import("bofapi").bof.Event,
+    out_event: **@import("bofapi").bof.Context,
 ) callconv(.C) c_int {
     if (!gstate.is_valid) return -1;
     if (!gstate.bof_pool.isBofValid(bof_handle)) return 0; // ignore (no error)
@@ -1014,19 +990,22 @@ pub export fn bofRunAsync(
     return 0;
 }
 
-pub export fn bofEventRelease(event: *@import("bofapi").bof.Event) void {
+pub export fn bofContextRelease(context: *@import("bofapi").bof.Context) void {
     if (!gstate.is_valid) return;
-    gstate.allocator.?.destroy(@as(*std.Thread.ResetEvent, @ptrCast(@alignCast(event))));
+    const ctx = @as(*BofContext, @ptrCast(@alignCast(context)));
+    gstate.allocator.?.destroy(ctx);
 }
 
-pub export fn bofEventIsComplete(event: *@import("bofapi").bof.Event) c_int {
+pub export fn bofContextIsRunning(context: *@import("bofapi").bof.Context) c_int {
     if (!gstate.is_valid) return 0;
-    return @intFromBool(@as(*std.Thread.ResetEvent, @ptrCast(@alignCast(event))).isSet());
+    const ctx = @as(*BofContext, @ptrCast(@alignCast(context)));
+    return @intFromBool(ctx.done_event.isSet() == false);
 }
 
-pub export fn bofEventWait(event: *@import("bofapi").bof.Event) void {
+pub export fn bofContextWait(context: *@import("bofapi").bof.Context) void {
     if (!gstate.is_valid) return;
-    @as(*std.Thread.ResetEvent, @ptrCast(@alignCast(event))).wait();
+    const ctx = @as(*BofContext, @ptrCast(@alignCast(context)));
+    ctx.done_event.wait();
 }
 
 pub export fn bofGetOutput(bof_handle: BofHandle, len: ?*c_int) callconv(.C) ?[*:0]const u8 {

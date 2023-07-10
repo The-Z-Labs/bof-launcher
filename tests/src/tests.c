@@ -46,8 +46,5 @@ int ctestBasic2(const unsigned char* file_data, int file_size) {
     if (output == NULL) return 0;
     if (output_len == 0) return 0;
 
-    BofHandle bof_handle1;
-    if (bofLoadAndRun("ctestBasic2", file_data, file_size, NULL, 0, &bof_handle1) < 0) return 0;
-
     return 1;
 }

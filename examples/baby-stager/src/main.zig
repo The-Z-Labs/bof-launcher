@@ -153,33 +153,32 @@ pub fn main() !u8 {
 
                 if (std.mem.eql(u8, exec_mode, "inline")) {
                     stdout.writer().print("Execution mode: {s}-based\n", .{exec_mode}) catch unreachable;
-                    _ = bof.loadAndRun(
-                        "dsfsdf",
-                        bof_content.ptr,
-                        @as(i32, @intCast(bof_content.len)),
-                        @constCast(bof_args.ptr),
-                        @as(i32, @intCast(bof_args.len)),
-                        &bof_handle,
-                    );
+                    _ = bof.load("dsfsdf", bof_content.ptr, @intCast(bof_content.len), &bof_handle);
                     //defer bof.unload(bof_handle);
+
+                    _ = bof.run(
+                        bof_handle,
+                        @constCast(bof_args.ptr),
+                        @intCast(bof_args.len),
+                    );
 
                     //stdout.writer().print("Bof output:\n{s}", .{bof.getOutput(bof_handle).?}) catch unreachable;
                 } else if (std.mem.eql(u8, exec_mode, "thread")) {
                     stdout.writer().print("Execution mode: {s}-based\n", .{exec_mode}) catch unreachable;
 
-                    _ = bof.load("sgsfgr", bof_content.ptr, @as(c_int, @intCast(bof_content.len)), &bof_handle);
+                    _ = bof.load("sgsfgr", bof_content.ptr, @intCast(bof_content.len), &bof_handle);
                     //defer bof.unload(bof_handle);
 
-                    var event: *bof.Event = undefined;
+                    var context: *bof.Context = undefined;
                     _ = bof.runAsync(
                         bof_handle,
                         @constCast(bof_args.ptr),
-                        @as(i32, @intCast(bof_args.len)),
+                        @intCast(bof_args.len),
                         null,
                         null,
-                        &event,
+                        &context,
                     );
-                    event.wait();
+                    context.wait();
                 } else if (std.mem.eql(u8, exec_mode, "process")) {
                     stdout.writer().print("Execution mode: {s}-based\n", .{exec_mode}) catch unreachable;
                 }

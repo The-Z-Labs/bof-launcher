@@ -16,15 +16,15 @@ fn runBofFromFile(
     defer allocator.free(file_data);
 
     var bof_handle: bof.Handle = undefined;
-    const result = bof.loadAndRun(
+    _ = bof.load(
         bof_name,
         file_data.ptr,
         @as(i32, @intCast(file_data.len)),
-        arg_data_ptr,
-        arg_data_len,
         &bof_handle,
     );
     defer bof.unload(bof_handle);
+
+    const result = bof.run(bof_handle, arg_data_ptr, arg_data_len);
 
     if (bof.getOutput(bof_handle)) |output| {
         std.io.getStdOut().writer().print("{s}", .{output}) catch unreachable;

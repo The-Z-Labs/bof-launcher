@@ -5,7 +5,7 @@ extern "C" {
 #endif
 
 typedef struct BofHandle { unsigned int bits; } BofHandle;
-typedef void BofEvent;
+typedef struct BofContext BofContext;
 
 typedef void (*BofCompletionCallback)(BofHandle bof_handle, int run_result, void* user_context);
 
@@ -15,6 +15,12 @@ typedef struct BofArgData {
     int length;
     int size;
 } BofArgData;
+
+/// Returns zero on success
+/// Returns negative value when error occurs
+int bofInitLauncher(void);
+
+void bofDeinitLauncher(void);
 
 /// Returns value returned from bof (zero or greater)
 /// Returns negative value when error occurs
@@ -36,20 +42,11 @@ int bofRunAsync(BofHandle bof_handle,
                 int arg_data_len,
                 BofCompletionCallback completion_cb, // optional (can be NULL)
                 void* completion_cb_context, // optional (can be NULL)
-                BofEvent** out_event); // optional (can be NULL)
+                BofContext** out_context); // required (can't be NULL)
 
-int bofEventIsComplete(BofEvent* event);
-void bofEventWait(BofEvent* event);
-void bofEventRelease(BofEvent* event);
-
-/// Returns value returned from bof (zero or greater)
-/// Returns negative value when error occurs
-int bofLoadAndRun(const char* bof_name_or_id,
-                  const unsigned char* file_data_ptr,
-                  int file_data_len,
-                  unsigned char* arg_data_ptr,
-                  int arg_data_len,
-                  BofHandle* out_bof_handle); // optional (can be NULL)
+int bofContextIsRunning(BofContext* context);
+void bofContextWait(BofContext* context);
+void bofContextRelease(BofContext* context);
 
 /// Returns zero on success
 /// Returns negative value when error occurs
@@ -59,12 +56,6 @@ const char* bofGetOutput(BofHandle bof_handle,
                          int *out_output_len); // optional (can be NULL)
 
 void bofClearOutput(BofHandle bof_handle);
-
-/// Returns zero on success
-/// Returns negative value when error occurs
-int bofInitLauncher(void);
-
-void bofDeinitLauncher(void);
 
 #ifdef __cplusplus
 }
