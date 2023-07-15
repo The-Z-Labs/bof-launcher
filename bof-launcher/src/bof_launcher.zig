@@ -774,13 +774,77 @@ const BofPool = struct {
     }
 };
 
+const BofArgs = extern struct {
+    original: ?[*]u8 = null,
+    buffer: ?[*]u8 = null,
+    length: i32 = 0,
+    size: i32 = 0,
+
+    blob: ?[*]u8 = null,
+    const blob_size = 128;
+};
+
+pub export fn bofArgsInit(
+    out_args: **@import("bofapi").bof.Args,
+) callconv(.C) c_int {
+    const args = gstate.allocator.?.create(BofArgs) catch return -1;
+    args.* = .{};
+    out_args.* = @ptrCast(args);
+    return 0;
+}
+
+pub export fn bofArgsRelease(
+    args: *@import("bofapi").bof.Args,
+) callconv(.C) void {
+    const bof_args = @as(*BofArgs, @ptrCast(@alignCast(args)));
+    if (bof_args.blob) |b| gstate.allocator.?.free(b[0..BofArgs.blob_size]);
+    gstate.allocator.?.destroy(bof_args);
+}
+
+pub export fn bofArgsFinalize(
+    args: *@import("bofapi").bof.Args,
+) callconv(.C) void {
+    const bof_args = @as(*BofArgs, @ptrCast(@alignCast(args)));
+    if (bof_args.blob != null) {
+        bof_args.size = bof_args.size - bof_args.length;
+        const len = bof_args.size - 4;
+        std.mem.copy(u8, bof_args.original.?[0..4], std.mem.asBytes(&len));
+    }
+}
+
+pub export fn bofArgsGetBuffer(
+    args: *@import("bofapi").bof.Args,
+) callconv(.C) ?[*]u8 {
+    const bof_args = @as(*BofArgs, @ptrCast(@alignCast(args)));
+    return bof_args.original;
+}
+
+pub export fn bofArgsGetSize(
+    args: *@import("bofapi").bof.Args,
+) callconv(.C) c_int {
+    const bof_args = @as(*BofArgs, @ptrCast(@alignCast(args)));
+    return bof_args.size;
+}
+
 pub export fn bofArgsAdd(
-    params: *@import("bofapi").bof.Args,
+    args: *@import("bofapi").bof.Args,
     arg: [*]const u8,
     arg_len: c_int,
 ) callconv(.C) c_int {
     if (!gstate.is_valid) return -1;
     if (arg_len < 1) return -1;
+
+    const params = @as(*BofArgs, @ptrCast(@alignCast(args)));
+
+    if (params.blob == null) {
+        const blob = gstate.allocator.?.alloc(u8, BofArgs.blob_size) catch return -1;
+
+        params.original = blob.ptr;
+        params.buffer = blob.ptr + 4;
+        params.length = @intCast(blob.len - 4);
+        params.size = @intCast(blob.len);
+        params.blob = blob.ptr;
+    }
 
     // function checks if we're dealing with an integer or with a string, then it packs data in params
     const sArg = arg[0..@as(usize, @intCast(arg_len))];
@@ -798,17 +862,17 @@ pub export fn bofArgsAdd(
         }
 
         const arg_len_w0 = arg_len + 1;
-        std.mem.copy(u8, params.buffer[0..4], std.mem.asBytes(&arg_len_w0));
+        std.mem.copy(u8, params.buffer.?[0..4], std.mem.asBytes(&arg_len_w0));
         params.length -= 4;
-        params.buffer += 4;
+        params.buffer.? += 4;
 
-        std.mem.copy(u8, params.buffer[0..@as(usize, @intCast(arg_len))], arg[0..@as(usize, @intCast(arg_len))]);
+        std.mem.copy(u8, params.buffer.?[0..@as(usize, @intCast(arg_len))], arg[0..@as(usize, @intCast(arg_len))]);
         params.length -= arg_len;
-        params.buffer += @as(usize, @intCast(arg_len));
+        params.buffer.? += @as(usize, @intCast(arg_len));
 
-        params.buffer[0] = 0;
+        params.buffer.?[0] = 0;
         params.length -= 1;
-        params.buffer += @as(usize, @intCast(1));
+        params.buffer.? += @as(usize, @intCast(1));
     } else if (res == std.fmt.ParseIntError.Overflow) {
         // if there was overflow when parsing it to short integer than treat it as a u32 integer
 
@@ -819,18 +883,18 @@ pub export fn bofArgsAdd(
         if (arg_len > params.length)
             return -1;
 
-        std.mem.copy(u8, params.buffer[0..4], std.mem.asBytes(&numArg));
+        std.mem.copy(u8, params.buffer.?[0..4], std.mem.asBytes(&numArg));
         params.length -= 4;
-        params.buffer += 4;
+        params.buffer.? += 4;
     } else {
         // parsing as short int was successful
         print("Short param: {s} {d}", .{ sArg, sArg.len });
         if (arg_len > params.length)
             return -1;
 
-        std.mem.copy(u8, params.buffer[0..2], std.mem.asBytes(&res));
+        std.mem.copy(u8, params.buffer.?[0..2], std.mem.asBytes(&res));
         params.length -= 2;
-        params.buffer += 2;
+        params.buffer.? += 2;
     }
 
     return 0;

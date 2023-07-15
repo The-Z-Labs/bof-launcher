@@ -9,15 +9,9 @@ extern "C" {
 //------------------------------------------------------------------------------
 typedef struct BofObjectHandle { unsigned int bits; } BofObjectHandle;
 typedef struct BofContext BofContext;
+typedef struct BofArgs BofArgs;
 
 typedef void (*BofCompletionCallback)(BofContext* bof_context, void* user_context);
-
-typedef struct BofArgs {
-    char* original;
-    char* buffer;
-    int length;
-    int size;
-} BofArgs;
 //------------------------------------------------------------------------------
 //
 // Launcher functions
@@ -89,10 +83,25 @@ bofContextGetOutput(BofContext* context,
 // Args functions
 //
 //------------------------------------------------------------------------------
+int
+bofArgsInit(BofArgs** out_args);
+
+void
+bofArgsRelease(BofArgs* args);
+
 /// Returns zero on success
 /// Returns negative value when error occurs
 int
 bofArgsAdd(BofArgs* args, unsigned char* arg, int arg_len);
+
+void
+bofArgsFinalize(BofArgs* args);
+
+char*
+bofArgsGetBuffer(BofArgs* args);
+
+int
+bofArgsGetSize(BofArgs* args);
 //------------------------------------------------------------------------------
 #ifdef __cplusplus
 }

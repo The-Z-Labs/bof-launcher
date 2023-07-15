@@ -67,40 +67,24 @@ pub fn main() !u8 {
     ///////////////////////////////////////////////////////////
     // command line arguments processing: handling BOF arguments
     ///////////////////////////////////////////////////////////
-    var args: bof.Args = .{};
-    var args_blob: ?[]u8 = null;
-    defer if (args_blob) |ab| allocator.free(ab);
+    var args = try bof.Args.init();
+    defer args.release();
 
     while (iter.next()) |arg| {
-        if (args_blob == null) {
-            // TODO: Use streams
-            args_blob = try allocator.alloc(u8, 100);
-
-            args.original = args_blob.?.ptr;
-            args.buffer = args_blob.?.ptr + 4;
-            args.length = @intCast(args_blob.?.len - 4);
-            args.size = @intCast(args_blob.?.len);
-        }
         try args.add(arg.ptr, @intCast(arg.len));
     }
 
-    if (args_blob != null) {
-        // update size to real length of arguments string
-        args.size = args.size - args.length;
-
-        const len = args.size - 4;
-        std.mem.copy(u8, args.original[0..4], std.mem.asBytes(&len));
-    }
+    args.finalize();
 
     ///////////////////////////////////////////////////////////
     // run selected BOF with provided arguments
     ///////////////////////////////////////////////////////////
-    const result = try runBofFromFile(allocator, &bof_path_buffer, args.original, args.size);
-
-    //if (result < 0 or result > 255) {
-    //    stdout.writer().print("Failed to run bof\n", .{}) catch unreachable;
-    //    return error.BofError;
-    //}
+    const result = try runBofFromFile(
+        allocator,
+        &bof_path_buffer,
+        args.getBuffer(),
+        args.getSize(),
+    );
 
     return result;
 }

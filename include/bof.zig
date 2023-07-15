@@ -114,17 +114,26 @@ pub const Context = opaque {
 // Args
 //
 //------------------------------------------------------------------------------
-pub const Args = extern struct {
-    original: [*]u8 = undefined,
-    buffer: [*]u8 = undefined,
-    length: i32 = 0,
-    size: i32 = 0,
+pub const Args = opaque {
+    pub fn init() Error!*Args {
+        var args: *Args = undefined;
+        if (bofArgsInit(&args) < 0) return error.Unknown;
+        return args;
+    }
+
+    pub const release = bofArgsRelease;
+
+    pub const finalize = bofArgsFinalize;
 
     /// Returns zero on success
     /// Returns negative value when error occurs
     pub fn add(args: *Args, arg: [*]const u8, arg_len: c_int) Error!void {
         if (bofArgsAdd(args, arg, arg_len) < 0) return error.Unknown;
     }
+
+    pub const getBuffer = bofArgsGetBuffer;
+
+    pub const getSize = bofArgsGetSize;
 };
 //------------------------------------------------------------------------------
 //
@@ -167,5 +176,10 @@ extern fn bofContextGetResult(context: *Context) callconv(.C) u8;
 extern fn bofContextGetObjectHandle(context: *Context) callconv(.C) Object;
 extern fn bofContextGetOutput(context: *Context, out_output_len: ?*c_int) callconv(.C) ?[*:0]const u8;
 
+extern fn bofArgsInit(out_args: **Args) callconv(.C) c_int;
+extern fn bofArgsRelease(args: *Args) callconv(.C) void;
 extern fn bofArgsAdd(args: *Args, arg: [*]const u8, arg_len: c_int) callconv(.C) c_int;
+extern fn bofArgsFinalize(args: *Args) callconv(.C) void;
+extern fn bofArgsGetBuffer(args: *Args) callconv(.C) ?[*]u8;
+extern fn bofArgsGetSize(args: *Args) callconv(.C) c_int;
 //------------------------------------------------------------------------------
