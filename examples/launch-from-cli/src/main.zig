@@ -67,7 +67,7 @@ pub fn main() !u8 {
     ///////////////////////////////////////////////////////////
     // command line arguments processing: handling BOF arguments
     ///////////////////////////////////////////////////////////
-    var args = try bof.Args.init();
+    const args = try bof.Args.init();
     defer args.release();
 
     while (iter.next()) |arg| {
