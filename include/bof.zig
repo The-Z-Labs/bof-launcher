@@ -1,51 +1,158 @@
-pub const Handle = packed struct(u32) { bits: u32 };
+//------------------------------------------------------------------------------
+//
+// Various types
+//
+//------------------------------------------------------------------------------
+pub const Error = error{
+    Unknown,
+};
 
+pub const CompletionCallback = *const fn (
+    bof_context: *Context,
+    user_context: ?*anyopaque,
+) callconv(.C) void;
+//------------------------------------------------------------------------------
+//
+// Launcher functions
+//
+//------------------------------------------------------------------------------
+/// Returns zero on success
+/// Returns negative value when error occurs
+pub fn initLauncher() Error!void {
+    if (bofLauncherInit() < 0) return error.Unknown;
+}
+
+pub const releaseLauncher = bofLauncherRelease;
+//------------------------------------------------------------------------------
+//
+// Object
+//
+//------------------------------------------------------------------------------
+pub const Object = extern struct {
+    handle: u32,
+
+    pub fn initFromMemory(
+        file_data_ptr: [*]const u8,
+        file_data_len: c_int,
+    ) Error!Object {
+        var object: Object = undefined;
+        if (bofObjectInitFromMemory(
+            file_data_ptr,
+            file_data_len,
+            &object,
+        ) < 0) return error.Unknown;
+        return object;
+    }
+
+    pub const release = bofObjectRelease;
+
+    pub fn isValid(bof_handle: Object) bool {
+        return bofObjectIsValid(bof_handle) != 0;
+    }
+
+    pub fn run(
+        bof_handle: Object,
+        arg_data_ptr: ?[*]u8,
+        arg_data_len: c_int,
+    ) Error!*Context {
+        var context: *Context = undefined;
+        if (bofObjectRun(
+            bof_handle,
+            arg_data_ptr,
+            arg_data_len,
+            &context,
+        ) < 0) return error.Unknown;
+        return context;
+    }
+
+    pub fn runAsync(
+        bof_handle: Object,
+        arg_data_ptr: ?[*]u8,
+        arg_data_len: c_int,
+        completion_cb: ?CompletionCallback,
+        completion_cb_context: ?*anyopaque,
+    ) Error!*Context {
+        var context: *Context = undefined;
+        if (bofObjectRunAsync(
+            bof_handle,
+            arg_data_ptr,
+            arg_data_len,
+            completion_cb,
+            completion_cb_context,
+            &context,
+        ) < 0) return error.Unknown;
+        return context;
+    }
+};
+//------------------------------------------------------------------------------
+//
+// Context
+//
+//------------------------------------------------------------------------------
 pub const Context = opaque {
     pub const release = bofContextRelease;
-    extern fn bofContextRelease(context: *Context) callconv(.C) void;
 
     pub fn isRunning(context: *Context) bool {
         return bofContextIsRunning(context) != 0;
     }
-    extern fn bofContextIsRunning(context: *Context) callconv(.C) c_int;
 
     pub const wait = bofContextWait;
-    extern fn bofContextWait(context: *Context) callconv(.C) void;
+
+    pub const getResult = bofContextGetResult;
+
+    pub const getObject = bofContextGetObjectHandle;
+
+    pub fn getOutput(context: *Context) ?[]const u8 {
+        var len: c_int = 0;
+        const ptr = bofContextGetOutput(context, &len);
+        if (ptr == null) return null;
+        return ptr.?[0..@intCast(len)];
+    }
 };
-
-pub const CompletionCallback = *const fn (
-    bof_handle: Handle,
-    run_result: c_int,
-    user_context: ?*anyopaque,
-) callconv(.C) void;
-
-pub const ArgData = extern struct {
+//------------------------------------------------------------------------------
+//
+// Args
+//
+//------------------------------------------------------------------------------
+pub const Args = extern struct {
     original: [*]u8 = undefined,
     buffer: [*]u8 = undefined,
     length: i32 = 0,
     size: i32 = 0,
-};
 
-pub const load = bofLoad;
-extern fn bofLoad(
-    bof_name_or_id: [*:0]const u8,
+    /// Returns zero on success
+    /// Returns negative value when error occurs
+    pub fn add(args: *Args, arg: [*]const u8, arg_len: c_int) Error!void {
+        if (bofArgsAdd(args, arg, arg_len) < 0) return error.Unknown;
+    }
+};
+//------------------------------------------------------------------------------
+//
+// Raw C functions
+//
+//------------------------------------------------------------------------------
+extern fn bofLauncherInit() callconv(.C) c_int;
+extern fn bofLauncherRelease() callconv(.C) void;
+
+extern fn bofObjectInitFromMemory(
     file_data_ptr: [*]const u8,
     file_data_len: c_int,
-    out_bof_handle: *Handle,
+    out_bof_handle: *Object,
 ) callconv(.C) c_int;
 
-pub const unload = bofUnload;
-extern fn bofUnload(bof_handle: Handle) void;
+extern fn bofObjectRelease(bof_handle: Object) callconv(.C) void;
 
-pub const isLoaded = bofIsLoaded;
-extern fn bofIsLoaded(bof_handle: Handle) c_int;
+extern fn bofObjectIsValid(bof_handle: Object) callconv(.C) c_int;
 
-pub const run = bofRun;
-extern fn bofRun(bof_handle: Handle, arg_data_ptr: ?[*]u8, arg_data_len: c_int) callconv(.C) c_int;
+extern fn bofObjectRun(
+    bof_handle: Object,
+    arg_data_ptr: ?[*]u8,
+    arg_data_len: c_int,
+    out_context: **Context,
+) callconv(.C) c_int;
 
-pub const runAsync = bofRunAsync;
-extern fn bofRunAsync(
-    bof_handle: Handle,
+extern fn bofObjectRunAsync(
+    bof_handle: Object,
     arg_data_ptr: ?[*]u8,
     arg_data_len: c_int,
     completion_cb: ?CompletionCallback,
@@ -53,26 +160,12 @@ extern fn bofRunAsync(
     out_context: **Context,
 ) callconv(.C) c_int;
 
-/// Returns zero on success
-/// Returns negative value when error occurs
-pub const packArg = bofPackArg;
-extern fn bofPackArg(data: *ArgData, arg: [*]const u8, arg_len: c_int) callconv(.C) c_int;
+extern fn bofContextRelease(context: *Context) callconv(.C) void;
+extern fn bofContextIsRunning(context: *Context) callconv(.C) c_int;
+extern fn bofContextWait(context: *Context) callconv(.C) void;
+extern fn bofContextGetResult(context: *Context) callconv(.C) u8;
+extern fn bofContextGetObjectHandle(context: *Context) callconv(.C) Object;
+extern fn bofContextGetOutput(context: *Context, out_output_len: ?*c_int) callconv(.C) ?[*:0]const u8;
 
-pub fn getOutput(bof_handle: Handle) ?[]const u8 {
-    var len: c_int = 0;
-    const ptr = bofGetOutput(bof_handle, &len);
-    if (ptr == null) return null;
-    return ptr.?[0..@as(usize, @intCast(len))];
-}
-extern fn bofGetOutput(bof_handle: Handle, out_output_len: ?*c_int) ?[*:0]const u8;
-
-pub const clearOutput = bofClearOutput;
-extern fn bofClearOutput(bof_handle: Handle) void;
-
-/// Returns zero on success
-/// Returns negative value when error occurs
-pub const initLauncher = bofInitLauncher;
-extern fn bofInitLauncher() callconv(.C) c_int;
-
-pub const deinitLauncher = bofDeinitLauncher;
-extern fn bofDeinitLauncher() callconv(.C) void;
+extern fn bofArgsAdd(args: *Args, arg: [*]const u8, arg_len: c_int) callconv(.C) c_int;
+//------------------------------------------------------------------------------

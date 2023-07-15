@@ -14,64 +14,46 @@ const BofHandle = packed struct(u32) {
     generation: u16 = 0,
 };
 comptime {
-    assert(@sizeOf(BofHandle) == @sizeOf(@import("bofapi").bof.Handle));
+    assert(@sizeOf(BofHandle) == @sizeOf(@import("bofapi").bof.Object));
 }
 
 const Bof = struct {
-    const max_output_len = 64 * 1024;
-
-    allocator: std.mem.Allocator,
-    name_or_id: ?[]u8 = null,
-
     is_allocated: bool = false,
     is_loaded: bool = false,
-    is_running: bool = false,
 
     all_sections_mem: ?[]align(page_size) u8 = null,
 
     entry_point: ?*const fn (arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 = null,
-    last_run_result: c_int = -1,
 
-    output: std.ArrayList(u8),
-    output_ring: std.RingBuffer,
-    output_ring_num_written_bytes: usize = 0,
-
-    fn init(allocator: std.mem.Allocator) Bof {
-        return .{
-            .allocator = allocator,
-            .output_ring = std.RingBuffer.init(allocator, max_output_len) catch @panic("OOM"),
-            .output = std.ArrayList(u8).initCapacity(allocator, max_output_len + 1) catch @panic("OOM"),
-        };
+    fn init() Bof {
+        return .{};
     }
 
     fn deinit(bof: *Bof) void {
         bof.unload();
-        bof.output_ring.deinit(bof.allocator);
-        bof.output.deinit();
         bof.* = undefined;
     }
 
-    fn run(bof: *Bof, arg_data: ?[]u8) void {
+    fn run(bof: *Bof, context: *BofContext, arg_data: ?[]u8) void {
         assert(bof.is_allocated == true);
+        assert(bof.is_loaded == true);
+        assert(gstate.current_bof_context == null);
 
-        if (bof.is_loaded) {
-            print("Trying to run go()...", .{});
+        print("Trying to run go()...", .{});
 
-            assert(gstate.currently_running_bof == null);
-            gstate.currently_running_bof = bof;
-            const res = bof.entry_point.?(
-                if (arg_data) |ad| ad.ptr else null,
-                if (arg_data) |ad| @as(i32, @intCast(ad.len)) else 0,
-            );
-            gstate.currently_running_bof = null;
+        gstate.current_bof_context = context;
+        context.result = bof.entry_point.?(
+            if (arg_data) |ad| ad.ptr else null,
+            if (arg_data) |ad| @as(i32, @intCast(ad.len)) else 0,
+        );
+        gstate.current_bof_context = null;
 
-            print("Returned '{d}' from go().", .{res});
+        context.done_event.set();
 
-            bof.last_run_result = res;
-        }
+        print("Returned '{d}' from go().", .{context.result});
     }
 
-    fn load(bof: *Bof, bof_name_or_id: [*:0]const u8, file_data: []const u8) !void {
+    fn load(bof: *Bof, allocator: std.mem.Allocator, file_data: []const u8) !void {
         assert(bof.is_allocated == true);
 
         bof.unload();
@@ -81,13 +63,11 @@ const Bof = struct {
         }
 
         bof.is_loaded = true;
-        bof.name_or_id = try bof.allocator.alloc(u8, std.mem.len(bof_name_or_id));
-        std.mem.copyForwards(u8, bof.name_or_id.?, std.mem.sliceTo(bof_name_or_id, 0));
 
         if (@import("builtin").os.tag == .linux) {
-            try bof.loadElf(file_data);
+            try bof.loadElf(allocator, file_data);
         } else {
-            try bof.loadCoff(file_data);
+            try bof.loadCoff(allocator, file_data);
         }
     }
 
@@ -102,27 +82,20 @@ const Bof = struct {
                     std.os.munmap(slice);
                 }
             }
-            bof.output.clearRetainingCapacity();
-            bof.output_ring.write_index = 0;
-            bof.output_ring.read_index = 0;
-            bof.output_ring_num_written_bytes = 0;
 
-            if (bof.name_or_id) |name| bof.allocator.free(name);
-
-            bof.name_or_id = null;
             bof.entry_point = null;
             bof.is_loaded = false;
         }
     }
 
-    fn loadCoff(bof: *Bof, file_data: []const u8) !void {
+    fn loadCoff(bof: *Bof, allocator: std.mem.Allocator, file_data: []const u8) !void {
         var parser = std.coff.Coff{
             .data = file_data,
             .is_image = false,
             .coff_header_offset = 0,
         };
 
-        var arena_state = std.heap.ArenaAllocator.init(bof.allocator);
+        var arena_state = std.heap.ArenaAllocator.init(allocator);
         defer arena_state.deinit();
         const arena = arena_state.allocator();
 
@@ -491,10 +464,10 @@ const Bof = struct {
         bof.entry_point = go;
     }
 
-    fn loadElf(bof: *Bof, file_data: []const u8) !void {
+    fn loadElf(bof: *Bof, allocator: std.mem.Allocator, file_data: []const u8) !void {
         const os = std.os;
 
-        var arena_state = std.heap.ArenaAllocator.init(bof.allocator);
+        var arena_state = std.heap.ArenaAllocator.init(allocator);
         defer arena_state.deinit();
         const arena = arena_state.allocator();
 
@@ -742,7 +715,7 @@ const BofPool = struct {
         return .{
             .bofs = blk: {
                 var bofs = allocator.alloc(Bof, max_num_bofs + 1) catch @panic("OOM");
-                for (bofs) |*bof| bof.* = Bof.init(allocator);
+                for (bofs) |*bof| bof.* = Bof.init();
                 break :blk bofs;
             },
             .generations = blk: {
@@ -801,11 +774,14 @@ const BofPool = struct {
     }
 };
 
-pub export fn bofPackArg(
-    params: *@import("bofapi").bof.ArgData,
+pub export fn bofArgsAdd(
+    params: *@import("bofapi").bof.Args,
     arg: [*]const u8,
     arg_len: c_int,
 ) callconv(.C) c_int {
+    if (!gstate.is_valid) return -1;
+    if (arg_len < 1) return -1;
+
     // function checks if we're dealing with an integer or with a string, then it packs data in params
     const sArg = arg[0..@as(usize, @intCast(arg_len))];
 
@@ -860,21 +836,20 @@ pub export fn bofPackArg(
     return 0;
 }
 
-pub export fn bofLoad(
-    bof_name_or_id: [*:0]const u8,
+pub export fn bofObjectInitFromMemory(
     file_data_ptr: [*]const u8,
     file_data_len: c_int,
     out_bof_handle: ?*BofHandle,
 ) callconv(.C) c_int {
     if (out_bof_handle == null) return -1;
 
-    const res = bofInitLauncher();
+    const res = bofLauncherInit();
     if (res < 0) return res;
 
     var bof_handle = gstate.bof_pool.allocateBofHandle();
     var bof = gstate.bof_pool.getBofPtrIfValid(bof_handle).?;
 
-    bof.load(bof_name_or_id, file_data_ptr[0..@as(usize, @intCast(file_data_len))]) catch {
+    bof.load(gstate.allocator.?, file_data_ptr[0..@as(usize, @intCast(file_data_len))]) catch {
         print("Failed to load BOF. Aborting.", .{});
         return -1;
     };
@@ -883,53 +858,95 @@ pub export fn bofLoad(
     return 0;
 }
 
-pub export fn bofUnload(bof_handle: BofHandle) callconv(.C) void {
+pub export fn bofObjectRelease(bof_handle: BofHandle) callconv(.C) void {
     if (!gstate.is_valid) return;
 
     gstate.bof_pool.unloadBofAndDeallocateHandle(bof_handle);
 }
 
-pub export fn bofIsLoaded(bof_handle: BofHandle) callconv(.C) c_int {
+pub export fn bofObjectIsValid(bof_handle: BofHandle) callconv(.C) c_int {
     if (!gstate.is_valid) return 0;
 
     return @intFromBool(gstate.bof_pool.isBofValid(bof_handle));
 }
 
-pub export fn bofRun(
+fn run(
     bof_handle: BofHandle,
     arg_data_ptr: ?[*]u8,
     arg_data_len: c_int,
-) callconv(.C) c_int {
-    if (!gstate.is_valid) return -1;
+    out_context: **@import("bofapi").bof.Context,
+) !void {
+    const context = try gstate.allocator.?.create(BofContext);
+    context.* = BofContext.init(gstate.allocator.?, bof_handle);
+    errdefer {
+        context.deinit();
+        gstate.allocator.?.destroy(context);
+    }
 
     if (gstate.bof_pool.getBofPtrIfValid(bof_handle)) |bof| {
-        bof.run(if (arg_data_ptr) |ptr| ptr[0..@as(usize, @intCast(arg_data_len))] else null);
-        return bof.last_run_result;
-    }
-    return -1;
+        bof.run(
+            context,
+            if (arg_data_ptr) |ptr| ptr[0..@as(usize, @intCast(arg_data_len))] else null,
+        );
+        out_context.* = @ptrCast(context);
+    } else unreachable;
+}
+
+pub export fn bofObjectRun(
+    bof_handle: BofHandle,
+    arg_data_ptr: ?[*]u8,
+    arg_data_len: c_int,
+    out_context: **@import("bofapi").bof.Context,
+) callconv(.C) c_int {
+    if (!gstate.is_valid) return -1;
+    if (!gstate.bof_pool.isBofValid(bof_handle)) return 0; // ignore (no error)
+    run(bof_handle, arg_data_ptr, arg_data_len, out_context) catch return -1;
+    return 0; // success
 }
 
 fn bofThread(
     bof: *Bof,
     arg_data: ?[]u8,
-    bof_handle: BofHandle,
     completion_cb: ?@import("bofapi").bof.CompletionCallback,
     completion_cb_context: ?*anyopaque,
     context: *BofContext,
 ) void {
-    bof.run(arg_data);
+    bof.run(context, arg_data);
+
     if (arg_data) |ad| gstate.allocator.?.free(ad);
 
-    if (completion_cb) |callback| {
-        callback(@bitCast(bof_handle), bof.last_run_result, completion_cb_context);
+    if (completion_cb) |cb| {
+        cb(@ptrCast(context), completion_cb_context);
     }
-
-    context.done_event.set();
 }
 
 const BofContext = struct {
+    const max_output_len = 16 * 1024;
+
+    allocator: std.mem.Allocator,
+
     done_event: std.Thread.ResetEvent = .{},
     handle: BofHandle,
+    result: u8 = 0,
+
+    output: std.ArrayList(u8),
+    output_ring: std.RingBuffer,
+    output_ring_num_written_bytes: usize = 0,
+
+    fn init(allocator: std.mem.Allocator, handle: BofHandle) BofContext {
+        return .{
+            .allocator = allocator,
+            .handle = handle,
+            .output_ring = std.RingBuffer.init(allocator, max_output_len) catch @panic("OOM"),
+            .output = std.ArrayList(u8).initCapacity(allocator, max_output_len + 1) catch @panic("OOM"),
+        };
+    }
+
+    fn deinit(context: *BofContext) void {
+        context.output_ring.deinit(context.allocator);
+        context.output.deinit();
+        context.* = undefined;
+    }
 };
 
 fn runAsync(
@@ -940,13 +957,10 @@ fn runAsync(
     completion_cb_context: ?*anyopaque,
     out_context: **@import("bofapi").bof.Context,
 ) !void {
-    const context = blk: {
-        const context_ptr = try gstate.allocator.?.create(BofContext);
-        context_ptr.* = .{ .handle = bof_handle };
-        out_context.* = @ptrCast(context_ptr);
-        break :blk context_ptr;
-    };
+    const context = try gstate.allocator.?.create(BofContext);
+    context.* = BofContext.init(gstate.allocator.?, bof_handle);
     errdefer {
+        context.deinit();
         gstate.allocator.?.destroy(context);
     }
 
@@ -963,19 +977,20 @@ fn runAsync(
         const thread = try std.Thread.spawn(
             .{},
             bofThread,
-            .{ bof, arg_data, bof_handle, completion_cb, completion_cb_context, context },
+            .{ bof, arg_data, completion_cb, completion_cb_context, context },
         );
+        out_context.* = @ptrCast(context);
         thread.detach();
     } else unreachable;
 }
 
-pub export fn bofRunAsync(
+pub export fn bofObjectRunAsync(
     bof_handle: BofHandle,
     arg_data_ptr: ?[*]u8,
     arg_data_len: c_int,
     completion_cb: ?@import("bofapi").bof.CompletionCallback,
     completion_cb_context: ?*anyopaque,
-    out_event: **@import("bofapi").bof.Context,
+    out_context: **@import("bofapi").bof.Context,
 ) callconv(.C) c_int {
     if (!gstate.is_valid) return -1;
     if (!gstate.bof_pool.isBofValid(bof_handle)) return 0; // ignore (no error)
@@ -985,14 +1000,15 @@ pub export fn bofRunAsync(
         arg_data_len,
         completion_cb,
         completion_cb_context,
-        out_event,
+        out_context,
     ) catch return -1;
-    return 0;
+    return 0; // success
 }
 
 pub export fn bofContextRelease(context: *@import("bofapi").bof.Context) void {
     if (!gstate.is_valid) return;
     const ctx = @as(*BofContext, @ptrCast(@alignCast(context)));
+    ctx.deinit();
     gstate.allocator.?.destroy(ctx);
 }
 
@@ -1002,43 +1018,41 @@ pub export fn bofContextIsRunning(context: *@import("bofapi").bof.Context) c_int
     return @intFromBool(ctx.done_event.isSet() == false);
 }
 
+pub export fn bofContextGetObjectHandle(context: *@import("bofapi").bof.Context) BofHandle {
+    if (!gstate.is_valid) return .{};
+    const ctx = @as(*BofContext, @ptrCast(@alignCast(context)));
+    return ctx.handle;
+}
+
+pub export fn bofContextGetResult(context: *@import("bofapi").bof.Context) u8 {
+    if (!gstate.is_valid) return 0;
+    const ctx = @as(*BofContext, @ptrCast(@alignCast(context)));
+    return ctx.result;
+}
+
 pub export fn bofContextWait(context: *@import("bofapi").bof.Context) void {
     if (!gstate.is_valid) return;
     const ctx = @as(*BofContext, @ptrCast(@alignCast(context)));
     ctx.done_event.wait();
 }
 
-pub export fn bofGetOutput(bof_handle: BofHandle, len: ?*c_int) callconv(.C) ?[*:0]const u8 {
+pub export fn bofContextGetOutput(context: *BofContext, len: ?*c_int) callconv(.C) ?[*:0]const u8 {
     if (!gstate.is_valid) return null;
 
-    var bof = gstate.bof_pool.getBofPtrIfValid(bof_handle);
-    if (bof == null) return null;
-
-    const output_len = @min(bof.?.output_ring_num_written_bytes, Bof.max_output_len);
-    if (len != null) len.?.* = @as(c_int, @intCast(output_len));
+    const output_len = @min(context.output_ring_num_written_bytes, BofContext.max_output_len);
+    if (len != null) len.?.* = @intCast(output_len);
     if (output_len == 0) return null;
 
-    const slice = bof.?.output_ring.sliceLast(output_len);
+    const slice = context.output_ring.sliceLast(output_len);
 
-    bof.?.output.clearRetainingCapacity();
-    bof.?.output.appendSliceAssumeCapacity(slice.first);
-    bof.?.output.appendSliceAssumeCapacity(slice.second);
+    context.output.clearRetainingCapacity();
+    context.output.appendSliceAssumeCapacity(slice.first);
+    context.output.appendSliceAssumeCapacity(slice.second);
 
-    bof.?.output.items.len += 1;
-    bof.?.output.items[output_len] = 0;
+    context.output.items.len += 1;
+    context.output.items[output_len] = 0;
 
-    return @as([*:0]const u8, @ptrCast(bof.?.output.items.ptr));
-}
-
-pub export fn bofClearOutput(bof_handle: BofHandle) callconv(.C) void {
-    if (!gstate.is_valid) return;
-
-    var bof = gstate.bof_pool.getBofPtrIfValid(bof_handle);
-    if (bof == null) return;
-
-    bof.?.output_ring.write_index = 0;
-    bof.?.output_ring.read_index = 0;
-    bof.?.output_ring_num_written_bytes = 0;
+    return @ptrCast(context.output.items.ptr);
 }
 
 const page_size = 4096;
@@ -1121,16 +1135,12 @@ export fn outputBofData(_: i32, data: [*]u8, len: i32, free_mem: i32) void {
     gstate.bof_output_mutex.lock();
     defer gstate.bof_output_mutex.unlock();
 
-    var bof = gstate.currently_running_bof.?;
+    var bof = gstate.current_bof_context.?;
 
-    const slice = data[0..@as(usize, @intCast(len))];
+    const slice = data[0..@intCast(len)];
 
     bof.output_ring.writeSliceAssumeCapacity(slice);
     bof.output_ring_num_written_bytes += slice.len;
-
-    //std.debug.print("[{s}]\n{s}", .{ bof.name_or_id.?, slice });
-
-    // TODO: Add data to a global buffer common to all bofs.
 
     if (free_mem != 0) {
         freeMemory(data);
@@ -1155,12 +1165,12 @@ const gstate = struct {
     var mutex: std.Thread.Mutex = .{};
     var func_lookup: std.StringHashMap(usize) = undefined;
 
-    threadlocal var currently_running_bof: ?*Bof = null;
+    threadlocal var current_bof_context: ?*BofContext = null;
     var bof_pool: BofPool = undefined;
     var bof_output_mutex: std.Thread.Mutex = .{};
 };
 
-fn init() !void {
+fn initLauncher() !void {
     gstate.mutex.lock();
     defer gstate.mutex.unlock();
 
@@ -1286,12 +1296,12 @@ fn init() !void {
     gstate.is_valid = true;
 }
 
-pub export fn bofInitLauncher() callconv(.C) c_int {
-    init() catch return -1;
+pub export fn bofLauncherInit() callconv(.C) c_int {
+    initLauncher() catch return -1;
     return 0;
 }
 
-pub export fn bofDeinitLauncher() callconv(.C) void {
+pub export fn bofLauncherRelease() callconv(.C) void {
     gstate.mutex.lock();
     defer gstate.mutex.unlock();
 

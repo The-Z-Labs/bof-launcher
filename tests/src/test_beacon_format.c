@@ -10,7 +10,7 @@ int go(char * args, int alen) {
     char *  bufferString;
     int     bufferStringLen;
 
-    BeaconPrintf(0, "\n--- testBeaconFormat.c ---\n");
+    BeaconPrintf(0, "--- testBeaconFormat.c ---\n");
 
     if (args == NULL) return 0;
 
@@ -72,7 +72,7 @@ int go(char * args, int alen) {
     /* Cleanup */
     BeaconFormatFree(&buffer);
 
-    BeaconPrintf(CALLBACK_OUTPUT, "!!!! End testBeaconFormat !!!!\n\n");
+    BeaconPrintf(CALLBACK_OUTPUT, "!!!! End testBeaconFormat !!!!\n");
 
     return 123;
 }

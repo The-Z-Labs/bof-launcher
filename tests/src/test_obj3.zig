@@ -2,7 +2,7 @@ const beacon = @import("bofapi").beacon;
 const w32 = @import("bofapi").win32;
 
 pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
-    _ = beacon.printf(0, "\n--- test_obj3.zig ---\n");
+    _ = beacon.printf(0, "--- test_obj3.zig ---\n");
 
     if (@import("builtin").os.tag == .windows) {
         w32.Sleep(0);

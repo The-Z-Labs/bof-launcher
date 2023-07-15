@@ -5,7 +5,7 @@ const beacon = @import("bofapi").beacon;
 pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) i32 {
     var parser = beacon.datap{};
 
-    _ = beacon.printf(0, "\n--- test_obj4.zig ---\n");
+    _ = beacon.printf(0, "--- test_obj4.zig ---\n");
 
     if (arg_data == null) return 0;
 

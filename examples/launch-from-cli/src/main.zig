@@ -4,32 +4,26 @@ const bof = @import("bofapi").bof;
 
 fn runBofFromFile(
     allocator: std.mem.Allocator,
-    bof_name: [:0]const u8,
     bof_path: [:0]const u8,
     arg_data_ptr: ?[*]u8,
     arg_data_len: i32,
-) c_int {
+) !u8 {
     const file = std.fs.openFileAbsoluteZ(bof_path, .{}) catch unreachable;
     defer file.close();
 
     const file_data = file.reader().readAllAlloc(allocator, 16 * 1024 * 1024) catch unreachable;
     defer allocator.free(file_data);
 
-    var bof_handle: bof.Handle = undefined;
-    _ = bof.load(
-        bof_name,
-        file_data.ptr,
-        @as(i32, @intCast(file_data.len)),
-        &bof_handle,
-    );
-    defer bof.unload(bof_handle);
+    const object = try bof.Object.initFromMemory(file_data.ptr, @intCast(file_data.len));
+    defer object.release();
 
-    const result = bof.run(bof_handle, arg_data_ptr, arg_data_len);
+    const context = try object.run(arg_data_ptr, arg_data_len);
+    defer context.release();
 
-    if (bof.getOutput(bof_handle)) |output| {
-        std.io.getStdOut().writer().print("{s}", .{output}) catch unreachable;
+    if (context.getOutput()) |output| {
+        try std.io.getStdOut().writer().print("{s}", .{output});
     }
-    return result;
+    return context.getResult();
 }
 
 fn usage(name: [:0]const u8) void {
@@ -38,8 +32,6 @@ fn usage(name: [:0]const u8) void {
 }
 
 pub fn main() !u8 {
-    const stdout = std.io.getStdOut();
-
     ///////////////////////////////////////////////////////////
     // heap preparation
     ///////////////////////////////////////////////////////////
@@ -69,52 +61,46 @@ pub fn main() !u8 {
     ///////////////////////////////////////////////////////////
     // initializing bof-launcher
     ///////////////////////////////////////////////////////////
-    if (bof.initLauncher() < 0) {
-        stdout.writer().print("Failed to init 'bof launcher' library\n", .{}) catch unreachable;
-        return error.BofError;
-    }
-    defer bof.deinitLauncher();
+    try bof.initLauncher();
+    defer bof.releaseLauncher();
 
     ///////////////////////////////////////////////////////////
     // command line arguments processing: handling BOF arguments
     ///////////////////////////////////////////////////////////
-    var params_blob: []u8 = undefined;
-    var params: bof.ArgData = .{};
+    var args: bof.Args = .{};
+    var args_blob: ?[]u8 = null;
+    defer if (args_blob) |ab| allocator.free(ab);
 
-    var initialized: bool = false;
     while (iter.next()) |arg| {
-        if (!initialized) {
-            params_blob = try allocator.alloc(u8, 100);
+        if (args_blob == null) {
+            // TODO: Use streams
+            args_blob = try allocator.alloc(u8, 100);
 
-            params.original = params_blob.ptr;
-            params.buffer = params_blob.ptr + 4;
-            params.length = @as(i32, @intCast(params_blob.len - 4));
-            params.size = @as(i32, @intCast(params_blob.len));
-
-            initialized = true;
+            args.original = args_blob.?.ptr;
+            args.buffer = args_blob.?.ptr + 4;
+            args.length = @intCast(args_blob.?.len - 4);
+            args.size = @intCast(args_blob.?.len);
         }
-        _ = bof.packArg(&params, arg.ptr, @as(c_int, @intCast(arg.len)));
+        try args.add(arg.ptr, @intCast(arg.len));
     }
 
-    if (initialized) {
+    if (args_blob != null) {
         // update size to real length of arguments string
-        params.size = params.size - params.length;
+        args.size = args.size - args.length;
 
-        const len = params.size - 4;
-        std.mem.copy(u8, params.original[0..4], std.mem.asBytes(&len));
+        const len = args.size - 4;
+        std.mem.copy(u8, args.original[0..4], std.mem.asBytes(&len));
     }
 
     ///////////////////////////////////////////////////////////
     // run selected BOF with provided arguments
     ///////////////////////////////////////////////////////////
-    const result = runBofFromFile(allocator, bof_name, &bof_path_buffer, params.original, params.size);
+    const result = try runBofFromFile(allocator, &bof_path_buffer, args.original, args.size);
 
-    if (initialized) allocator.free(params_blob);
+    //if (result < 0 or result > 255) {
+    //    stdout.writer().print("Failed to run bof\n", .{}) catch unreachable;
+    //    return error.BofError;
+    //}
 
-    if (result < 0 or result > 255) {
-        stdout.writer().print("Failed to run bof\n", .{}) catch unreachable;
-        return error.BofError;
-    }
-
-    return @as(u8, @intCast(result));
+    return result;
 }

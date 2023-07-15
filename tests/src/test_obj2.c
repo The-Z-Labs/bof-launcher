@@ -16,7 +16,7 @@ int test3(void) {
 }
 
 int go(char* arg_data, int arg_len) {
-    BeaconPrintf(0, "\n--- test_obj2.c ---\n%s\n", "bof");
+    BeaconPrintf(0, "--- test_obj2.c ---\n%s\n", "bof");
 
     datap parser = {0};
     BeaconDataParse(&parser, arg_data, arg_len);

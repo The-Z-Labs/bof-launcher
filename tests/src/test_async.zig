@@ -2,6 +2,8 @@ const std = @import("std");
 const beacon = @import("bofapi").beacon;
 
 pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
+    _ = beacon.printf(0, "--- test_async.zig ---\n");
+
     var parser: beacon.datap = .{};
     beacon.dataParse(&parser, arg_data, arg_len);
 
@@ -12,5 +14,5 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
         std.time.sleep(10e6);
     }
 
-    return @as(u8, @intCast(id));
+    return @intCast(id);
 }

