@@ -135,7 +135,7 @@ pub const Args = opaque {
 
     pub const getBuffer = bofArgsGetBuffer;
 
-    pub const getSize = bofArgsGetSize;
+    pub const getBufferSize = bofArgsGetBufferSize;
 };
 //------------------------------------------------------------------------------
 //
@@ -184,5 +184,5 @@ extern fn bofArgsAdd(args: *Args, arg: [*]const u8, arg_len: c_int) callconv(.C)
 extern fn bofArgsBegin(args: *Args) callconv(.C) void;
 extern fn bofArgsEnd(args: *Args) callconv(.C) void;
 extern fn bofArgsGetBuffer(args: *Args) callconv(.C) ?[*]u8;
-extern fn bofArgsGetSize(args: *Args) callconv(.C) c_int;
+extern fn bofArgsGetBufferSize(args: *Args) callconv(.C) c_int;
 //------------------------------------------------------------------------------

@@ -827,7 +827,7 @@ pub export fn bofArgsGetBuffer(
     return bof_args.original;
 }
 
-pub export fn bofArgsGetSize(
+pub export fn bofArgsGetBufferSize(
     args: *@import("bofapi").bof.Args,
 ) callconv(.C) c_int {
     const bof_args = @as(*BofArgs, @ptrCast(@alignCast(args)));

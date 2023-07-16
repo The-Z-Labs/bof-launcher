@@ -83,7 +83,7 @@ pub fn main() !u8 {
         allocator,
         &bof_path_buffer,
         args.getBuffer(),
-        args.getSize(),
+        args.getBufferSize(),
     );
 
     return result;

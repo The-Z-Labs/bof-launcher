@@ -77,7 +77,7 @@ bofContextWait(BofContext* context);
 
 const char*
 bofContextGetOutput(BofContext* context,
-                    int *out_output_len); // optional (can be NULL)
+                    int* out_output_len); // optional (can be NULL)
 //------------------------------------------------------------------------------
 //
 // Args functions
@@ -104,7 +104,7 @@ char*
 bofArgsGetBuffer(BofArgs* args);
 
 int
-bofArgsGetSize(BofArgs* args);
+bofArgsGetBufferSize(BofArgs* args);
 //------------------------------------------------------------------------------
 #ifdef __cplusplus
 }
