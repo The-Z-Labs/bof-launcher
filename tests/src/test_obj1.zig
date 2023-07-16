@@ -21,7 +21,7 @@ fn func() !void {
     global_var += 1;
 }
 
-pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) i32 {
+pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     _ = beacon.printf(0, "--- test_obj1.zig ---\n");
 
     _ = beacon.printf(0, "BeaconPrintf %s\n", "has been called");
@@ -70,5 +70,5 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) i32 {
     global_var += 2;
     const ret = global_var;
     global_var = 3;
-    return ret;
+    return @intCast(ret);
 }

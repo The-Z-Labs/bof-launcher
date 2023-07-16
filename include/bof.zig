@@ -98,7 +98,7 @@ pub const Context = opaque {
 
     pub const wait = bofContextWait;
 
-    pub const getResult = bofContextGetResult;
+    pub const getReturnedValue = bofContextGetReturnedValue;
 
     pub const getObject = bofContextGetObjectHandle;
 
@@ -174,7 +174,7 @@ extern fn bofObjectRunAsync(
 extern fn bofContextRelease(context: *Context) callconv(.C) void;
 extern fn bofContextIsRunning(context: *Context) callconv(.C) c_int;
 extern fn bofContextWait(context: *Context) callconv(.C) void;
-extern fn bofContextGetResult(context: *Context) callconv(.C) u8;
+extern fn bofContextGetReturnedValue(context: *Context) callconv(.C) u8;
 extern fn bofContextGetObjectHandle(context: *Context) callconv(.C) Object;
 extern fn bofContextGetOutput(context: *Context, out_output_len: ?*c_int) callconv(.C) ?[*:0]const u8;
 

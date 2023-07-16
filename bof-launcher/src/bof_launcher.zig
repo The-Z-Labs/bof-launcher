@@ -999,11 +999,12 @@ const BofContext = struct {
 
     done_event: std.Thread.ResetEvent = .{},
     handle: BofHandle,
-    result: u8 = 0,
+    result: u8 = 0xff,
 
     output: std.ArrayList(u8),
     output_ring: std.RingBuffer,
     output_ring_num_written_bytes: usize = 0,
+    output_mutex: std.Thread.Mutex = .{},
 
     fn init(allocator: std.mem.Allocator, handle: BofHandle) BofContext {
         return .{
@@ -1096,7 +1097,7 @@ pub export fn bofContextGetObjectHandle(context: *@import("bofapi").bof.Context)
     return ctx.handle;
 }
 
-pub export fn bofContextGetResult(context: *@import("bofapi").bof.Context) u8 {
+pub export fn bofContextGetReturnedValue(context: *@import("bofapi").bof.Context) u8 {
     if (!gstate.is_valid) return 0;
     const ctx = @as(*BofContext, @ptrCast(@alignCast(context)));
     return ctx.result;
@@ -1110,6 +1111,9 @@ pub export fn bofContextWait(context: *@import("bofapi").bof.Context) void {
 
 pub export fn bofContextGetOutput(context: *BofContext, len: ?*c_int) callconv(.C) ?[*:0]const u8 {
     if (!gstate.is_valid) return null;
+
+    context.output_mutex.lock();
+    defer context.output_mutex.unlock();
 
     const output_len = @min(context.output_ring_num_written_bytes, BofContext.max_output_len);
     if (len != null) len.?.* = @intCast(output_len);
@@ -1204,15 +1208,15 @@ export fn allocateAndZeroMemory(num: usize, size: usize) callconv(.C) ?*anyopaqu
 }
 
 export fn outputBofData(_: i32, data: [*]u8, len: i32, free_mem: i32) void {
-    gstate.bof_output_mutex.lock();
-    defer gstate.bof_output_mutex.unlock();
+    var context = gstate.current_bof_context.?;
 
-    var bof = gstate.current_bof_context.?;
+    context.output_mutex.lock();
+    defer context.output_mutex.unlock();
 
     const slice = data[0..@intCast(len)];
 
-    bof.output_ring.writeSliceAssumeCapacity(slice);
-    bof.output_ring_num_written_bytes += slice.len;
+    context.output_ring.writeSliceAssumeCapacity(slice);
+    context.output_ring_num_written_bytes += slice.len;
 
     if (free_mem != 0) {
         freeMemory(data);
@@ -1239,7 +1243,6 @@ const gstate = struct {
 
     threadlocal var current_bof_context: ?*BofContext = null;
     var bof_pool: BofPool = undefined;
-    var bof_output_mutex: std.Thread.Mutex = .{};
 };
 
 fn initLauncher() !void {

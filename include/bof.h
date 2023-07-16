@@ -67,7 +67,7 @@ int
 bofContextIsRunning(BofContext* context);
 
 unsigned char
-bofContextGetResult(BofContext* context);
+bofContextGetReturnedValue(BofContext* context);
 
 BofObjectHandle
 bofContextGetObjectHandle(BofContext* context);
@@ -100,7 +100,7 @@ bofArgsBegin(BofArgs* args);
 void
 bofArgsEnd(BofArgs* args);
 
-char*
+const char*
 bofArgsGetBuffer(BofArgs* args);
 
 int

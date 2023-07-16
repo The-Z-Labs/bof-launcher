@@ -15,7 +15,7 @@ int test3(void) {
     return 5;
 }
 
-int go(char* arg_data, int arg_len) {
+unsigned char go(char* arg_data, int arg_len) {
     BeaconPrintf(0, "--- test_obj2.c ---\n%s\n", "bof");
 
     datap parser = {0};
@@ -50,5 +50,5 @@ int go(char* arg_data, int arg_len) {
 
     res = res + global_number;
     global_number = 3;
-    return res;
+    return (unsigned char)res;
 }

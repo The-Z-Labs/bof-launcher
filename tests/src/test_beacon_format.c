@@ -1,7 +1,7 @@
 #include "beacon.h" 
 
 
-int go(char * args, int alen) { 
+unsigned char go(char * args, int alen) {
     datap   parser;
     formatp buffer;
     char *  userString;

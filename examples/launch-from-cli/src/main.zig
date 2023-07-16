@@ -23,7 +23,7 @@ fn runBofFromFile(
     if (context.getOutput()) |output| {
         try std.io.getStdOut().writer().print("{s}", .{output});
     }
-    return context.getResult();
+    return context.getReturnedValue();
 }
 
 fn usage(name: [:0]const u8) void {

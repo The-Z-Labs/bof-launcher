@@ -23,7 +23,7 @@ fn runBofFromFile(
         std.debug.print("{s}", .{output});
     }
 
-    return context.getResult();
+    return context.getReturnedValue();
 }
 
 fn testRunBofFromFile(
@@ -177,27 +177,27 @@ test "bof-launcher.bofs.load_run" {
 
     const context0 = try object0.run(&bytes, @intCast(bytes.len));
     defer context0.release();
-    try expect(6 == context0.getResult());
+    try expect(6 == context0.getReturnedValue());
     try expect(context0.getObject().handle == object0.handle);
 
     const context1 = try object1.run(&bytes, @intCast(bytes.len));
     defer context1.release();
-    try expect(15 == context1.getResult());
+    try expect(15 == context1.getReturnedValue());
     try expect(context1.isRunning() == false);
     try expect(context1.getObject().handle == object1.handle);
 
     const context2 = try object1.run(&bytes, @intCast(bytes.len));
     defer context2.release();
-    try expect(15 == context2.getResult());
+    try expect(15 == context2.getReturnedValue());
 
     const context3 = try object0.run(&bytes, @intCast(bytes.len));
     defer context3.release();
-    try expect(6 == context3.getResult());
+    try expect(6 == context3.getReturnedValue());
     try expect(context3.isRunning() == false);
 
     const context4 = try object1.run(&bytes, @intCast(bytes.len));
     defer context4.release();
-    try expect(15 == context4.getResult());
+    try expect(15 == context4.getReturnedValue());
 
     try expect(context3.getOutput() != null);
     if (context3.getOutput()) |output| {
