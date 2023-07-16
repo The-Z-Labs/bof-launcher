@@ -95,7 +95,10 @@ int
 bofArgsAdd(BofArgs* args, unsigned char* arg, int arg_len);
 
 void
-bofArgsFinalize(BofArgs* args);
+bofArgsBegin(BofArgs* args);
+
+void
+bofArgsEnd(BofArgs* args);
 
 char*
 bofArgsGetBuffer(BofArgs* args);

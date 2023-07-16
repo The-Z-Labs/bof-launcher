@@ -70,11 +70,11 @@ pub fn main() !u8 {
     const args = try bof.Args.init();
     defer args.release();
 
+    args.begin();
     while (iter.next()) |arg| {
         try args.add(arg.ptr, @intCast(arg.len));
     }
-
-    args.finalize();
+    args.end();
 
     ///////////////////////////////////////////////////////////
     // run selected BOF with provided arguments

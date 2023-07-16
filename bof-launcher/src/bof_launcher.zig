@@ -801,7 +801,15 @@ pub export fn bofArgsRelease(
     gstate.allocator.?.destroy(bof_args);
 }
 
-pub export fn bofArgsFinalize(
+pub export fn bofArgsBegin(
+    args: *@import("bofapi").bof.Args,
+) callconv(.C) void {
+    const bof_args = @as(*BofArgs, @ptrCast(@alignCast(args)));
+    if (bof_args.blob) |b| gstate.allocator.?.free(b[0..BofArgs.blob_size]);
+    bof_args.* = .{};
+}
+
+pub export fn bofArgsEnd(
     args: *@import("bofapi").bof.Args,
 ) callconv(.C) void {
     const bof_args = @as(*BofArgs, @ptrCast(@alignCast(args)));
@@ -847,7 +855,7 @@ pub export fn bofArgsAdd(
     }
 
     // function checks if we're dealing with an integer or with a string, then it packs data in params
-    const sArg = arg[0..@as(usize, @intCast(arg_len))];
+    const sArg = arg[0..@intCast(arg_len)];
 
     // attempt to treat argument as a short int
     const res = std.fmt.parseUnsigned(u16, sArg, 10);
@@ -866,7 +874,7 @@ pub export fn bofArgsAdd(
         params.length -= 4;
         params.buffer.? += 4;
 
-        std.mem.copy(u8, params.buffer.?[0..@as(usize, @intCast(arg_len))], arg[0..@as(usize, @intCast(arg_len))]);
+        std.mem.copy(u8, params.buffer.?[0..@intCast(arg_len)], arg[0..@intCast(arg_len)]);
         params.length -= arg_len;
         params.buffer.? += @as(usize, @intCast(arg_len));
 

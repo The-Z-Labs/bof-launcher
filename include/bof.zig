@@ -123,7 +123,9 @@ pub const Args = opaque {
 
     pub const release = bofArgsRelease;
 
-    pub const finalize = bofArgsFinalize;
+    pub const begin = bofArgsBegin;
+
+    pub const end = bofArgsEnd;
 
     /// Returns zero on success
     /// Returns negative value when error occurs
@@ -179,7 +181,8 @@ extern fn bofContextGetOutput(context: *Context, out_output_len: ?*c_int) callco
 extern fn bofArgsInit(out_args: **Args) callconv(.C) c_int;
 extern fn bofArgsRelease(args: *Args) callconv(.C) void;
 extern fn bofArgsAdd(args: *Args, arg: [*]const u8, arg_len: c_int) callconv(.C) c_int;
-extern fn bofArgsFinalize(args: *Args) callconv(.C) void;
+extern fn bofArgsBegin(args: *Args) callconv(.C) void;
+extern fn bofArgsEnd(args: *Args) callconv(.C) void;
 extern fn bofArgsGetBuffer(args: *Args) callconv(.C) ?[*]u8;
 extern fn bofArgsGetSize(args: *Args) callconv(.C) c_int;
 //------------------------------------------------------------------------------
