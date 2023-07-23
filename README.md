@@ -1,7 +1,7 @@
 # Beacon Object File (BOF) launcher
 
 <p align="center">
-  <img src="https://github.com/The-Z-Labs/bof-launcher/assets/4785347/2d43ec3f-c230-426b-8f0f-b7ead45442b5" />
+  <img src="https://github.com/The-Z-Labs/bof-launcher/assets/4785347/990ad1fb-c35b-48cf-a0db-aed3c825d149" width="256" height="256" />
 </p>
 
 ## Introduction
