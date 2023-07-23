@@ -57,10 +57,10 @@ Below you can see the same BOF written in Zig and in C. When compiled, Zig versi
 
 For an example of larger and cross-platform BOF please see our [UDP port scanner](bofs/src/cUDPscan.zig).
 
-To run a BOF you can use our [cli-bof-launcher](examples/launch-from-cli), for example:
+To run a BOF you can use our [cli4bofs](examples/cli4bofs), for example:
 
-    .\zig-out\bin\example-cli-launcher_win_x64.exe .\zig-out\bin\wWinver.coff.x64.o
-    .\zig-out\bin\example-cli-launcher_win_x64.exe .\zig-out\bin\cUDPscan.coff.x64.o 162.159.200.1-5:123,88
+    .\zig-out\bin\cli4bofs_win_x64.exe .\zig-out\bin\wWinver.coff.x64.o
+    .\zig-out\bin\cli4bofs_win_x64.exe .\zig-out\bin\cUDPscan.coff.x64.o 162.159.200.1-5:123,88
 
 https://github.com/The-Z-Labs/bof-launcher/blob/074d002720702248efd3343fae7fb7501be8fc81/bofs/src/wWinver.zig#L1-L19
 
@@ -76,7 +76,7 @@ We provide an open-source and standalone library that can be used to execute any
 
 *Rapid launching, testing and debugging BOFs*
 
-[cli-bof-launcher](examples/launch-from-cli) - standalone command line program for running BOFs. Handy during testing/verifying 3rd BOFs or during developing/debugging BOFs. Does not require [Cobalt Strike's Beacon](https://www.cobaltstrike.com/) and its aggresor scripts to run.
+[cli4bofs](examples/cli4bofs) - standalone command line program for running BOFs. Handy during testing/verifying 3rd BOFs or during developing/debugging BOFs. Does not require [Cobalt Strike's Beacon](https://www.cobaltstrike.com/) and its aggresor scripts to run.
 
 ### Sample C application
 

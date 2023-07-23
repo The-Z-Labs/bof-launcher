@@ -11,7 +11,7 @@ pub fn build(
 ) void {
     const exe = b.addExecutable(.{
         .name = std.mem.join(b.allocator, "_", &.{
-            "example-cli-launcher",
+            "cli4bofs",
             options.osTagStr(),
             options.cpuArchStr(),
         }) catch @panic("OOM"),
