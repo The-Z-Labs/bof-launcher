@@ -1,10 +1,8 @@
 // -----------------------------------------------------------------------------
-// BOF TABLE
+// BOFs TABLEs
 // -----------------------------------------------------------------------------
-// Add new BOFs here. Naming convention:
-// c* - cross platform BOFs
-// l* - Linux-only BOFs
-// w* - Windows-only BOFs
+
+// BOFs included with bof-launcher
 const bofs = [_]Bof{
     .{ .name = "uname", .formats = &.{.elf}, .archs = &.{ .x64, .x86 } },
     .{ .name = "udpScanner", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86 } },
@@ -12,6 +10,9 @@ const bofs = [_]Bof{
     .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWhoami", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
 };
+
+// other BOFs for building should be defined here
+// ...
 // -----------------------------------------------------------------------------
 
 const std = @import("std");
@@ -53,7 +54,18 @@ pub fn build(b: *std.build.Builder, _: Options) void {
         .source_file = .{ .path = thisDir() ++ "/../include/bofapi.zig" },
     });
 
+    var bofsList = std.ArrayList(Bof).init(b.allocator);
+    defer bofsList.deinit();
+
+    // appending BOFs included with bof-launcher
     for (bofs) |bof| {
+        bofsList.append(bof) catch unreachable;
+    }
+
+    // additional/3rdparty BOFs for building should be appended here
+    // ...
+
+    for (bofsList.items) |bof| {
         const bof_src_path = std.mem.join(
             b.allocator,
             "",
