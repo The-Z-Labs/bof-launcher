@@ -837,10 +837,18 @@ pub export fn bofArgsGetBufferSize(
 pub export fn bofArgsAdd(
     args: *@import("bofapi").bof.Args,
     arg: [*]const u8,
-    arg_len: c_int,
+    arg_size: c_int,
 ) callconv(.C) c_int {
     if (!gstate.is_valid) return -1;
-    if (arg_len < 1) return -1;
+    if (arg_size < 1) return -1;
+
+    const allowed_types = [_][]const u8{
+        "short", "s",
+        "int",   "i",
+        "str",   "z",
+        "wstr",  "Z",
+        "file",  "b",
+    };
 
     const params = @as(*BofArgs, @ptrCast(@alignCast(args)));
 
@@ -854,37 +862,52 @@ pub export fn bofArgsAdd(
         params.blob = blob.ptr;
     }
 
-    // function checks if we're dealing with an integer or with a string, then it packs data in params
-    const sArg = arg[0..@intCast(arg_len)];
+    var sArg = arg[0..@intCast(arg_size)];
+    var sArg_type: []const u8 = "str";
 
-    // attempt to treat argument as a short int
-    const res = std.fmt.parseUnsigned(u16, sArg, 10);
+    var iter = std.mem.tokenizeAny(u8, sArg, ":");
 
-    if (res == std.fmt.ParseIntError.InvalidCharacter) {
-        // if it's not possible to convert it to integer (it contains non digit characters) then treat is as a string
+    // get first element or return if argument was empty
+    const prefix = iter.next() orelse return -1;
 
-        print("String param: {s} {d}", .{ sArg, sArg.len });
+    // delimeter (:) was found, check if known type was provided
+    if (!std.mem.eql(u8, prefix, sArg)) {
+        for (allowed_types) |t| {
+            if (std.mem.eql(u8, prefix, t)) {
+                sArg_type = prefix;
+
+                // remove prefix from the argument:
+                sArg = std.mem.trimLeft(u8, sArg, sArg_type);
+                sArg = std.mem.trimLeft(u8, sArg, ":");
+                break;
+            }
+        }
+    }
+
+    // argument length after removing prefix:
+    const arg_len = @as(i32, @intCast(sArg.len));
+
+    if (std.mem.eql(u8, sArg_type, "str") or std.mem.eql(u8, sArg_type, "z")) {
         // check if we have space for: len(i32) | u8 * arg_len | \0
         if (arg_len > params.length - 5) {
             return -1;
         }
+        print("Str param: {s} {d}", .{ sArg, sArg.len });
 
         const arg_len_w0 = arg_len + 1;
         std.mem.copy(u8, params.buffer.?[0..4], std.mem.asBytes(&arg_len_w0));
         params.length -= 4;
         params.buffer.? += 4;
 
-        std.mem.copy(u8, params.buffer.?[0..@intCast(arg_len)], arg[0..@intCast(arg_len)]);
+        std.mem.copy(u8, params.buffer.?[0..@intCast(arg_len)], sArg);
         params.length -= arg_len;
         params.buffer.? += @as(usize, @intCast(arg_len));
 
         params.buffer.?[0] = 0;
         params.length -= 1;
         params.buffer.? += @as(usize, @intCast(1));
-    } else if (res == std.fmt.ParseIntError.Overflow) {
-        // if there was overflow when parsing it to short integer than treat it as a u32 integer
-
-        const numArg = std.fmt.parseUnsigned(u32, sArg, 10) catch unreachable;
+    } else if (std.mem.eql(u8, sArg_type, "int") or std.mem.eql(u8, sArg_type, "i")) {
+        const numArg = std.fmt.parseUnsigned(u32, sArg, 10) catch return -1;
 
         print("Int param: {s} {d}", .{ sArg, sArg.len });
 
@@ -894,16 +917,19 @@ pub export fn bofArgsAdd(
         std.mem.copy(u8, params.buffer.?[0..4], std.mem.asBytes(&numArg));
         params.length -= 4;
         params.buffer.? += 4;
-    } else {
-        // parsing as short int was successful
+    } else if (std.mem.eql(u8, sArg_type, "short") or std.mem.eql(u8, sArg_type, "s")) {
+        const numArg = std.fmt.parseUnsigned(u16, sArg, 10) catch return -1;
+
         print("Short param: {s} {d}", .{ sArg, sArg.len });
+
         if (arg_len > params.length)
             return -1;
 
-        std.mem.copy(u8, params.buffer.?[0..2], std.mem.asBytes(&res));
+        std.mem.copy(u8, params.buffer.?[0..2], std.mem.asBytes(&numArg));
         params.length -= 2;
         params.buffer.? += 2;
     }
+    // TODO: add wstr (wide chars) support
 
     return 0;
 }
