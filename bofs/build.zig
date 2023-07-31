@@ -9,6 +9,7 @@ const bofs = [_]Bof{
     .{ .name = "wWinver", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWhoami", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    //.{ .name = "adcs_enum_com2", .go = "entry", .dir = "adcs_enum_com2/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
 };
 
 // other BOFs for building should be defined here
@@ -24,6 +25,8 @@ const BofArch = enum { x64, x86 };
 
 const Bof = struct {
     dir: ?[]const u8 = null,
+    // source file name with go() function if in other file than .name
+    go: ?[]const u8 = null,
     name: []const u8,
     formats: []const BofFormat,
     archs: []const BofArch,
@@ -69,7 +72,7 @@ pub fn build(b: *std.build.Builder, _: Options) void {
         const bof_src_path = std.mem.join(
             b.allocator,
             "",
-            &.{ thisDir(), "/src/", if (bof.dir) |dir| dir else "", bof.name },
+            &.{ thisDir(), "/src/", if (bof.dir) |dir| dir else "", if (bof.go) |go| go else bof.name },
         ) catch unreachable;
 
         const lang: BofLang = blk: {
