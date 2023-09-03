@@ -15,9 +15,12 @@ pub fn runTests(
         .optimize = options.optimize,
     });
 
-    tests.addIncludePath(thisDir() ++ "/../include");
+    tests.addIncludePath(.{ .path = thisDir() ++ "/../include" });
     tests.linkLibrary(bof_launcher_lib);
-    tests.addCSourceFile(thisDir() ++ "/src/tests.c", &.{"-std=c99"});
+    tests.addCSourceFile(.{
+        .file = .{ .path = thisDir() ++ "/src/tests.c" },
+        .flags = &.{"-std=c99"},
+    });
     tests.linkLibC();
 
     const bofapi = b.createModule(.{
@@ -76,8 +79,11 @@ fn buildTestObjs(b: *std.build.Builder, options: Options, bofapi: *std.Build.Mod
             .target = options.target,
             .optimize = .ReleaseSmall,
         });
-        obj.addIncludePath(thisDir() ++ "/../include");
-        obj.addCSourceFile(thisDir() ++ "/src/" ++ name ++ ".c", &.{"-std=c99"});
+        obj.addIncludePath(.{ .path = thisDir() ++ "/../include" });
+        obj.addCSourceFile(.{
+            .file = .{ .path = thisDir() ++ "/src/" ++ name ++ ".c" },
+            .flags = &.{"-std=c99"},
+        });
         obj.force_pic = true;
         obj.single_threaded = true;
         obj.strip = true;

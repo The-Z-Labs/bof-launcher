@@ -49,9 +49,15 @@ pub fn build(b: *std.build.Builder, options: Options) *std.Build.CompileStep {
 
 fn buildLib(lib: *std.Build.CompileStep) void {
     lib.force_pic = true;
-    lib.addIncludePath(thisDir() ++ "/../include");
-    lib.addCSourceFile(thisDir() ++ "/src/beacon/beacon_impl.c", &.{"-std=c99"});
-    lib.addCSourceFile(thisDir() ++ "/src/beacon/stb_sprintf.c", &.{ "-std=c99", "-fno-sanitize=undefined" });
+    lib.addIncludePath(.{ .path = thisDir() ++ "/../include" });
+    lib.addCSourceFile(.{
+        .file = .{ .path = thisDir() ++ "/src/beacon/beacon_impl.c" },
+        .flags = &.{"-std=c99"},
+    });
+    lib.addCSourceFile(.{
+        .file = .{ .path = thisDir() ++ "/src/beacon/stb_sprintf.c" },
+        .flags = &.{ "-std=c99", "-fno-sanitize=undefined" },
+    });
 }
 
 inline fn thisDir() []const u8 {

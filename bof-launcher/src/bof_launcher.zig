@@ -91,6 +91,7 @@ const Bof = struct {
     fn loadCoff(bof: *Bof, allocator: std.mem.Allocator, file_data: []const u8) !void {
         var parser = std.coff.Coff{
             .data = file_data,
+            .is_loaded = false,
             .is_image = false,
             .coff_header_offset = 0,
         };
@@ -148,7 +149,7 @@ const Bof = struct {
         }
 
         const symtab = parser.getSymtab().?;
-        const strtab = parser.getStrtab().?;
+        const strtab = (try parser.getStrtab()).?;
 
         for (section_headers, 0..) |section_header, section_index| {
             const section_name = parser.getSectionName(&section_header);

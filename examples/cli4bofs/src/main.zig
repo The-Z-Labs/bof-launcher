@@ -2,8 +2,6 @@ const std = @import("std");
 const assert = std.debug.assert;
 const bof = @import("bofapi").bof;
 
-const stdout = std.io.getStdOut();
-
 fn runBofFromFile(
     allocator: std.mem.Allocator,
     bof_path: [:0]const u8,
@@ -29,6 +27,7 @@ fn runBofFromFile(
 }
 
 fn usage(name: [:0]const u8) void {
+    const stdout = std.io.getStdOut();
     stdout.writer().print("Usage: {s} <BOF> [[prefix:]ARGUMENT]...\n\n", .{name}) catch unreachable;
     stdout.writer().print("Execute given BOF from filesystem with provided ARGUMENTs.\n\n", .{}) catch unreachable;
     stdout.writer().print("ARGUMENTS:\n\n", .{}) catch unreachable;
@@ -47,6 +46,7 @@ fn usage(name: [:0]const u8) void {
 }
 
 pub fn main() !u8 {
+    const stdout = std.io.getStdOut();
     ///////////////////////////////////////////////////////////
     // heap preparation
     ///////////////////////////////////////////////////////////

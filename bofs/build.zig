@@ -105,9 +105,15 @@ pub fn build(b: *std.build.Builder, _: Options) void {
                             .target = target,
                             .optimize = .ReleaseSmall,
                         });
-                        obj.addCSourceFile(
-                            std.mem.join(b.allocator, "", &.{ bof_src_path, ".c" }) catch unreachable,
-                            &.{
+                        obj.addCSourceFile(.{
+                            .file = .{
+                                .path = std.mem.join(
+                                    b.allocator,
+                                    "",
+                                    &.{ bof_src_path, ".c" },
+                                ) catch unreachable,
+                            },
+                            .flags = &.{
                                 "-DWINBASEAPI=",
                                 "-D_CRTIMP=",
                                 "-DLDAPAPI=",
@@ -117,14 +123,14 @@ pub fn build(b: *std.build.Builder, _: Options) void {
                                 "-inline-asm=intel",
                                 if (format == .coff) "-DDECLSPEC_IMPORT=" else "",
                             },
-                        );
+                        });
                         if (format == .coff)
-                            obj.addIncludePath(windows_include_dir);
+                            obj.addIncludePath(.{ .path = windows_include_dir });
                         break :blk obj;
                     },
                 };
                 obj.addModule("bofapi", bofapi);
-                obj.addIncludePath(thisDir() ++ "/../include");
+                obj.addIncludePath(.{ .path = thisDir() ++ "/../include" });
                 obj.force_pic = true;
                 obj.single_threaded = true;
                 obj.strip = true;
