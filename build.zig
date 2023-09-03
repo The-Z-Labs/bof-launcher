@@ -16,6 +16,7 @@ pub const Options = struct {
         return switch (options.target.getCpuArch()) {
             .x86_64 => "x64",
             .x86 => "x86",
+            .aarch64 => "aarch64",
             else => unreachable,
         };
     }

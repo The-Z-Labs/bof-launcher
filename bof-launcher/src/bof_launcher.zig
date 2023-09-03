@@ -563,8 +563,8 @@ const Bof = struct {
             }
         }
 
-        const sht_rel_type = if (@import("builtin").cpu.arch == .x86_64) std.elf.SHT_RELA else std.elf.SHT_REL;
-        const ElfRel = if (@import("builtin").cpu.arch == .x86_64) std.elf.Rela else std.elf.Rel;
+        const sht_rel_type = if (@sizeOf(usize) == 8) std.elf.SHT_RELA else std.elf.SHT_REL;
+        const ElfRel = if (@sizeOf(usize) == 8) std.elf.Rela else std.elf.Rel;
 
         for (section_headers.items, 0..) |section, section_index| {
             const section_offset = @as(usize, @intCast(section.sh_offset));
@@ -583,7 +583,7 @@ const Bof = struct {
 
                     const addr_p = @intFromPtr(section_mappings.items[section.sh_info].ptr) + reloc.r_offset;
                     const addr_s = @intFromPtr(section_mappings.items[symbol.st_shndx].ptr) + symbol.st_value;
-                    const addend = if (@import("builtin").cpu.arch == .x86)
+                    const addend = if (@sizeOf(usize) == 4)
                         @as(*align(1) isize, @ptrFromInt(addr_p)).*
                     else
                         reloc.r_addend;
