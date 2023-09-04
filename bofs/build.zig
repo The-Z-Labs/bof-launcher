@@ -4,7 +4,7 @@
 
 // BOFs included with bof-launcher
 const bofs = [_]Bof{
-    .{ .name = "uname", .formats = &.{.elf}, .archs = &.{ .x64, .x86 } },
+    .{ .name = "uname", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64 } },
     .{ .name = "udpScanner", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWinver", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
@@ -21,7 +21,7 @@ const Options = @import("../build.zig").Options;
 
 const BofLang = enum { zig, c };
 const BofFormat = enum { coff, elf };
-const BofArch = enum { x64, x86 };
+const BofArch = enum { x64, x86, aarch64 };
 
 const Bof = struct {
     dir: ?[]const u8 = null,
@@ -36,6 +36,7 @@ const Bof = struct {
             .cpu_arch = switch (arch) {
                 .x64 => .x86_64,
                 .x86 => .x86,
+                .aarch64 => .aarch64,
             },
             .os_tag = switch (format) {
                 .coff => .windows,
