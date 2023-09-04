@@ -4,6 +4,7 @@
 
 // BOFs included with bof-launcher
 const bofs = [_]Bof{
+    .{ .name = "helloBof", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64 } },
     .{ .name = "uname", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64 } },
     .{ .name = "udpScanner", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWinver", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
