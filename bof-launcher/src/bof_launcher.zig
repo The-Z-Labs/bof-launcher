@@ -590,7 +590,7 @@ const Bof = struct {
 
                     const reloc_str = @as([*:0]const u8, @ptrCast(&string_table[symbol.st_name]));
                     print("\t\tSymbol: {s}", .{reloc_str});
-                    print("\t\tReloc type: 0x{x}", .{reloc.r_type()});
+                    print("\t\tReloc type: {d}", .{reloc.r_type()});
                     print("\t\tSymbol Value: 0x{x}", .{symbol.st_value});
                     print("\t\tShndx: 0x{x}", .{symbol.st_shndx});
                     print("\t\tInfo: 0x{x}", .{reloc.r_info});
@@ -599,7 +599,9 @@ const Bof = struct {
                     print("\t\taddr_p: 0x{x}", .{addr_p});
                     print("\t\taddr_s: 0x{x}", .{addr_s});
 
-                    if (reloc.r_type() == 0xa and @import("builtin").cpu.arch == .x86) {
+                    if (symbol.st_shndx == 0 and reloc.r_type() == 0xa and @import("builtin").cpu.arch == .x86) {
+                        // EXTERNAL PROCEDURE CALLS (x86 special case)
+
                         // _GLOBAL_OFFSET_TABLE_
                         // GOT + A - P
 
@@ -610,6 +612,8 @@ const Bof = struct {
 
                         @as(*align(1) i32, @ptrFromInt(addr_p)).* = relative_offset;
                     } else if (symbol.st_shndx == 0) {
+                        // EXTERNAL PROCEDURE CALLS (all archs)
+
                         const func_name = reloc_str[0..std.mem.len(reloc_str)];
                         const maybe_func_ptr = gstate.func_lookup.get(func_name);
 
@@ -632,16 +636,119 @@ const Bof = struct {
                         // Copy the trampoline bytes over to the `temp_offset_table` so relocations work.
                         std.mem.copy(u8, @as([*]u8, @ptrFromInt(a1))[0..thunk_trampoline.len], trampoline[0..]);
 
-                        const relative_offset = @as(
-                            i32,
-                            @intCast(@as(i64, @intCast(a1)) + addend - @as(i64, @intCast(addr_p))),
-                        );
+                        switch (@import("builtin").cpu.arch) {
+                            .aarch64 => {
+                                const relative_offset = (@as(
+                                    i32,
+                                    @intCast(@as(i64, @intCast(a1)) + addend - @as(i64, @intCast(addr_p))),
+                                ) & 0x0fff_ffff) >> 2;
 
-                        @as(*align(1) i32, @ptrFromInt(addr_p)).* = relative_offset;
+                                // 0x94000000 BL (branch linked)
+                                // 0x14000000 B (branch)
+                                @as(*align(1) u32, @ptrFromInt(addr_p)).* =
+                                    @as(u32, if (reloc.r_type() == R_AARCH64_CALL26) 0x94000000 else 0x14000000) |
+                                    @as(u32, @bitCast(relative_offset));
+                            },
+                            else => {
+                                const relative_offset = @as(
+                                    i32,
+                                    @intCast(@as(i64, @intCast(a1)) + addend - @as(i64, @intCast(addr_p))),
+                                );
+
+                                @as(*align(1) u32, @ptrFromInt(addr_p)).* = @as(u32, @bitCast(relative_offset));
+                            },
+                        }
 
                         num_got_entries += 1;
                         assert(num_got_entries < max_num_external_functions);
-                    } else if ((section.sh_flags & std.elf.SHF_INFO_LINK) != 0) {
+                    } else if ((section.sh_flags & std.elf.SHF_INFO_LINK) != 0 and
+                        @import("builtin").cpu.arch == .aarch64)
+                    {
+                        // RELOCATIONS FOR AARCH64
+
+                        switch (reloc.r_type()) {
+                            R_AARCH64_ADR_PREL_PG_HI21 => {
+                                const s_plus_a_page: i64 = (@as(i64, @intCast(addr_s)) + addend) & ~@as(i64, 0xfff);
+                                const p_page: i64 = @as(i64, @intCast(addr_p)) & ~@as(i64, 0xfff);
+
+                                const pc_offset_21: i64 = ((s_plus_a_page - p_page) & 0x0000_0001_ffff_f000) >> 12;
+                                const pc_offset_19_hi: u32 = @intCast((pc_offset_21 & 0x0000_0000_001f_fffc) << 3);
+                                const pc_offset_2_lo: u32 = @intCast((pc_offset_21 & 0x0000_0000_0000_0003) << 29);
+
+                                var encoding = @as(*align(1) u32, @ptrFromInt(addr_p)).*;
+                                encoding = encoding | pc_offset_19_hi | pc_offset_2_lo;
+                                @as(*align(1) u32, @ptrFromInt(addr_p)).* = encoding;
+                            },
+                            R_AARCH64_ADD_ABS_LO12_NC => {
+                                const s_plus_a: i64 = @as(i64, @intCast(addr_s)) + addend;
+                                const imm: u32 = @as(u32, @intCast(s_plus_a & 0xfff)) << 10;
+
+                                var encoding = @as(*align(1) u32, @ptrFromInt(addr_p)).*;
+                                encoding = encoding | imm;
+                                @as(*align(1) u32, @ptrFromInt(addr_p)).* = encoding;
+                            },
+                            R_AARCH64_CALL26 => unreachable,
+                            R_AARCH64_JUMP26 => unreachable,
+                            R_AARCH64_ABS64 => {
+                                const relative_offset = @as(i64, @intCast(addr_s)) + addend;
+
+                                @as(*align(1) i64, @ptrFromInt(addr_p)).* = relative_offset;
+                            },
+                            R_AARCH64_PREL32 => {
+                                const relative_offset = @as(
+                                    i32,
+                                    @intCast(@as(i64, @intCast(addr_s)) + addend - @as(i64, @intCast(addr_p))),
+                                );
+
+                                @as(*align(1) i32, @ptrFromInt(addr_p)).* = relative_offset;
+                            },
+                            R_AARCH64_LDST8_ABS_LO12_NC => {
+                                const s_plus_a: i64 = @as(i64, @intCast(addr_s)) + addend;
+                                const imm: u32 = @as(u32, @intCast(s_plus_a & 0xfff)) << 10;
+
+                                var encoding = @as(*align(1) u32, @ptrFromInt(addr_p)).*;
+                                encoding = encoding | imm;
+                                @as(*align(1) u32, @ptrFromInt(addr_p)).* = encoding;
+                            },
+                            R_AARCH64_LDST16_ABS_LO12_NC => {
+                                const s_plus_a: i64 = @as(i64, @intCast(addr_s)) + addend;
+                                const imm: u32 = @as(u32, @intCast(s_plus_a & 0xffe)) << 9;
+
+                                var encoding = @as(*align(1) u32, @ptrFromInt(addr_p)).*;
+                                encoding = encoding | imm;
+                                @as(*align(1) u32, @ptrFromInt(addr_p)).* = encoding;
+                            },
+                            R_AARCH64_LDST32_ABS_LO12_NC => {
+                                const s_plus_a: i64 = @as(i64, @intCast(addr_s)) + addend;
+                                const imm: u32 = @as(u32, @intCast(s_plus_a & 0xffc)) << 8;
+
+                                var encoding = @as(*align(1) u32, @ptrFromInt(addr_p)).*;
+                                encoding = encoding | imm;
+                                @as(*align(1) u32, @ptrFromInt(addr_p)).* = encoding;
+                            },
+                            R_AARCH64_LDST64_ABS_LO12_NC => {
+                                const s_plus_a: i64 = @as(i64, @intCast(addr_s)) + addend;
+                                const imm: u32 = @as(u32, @intCast(s_plus_a & 0xff8)) << 7;
+
+                                var encoding = @as(*align(1) u32, @ptrFromInt(addr_p)).*;
+                                encoding = encoding | imm;
+                                @as(*align(1) u32, @ptrFromInt(addr_p)).* = encoding;
+                            },
+                            R_AARCH64_LDST128_ABS_LO12_NC => {
+                                const s_plus_a: i64 = @as(i64, @intCast(addr_s)) + addend;
+                                const imm: u32 = @as(u32, @intCast(s_plus_a & 0xff0)) << 6;
+
+                                var encoding = @as(*align(1) u32, @ptrFromInt(addr_p)).*;
+                                encoding = encoding | imm;
+                                @as(*align(1) u32, @ptrFromInt(addr_p)).* = encoding;
+                            },
+                            else => {},
+                        }
+                    } else if ((section.sh_flags & std.elf.SHF_INFO_LINK) != 0 and
+                        @import("builtin").cpu.arch == .x86_64)
+                    {
+                        // RELOCATIONS FOR X86_64
+
                         switch (reloc.r_type()) {
                             0x1 => {
                                 // R_X86_64_64 (0x1)
@@ -660,6 +767,20 @@ const Bof = struct {
 
                                 @as(*align(1) i32, @ptrFromInt(addr_p)).* = relative_offset;
                             },
+                            else => {},
+                        }
+                    } else if ((section.sh_flags & std.elf.SHF_INFO_LINK) != 0 and
+                        @import("builtin").cpu.arch == .x86)
+                    {
+                        // RELOCATIONS FOR X86
+
+                        switch (reloc.r_type()) {
+                            0x1 => {
+                                // R_X86_64_64 (0x1)
+
+                                @as(*align(1) usize, @ptrFromInt(addr_p)).* =
+                                    @as(usize, @intCast(@as(u64, @bitCast(@as(i64, @intCast(addr_s)) + addend))));
+                            },
                             0x9 => {
                                 // S + A - GOT
                                 const relative_offset = @as(
@@ -672,9 +793,9 @@ const Bof = struct {
                             else => {},
                         }
                     }
-                    print("\t\t-------------------------------------------------", .{});
                 }
             }
+            print("\t\t-------------------------------------------------", .{});
         }
 
         // Print all symbols; get pointer to `go()`.
@@ -1164,11 +1285,35 @@ const max_num_external_functions = 256;
 
 const w32 = @import("bofapi").win32;
 
-const thunk_offset = if (@import("builtin").cpu.arch == .x86_64) 2 else 1;
-const thunk_trampoline = if (@import("builtin").cpu.arch == .x86_64)
-    [_]u8{ 0x48, 0xb8, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xff, 0xe0 }
-else
-    [_]u8{ 0xb8, 0xee, 0xee, 0xee, 0xee, 0xff, 0xe0 };
+const thunk_offset = switch (@import("builtin").cpu.arch) {
+    .x86_64 => 2,
+    .x86 => 1,
+    .aarch64 => 8,
+    else => unreachable,
+};
+// zig fmt: off
+const thunk_trampoline = switch (@import("builtin").cpu.arch) {
+    .x86_64 => [_]u8{
+        0x48, 0xb8,
+        undefined, undefined,
+        undefined, undefined,
+        undefined, undefined,
+        undefined, undefined,
+        0xff, 0xe0,
+    },
+    .x86 => [_]u8{
+        0xb8,
+        undefined, undefined, undefined, undefined,
+        0xff, 0xe0,
+    },
+    .aarch64 => [_]u8{
+        0x50, 0x00, 0x00, 0x58, // ldr x16, .+8
+        0x00, 0x02, 0x1f, 0xd6, // br x16
+        undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+    },
+    else => unreachable,
+};
+// zig fmt: on
 
 const coff = struct {
     const Reloc = extern struct {
@@ -1189,6 +1334,18 @@ const coff = struct {
     const IMAGE_REL_I386_DIR32 = 6;
     const IMAGE_REL_I386_REL32 = 20;
 };
+
+const R_AARCH64_CALL26 = 283;
+const R_AARCH64_ADR_PREL_PG_HI21 = 275;
+const R_AARCH64_ADD_ABS_LO12_NC = 277;
+const R_AARCH64_JUMP26 = 282;
+const R_AARCH64_LDST8_ABS_LO12_NC = 278;
+const R_AARCH64_LDST16_ABS_LO12_NC = 284;
+const R_AARCH64_LDST32_ABS_LO12_NC = 285;
+const R_AARCH64_LDST64_ABS_LO12_NC = 286;
+const R_AARCH64_LDST128_ABS_LO12_NC = 299;
+const R_AARCH64_ABS64 = 257;
+const R_AARCH64_PREL32 = 261;
 
 extern fn __ashlti3(a: i128, b: i32) callconv(.C) i128;
 extern fn __ashldi3(a: i64, b: i32) callconv(.C) i64;

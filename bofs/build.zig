@@ -6,7 +6,7 @@
 const bofs = [_]Bof{
     .{ .name = "helloBof", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64 } },
     .{ .name = "uname", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64 } },
-    .{ .name = "udpScanner", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86 } },
+    .{ .name = "udpScanner", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64 } },
     .{ .name = "wWinver", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWhoami", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
@@ -87,6 +87,8 @@ pub fn build(b: *std.build.Builder, _: Options) void {
 
         for (bof.formats) |format| {
             for (bof.archs) |arch| {
+                if (format == .coff and arch == .aarch64) continue;
+
                 const target = Bof.getCrossTarget(format, arch);
                 const obj = switch (lang) {
                     .zig => b.addObject(.{
