@@ -51,6 +51,12 @@ zig build
 zig test
 ```
 
+Using qemu to run on non-native architecture:
+
+    zig build -Dtarget=aarch64-linux-gnu
+    zig build test -Dtarget=aarch64-linux-gnu
+    qemu-aarch64 -L /usr/aarch64-linux-gnu ./zig-out/bin/cli4bofs_lin_aarch64 zig-out/bin/test_obj0.elf.aarch64.o
+
 ## Example BOFs
 
 Below you can see the same BOF written in Zig and in C. When compiled, Zig version weights 860 bytes, C version weights 916 bytes.
