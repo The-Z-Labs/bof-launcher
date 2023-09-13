@@ -4,9 +4,9 @@
 
 // BOFs included with bof-launcher
 const bofs = [_]Bof{
-    .{ .name = "helloBof", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64 } },
-    .{ .name = "uname", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64 } },
-    .{ .name = "udpScanner", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64 } },
+    .{ .name = "helloBof", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+    .{ .name = "uname", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+    .{ .name = "udpScanner", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "wWinver", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWhoami", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
@@ -22,7 +22,7 @@ const Options = @import("../build.zig").Options;
 
 const BofLang = enum { zig, c };
 const BofFormat = enum { coff, elf };
-const BofArch = enum { x64, x86, aarch64 };
+const BofArch = enum { x64, x86, aarch64, arm };
 
 const Bof = struct {
     dir: ?[]const u8 = null,
@@ -38,12 +38,13 @@ const Bof = struct {
                 .x64 => .x86_64,
                 .x86 => .x86,
                 .aarch64 => .aarch64,
+                .arm => .arm,
             },
             .os_tag = switch (format) {
                 .coff => .windows,
                 .elf => .linux,
             },
-            .abi = .gnu,
+            .abi = if (arch == .arm) .gnueabihf else .gnu,
         };
     }
 };
@@ -88,6 +89,7 @@ pub fn build(b: *std.build.Builder, _: Options) void {
         for (bof.formats) |format| {
             for (bof.archs) |arch| {
                 if (format == .coff and arch == .aarch64) continue;
+                if (format == .coff and arch == .arm) continue;
 
                 const target = Bof.getCrossTarget(format, arch);
                 const obj = switch (lang) {
@@ -138,6 +140,7 @@ pub fn build(b: *std.build.Builder, _: Options) void {
                 obj.force_pic = true;
                 obj.single_threaded = true;
                 obj.strip = true;
+                obj.unwind_tables = false;
 
                 b.getInstallStep().dependOn(
                     &b.addInstallFile(

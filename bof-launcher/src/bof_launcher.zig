@@ -570,8 +570,14 @@ const Bof = struct {
             const section_offset = @as(usize, @intCast(section.sh_offset));
             const section_size = @as(usize, @intCast(section.sh_size));
 
+            if (section.sh_type == std.elf.SHT_RELA) {
+                print("\tSection type: SHT_RELA", .{});
+            } else if (section.sh_type == std.elf.SHT_REL) {
+                print("\tSection type: SHT_REL", .{});
+            }
+
             if (section.sh_type == sht_rel_type) {
-                print("\tREL(A) ENTRIES (Section Index: {d})", .{section_index});
+                print("\tENTRIES (Section Index: {d})", .{section_index});
 
                 const relocs = @as(
                     [*]const ElfRel,
@@ -611,7 +617,7 @@ const Bof = struct {
                         );
 
                         @as(*align(1) i32, @ptrFromInt(addr_p)).* = relative_offset;
-                    } else if (symbol.st_shndx == 0) {
+                    } else if (symbol.st_shndx == 0 and reloc.r_type() != 0) {
                         // EXTERNAL PROCEDURE CALLS (all archs)
 
                         const func_name = reloc_str[0..std.mem.len(reloc_str)];
@@ -638,6 +644,9 @@ const Bof = struct {
 
                         switch (@import("builtin").cpu.arch) {
                             .aarch64 => {
+                                // DOCS: https://github.com/ARM-software/abi-aa/blob/main/aaelf64/aaelf64.rst
+                                assert(reloc.r_type() == R_AARCH64_CALL26 or reloc.r_type() == R_AARCH64_JUMP26);
+
                                 const relative_offset = (@as(
                                     i32,
                                     @intCast(@as(i64, @intCast(a1)) + addend - @as(i64, @intCast(addr_p))),
@@ -648,6 +657,23 @@ const Bof = struct {
                                 @as(*align(1) u32, @ptrFromInt(addr_p)).* =
                                     @as(u32, if (reloc.r_type() == R_AARCH64_CALL26) 0x94000000 else 0x14000000) |
                                     @as(u32, @bitCast(relative_offset));
+                            },
+                            .arm => {
+                                // DOCS: https://github.com/ARM-software/abi-aa/blob/main/aaelf32/aaelf32.rst
+                                assert(reloc.r_type() == R_ARM_CALL);
+
+                                const encoding = @as(*align(1) i32, @ptrFromInt(addr_p)).*;
+                                const a: i32 = @intCast(@as(i26, @intCast(encoding & 0x00_ff_ff_ff)) << 2);
+
+                                const relative_offset = @as(
+                                    i32,
+                                    @intCast(@as(i64, @intCast(a1)) + a - @as(i64, @intCast(addr_p))),
+                                );
+
+                                // 0xeb000000 BL (branch linked)
+                                @as(*align(1) u32, @ptrFromInt(addr_p)).* =
+                                    @as(u32, 0xeb000000) |
+                                    @as(u32, @bitCast((relative_offset & 0x03fffffe) >> 2));
                             },
                             else => {
                                 const relative_offset = @as(
@@ -665,6 +691,7 @@ const Bof = struct {
                         @import("builtin").cpu.arch == .aarch64)
                     {
                         // RELOCATIONS FOR AARCH64
+                        // DOCS: https://github.com/ARM-software/abi-aa/blob/main/aaelf64/aaelf64.rst
 
                         switch (reloc.r_type()) {
                             R_AARCH64_ADR_PREL_PG_HI21 => {
@@ -745,6 +772,45 @@ const Bof = struct {
                             else => {},
                         }
                     } else if ((section.sh_flags & std.elf.SHF_INFO_LINK) != 0 and
+                        @import("builtin").cpu.arch == .arm)
+                    {
+                        // RELOCATIONS FOR ARM
+                        // DOCS: https://github.com/ARM-software/abi-aa/blob/main/aaelf32/aaelf32.rst
+
+                        switch (reloc.r_type()) {
+                            R_ARM_REL32 => {
+                                const relative_offset = @as(
+                                    i32,
+                                    @intCast(@as(i64, @intCast(addr_s)) + addend - @as(i64, @intCast(addr_p))),
+                                );
+
+                                @as(*align(1) i32, @ptrFromInt(addr_p)).* = relative_offset;
+                            },
+                            R_ARM_ABS32 => {
+                                const relative_offset = @as(
+                                    i32,
+                                    @intCast(@as(i64, @intCast(addr_s)) + addend),
+                                );
+
+                                @as(*align(1) i32, @ptrFromInt(addr_p)).* = relative_offset;
+                            },
+                            R_ARM_CALL => {
+                                const encoding = @as(*align(1) i32, @ptrFromInt(addr_p)).*;
+                                const a: i32 = @intCast(@as(i26, @intCast(encoding & 0x00_ff_ff_ff)) << 2);
+
+                                const relative_offset = @as(
+                                    i32,
+                                    @intCast(@as(i64, @intCast(addr_s)) + a - @as(i64, @intCast(addr_p))),
+                                );
+
+                                @as(*align(1) u32, @ptrFromInt(addr_p)).* =
+                                    @as(u32, 0xeb000000) |
+                                    @as(u32, @bitCast((relative_offset & 0x03fffffe) >> 2));
+                            },
+                            R_ARM_PREL31 => {},
+                            else => unreachable,
+                        }
+                    } else if ((section.sh_flags & std.elf.SHF_INFO_LINK) != 0 and
                         @import("builtin").cpu.arch == .x86_64)
                     {
                         // RELOCATIONS FOR X86_64
@@ -793,9 +859,9 @@ const Bof = struct {
                             else => {},
                         }
                     }
+                    print("\t\t-------------------------------------------------", .{});
                 }
             }
-            print("\t\t-------------------------------------------------", .{});
         }
 
         // Print all symbols; get pointer to `go()`.
@@ -1289,16 +1355,14 @@ const thunk_offset = switch (@import("builtin").cpu.arch) {
     .x86_64 => 2,
     .x86 => 1,
     .aarch64 => 8,
+    .arm => 8,
     else => unreachable,
 };
 // zig fmt: off
 const thunk_trampoline = switch (@import("builtin").cpu.arch) {
     .x86_64 => [_]u8{
         0x48, 0xb8,
-        undefined, undefined,
-        undefined, undefined,
-        undefined, undefined,
-        undefined, undefined,
+        undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined,
         0xff, 0xe0,
     },
     .x86 => [_]u8{
@@ -1307,9 +1371,14 @@ const thunk_trampoline = switch (@import("builtin").cpu.arch) {
         0xff, 0xe0,
     },
     .aarch64 => [_]u8{
-        0x50, 0x00, 0x00, 0x58, // ldr x16, .+8
+        0x50, 0x00, 0x00, 0x58, // ldr x16, #8
         0x00, 0x02, 0x1f, 0xd6, // br x16
         undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+    },
+    .arm => [_]u8{
+        0x00, 0xc0, 0x9f, 0xe5, // ldr r12, [pc] ; pc points two instructions ahead
+        0x1c, 0xff, 0x2f, 0xe1, // bx r12
+        undefined, undefined, undefined, undefined,
     },
     else => unreachable,
 };
@@ -1347,12 +1416,22 @@ const R_AARCH64_LDST128_ABS_LO12_NC = 299;
 const R_AARCH64_ABS64 = 257;
 const R_AARCH64_PREL32 = 261;
 
+const R_ARM_ABS32 = 2;
+const R_ARM_REL32 = 3;
+const R_ARM_CALL = 28;
+const R_ARM_NONE = 0;
+const R_ARM_PREL31 = 42;
+
 extern fn __ashlti3(a: i128, b: i32) callconv(.C) i128;
 extern fn __ashldi3(a: i64, b: i32) callconv(.C) i64;
 extern fn __udivdi3(a: u64, b: u64) callconv(.C) u64;
 extern fn __divti3(a: i128, b: i128) callconv(.C) i128;
 extern fn __divdi3(a: i64, b: i64) callconv(.C) i64;
 extern fn __modti3(a: i128, b: i128) callconv(.C) i128;
+extern fn __aeabi_llsl(a: i64, b: i32) callconv(.AAPCS) i64;
+extern fn __aeabi_uidiv(n: u32, d: u32) callconv(.AAPCS) u32;
+extern fn __aeabi_uldivmod() callconv(.Naked) void;
+extern fn __aeabi_ldivmod() callconv(.Naked) void;
 extern fn memset(dest: ?[*]u8, c: u8, len: usize) callconv(.C) ?[*]u8;
 extern fn memcpy(noalias dest: ?[*]u8, noalias src: ?[*]const u8, len: usize) callconv(.C) ?[*]u8;
 
@@ -1518,7 +1597,9 @@ fn initLauncher() !void {
     try gstate.func_lookup.put(if (is32w) "_calloc" else "calloc", @intFromPtr(&allocateAndZeroMemory));
     try gstate.func_lookup.put(if (is32w) "_free" else "free", @intFromPtr(&freeMemory));
     try gstate.func_lookup.put(if (is32w) "___ashlti3" else "__ashlti3", @intFromPtr(&__ashlti3));
-    try gstate.func_lookup.put(if (is32w) "___ashldi3" else "__ashldi3", @intFromPtr(&__ashldi3));
+    if (@import("builtin").cpu.arch != .arm) {
+        try gstate.func_lookup.put(if (is32w) "___ashldi3" else "__ashldi3", @intFromPtr(&__ashldi3));
+    }
     try gstate.func_lookup.put(if (is32w) "___udivdi3" else "__udivdi3", @intFromPtr(&__udivdi3));
     try gstate.func_lookup.put(if (is32w) "___divti3" else "__divti3", @intFromPtr(&__divti3));
     try gstate.func_lookup.put(if (is32w) "___divdi3" else "__divdi3", @intFromPtr(&__divdi3));
@@ -1548,6 +1629,13 @@ fn initLauncher() !void {
             },
             else => unreachable,
         }
+    }
+
+    if (@import("builtin").cpu.arch == .arm) {
+        try gstate.func_lookup.put("__aeabi_llsl", @intFromPtr(&__aeabi_llsl));
+        try gstate.func_lookup.put("__aeabi_uidiv", @intFromPtr(&__aeabi_uidiv));
+        try gstate.func_lookup.put("__aeabi_uldivmod", @intFromPtr(&__aeabi_uldivmod));
+        try gstate.func_lookup.put("__aeabi_ldivmod", @intFromPtr(&__aeabi_ldivmod));
     }
 
     gstate.bof_pool = BofPool.init(gstate.allocator.?);

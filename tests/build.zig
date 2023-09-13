@@ -55,6 +55,7 @@ fn buildTestObjs(b: *std.build.Builder, options: Options, bofapi: *std.Build.Mod
         obj.force_pic = true;
         obj.single_threaded = true;
         obj.strip = true;
+        obj.unwind_tables = false;
 
         const dest_path = std.mem.join(b.allocator, ".", &.{
             "bin/" ++ name,
@@ -87,6 +88,7 @@ fn buildTestObjs(b: *std.build.Builder, options: Options, bofapi: *std.Build.Mod
         obj.force_pic = true;
         obj.single_threaded = true;
         obj.strip = true;
+        obj.unwind_tables = false;
 
         const dest_path = std.mem.join(b.allocator, ".", &.{
             "bin/" ++ name,
