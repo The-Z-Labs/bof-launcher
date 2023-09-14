@@ -8,6 +8,7 @@ pub fn build(
     b: *std.build.Builder,
     options: Options,
     bof_launcher_lib: *std.Build.CompileStep,
+    bof_api_module: *std.Build.Module,
 ) void {
     const exe = b.addExecutable(.{
         .name = std.mem.join(b.allocator, "_", &.{
@@ -24,10 +25,7 @@ pub fn build(
 
     exe.linkLibrary(bof_launcher_lib);
 
-    const bofapi = b.createModule(.{
-        .source_file = .{ .path = thisDir() ++ "/../../include/bofapi.zig" },
-    });
-    exe.addModule("bofapi", bofapi);
+    exe.addModule("bofapi", bof_api_module);
 
     b.installArtifact(exe);
 }

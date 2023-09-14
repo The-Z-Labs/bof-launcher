@@ -7,14 +7,14 @@ pub fn runTests(
     b: *std.build.Builder,
     options: Options,
     bof_launcher_lib: *std.Build.CompileStep,
-) *std.build.Step {
+    bof_api_module: *std.Build.Module,
+) *std.build.RunStep {
     const tests = b.addTest(.{
         .name = "bof-launcher-tests",
         .root_source_file = .{ .path = thisDir() ++ "/src/tests.zig" },
         .target = options.target,
         .optimize = options.optimize,
     });
-
     tests.addIncludePath(.{ .path = thisDir() ++ "/../include" });
     tests.linkLibrary(bof_launcher_lib);
     tests.addCSourceFile(.{
@@ -22,21 +22,16 @@ pub fn runTests(
         .flags = &.{"-std=c99"},
     });
     tests.linkLibC();
-
-    const bofapi = b.createModule(.{
-        .source_file = .{ .path = thisDir() ++ "/../include/bofapi.zig" },
-    });
-    tests.addModule("bofapi", bofapi);
-
-    tests.step.dependOn(buildTestObjs(b, options, bofapi));
-
-    return &b.addRunArtifact(tests).step;
+    tests.addModule("bofapi", bof_api_module);
+    tests.step.dependOn(b.getInstallStep());
+    return b.addRunArtifact(tests);
 }
 
-fn buildTestObjs(b: *std.build.Builder, options: Options, bofapi: *std.Build.Module) *std.build.Step {
-    const parent_step = b.allocator.create(std.Build.Step) catch @panic("OOM");
-    parent_step.* = std.Build.Step.init(.{ .id = .custom, .name = "bof-launcher-tests-objs", .owner = b });
-
+pub fn buildTestBofs(
+    b: *std.build.Builder,
+    options: Options,
+    bof_api_module: *std.Build.Module,
+) void {
     // Cross-platform (Windows, Linux) tests written in Zig
     inline for (.{
         "test_obj0",
@@ -51,7 +46,7 @@ fn buildTestObjs(b: *std.build.Builder, options: Options, bofapi: *std.Build.Mod
             .target = options.target,
             .optimize = .ReleaseSmall,
         });
-        obj.addModule("bofapi", bofapi);
+        obj.addModule("bofapi", bof_api_module);
         obj.force_pic = true;
         obj.single_threaded = true;
         obj.strip = true;
@@ -64,10 +59,9 @@ fn buildTestObjs(b: *std.build.Builder, options: Options, bofapi: *std.Build.Mod
             "o",
         }) catch @panic("OOM");
 
-        const obj_install = b.addInstallFile(obj.getOutputSource(), dest_path);
-        obj_install.step.dependOn(&obj.step);
-
-        parent_step.dependOn(&obj_install.step);
+        b.getInstallStep().dependOn(
+            &b.addInstallFile(obj.getOutputSource(), dest_path).step,
+        );
     }
 
     // Cross-platform (Windows, Linux) tests written in C
@@ -97,13 +91,10 @@ fn buildTestObjs(b: *std.build.Builder, options: Options, bofapi: *std.Build.Mod
             "o",
         }) catch @panic("OOM");
 
-        const obj_install = b.addInstallFile(obj.getOutputSource(), dest_path);
-        obj_install.step.dependOn(&obj.step);
-
-        parent_step.dependOn(&obj_install.step);
+        b.getInstallStep().dependOn(
+            &b.addInstallFile(obj.getOutputSource(), dest_path).step,
+        );
     }
-
-    return parent_step;
 }
 
 inline fn thisDir() []const u8 {

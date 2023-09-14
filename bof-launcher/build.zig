@@ -2,11 +2,11 @@ const std = @import("std");
 
 const Options = @import("../build.zig").Options;
 
-pub fn build(b: *std.build.Builder, options: Options) *std.Build.CompileStep {
-    const bofapi = b.createModule(.{
-        .source_file = .{ .path = thisDir() ++ "/../include/bofapi.zig" },
-    });
-
+pub fn build(
+    b: *std.build.Builder,
+    options: Options,
+    bof_api_module: *std.Build.Module,
+) *std.Build.CompileStep {
     const static_lib = b.addStaticLibrary(.{
         .name = std.mem.join(b.allocator, "_", &.{
             "bof-launcher",
@@ -20,7 +20,7 @@ pub fn build(b: *std.build.Builder, options: Options) *std.Build.CompileStep {
         // TODO: This is a workaround for `std.Thread.spawn()` on Linux.
         .link_libc = @import("builtin").os.tag == .linux,
     });
-    static_lib.addModule("bofapi", bofapi);
+    static_lib.addModule("bofapi", bof_api_module);
     buildLib(static_lib);
     b.installArtifact(static_lib);
 
@@ -39,7 +39,7 @@ pub fn build(b: *std.build.Builder, options: Options) *std.Build.CompileStep {
             // TODO: This is a workaround for `std.Thread.spawn()` on Linux.
             .link_libc = @import("builtin").os.tag == .linux,
         });
-        shared_lib.addModule("bofapi", bofapi);
+        shared_lib.addModule("bofapi", bof_api_module);
         buildLib(shared_lib);
         b.installArtifact(shared_lib);
     }

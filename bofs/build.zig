@@ -49,16 +49,15 @@ const Bof = struct {
     }
 };
 
-pub fn build(b: *std.build.Builder, _: Options) void {
+pub fn build(
+    b: *std.build.Builder,
+    bof_api_module: *std.Build.Module,
+) void {
     // Get directory with `windows.h` (and others windows headers) from zig installation.
     const windows_include_dir = std.fs.path.join(
         b.allocator,
         &.{ std.fs.path.dirname(b.zig_exe).?, "/lib/libc/include/any-windows-any" },
     ) catch unreachable;
-
-    const bofapi = b.createModule(.{
-        .source_file = .{ .path = thisDir() ++ "/../include/bofapi.zig" },
-    });
 
     var bofsList = std.ArrayList(Bof).init(b.allocator);
     defer bofsList.deinit();
@@ -135,7 +134,7 @@ pub fn build(b: *std.build.Builder, _: Options) void {
                         break :blk obj;
                     },
                 };
-                obj.addModule("bofapi", bofapi);
+                obj.addModule("bofapi", bof_api_module);
                 obj.addIncludePath(.{ .path = thisDir() ++ "/../include" });
                 obj.force_pic = true;
                 obj.single_threaded = true;
