@@ -30,11 +30,6 @@ Being a zero-dependency, drop-in C/C++ compiler that supports cross-compilation 
 
 Build artifacts will show up in `zig-out/bin` and `zig-out/lib` folders.
 
-To build the project for a specific target use `-Dtarget` option, for example:
-
-    zig build -Dtarget=x86-windows-gnu
-    zig build -Dtarget=x86_64-linux-gnu
-
 To build and run test BOFs do:
 
     zig build test
@@ -50,12 +45,11 @@ cd bof-launcher
 zig build
 zig test
 ```
+You can use qemu to run on foreign CPU architectures, for example:
 
-Using qemu to run on non-native architecture:
-
-    zig build -Dtarget=aarch64-linux-gnu
-    zig build test -Dtarget=aarch64-linux-gnu
+    zig build
     qemu-aarch64 -L /usr/aarch64-linux-gnu ./zig-out/bin/cli4bofs_lin_aarch64 zig-out/bin/test_obj0.elf.aarch64.o
+    qemu-arm -L /usr/arm-linux-gnueabihf ./zig-out/bin/cli4bofs_lin_arm zig-out/bin/test_obj0.elf.arm.o
 
 ## Example BOFs
 
