@@ -20,7 +20,7 @@ We at [Z-Labs](https://z-labs.eu) saw a big potential in BOFs and decided to ext
 - Adds capability to write BOFs in [Zig programming language](https://ziglang.org/) - which is a low-level langauge with a goal of being a "better C". All the features of the language and rich standard library can be used in BOFs (hash maps and other data structures, cross-platform OS layer, http, networking, threading, crypto and more).
 - Asynchronous BOF execution - additional capability to launch more time-consuming BOFs in a separate thread. 
 - Seamless support for either Windows COFF format and UNIX/Linux ELF format.
-- ARM 64/32 support (in development).
+- ARM and AARCH64 support on Linux.
 
 ## Building
 
