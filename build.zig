@@ -113,6 +113,9 @@ pub fn build(b: *std.build.Builder) void {
     //
     @import("bofs/build.zig").build(b, bof_api_module);
 
+    //
+    // Additional Windows tests
+    //
     if (@import("builtin").os.tag == .windows and @import("builtin").cpu.arch == .x86_64) {
         const udp_scanner_x64 = b.addSystemCommand(&.{
             "zig-out/bin/cli4bofs_win_x64.exe", "zig-out/bin/udpScanner.coff.x64.o", "192.168.0.1:2-10",
@@ -126,6 +129,68 @@ pub fn build(b: *std.build.Builder) void {
 
         test_step.dependOn(&udp_scanner_x64.step);
         test_step.dependOn(&udp_scanner_x86.step);
+    }
+
+    //
+    // Additional Linux tests
+    //
+    if (@import("builtin").os.tag == .linux and @import("builtin").cpu.arch == .x86_64) {
+        const udp_scanner_x64 = b.addSystemCommand(&.{
+            "zig-out/bin/cli4bofs_lin_x64", "zig-out/bin/udpScanner.elf.x64.o", "192.168.0.1:2-10",
+        });
+        const udp_scanner_x86 = b.addSystemCommand(&.{
+            "zig-out/bin/cli4bofs_lin_x86", "zig-out/bin/udpScanner.elf.x86.o", "192.168.0.1:2-10",
+        });
+
+        udp_scanner_x64.step.dependOn(b.getInstallStep());
+        udp_scanner_x86.step.dependOn(b.getInstallStep());
+
+        test_step.dependOn(&udp_scanner_x64.step);
+        test_step.dependOn(&udp_scanner_x86.step);
+
+        // Try to run on aarch64 using qemu
+        aarch64_blk: {
+            const result = std.ChildProcess.exec(.{
+                .allocator = b.allocator,
+                .argv = &.{ "qemu-aarch64", "--version" },
+                .cwd = thisDir(),
+            }) catch break :aarch64_blk;
+
+            if (result.term.Exited == 0) {
+                const udp_scanner_aarch64 = b.addSystemCommand(&.{
+                    "qemu-aarch64",
+                    "-L",
+                    "/usr/aarch64-linux-gnu",
+                    "zig-out/bin/cli4bofs_lin_aarch64",
+                    "zig-out/bin/udpScanner.elf.aarch64.o",
+                    "192.168.0.1:2-10",
+                });
+                udp_scanner_aarch64.step.dependOn(b.getInstallStep());
+                test_step.dependOn(&udp_scanner_aarch64.step);
+            }
+        }
+
+        // Try to run on arm using qemu
+        arm_blk: {
+            const result = std.ChildProcess.exec(.{
+                .allocator = b.allocator,
+                .argv = &.{ "qemu-arm", "--version" },
+                .cwd = thisDir(),
+            }) catch break :arm_blk;
+
+            if (result.term.Exited == 0) {
+                const udp_scanner_arm = b.addSystemCommand(&.{
+                    "qemu-arm",
+                    "-L",
+                    "/usr/arm-linux-gnueabihf",
+                    "zig-out/bin/cli4bofs_lin_arm",
+                    "zig-out/bin/udpScanner.elf.arm.o",
+                    "192.168.0.1:2-10",
+                });
+                udp_scanner_arm.step.dependOn(b.getInstallStep());
+                test_step.dependOn(&udp_scanner_arm.step);
+            }
+        }
     }
 }
 
