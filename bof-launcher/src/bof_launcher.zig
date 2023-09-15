@@ -1632,6 +1632,7 @@ fn initLauncher() !void {
     }
 
     if (@import("builtin").cpu.arch == .arm) {
+        // TODO: Add more.
         try gstate.func_lookup.put("__aeabi_llsl", @intFromPtr(&__aeabi_llsl));
         try gstate.func_lookup.put("__aeabi_uidiv", @intFromPtr(&__aeabi_uidiv));
         try gstate.func_lookup.put("__aeabi_uldivmod", @intFromPtr(&__aeabi_uldivmod));

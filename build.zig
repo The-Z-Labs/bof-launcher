@@ -93,7 +93,7 @@ pub fn build(b: *std.build.Builder) void {
             ).step);
         }
 
-        // TODO: Zig bug? Error in test runner on Linux.
+        // TODO: Zig bug? Error in the test runner on Linux (tests pass but memory error is reported).
         if (@import("builtin").os.tag == .linux and options.target.cpu_arch == .x86) continue;
 
         if (options.target.cpu_arch == .x86 and @import("builtin").cpu.arch == .x86_64 and
@@ -112,6 +112,21 @@ pub fn build(b: *std.build.Builder) void {
     // BOFs
     //
     @import("bofs/build.zig").build(b, bof_api_module);
+
+    if (@import("builtin").os.tag == .windows and @import("builtin").cpu.arch == .x86_64) {
+        const udp_scanner_x64 = b.addSystemCommand(&.{
+            "zig-out/bin/cli4bofs_win_x64.exe", "zig-out/bin/udpScanner.coff.x64.o", "192.168.0.1:2-10",
+        });
+        const udp_scanner_x86 = b.addSystemCommand(&.{
+            "zig-out/bin/cli4bofs_win_x86.exe", "zig-out/bin/udpScanner.coff.x86.o", "192.168.0.1:2-10",
+        });
+
+        udp_scanner_x64.step.dependOn(b.getInstallStep());
+        udp_scanner_x86.step.dependOn(b.getInstallStep());
+
+        test_step.dependOn(&udp_scanner_x64.step);
+        test_step.dependOn(&udp_scanner_x86.step);
+    }
 }
 
 inline fn thisDir() []const u8 {
