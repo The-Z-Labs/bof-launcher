@@ -166,7 +166,18 @@ pub fn build(b: *std.build.Builder) void {
                     "192.168.0.1:2-10",
                 });
                 udp_scanner_aarch64.step.dependOn(b.getInstallStep());
+
+                const test_obj0_aarch64 = b.addSystemCommand(&.{
+                    "qemu-aarch64",
+                    "-L",
+                    "/usr/aarch64-linux-gnu",
+                    "zig-out/bin/cli4bofs_lin_aarch64",
+                    "zig-out/bin/test_obj0.elf.aarch64.o",
+                });
+                test_obj0_aarch64.step.dependOn(b.getInstallStep());
+
                 test_step.dependOn(&udp_scanner_aarch64.step);
+                test_step.dependOn(&test_obj0_aarch64.step);
             }
         }
 
@@ -188,7 +199,18 @@ pub fn build(b: *std.build.Builder) void {
                     "192.168.0.1:2-10",
                 });
                 udp_scanner_arm.step.dependOn(b.getInstallStep());
+
+                const test_obj0_arm = b.addSystemCommand(&.{
+                    "qemu-arm",
+                    "-L",
+                    "/usr/arm-linux-gnueabihf",
+                    "zig-out/bin/cli4bofs_lin_arm",
+                    "zig-out/bin/test_obj0.elf.arm.o",
+                });
+                test_obj0_arm.step.dependOn(b.getInstallStep());
+
                 test_step.dependOn(&udp_scanner_arm.step);
+                test_step.dependOn(&test_obj0_arm.step);
             }
         }
     }

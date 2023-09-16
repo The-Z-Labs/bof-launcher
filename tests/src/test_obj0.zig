@@ -3,6 +3,7 @@ const beacon = @import("bofapi").beacon;
 
 fn func(msg: []const u8) u8 {
     std.debug.print("debug: test {s}\n", .{msg});
+    _ = beacon.printf(0, "func()\n");
     return 0;
 }
 
