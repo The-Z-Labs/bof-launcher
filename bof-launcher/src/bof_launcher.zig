@@ -660,7 +660,7 @@ const Bof = struct {
                             },
                             .arm => {
                                 // DOCS: https://github.com/ARM-software/abi-aa/blob/main/aaelf32/aaelf32.rst
-                                assert(reloc.r_type() == R_ARM_CALL);
+                                assert(reloc.r_type() == R_ARM_CALL or reloc.r_type() == R_ARM_JUMP24);
 
                                 const encoding = @as(*align(1) i32, @ptrFromInt(addr_p)).*;
                                 const a: i32 = @intCast(@as(i26, @intCast(encoding & 0x00_ff_ff_ff)) << 2);
@@ -671,8 +671,9 @@ const Bof = struct {
                                 );
 
                                 // 0xeb000000 BL (branch linked)
+                                // 0xea000000 B (branch)
                                 @as(*align(1) u32, @ptrFromInt(addr_p)).* =
-                                    @as(u32, 0xeb000000) |
+                                    @as(u32, if (reloc.r_type() == R_ARM_CALL) 0xeb000000 else 0xea000000) |
                                     @as(u32, @bitCast((relative_offset & 0x03fffffe) >> 2));
                             },
                             else => {
@@ -794,7 +795,7 @@ const Bof = struct {
 
                                 @as(*align(1) i32, @ptrFromInt(addr_p)).* = relative_offset;
                             },
-                            R_ARM_CALL => {
+                            R_ARM_CALL, R_ARM_JUMP24 => {
                                 const encoding = @as(*align(1) i32, @ptrFromInt(addr_p)).*;
                                 const a: i32 = @intCast(@as(i26, @intCast(encoding & 0x00_ff_ff_ff)) << 2);
 
@@ -803,8 +804,10 @@ const Bof = struct {
                                     @intCast(@as(i64, @intCast(addr_s)) + a - @as(i64, @intCast(addr_p))),
                                 );
 
+                                // 0xeb000000 BL (branch linked)
+                                // 0xea000000 B (branch)
                                 @as(*align(1) u32, @ptrFromInt(addr_p)).* =
-                                    @as(u32, 0xeb000000) |
+                                    @as(u32, if (reloc.r_type() == R_ARM_CALL) 0xeb000000 else 0xea000000) |
                                     @as(u32, @bitCast((relative_offset & 0x03fffffe) >> 2));
                             },
                             R_ARM_PREL31 => {},
@@ -1419,6 +1422,7 @@ const R_AARCH64_PREL32 = 261;
 const R_ARM_ABS32 = 2;
 const R_ARM_REL32 = 3;
 const R_ARM_CALL = 28;
+const R_ARM_JUMP24 = 29;
 const R_ARM_NONE = 0;
 const R_ARM_PREL31 = 42;
 
