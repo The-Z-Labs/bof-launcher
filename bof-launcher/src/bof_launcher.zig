@@ -272,157 +272,93 @@ const Bof = struct {
                     return error.UnknownFunction;
                 }
 
+                const addr_p = @intFromPtr(section_mappings.items[section_index].ptr) + reloc.virtual_address;
+                const addr_s = if (@intFromEnum(sym.symbol.section_number) > 0)
+                    @intFromPtr(section_mappings.items[@intFromEnum(sym.symbol.section_number) - 1].ptr)
+                else
+                    undefined;
+
+                const addend = std.mem.readIntSliceLittle(
+                    i32,
+                    section_mappings.items[section_index][reloc.virtual_address..],
+                ) + @as(i32, @intCast(sym.symbol.value));
+
                 if (@import("builtin").cpu.arch == .x86_64) {
                     if (reloc.type == coff.IMAGE_REL_AMD64_ADDR64) {
-                        const offset = std.mem.readIntSliceLittle(
+                        const a = std.mem.readIntSliceLittle(
                             u64,
                             section_mappings.items[section_index][reloc.virtual_address..],
-                        );
-                        const s = @intFromPtr(section_mappings.items[@intFromEnum(sym.symbol.section_number) - 1].ptr);
+                        ) + sym.symbol.value;
 
-                        print("S ADDR: 0x{x}", .{s});
-                        print("OFFSET: 0x{x}", .{offset});
+                        const addr = addr_s + a;
 
-                        const addr = offset + s + sym.symbol.value;
-                        print("ADDR: 0x{x}", .{addr});
-
-                        std.mem.copy(
-                            u8,
-                            section_mappings.items[section_index][reloc.virtual_address..],
-                            std.mem.asBytes(&addr),
-                        );
+                        @as(*align(1) u64, @ptrFromInt(addr_p)).* = addr;
                     } else if (reloc.type == coff.IMAGE_REL_AMD64_REL32 and maybe_func_addr != null) {
                         const func_addr = maybe_func_addr.?;
                         const func_map_addr = got_base_addr + num_got_entries * thunk_trampoline.len;
 
-                        // mov rax, func_addr
-                        @as(*align(1) u8, @ptrFromInt(func_map_addr)).* = 0x48;
-                        @as(*align(1) u8, @ptrFromInt(func_map_addr + 1)).* = 0xb8;
-                        @as(*align(1) usize, @ptrFromInt(func_map_addr + 2)).* = func_addr;
-                        // jmp rax
-                        @as(*align(1) u8, @ptrFromInt(func_map_addr + 10)).* = 0xff;
-                        @as(*align(1) u8, @ptrFromInt(func_map_addr + 11)).* = 0xe0;
+                        var trampoline = [_]u8{0} ** thunk_trampoline.len;
+                        std.mem.copy(u8, trampoline[0..], thunk_trampoline[0..]);
+                        std.mem.copy(u8, trampoline[thunk_offset..], std.mem.asBytes(&func_addr));
+                        std.mem.copy(
+                            u8,
+                            @as([*]u8, @ptrFromInt(func_map_addr))[0..thunk_trampoline.len],
+                            trampoline[0..],
+                        );
 
-                        const p = @intFromPtr(section_mappings.items[section_index].ptr) + reloc.virtual_address;
+                        const addr: i32 = @intCast(
+                            @as(isize, @intCast(func_map_addr)) - @as(isize, @intCast(addr_p)) - 4,
+                        );
 
-                        print("FUNC MAP ADDR: 0x{x}", .{func_map_addr});
-                        print("P ADDR: 0x{x}", .{p});
-                        print("FUNC ADDR: 0x{x}", .{func_addr});
-
-                        const addr = @as(i32, @intCast(@as(isize, @intCast(func_map_addr)) - @as(isize, @intCast(p)) - 4));
-
-                        print("ADDR: 0x{x}", .{addr});
-
-                        @as(*align(1) i32, @ptrFromInt(p)).* = addr;
-
-                        //std.mem.copy(
-                        //    u8,
-                        //    @intToPtr([*]u8, p)[0..4],
-                        //    std.mem.asBytes(&addr),
-                        //);
+                        @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
 
                         num_got_entries += 1;
                         assert(num_got_entries < max_num_external_functions);
                     } else if (reloc.type == coff.IMAGE_REL_AMD64_REL32) {
-                        const offset = std.mem.readIntSliceLittle(
-                            i32,
-                            section_mappings.items[section_index][reloc.virtual_address..],
+                        const addr: i32 = @intCast(
+                            @as(isize, @intCast(addr_s)) + addend - @as(isize, @intCast(addr_p)) - 4,
                         );
-                        const s = @intFromPtr(section_mappings.items[@intFromEnum(sym.symbol.section_number) - 1].ptr);
-                        const p = @intFromPtr(section_mappings.items[section_index].ptr) + reloc.virtual_address;
 
-                        print("FUNC OFFSET: 0x{x}", .{offset});
-                        print("P ADDR: 0x{x}", .{p});
-                        print("S ADDR: 0x{x}", .{s});
-
-                        const addr = offset + @as(
-                            i32,
-                            @intCast(@as(isize, @intCast(s)) + @as(i32, @intCast(sym.symbol.value)) - @as(isize, @intCast(p)) - 4),
-                        );
-                        print("ADDR: 0x{x}", .{addr});
-                        std.mem.copy(
-                            u8,
-                            section_mappings.items[section_index][reloc.virtual_address..],
-                            std.mem.asBytes(&addr),
-                        );
+                        @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
                     } else if (reloc.type == coff.IMAGE_REL_AMD64_ADDR32NB) {
-                        //const offset = std.mem.readIntSliceLittle(
-                        //    u32,
-                        //    section_mappings.items[section_index][reloc.virtual_address..],
-                        //);
-                        const s = @intFromPtr(section_mappings.items[@intFromEnum(sym.symbol.section_number) - 1].ptr);
-                        const p = @intFromPtr(section_mappings.items[section_index].ptr) + reloc.virtual_address;
-
-                        const addr = @as(i32, @intCast(@as(isize, @intCast(s)) - @as(isize, @intCast(p)) - 4));
-                        std.mem.copy(
-                            u8,
-                            section_mappings.items[section_index][reloc.virtual_address..],
-                            std.mem.asBytes(&addr),
+                        const addr: i32 = @intCast(
+                            @as(isize, @intCast(addr_s)) - @as(isize, @intCast(addr_p)) - 4,
                         );
+
+                        @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
                     }
                 } else if (@import("builtin").cpu.arch == .x86) {
                     if (reloc.type == coff.IMAGE_REL_I386_DIR32) {
-                        const offset = std.mem.readIntSliceLittle(
-                            i32,
-                            section_mappings.items[section_index][reloc.virtual_address..],
-                        );
-                        const s = @intFromPtr(section_mappings.items[@intFromEnum(sym.symbol.section_number) - 1].ptr);
+                        const addr = @as(i32, @intCast(addr_s)) + addend;
 
-                        print("S ADDR: 0x{x}", .{s});
-                        print("OFFSET: 0x{x}", .{offset});
-
-                        const addr = offset + @as(i32, @intCast(s)) + @as(i32, @intCast(sym.symbol.value));
-                        print("ADDR: 0x{x}", .{addr});
-
-                        std.mem.copy(
-                            u8,
-                            section_mappings.items[section_index][reloc.virtual_address..],
-                            std.mem.asBytes(&addr),
-                        );
+                        @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
                     } else if (reloc.type == coff.IMAGE_REL_I386_REL32 and maybe_func_addr != null) {
                         const func_addr = maybe_func_addr.?;
-                        const func_map_addr = got_base_addr + num_got_entries * 7;
+                        const func_map_addr = got_base_addr + num_got_entries * thunk_trampoline.len;
 
-                        // mov eax, func_addr
-                        @as(*align(1) u8, @ptrFromInt(func_map_addr)).* = 0xb8;
-                        @as(*align(1) usize, @ptrFromInt(func_map_addr + 1)).* = func_addr;
+                        var trampoline = [_]u8{0} ** thunk_trampoline.len;
+                        std.mem.copy(u8, trampoline[0..], thunk_trampoline[0..]);
+                        std.mem.copy(u8, trampoline[thunk_offset..], std.mem.asBytes(&func_addr));
+                        std.mem.copy(
+                            u8,
+                            @as([*]u8, @ptrFromInt(func_map_addr))[0..thunk_trampoline.len],
+                            trampoline[0..],
+                        );
 
-                        // jmp eax
-                        @as(*align(1) u8, @ptrFromInt(func_map_addr + 5)).* = 0xff;
-                        @as(*align(1) u8, @ptrFromInt(func_map_addr + 6)).* = 0xe0;
+                        const addr: i32 = @intCast(
+                            @as(isize, @intCast(func_map_addr)) - @as(isize, @intCast(addr_p)) - 4,
+                        );
 
-                        const p = @intFromPtr(section_mappings.items[section_index].ptr) + reloc.virtual_address;
-
-                        print("FUNC MAP ADDR: 0x{x}", .{func_map_addr});
-                        print("P ADDR: 0x{x}", .{p});
-                        print("FUNC ADDR: 0x{x}", .{func_addr});
-
-                        const addr = @as(i32, @intCast(@as(isize, @intCast(func_map_addr)) - @as(isize, @intCast(p)) - 4));
-
-                        print("ADDR: 0x{x}", .{addr});
-
-                        @as(*align(1) i32, @ptrFromInt(p)).* = addr;
+                        @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
 
                         num_got_entries += 1;
                         assert(num_got_entries < max_num_external_functions);
                     } else if (reloc.type == coff.IMAGE_REL_I386_REL32) {
-                        const offset = std.mem.readIntSliceLittle(
-                            i32,
-                            section_mappings.items[section_index][reloc.virtual_address..],
+                        const addr: i32 = @intCast(
+                            @as(isize, @intCast(addr_s)) + addend - @as(isize, @intCast(addr_p)) - 4,
                         );
-                        const s = @intFromPtr(section_mappings.items[@intFromEnum(sym.symbol.section_number) - 1].ptr);
-                        const p = @intFromPtr(section_mappings.items[section_index].ptr) + reloc.virtual_address;
 
-                        const addr = offset + @as(
-                            i32,
-                            @intCast(@as(isize, @intCast(s)) + @as(i32, @intCast(sym.symbol.value)) - @as(isize, @intCast(p)) - 4),
-                        );
-                        print("ADDR: 0x{x}", .{addr});
-                        std.mem.copy(
-                            u8,
-                            section_mappings.items[section_index][reloc.virtual_address..],
-                            std.mem.asBytes(&addr),
-                        );
+                        @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
                     }
                 }
                 print("", .{});
@@ -631,15 +567,11 @@ const Bof = struct {
                         }
                         const func_ptr = maybe_func_ptr.?;
 
-                        // Copy over the `func_ptr` to the location of the trampoline.
-                        var trampoline = [_]u8{0} ** thunk_trampoline.len;
-                        std.mem.copy(u8, trampoline[0..], thunk_trampoline[0..]);
-
-                        std.mem.copy(u8, trampoline[thunk_offset..], std.mem.asBytes(&func_ptr));
-
                         const a1 = @intFromPtr(got.ptr) + (num_got_entries * thunk_trampoline.len);
 
-                        // Copy the trampoline bytes over to the `temp_offset_table` so relocations work.
+                        var trampoline = [_]u8{0} ** thunk_trampoline.len;
+                        std.mem.copy(u8, trampoline[0..], thunk_trampoline[0..]);
+                        std.mem.copy(u8, trampoline[thunk_offset..], std.mem.asBytes(&func_ptr));
                         std.mem.copy(u8, @as([*]u8, @ptrFromInt(a1))[0..thunk_trampoline.len], trampoline[0..]);
 
                         switch (@import("builtin").cpu.arch) {
@@ -1364,14 +1296,14 @@ const thunk_offset = switch (@import("builtin").cpu.arch) {
 // zig fmt: off
 const thunk_trampoline = switch (@import("builtin").cpu.arch) {
     .x86_64 => [_]u8{
-        0x48, 0xb8,
+        0x48, 0xb8, // mov rax, imm64
         undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined,
-        0xff, 0xe0,
+        0xff, 0xe0, // jmp rax
     },
     .x86 => [_]u8{
-        0xb8,
+        0xb8, // mov eax, imm32
         undefined, undefined, undefined, undefined,
-        0xff, 0xe0,
+        0xff, 0xe0, // jmp eax
     },
     .aarch64 => [_]u8{
         0x50, 0x00, 0x00, 0x58, // ldr x16, #8
