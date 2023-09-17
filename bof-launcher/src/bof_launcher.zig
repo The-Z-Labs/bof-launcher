@@ -547,9 +547,8 @@ const Bof = struct {
                         // _GLOBAL_OFFSET_TABLE_
                         // GOT + A - P
 
-                        const relative_offset = @as(
-                            i32,
-                            @intCast(@as(i64, @intCast(@intFromPtr(got.ptr))) + addend - @as(i64, @intCast(addr_p))),
+                        const relative_offset: i32 = @intCast(
+                            @as(i64, @intCast(@intFromPtr(got.ptr))) + addend - @as(i64, @intCast(addr_p)),
                         );
 
                         @as(*align(1) i32, @ptrFromInt(addr_p)).* = relative_offset;
@@ -609,10 +608,8 @@ const Bof = struct {
                                     @as(u32, @bitCast((relative_offset & 0x03fffffe) >> 2));
                             },
                             else => {
-                                const relative_offset = @as(
-                                    i32,
-                                    @intCast(@as(i64, @intCast(a1)) + addend - @as(i64, @intCast(addr_p))),
-                                );
+                                const relative_offset: i32 =
+                                    @intCast(@as(i64, @intCast(a1)) + addend - @as(i64, @intCast(addr_p)));
 
                                 @as(*align(1) u32, @ptrFromInt(addr_p)).* = @as(u32, @bitCast(relative_offset));
                             },
@@ -712,18 +709,13 @@ const Bof = struct {
 
                         switch (reloc.r_type()) {
                             R_ARM_REL32 => {
-                                const relative_offset = @as(
-                                    i32,
-                                    @intCast(@as(i64, @intCast(addr_s)) + addend - @as(i64, @intCast(addr_p))),
-                                );
+                                const relative_offset: i32 =
+                                    @intCast(@as(i64, @intCast(addr_s)) + addend - @as(i64, @intCast(addr_p)));
 
                                 @as(*align(1) i32, @ptrFromInt(addr_p)).* = relative_offset;
                             },
                             R_ARM_ABS32 => {
-                                const relative_offset = @as(
-                                    i32,
-                                    @intCast(@as(i64, @intCast(addr_s)) + addend),
-                                );
+                                const relative_offset: i32 = @intCast(@as(i64, @intCast(addr_s)) + addend);
 
                                 @as(*align(1) i32, @ptrFromInt(addr_p)).* = relative_offset;
                             },
@@ -731,10 +723,8 @@ const Bof = struct {
                                 const encoding = @as(*align(1) i32, @ptrFromInt(addr_p)).*;
                                 const a: i32 = @intCast(@as(i26, @intCast(encoding & 0x00_ff_ff_ff)) << 2);
 
-                                const relative_offset = @as(
-                                    i32,
-                                    @intCast(@as(i64, @intCast(addr_s)) + a - @as(i64, @intCast(addr_p))),
-                                );
+                                const relative_offset: i32 =
+                                    @intCast(@as(i64, @intCast(addr_s)) + a - @as(i64, @intCast(addr_p)));
 
                                 // 0xeb000000 BL (branch linked)
                                 // 0xea000000 B (branch)
@@ -761,10 +751,8 @@ const Bof = struct {
                                 // R_X86_64_PC32 (0x2)
                                 // R_X86_64_PLT32 (0x4)
 
-                                const relative_offset = @as(
-                                    i32,
-                                    @intCast(@as(i64, @intCast(addr_s)) + addend - @as(i64, @intCast(addr_p))),
-                                );
+                                const relative_offset: i32 =
+                                    @intCast(@as(i64, @intCast(addr_s)) + addend - @as(i64, @intCast(addr_p)));
 
                                 @as(*align(1) i32, @ptrFromInt(addr_p)).* = relative_offset;
                             },
@@ -784,9 +772,8 @@ const Bof = struct {
                             },
                             0x9 => {
                                 // S + A - GOT
-                                const relative_offset = @as(
-                                    i32,
-                                    @intCast(@as(i64, @intCast(addr_s)) + addend - @as(i64, @intCast(@intFromPtr(got.ptr)))),
+                                const relative_offset: i32 = @intCast(
+                                    @as(i64, @intCast(addr_s)) + addend - @as(i64, @intCast(@intFromPtr(got.ptr))),
                                 );
 
                                 @as(*align(1) i32, @ptrFromInt(addr_p)).* = relative_offset;
