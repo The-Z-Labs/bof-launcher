@@ -1,8 +1,7 @@
 const std = @import("std");
 const assert = std.debug.assert;
 
-const print = dummyLog;
-//const print = log;
+const print = if (@import("builtin").mode == .Debug) log else dummyLog;
 
 fn dummyLog(_: []const u8, _: anytype) void {}
 fn log(comptime fmt: []const u8, args: anytype) void {
@@ -129,7 +128,7 @@ const Bof = struct {
         var section_offset: usize = max_section_size;
         for (section_headers) |section_header| {
             const section_name = parser.getSectionName(&section_header);
-            print("SECTION NAME: {s}", .{section_name});
+            print("SECTION NAME: {!s}", .{section_name});
             print("{any}\n\n", .{section_header});
 
             if (section_header.size_of_raw_data > 0) {
@@ -155,7 +154,7 @@ const Bof = struct {
 
         for (section_headers, 0..) |section_header, section_index| {
             const section_name = parser.getSectionName(&section_header);
-            print("SECTION NAME: {s} ({d})", .{ section_name, section_index });
+            print("SECTION NAME: {!s} ({d})", .{ section_name, section_index });
 
             const relocs = @as(
                 [*]align(1) const coff.Reloc,
@@ -290,7 +289,10 @@ const Bof = struct {
 
                     const got_entry = if (func_addr_to_got_entry.get(func_addr)) |entry| entry else blk: {
                         const entry = func_addr_to_got_entry.count();
-                        assert(entry < max_num_external_functions);
+                        if (entry >= max_num_external_functions) {
+                            print("Too many external functions used. Consider increasing `max_num_external_functions` constant.", .{});
+                            return error.TooManyExternalFunctions;
+                        }
 
                         try func_addr_to_got_entry.put(func_addr, entry);
                         break :blk entry;
@@ -566,7 +568,10 @@ const Bof = struct {
 
                         const got_entry = if (func_addr_to_got_entry.get(func_ptr)) |entry| entry else blk: {
                             const entry = func_addr_to_got_entry.count();
-                            assert(entry < max_num_external_functions);
+                            if (entry >= max_num_external_functions) {
+                                print("Too many external functions used. Consider increasing `max_num_external_functions` constant.", .{});
+                                return error.TooManyExternalFunctions;
+                            }
 
                             try func_addr_to_got_entry.put(func_ptr, entry);
                             break :blk entry;
