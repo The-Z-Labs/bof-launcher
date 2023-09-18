@@ -122,7 +122,9 @@ const Bof = struct {
         bof.all_sections_mem = all_sections_mem;
 
         const got_base_addr = @intFromPtr(all_sections_mem.ptr);
-        var num_got_entries: u32 = 0;
+
+        var func_addr_to_got_entry = std.AutoHashMap(usize, u32).init(arena);
+        defer func_addr_to_got_entry.deinit();
 
         var section_offset: usize = max_section_size;
         for (section_headers) |section_header| {
@@ -285,7 +287,16 @@ const Bof = struct {
 
                 if (maybe_func_addr != null) {
                     const func_addr = maybe_func_addr.?;
-                    const func_map_addr = got_base_addr + num_got_entries * thunk_trampoline.len;
+
+                    const got_entry = if (func_addr_to_got_entry.get(func_addr)) |entry| entry else blk: {
+                        const entry = func_addr_to_got_entry.count();
+                        assert(entry < max_num_external_functions);
+
+                        try func_addr_to_got_entry.put(func_addr, entry);
+                        break :blk entry;
+                    };
+
+                    const func_map_addr = got_base_addr + got_entry * thunk_trampoline.len;
 
                     var trampoline = [_]u8{0} ** thunk_trampoline.len;
                     std.mem.copy(u8, trampoline[0..], thunk_trampoline[0..]);
@@ -301,9 +312,6 @@ const Bof = struct {
                     );
 
                     @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
-
-                    num_got_entries += 1;
-                    assert(num_got_entries < max_num_external_functions);
                 } else if (@import("builtin").cpu.arch == .x86_64) {
                     switch (reloc.type) {
                         coff.IMAGE_REL_AMD64_ADDR64 => {
@@ -429,7 +437,9 @@ const Bof = struct {
         bof.all_sections_mem = all_sections_mem;
 
         const got = all_sections_mem[0 .. max_num_external_functions * thunk_trampoline.len];
-        var num_got_entries: u32 = 0;
+
+        var func_addr_to_got_entry = std.AutoHashMap(usize, u32).init(arena);
+        defer func_addr_to_got_entry.deinit();
 
         var map_offset: usize = max_section_size;
         for (section_headers.items, 0..) |section, section_index| {
@@ -554,7 +564,15 @@ const Bof = struct {
                         }
                         const func_ptr = maybe_func_ptr.?;
 
-                        const a1 = @intFromPtr(got.ptr) + (num_got_entries * thunk_trampoline.len);
+                        const got_entry = if (func_addr_to_got_entry.get(func_ptr)) |entry| entry else blk: {
+                            const entry = func_addr_to_got_entry.count();
+                            assert(entry < max_num_external_functions);
+
+                            try func_addr_to_got_entry.put(func_ptr, entry);
+                            break :blk entry;
+                        };
+
+                        const a1 = @intFromPtr(got.ptr) + got_entry * thunk_trampoline.len;
 
                         var trampoline = [_]u8{0} ** thunk_trampoline.len;
                         std.mem.copy(u8, trampoline[0..], thunk_trampoline[0..]);
@@ -602,9 +620,6 @@ const Bof = struct {
                                 @as(*align(1) u32, @ptrFromInt(addr_p)).* = @as(u32, @bitCast(relative_offset));
                             },
                         }
-
-                        num_got_entries += 1;
-                        assert(num_got_entries < max_num_external_functions);
                     } else if ((section.sh_flags & std.elf.SHF_INFO_LINK) != 0 and
                         @import("builtin").cpu.arch == .aarch64)
                     {
