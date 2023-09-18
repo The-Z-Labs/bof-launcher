@@ -283,82 +283,70 @@ const Bof = struct {
                     section_mappings.items[section_index][reloc.virtual_address..],
                 ) + @as(i32, @intCast(sym.symbol.value));
 
-                if (@import("builtin").cpu.arch == .x86_64) {
-                    if (reloc.type == coff.IMAGE_REL_AMD64_ADDR64) {
-                        const a = std.mem.readIntSliceLittle(
-                            u64,
-                            section_mappings.items[section_index][reloc.virtual_address..],
-                        ) + sym.symbol.value;
+                if (maybe_func_addr != null) {
+                    const func_addr = maybe_func_addr.?;
+                    const func_map_addr = got_base_addr + num_got_entries * thunk_trampoline.len;
 
-                        const addr = addr_s + a;
+                    var trampoline = [_]u8{0} ** thunk_trampoline.len;
+                    std.mem.copy(u8, trampoline[0..], thunk_trampoline[0..]);
+                    std.mem.copy(u8, trampoline[thunk_offset..], std.mem.asBytes(&func_addr));
+                    std.mem.copy(
+                        u8,
+                        @as([*]u8, @ptrFromInt(func_map_addr))[0..thunk_trampoline.len],
+                        trampoline[0..],
+                    );
 
-                        @as(*align(1) u64, @ptrFromInt(addr_p)).* = addr;
-                    } else if (reloc.type == coff.IMAGE_REL_AMD64_REL32 and maybe_func_addr != null) {
-                        const func_addr = maybe_func_addr.?;
-                        const func_map_addr = got_base_addr + num_got_entries * thunk_trampoline.len;
+                    const addr: i32 = @intCast(
+                        @as(isize, @intCast(func_map_addr)) - @as(isize, @intCast(addr_p)) - 4,
+                    );
 
-                        var trampoline = [_]u8{0} ** thunk_trampoline.len;
-                        std.mem.copy(u8, trampoline[0..], thunk_trampoline[0..]);
-                        std.mem.copy(u8, trampoline[thunk_offset..], std.mem.asBytes(&func_addr));
-                        std.mem.copy(
-                            u8,
-                            @as([*]u8, @ptrFromInt(func_map_addr))[0..thunk_trampoline.len],
-                            trampoline[0..],
-                        );
+                    @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
 
-                        const addr: i32 = @intCast(
-                            @as(isize, @intCast(func_map_addr)) - @as(isize, @intCast(addr_p)) - 4,
-                        );
+                    num_got_entries += 1;
+                    assert(num_got_entries < max_num_external_functions);
+                } else if (@import("builtin").cpu.arch == .x86_64) {
+                    switch (reloc.type) {
+                        coff.IMAGE_REL_AMD64_ADDR64 => {
+                            const a = std.mem.readIntSliceLittle(
+                                u64,
+                                section_mappings.items[section_index][reloc.virtual_address..],
+                            ) + sym.symbol.value;
 
-                        @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
+                            const addr = addr_s + a;
 
-                        num_got_entries += 1;
-                        assert(num_got_entries < max_num_external_functions);
-                    } else if (reloc.type == coff.IMAGE_REL_AMD64_REL32) {
-                        const addr: i32 = @intCast(
-                            @as(isize, @intCast(addr_s)) + addend - @as(isize, @intCast(addr_p)) - 4,
-                        );
+                            @as(*align(1) u64, @ptrFromInt(addr_p)).* = addr;
+                        },
+                        coff.IMAGE_REL_AMD64_REL32 => {
+                            const addr: i32 = @intCast(
+                                @as(isize, @intCast(addr_s)) + addend - @as(isize, @intCast(addr_p)) - 4,
+                            );
 
-                        @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
-                    } else if (reloc.type == coff.IMAGE_REL_AMD64_ADDR32NB) {
-                        const addr: i32 = @intCast(
-                            @as(isize, @intCast(addr_s)) - @as(isize, @intCast(addr_p)) - 4,
-                        );
+                            @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
+                        },
+                        coff.IMAGE_REL_AMD64_ADDR32NB => {
+                            const addr: i32 = @intCast(
+                                @as(isize, @intCast(addr_s)) - @as(isize, @intCast(addr_p)) - 4,
+                            );
 
-                        @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
+                            @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
+                        },
+                        else => {},
                     }
                 } else if (@import("builtin").cpu.arch == .x86) {
-                    if (reloc.type == coff.IMAGE_REL_I386_DIR32) {
-                        const addr = @as(i32, @intCast(addr_s)) + addend;
+                    switch (reloc.type) {
+                        coff.IMAGE_REL_I386_DIR32 => {
+                            const addr = @as(i32, @intCast(addr_s)) + addend;
 
-                        @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
-                    } else if (reloc.type == coff.IMAGE_REL_I386_REL32 and maybe_func_addr != null) {
-                        const func_addr = maybe_func_addr.?;
-                        const func_map_addr = got_base_addr + num_got_entries * thunk_trampoline.len;
+                            @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
+                        },
+                        coff.IMAGE_REL_I386_REL32 => {
+                            const addr: i32 = @intCast(
+                                @as(isize, @intCast(addr_s)) + addend - @as(isize, @intCast(addr_p)) - 4,
+                            );
 
-                        var trampoline = [_]u8{0} ** thunk_trampoline.len;
-                        std.mem.copy(u8, trampoline[0..], thunk_trampoline[0..]);
-                        std.mem.copy(u8, trampoline[thunk_offset..], std.mem.asBytes(&func_addr));
-                        std.mem.copy(
-                            u8,
-                            @as([*]u8, @ptrFromInt(func_map_addr))[0..thunk_trampoline.len],
-                            trampoline[0..],
-                        );
-
-                        const addr: i32 = @intCast(
-                            @as(isize, @intCast(func_map_addr)) - @as(isize, @intCast(addr_p)) - 4,
-                        );
-
-                        @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
-
-                        num_got_entries += 1;
-                        assert(num_got_entries < max_num_external_functions);
-                    } else if (reloc.type == coff.IMAGE_REL_I386_REL32) {
-                        const addr: i32 = @intCast(
-                            @as(isize, @intCast(addr_s)) + addend - @as(isize, @intCast(addr_p)) - 4,
-                        );
-
-                        @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
+                            @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
+                        },
+                        else => {},
                     }
                 }
                 print("", .{});
