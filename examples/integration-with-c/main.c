@@ -40,7 +40,8 @@ int main(int argc, char *argv[]) {
     if (bof_context == NULL) return 1;
 
     const char* output = bofContextGetOutput(bof_context, NULL);
-    printf("\n%s\n", output);
+    if (output)
+        printf("\n%s\n", output);
 
     bofObjectRelease(bof_handle);
     bofContextRelease(bof_context);
