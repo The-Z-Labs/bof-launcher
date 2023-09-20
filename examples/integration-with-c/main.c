@@ -45,6 +45,7 @@ int main(int argc, char *argv[]) {
     bofObjectRelease(bof_handle);
     bofContextRelease(bof_context);
     free(buf);
+    fclose(fp);
 
     return 0;
 }
