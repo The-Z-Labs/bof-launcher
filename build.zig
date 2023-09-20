@@ -80,6 +80,11 @@ pub fn build(b: *std.build.Builder) void {
         @import("examples/baby-stager/build.zig").build(b, options, bof_launcher_lib, bof_api_module);
 
         //
+        // Examples: integration with c
+        //
+        @import("examples/integration-with-c/build.zig").build(b, options, bof_launcher_lib);
+
+        //
         // Run test BOFs (`zig build test`)
         //
         if (options.target.cpu_arch == @import("builtin").cpu.arch and

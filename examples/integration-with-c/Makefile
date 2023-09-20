@@ -14,4 +14,4 @@ stb_sprintf.o: ../../bof-launcher/src/beacon/stb_sprintf.c
 	$(CC) $(CFLAGS) ../../bof-launcher/src/beacon/stb_sprintf.c
 
 bof_launcher.o:
-	zig build-obj -O ReleaseSmall ../../bof-launcher/src/bof_launcher.zig --mod bofapi::../../include/bofapi.zig --deps bofapi
+	zig build-obj -O ReleaseSmall -fstrip ../../bof-launcher/src/bof_launcher.zig --mod bofapi::../../include/bofapi.zig --deps bofapi

@@ -1,57 +1,50 @@
 #include <stdio.h>
-#include <unistd.h>
 #include <stdlib.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include "bof.h"
 
 int main(int argc, char *argv[]) {
-    ssize_t ret;
-    ssize_t len;
-    int fd;
-    struct stat sb;
-    const char *filename;
-
     if (argc < 2) {
         printf("Usage: %s <bof-filename>\n", argv[0]);
         return 0;
     }
-    filename = argv[1];
-    printf("filename: %s\n", filename);
+    const char* filename = argv[1];
+    printf("<bof-filename>: %s\n", filename);
 
-    fd = open(filename, O_RDONLY);
-    if (fd == -1) {
+    FILE* fp = fopen(filename, "rb");
+    if (fp == NULL) {
         printf("File not found. Please run 'zig build' in the root of the project.\n");
         return 1;
     }
 
-    if (fstat(fd, &sb) == -1) {
-        printf("fstat failed.\n");
-        return 2;
-    }
-    len = sb.st_size;
-    printf("bof len (fstat): %ld\n", sb.st_size);
+    fseek(fp, 0, SEEK_END);
+    long len = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
 
-    char* buf = (char *)malloc(sizeof(char)*len);
-    if (buf == NULL) return 3;
-    char* p = buf;
+    printf("File size is: %ld\n", len);
 
-    printf("Running bof from command line C application ...\n");
+    void* buf = malloc(len);
+    if (buf == NULL) return 1;
 
-    while (len != 0 && (ret = read(fd, p, len)) != 0) {
-        if (ret == -1) {
-            if (errno == EINTR)
-                continue;
-            printf("'read' failed.\n");
-            break;
-        }
-        len -= ret;
-        p += ret;
+    if (fread(buf, 1, len, fp) != len) {
+        printf("Failed to read the file.\n");
+        return 1;
     }
 
-    int bof_result = bofLoadAndRun("bof", (unsigned char*)buf, ret, NULL, 0, NULL);
+    BofObjectHandle bof_handle;
+    if (bofObjectInitFromMemory((unsigned char*)buf, len, &bof_handle) < 0) return 1;
+
+    printf("Running BOF from command line C application...\n");
+ 
+    BofContext* bof_context = NULL;
+    if (bofObjectRun(bof_handle, NULL, 0, &bof_context) < 0) return 1;
+    if (bof_context == NULL) return 1;
+
+    const char* output = bofContextGetOutput(bof_context, NULL);
+    printf("\n%s\n", output);
+
+    bofObjectRelease(bof_handle);
+    bofContextRelease(bof_context);
+    free(buf);
 
     return 0;
 }

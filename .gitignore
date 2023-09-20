@@ -1,10 +1,14 @@
 # Ignore all files by default, but scan all directories
+*
+!*/
 
 !*.c
 !*.cpp
 !*.inl
 !*.zig
 !*.h
+!*.bat
+!Makefile
 !LICENSE*
 
 !*.ini
