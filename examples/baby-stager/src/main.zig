@@ -19,7 +19,7 @@ fn fetchBofContent(allocator: std.mem.Allocator, bof_uri: []const u8) ![]u8 {
     var bof_req = try http_client.request(.GET, bof_url, h, .{});
     defer bof_req.deinit();
 
-    try bof_req.start();
+    try bof_req.start(.{});
     try bof_req.wait();
 
     const stdout = std.io.getStdOut();
@@ -88,7 +88,7 @@ pub fn main() !u8 {
         var req = try http_client.request(.GET, heartbeat_uri, heartbeat_header, .{});
         defer req.deinit();
 
-        try req.start();
+        try req.start(.{});
         try req.wait();
 
         if (req.response.status != .ok) {
@@ -190,7 +190,7 @@ pub fn main() !u8 {
 
                     reqRes.transfer_encoding = .{ .content_length = out_b64.len };
 
-                    try reqRes.start();
+                    try reqRes.start(.{});
                     try reqRes.writeAll(out_b64);
                     try reqRes.finish();
 
