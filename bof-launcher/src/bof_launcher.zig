@@ -1536,6 +1536,25 @@ fn initLauncher() !void {
     try gstate.func_lookup.put(if (is32w) "___divdi3" else "__divdi3", @intFromPtr(&__divdi3));
     try gstate.func_lookup.put(if (is32w) "___modti3" else "__modti3", @intFromPtr(&__modti3));
 
+    //TODO: should be loaded dynamically with std.DynLib.open
+    if (@import("builtin").os.tag == .linux) {
+        const libc = @cImport({
+            @cInclude("stdio.h");
+            @cInclude("time.h");
+            @cInclude("utmpx.h");
+        });
+        try gstate.func_lookup.put("puts", @intFromPtr(&libc.puts));
+        try gstate.func_lookup.put("printf", @intFromPtr(&libc.printf));
+
+        // https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/time.h.html
+        try gstate.func_lookup.put("ctime", @intFromPtr(&libc.ctime));
+
+        // https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/utmpx.h.html
+        try gstate.func_lookup.put("setutxent", @intFromPtr(&libc.setutxent));
+        try gstate.func_lookup.put("getutxent", @intFromPtr(&libc.getutxent));
+        try gstate.func_lookup.put("endutxent", @intFromPtr(&libc.endutxent));
+    }
+
     if (@import("builtin").os.tag == .windows) {
         switch (@import("builtin").cpu.arch) {
             .x86_64 => {

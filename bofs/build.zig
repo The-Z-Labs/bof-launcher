@@ -6,6 +6,8 @@
 const bofs = [_]Bof{
     .{ .name = "helloBof", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "uname", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+    .{ .name = "uptime", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+    .{ .name = "uptimeC", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "udpScanner", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "wWinver", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
@@ -119,6 +121,7 @@ pub fn build(
                                 ) catch unreachable,
                             },
                             .flags = &.{
+                                "-I/usr/include",
                                 "-DWINBASEAPI=",
                                 "-D_CRTIMP=",
                                 "-DLDAPAPI=",
