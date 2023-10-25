@@ -152,7 +152,7 @@ pub fn build(b: *std.build.Builder) void {
 
         // Try to run on aarch64 using qemu
         aarch64_blk: {
-            const result = std.ChildProcess.exec(.{
+            const result = std.ChildProcess.run(.{
                 .allocator = b.allocator,
                 .argv = &.{ "qemu-aarch64", "--version" },
                 .cwd = thisDir(),
@@ -185,7 +185,7 @@ pub fn build(b: *std.build.Builder) void {
 
         // Try to run on arm using qemu
         arm_blk: {
-            const result = std.ChildProcess.exec(.{
+            const result = std.ChildProcess.run(.{
                 .allocator = b.allocator,
                 .argv = &.{ "qemu-arm", "--version" },
                 .cwd = thisDir(),
