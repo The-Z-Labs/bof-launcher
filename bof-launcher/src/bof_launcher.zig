@@ -1538,11 +1538,8 @@ fn initLauncher() !void {
 
     //TODO: should be loaded dynamically with std.DynLib.open
     if (@import("builtin").os.tag == .linux) {
-        const libc = @cImport({
-            @cInclude("stdio.h");
-            @cInclude("time.h");
-            @cInclude("utmpx.h");
-        });
+        const libc = @import("bofapi").unix;
+
         try gstate.func_lookup.put("puts", @intFromPtr(&libc.puts));
         try gstate.func_lookup.put("printf", @intFromPtr(&libc.printf));
 
