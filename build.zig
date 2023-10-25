@@ -61,9 +61,6 @@ pub fn build(b: *std.build.Builder) void {
         //
         @import("tests/build.zig").buildTestBofs(b, options, bof_api_module);
 
-        // TODO: Zig bug. Link error on Windows. __tls_get_addr() is undefined.
-        if (@import("builtin").os.tag == .windows and target.cpu_arch == .arm) continue;
-
         //
         // Bof-launcher library
         //
