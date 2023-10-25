@@ -5,6 +5,8 @@
 #include <paths.h>
 #include "beacon.h"
 
+
+
 unsigned char go(unsigned char* arg_data, int arg_len) {
     struct utmpx *ut;
 

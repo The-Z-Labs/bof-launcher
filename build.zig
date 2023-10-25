@@ -77,7 +77,7 @@ pub fn build(b: *std.build.Builder) void {
         //
         // Examples: baby stager
         //
-        @import("examples/baby-stager/build.zig").build(b, options, bof_launcher_lib, bof_api_module);
+        //@import("examples/baby-stager/build.zig").build(b, options, bof_launcher_lib, bof_api_module);
 
         //
         // Examples: integration with c
