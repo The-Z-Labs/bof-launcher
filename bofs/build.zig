@@ -63,11 +63,11 @@ pub fn build(
 
     const linux_include_dir = std.fs.path.join(
         b.allocator,
-        &.{ "-I", std.fs.path.dirname(b.zig_exe).?, "/lib/libc/include/x86_64-linux-gnu" },
+        &.{ std.fs.path.dirname(b.zig_exe).?, "/lib/libc/include/x86_64-linux-gnu" },
     ) catch unreachable;
-    const libc_include_dir = std.fs.path.join(
+    const linux_libc_include_dir = std.fs.path.join(
         b.allocator,
-        &.{ "-I", std.fs.path.dirname(b.zig_exe).?, "/lib/libc/include/generic-glibc" },
+        &.{ std.fs.path.dirname(b.zig_exe).?, "/lib/libc/include/generic-glibc" },
     ) catch unreachable;
 
     var bofsList = std.ArrayList(Bof).init(b.allocator);
@@ -130,8 +130,6 @@ pub fn build(
                                 ) catch unreachable,
                             },
                             .flags = &.{
-                                linux_include_dir,
-                                libc_include_dir,
                                 "-DWINBASEAPI=",
                                 "-D_CRTIMP=",
                                 "-DLDAPAPI=",
@@ -142,8 +140,12 @@ pub fn build(
                                 if (format == .coff) "-DDECLSPEC_IMPORT=" else "",
                             },
                         });
-                        if (format == .coff)
+                        if (format == .coff) {
                             obj.addIncludePath(.{ .path = windows_include_dir });
+                        } else if (format == .elf) {
+                            obj.addIncludePath(.{ .path = linux_include_dir });
+                            obj.addIncludePath(.{ .path = linux_libc_include_dir });
+                        }
                         break :blk obj;
                     },
                 };
