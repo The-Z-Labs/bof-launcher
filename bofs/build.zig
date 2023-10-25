@@ -7,7 +7,7 @@ const bofs = [_]Bof{
     .{ .name = "helloBof", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "uname", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "uptime", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    //.{ .name = "uptimeC", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+    .{ .name = "uptimeC", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "udpScanner", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "wWinver", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
@@ -59,6 +59,15 @@ pub fn build(
     const windows_include_dir = std.fs.path.join(
         b.allocator,
         &.{ std.fs.path.dirname(b.zig_exe).?, "/lib/libc/include/any-windows-any" },
+    ) catch unreachable;
+
+    const linux_include_dir = std.fs.path.join(
+        b.allocator,
+        &.{ "-I", std.fs.path.dirname(b.zig_exe).?, "/lib/libc/include/x86_64-linux-gnu" },
+    ) catch unreachable;
+    const libc_include_dir = std.fs.path.join(
+        b.allocator,
+        &.{ "-I", std.fs.path.dirname(b.zig_exe).?, "/lib/libc/include/generic-glibc" },
     ) catch unreachable;
 
     var bofsList = std.ArrayList(Bof).init(b.allocator);
@@ -121,7 +130,8 @@ pub fn build(
                                 ) catch unreachable,
                             },
                             .flags = &.{
-                                "-I/usr/include",
+                                linux_include_dir,
+                                libc_include_dir,
                                 "-DWINBASEAPI=",
                                 "-D_CRTIMP=",
                                 "-DLDAPAPI=",

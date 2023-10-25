@@ -22,4 +22,5 @@ pub const utmpx = extern struct {
 
 pub extern fn setutxent() callconv(.C) void;
 pub extern fn getutxent() callconv(.C) *utmpx;
+pub extern fn getutxid(*utmpx) callconv(.C) *utmpx;
 pub extern fn endutxent() callconv(.C) void;

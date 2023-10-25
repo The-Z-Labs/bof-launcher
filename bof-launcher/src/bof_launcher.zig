@@ -1549,6 +1549,7 @@ fn initLauncher() !void {
         // https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/utmpx.h.html
         try gstate.func_lookup.put("setutxent", @intFromPtr(&libc.setutxent));
         try gstate.func_lookup.put("getutxent", @intFromPtr(&libc.getutxent));
+        try gstate.func_lookup.put("getutxid", @intFromPtr(&libc.getutxid));
         try gstate.func_lookup.put("endutxent", @intFromPtr(&libc.endutxent));
     }
 
