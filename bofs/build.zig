@@ -61,10 +61,6 @@ pub fn build(
         &.{ std.fs.path.dirname(b.zig_exe).?, "/lib/libc/include/any-windows-any" },
     ) catch unreachable;
 
-    const linux_include_dir = std.fs.path.join(
-        b.allocator,
-        &.{ std.fs.path.dirname(b.zig_exe).?, "/lib/libc/include/x86_64-linux-gnu" },
-    ) catch unreachable;
     const linux_libc_include_dir = std.fs.path.join(
         b.allocator,
         &.{ std.fs.path.dirname(b.zig_exe).?, "/lib/libc/include/generic-glibc" },
@@ -143,6 +139,17 @@ pub fn build(
                         if (format == .coff) {
                             obj.addIncludePath(.{ .path = windows_include_dir });
                         } else if (format == .elf) {
+                            const linux_include_dir = std.mem.join(
+                                b.allocator,
+                                "",
+                                &.{
+                                    std.fs.path.dirname(b.zig_exe).?,
+                                    "/lib/libc/include/",
+                                    @tagName(target.cpu_arch.?),
+                                    "-linux-",
+                                    @tagName(target.abi.?),
+                                },
+                            ) catch unreachable;
                             obj.addIncludePath(.{ .path = linux_include_dir });
                             obj.addIncludePath(.{ .path = linux_libc_include_dir });
                         }
