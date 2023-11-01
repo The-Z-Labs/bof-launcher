@@ -241,7 +241,7 @@ const Bof = struct {
                             "secur32.dll",
                             "advapi32.dll",
                             "ws2_32.dll",
-                            "ntdll.dll",
+                            //"ntdll.dll",
                             "version.dll",
                             "msvcrt.dll",
                             "shlwapi.dll",
@@ -1130,9 +1130,55 @@ fn bofThread(
     bof.run(context, arg_data);
 
     if (arg_data) |ad| gstate.allocator.?.free(ad);
-
     if (completion_cb) |cb| {
         cb(@ptrCast(context), completion_cb_context);
+    }
+}
+
+fn bofThreadCloneProc(
+    bof: *Bof,
+    arg_data: ?[]u8,
+    completion_cb: ?@import("bofapi").bof.CompletionCallback,
+    completion_cb_context: ?*anyopaque,
+    context: *BofContext,
+) void {
+    if (@import("builtin").os.tag == .windows) { // and @import("builtin").cpu.arch == .x86_64) {
+        var info: w32.RTL_USER_PROCESS_INFORMATION = undefined;
+        const status = w32.RtlCloneUserProcess(
+            w32.RTL_CLONE_PROCESS_FLAGS_INHERIT_HANDLES,
+            null,
+            null,
+            null,
+            &info,
+        );
+        switch (status) {
+            .PROCESS_CLONED => {
+                // child process
+                bof.run(context, arg_data);
+            },
+            .SUCCESS => {
+                // parent process
+                const wait_status = w32.WaitForSingleObject(info.ProcessHandle.?, w32.INFINITE);
+                print("Wait status: {d}\n", .{wait_status});
+                print("Status (parent): {d}\n", .{status});
+
+                // TODO: Get output and result from the child process
+                context.result = 0;
+                context.done_event.set();
+            },
+            else => {
+                print("Failed to clone the process ({d})\n", .{status});
+                context.result = 0xff; // error
+                context.done_event.set();
+            },
+        }
+
+        if (arg_data) |ad| gstate.allocator.?.free(ad);
+        if (completion_cb) |cb| {
+            cb(@ptrCast(context), completion_cb_context);
+        }
+    } else {
+        bofThread(bof, arg_data, completion_cb, completion_cb_context, context);
     }
 }
 
@@ -1172,6 +1218,7 @@ fn runAsync(
     arg_data_len: c_int,
     completion_cb: ?@import("bofapi").bof.CompletionCallback,
     completion_cb_context: ?*anyopaque,
+    comptime run_in_new_process: bool,
     out_context: **@import("bofapi").bof.Context,
 ) !void {
     const context = try gstate.allocator.?.create(BofContext);
@@ -1193,7 +1240,7 @@ fn runAsync(
     if (gstate.bof_pool.getBofPtrIfValid(bof_handle)) |bof| {
         const thread = try std.Thread.spawn(
             .{},
-            bofThread,
+            if (run_in_new_process) bofThreadCloneProc else bofThread,
             .{ bof, arg_data, completion_cb, completion_cb_context, context },
         );
         out_context.* = @ptrCast(context);
@@ -1217,6 +1264,29 @@ pub export fn bofObjectRunAsync(
         arg_data_len,
         completion_cb,
         completion_cb_context,
+        false,
+        out_context,
+    ) catch return -1;
+    return 0; // success
+}
+
+pub export fn bofObjectRunAsyncProc(
+    bof_handle: BofHandle,
+    arg_data_ptr: ?[*]u8,
+    arg_data_len: c_int,
+    completion_cb: ?@import("bofapi").bof.CompletionCallback,
+    completion_cb_context: ?*anyopaque,
+    out_context: **@import("bofapi").bof.Context,
+) callconv(.C) c_int {
+    if (!gstate.is_valid) return -1;
+    if (!gstate.bof_pool.isBofValid(bof_handle)) return 0; // ignore (no error)
+    runAsync(
+        bof_handle,
+        arg_data_ptr,
+        arg_data_len,
+        completion_cb,
+        completion_cb_context,
+        true, // run in new process
         out_context,
     ) catch return -1;
     return 0; // success

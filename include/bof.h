@@ -55,6 +55,13 @@ bofObjectRunAsync(BofObjectHandle bof_handle,
                   BofCompletionCallback completion_cb, // optional (can be NULL)
                   void* completion_cb_context, // optional (can be NULL)
                   BofContext** out_context); // required (can't be NULL)
+int
+bofObjectRunAsyncProc(BofObjectHandle bof_handle,
+                      unsigned char* arg_data_ptr,
+                      int arg_data_len,
+                      BofCompletionCallback completion_cb, // optional (can be NULL)
+                      void* completion_cb_context, // optional (can be NULL)
+                      BofContext** out_context); // required (can't be NULL)
 //------------------------------------------------------------------------------
 //
 // Context functions

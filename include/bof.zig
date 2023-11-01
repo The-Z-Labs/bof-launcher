@@ -83,6 +83,25 @@ pub const Object = extern struct {
         ) < 0) return error.Unknown;
         return context;
     }
+
+    pub fn runAsyncProc(
+        bof_handle: Object,
+        arg_data_ptr: ?[*]u8,
+        arg_data_len: c_int,
+        completion_cb: ?CompletionCallback,
+        completion_cb_context: ?*anyopaque,
+    ) Error!*Context {
+        var context: *Context = undefined;
+        if (bofObjectRunAsyncProc(
+            bof_handle,
+            arg_data_ptr,
+            arg_data_len,
+            completion_cb,
+            completion_cb_context,
+            &context,
+        ) < 0) return error.Unknown;
+        return context;
+    }
 };
 //------------------------------------------------------------------------------
 //
@@ -163,6 +182,15 @@ extern fn bofObjectRun(
 ) callconv(.C) c_int;
 
 extern fn bofObjectRunAsync(
+    bof_handle: Object,
+    arg_data_ptr: ?[*]u8,
+    arg_data_len: c_int,
+    completion_cb: ?CompletionCallback,
+    completion_cb_context: ?*anyopaque,
+    out_context: **Context,
+) callconv(.C) c_int;
+
+extern fn bofObjectRunAsyncProc(
     bof_handle: Object,
     arg_data_ptr: ?[*]u8,
     arg_data_len: c_int,

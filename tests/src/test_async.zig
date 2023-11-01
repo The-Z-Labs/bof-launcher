@@ -1,5 +1,6 @@
 const std = @import("std");
 const beacon = @import("bofapi").beacon;
+const w32 = @import("bofapi").win32;
 
 pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     _ = beacon.printf(0, "--- test_async.zig ---\n");
@@ -13,6 +14,8 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
         _ = beacon.printf(0, "Async bof #%d is running...\n", id);
         std.time.sleep(10e6);
     }
+
+    std.debug.print("aaaaaaaaaaaaaaaaaaaaaaaa\n", .{});
 
     return @intCast(id);
 }

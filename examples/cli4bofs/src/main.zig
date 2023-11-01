@@ -17,8 +17,10 @@ fn runBofFromFile(
     const object = try bof.Object.initFromMemory(file_data.ptr, @intCast(file_data.len));
     defer object.release();
 
-    const context = try object.run(arg_data_ptr, arg_data_len);
+    const context = try object.runAsync(arg_data_ptr, arg_data_len, null, null);
     defer context.release();
+
+    context.wait();
 
     if (context.getOutput()) |output| {
         try std.io.getStdOut().writer().print("{s}", .{output});
@@ -35,7 +37,7 @@ fn usage(name: [:0]const u8) void {
     stdout.writer().print("\tshort OR s\t - 16-bit signed integer.\n", .{}) catch unreachable;
     stdout.writer().print("\tint OR i\t - 32-bit signed integer.\n", .{}) catch unreachable;
     stdout.writer().print("\tstr OR z\t - zero-terminated characters string.\n", .{}) catch unreachable;
-    stdout.writer().print("\twstr OR Z\t - zer-terminated wide characters string.\n", .{}) catch unreachable;
+    stdout.writer().print("\twstr OR Z\t - zero-terminated wide characters string.\n", .{}) catch unreachable;
     stdout.writer().print("\tfile OR b\t - special type followed by file path indicating that a pointer to a buffer filled with content of the file will be passed to BOF.\n", .{}) catch unreachable;
     stdout.writer().print("\nIf prefix is ommited then ARGUMENT is treated as a zero-terminated characters string (str / z).\n", .{}) catch unreachable;
     stdout.writer().print("\nEXAMPLES:\n\n", .{}) catch unreachable;

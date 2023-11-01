@@ -25,6 +25,9 @@ pub const BOOLEAN = windows.BOOLEAN;
 pub const SIZE_T = windows.SIZE_T;
 pub const UCHAR = windows.UCHAR;
 
+pub const INFINITE = windows.INFINITE;
+pub const WAIT_FAILED = windows.WAIT_FAILED;
+
 pub const MEM_COMMIT = windows.MEM_COMMIT;
 pub const MEM_RESERVE = windows.MEM_RESERVE;
 pub const MEM_FREE = windows.MEM_FREE;
@@ -129,7 +132,7 @@ pub const TOKEN_INFORMATION_CLASS = enum(u32) {
 };
 
 pub const SECTION_IMAGE_INFORMATION = extern struct {
-    TransferAddress: PVOID,
+    TransferAddress: ?PVOID,
     ZeroBits: ULONG,
     MaximumStackSize: SIZE_T,
     CommittedStackSize: SIZE_T,
@@ -171,8 +174,8 @@ pub const SECTION_IMAGE_INFORMATION = extern struct {
 
 pub const RTL_USER_PROCESS_INFORMATION = extern struct {
     Length: ULONG,
-    ProcessHandle: HANDLE,
-    ThreadHandle: HANDLE,
+    ProcessHandle: ?HANDLE,
+    ThreadHandle: ?HANDLE,
     ClientId: CLIENT_ID,
     ImageInformation: SECTION_IMAGE_INFORMATION,
 };
@@ -189,6 +192,7 @@ pub const GetLastError = windows.kernel32.GetLastError;
 pub const Sleep = windows.kernel32.Sleep;
 pub const ExitProcess = windows.kernel32.ExitProcess;
 pub const GetCurrentProcess = windows.kernel32.GetCurrentProcess;
+pub const WaitForSingleObject = windows.kernel32.WaitForSingleObject;
 
 pub extern "kernel32" fn GetModuleHandleA(
     lpModuleName: ?LPCSTR,
@@ -220,6 +224,9 @@ pub extern "advapi32" fn OpenProcessToken(
     DesiredAccess: DWORD,
     TokenHandle: *HANDLE,
 ) callconv(WINAPI) BOOL;
+
+// user32
+pub const MessageBoxA = windows.user32.MessageBoxA;
 
 // ole32
 pub const CoInitializeEx = windows.ole32.CoInitializeEx;
