@@ -1143,7 +1143,7 @@ const BofContext = struct {
 
     done_event: std.Thread.ResetEvent = .{},
     handle: BofHandle,
-    result: u8 = 0xff,
+    result: u8 = 0xff, // TODO: Make atomic
 
     output: std.ArrayList(u8),
     output_ring: std.RingBuffer,
