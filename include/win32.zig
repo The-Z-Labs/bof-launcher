@@ -177,6 +177,10 @@ pub const RTL_USER_PROCESS_INFORMATION = extern struct {
     ImageInformation: SECTION_IMAGE_INFORMATION,
 };
 
+pub const RTL_CLONE_PROCESS_FLAGS_CREATE_SUSPENDED = 0x00000001;
+pub const RTL_CLONE_PROCESS_FLAGS_INHERIT_HANDLES = 0x00000002;
+pub const RTL_CLONE_PROCESS_FLAGS_NO_SYNCHRONIZE = 0x00000004; // don't update synchronization objects
+
 // kernel32
 pub const VirtualAlloc = windows.kernel32.VirtualAlloc;
 pub const VirtualFree = windows.kernel32.VirtualFree;
