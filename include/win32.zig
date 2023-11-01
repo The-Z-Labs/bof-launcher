@@ -15,6 +15,15 @@ pub const TRUE = windows.TRUE;
 pub const FALSE = windows.FALSE;
 pub const OSVERSIONINFOW = windows.OSVERSIONINFOW;
 pub const RTL_OSVERSIONINFOW = windows.RTL_OSVERSIONINFOW;
+pub const PVOID = windows.PVOID;
+pub const PSECURITY_DESCRIPTOR = PVOID;
+pub const NTSTATUS = windows.NTSTATUS;
+pub const CLIENT_ID = windows.CLIENT_ID;
+pub const UNICODE_STRING = windows.UNICODE_STRING;
+pub const USHORT = windows.USHORT;
+pub const BOOLEAN = windows.BOOLEAN;
+pub const SIZE_T = windows.SIZE_T;
+pub const UCHAR = windows.UCHAR;
 
 pub const MEM_COMMIT = windows.MEM_COMMIT;
 pub const MEM_RESERVE = windows.MEM_RESERVE;
@@ -119,6 +128,55 @@ pub const TOKEN_INFORMATION_CLASS = enum(u32) {
     MaxTokenInfoClass, // MaxTokenInfoClass should always be the last enum
 };
 
+pub const SECTION_IMAGE_INFORMATION = extern struct {
+    TransferAddress: PVOID,
+    ZeroBits: ULONG,
+    MaximumStackSize: SIZE_T,
+    CommittedStackSize: SIZE_T,
+    SubSystemType: ULONG,
+    U0: extern union {
+        S: extern struct {
+            SubSystemMinorVersion: USHORT,
+            SubSystemMajorVersion: USHORT,
+        },
+        SubSystemVersion: ULONG,
+    },
+    U1: extern union {
+        S: extern struct {
+            MajorOperatingSystemVersion: USHORT,
+            MinorOperatingSystemVersion: USHORT,
+        },
+        OperatingSystemVersion: ULONG,
+    },
+    ImageCharacteristics: USHORT,
+    DllCharacteristics: USHORT,
+    Machine: USHORT,
+    ImageContainsCode: BOOLEAN,
+    U2: extern union {
+        ImageFlags: UCHAR,
+        S: packed struct(UCHAR) {
+            ComPlusNativeReady: u1,
+            ComPlusILOnly: u1,
+            ImageDynamicallyRelocated: u1,
+            ImageMappedFlat: u1,
+            BaseBelow4gb: u1,
+            ComPlusPrefer32bit: u1,
+            Reserved: u2,
+        },
+    },
+    LoaderFlags: ULONG,
+    ImageFileSize: ULONG,
+    CheckSum: ULONG,
+};
+
+pub const RTL_USER_PROCESS_INFORMATION = extern struct {
+    Length: ULONG,
+    ProcessHandle: HANDLE,
+    ThreadHandle: HANDLE,
+    ClientId: CLIENT_ID,
+    ImageInformation: SECTION_IMAGE_INFORMATION,
+};
+
 // kernel32
 pub const VirtualAlloc = windows.kernel32.VirtualAlloc;
 pub const VirtualFree = windows.kernel32.VirtualFree;
@@ -127,15 +185,37 @@ pub const GetLastError = windows.kernel32.GetLastError;
 pub const Sleep = windows.kernel32.Sleep;
 pub const ExitProcess = windows.kernel32.ExitProcess;
 pub const GetCurrentProcess = windows.kernel32.GetCurrentProcess;
-pub extern "kernel32" fn GetModuleHandleA(lpModuleName: ?LPCSTR) callconv(WINAPI) ?HMODULE;
-pub extern "kernel32" fn LoadLibraryA(lpLibFileName: LPCSTR) callconv(WINAPI) ?HMODULE;
-pub extern "kernel32" fn GetProcAddress(hModule: HMODULE, lpProcName: LPCSTR) callconv(WINAPI) ?FARPROC;
+
+pub extern "kernel32" fn GetModuleHandleA(
+    lpModuleName: ?LPCSTR,
+) callconv(WINAPI) ?HMODULE;
+
+pub extern "kernel32" fn LoadLibraryA(
+    lpLibFileName: LPCSTR,
+) callconv(WINAPI) ?HMODULE;
+
+pub extern "kernel32" fn GetProcAddress(
+    hModule: HMODULE,
+    lpProcName: LPCSTR,
+) callconv(WINAPI) ?FARPROC;
 
 // ntdll
 pub const RtlGetVersion = windows.ntdll.RtlGetVersion;
 
+pub extern "ntdll" fn RtlCloneUserProcess(
+    ProcessFlags: ULONG,
+    ProcessSecurityDescriptor: ?PSECURITY_DESCRIPTOR,
+    ThreadSecurityDescriptor: ?PSECURITY_DESCRIPTOR,
+    DebugPort: ?HANDLE,
+    ProcessInformation: *RTL_USER_PROCESS_INFORMATION,
+) callconv(WINAPI) NTSTATUS;
+
 // advapi32
-pub extern "advapi32" fn OpenProcessToken(ProcessHandle: HANDLE, DesiredAccess: DWORD, TokenHandle: *HANDLE) callconv(WINAPI) BOOL;
+pub extern "advapi32" fn OpenProcessToken(
+    ProcessHandle: HANDLE,
+    DesiredAccess: DWORD,
+    TokenHandle: *HANDLE,
+) callconv(WINAPI) BOOL;
 
 // ole32
 pub const CoInitializeEx = windows.ole32.CoInitializeEx;
