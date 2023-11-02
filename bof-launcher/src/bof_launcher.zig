@@ -279,10 +279,7 @@ const Bof = struct {
                 else
                     undefined;
 
-                const addend = std.mem.readIntSliceLittle(
-                    i32,
-                    section_mappings.items[section_index][reloc.virtual_address..],
-                ) + @as(i32, @intCast(sym.symbol.value));
+                const addend = @as(*align(1) i32, @ptrFromInt(addr_p)).* + @as(i32, @intCast(sym.symbol.value));
 
                 if (maybe_func_addr != null) {
                     const func_addr = maybe_func_addr.?;
@@ -317,10 +314,7 @@ const Bof = struct {
                 } else if (@import("builtin").cpu.arch == .x86_64) {
                     switch (reloc.type) {
                         coff.IMAGE_REL_AMD64_ADDR64 => {
-                            const a = std.mem.readIntSliceLittle(
-                                u64,
-                                section_mappings.items[section_index][reloc.virtual_address..],
-                            ) + sym.symbol.value;
+                            const a = @as(*align(1) u64, @ptrFromInt(addr_p)).* + sym.symbol.value;
 
                             const addr = addr_s + a;
 
