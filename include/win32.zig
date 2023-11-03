@@ -184,15 +184,21 @@ pub const RTL_CLONE_PROCESS_FLAGS_CREATE_SUSPENDED = 0x00000001;
 pub const RTL_CLONE_PROCESS_FLAGS_INHERIT_HANDLES = 0x00000002;
 pub const RTL_CLONE_PROCESS_FLAGS_NO_SYNCHRONIZE = 0x00000004; // don't update synchronization objects
 
+pub const PROCESSINFOCLASS = windows.PROCESSINFOCLASS;
+pub const PROCESS_BASIC_INFORMATION = windows.PROCESS_BASIC_INFORMATION;
+pub const SECURITY_ATTRIBUTES = windows.SECURITY_ATTRIBUTES;
+
 // kernel32
 pub const VirtualAlloc = windows.kernel32.VirtualAlloc;
 pub const VirtualFree = windows.kernel32.VirtualFree;
-pub const WriteFile = windows.kernel32.WriteFile;
 pub const GetLastError = windows.kernel32.GetLastError;
 pub const Sleep = windows.kernel32.Sleep;
 pub const ExitProcess = windows.kernel32.ExitProcess;
 pub const GetCurrentProcess = windows.kernel32.GetCurrentProcess;
 pub const WaitForSingleObject = windows.kernel32.WaitForSingleObject;
+pub const ReadFile = windows.kernel32.ReadFile;
+pub const WriteFile = windows.kernel32.WriteFile;
+pub const CloseHandle = windows.kernel32.CloseHandle;
 
 pub extern "kernel32" fn GetModuleHandleA(
     lpModuleName: ?LPCSTR,
@@ -207,8 +213,16 @@ pub extern "kernel32" fn GetProcAddress(
     lpProcName: LPCSTR,
 ) callconv(WINAPI) ?FARPROC;
 
+pub extern "kernel32" fn CreatePipe(
+    hReadPipe: *HANDLE,
+    hWritePipe: *HANDLE,
+    lpPipeAttributes: ?*const SECURITY_ATTRIBUTES,
+    nSize: DWORD,
+) callconv(WINAPI) BOOL;
+
 // ntdll
 pub const RtlGetVersion = windows.ntdll.RtlGetVersion;
+pub const NtQueryInformationProcess = windows.ntdll.NtQueryInformationProcess;
 
 pub extern "ntdll" fn RtlCloneUserProcess(
     ProcessFlags: ULONG,

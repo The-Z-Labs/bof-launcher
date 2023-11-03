@@ -47,8 +47,6 @@ const Bof = struct {
         );
         gstate.current_bof_context = null;
 
-        context.done_event.set();
-
         print("Returned '{d}' from go().", .{context.result});
     }
 
@@ -1098,6 +1096,7 @@ fn run(
             context,
             if (arg_data_ptr) |ptr| ptr[0..@as(usize, @intCast(arg_data_len))] else null,
         );
+        context.done_event.set();
         out_context.* = @ptrCast(context);
     } else unreachable;
 }
@@ -1127,6 +1126,8 @@ fn bofThread(
     if (completion_cb) |cb| {
         cb(@ptrCast(context), completion_cb_context);
     }
+
+    context.done_event.set();
 }
 
 fn bofThreadCloneProc(
@@ -1136,7 +1137,24 @@ fn bofThreadCloneProc(
     completion_cb_context: ?*anyopaque,
     context: *BofContext,
 ) void {
-    if (@import("builtin").os.tag == .windows) { // and @import("builtin").cpu.arch == .x86_64) {
+    if (@import("builtin").os.tag == .windows and @import("builtin").cpu.arch == .x86_64) {
+        var read_pipe: w32.HANDLE = undefined;
+        var write_pipe: w32.HANDLE = undefined;
+        _ = w32.CreatePipe(
+            &read_pipe,
+            &write_pipe,
+            &.{
+                .nLength = @sizeOf(w32.SECURITY_ATTRIBUTES),
+                .lpSecurityDescriptor = null,
+                .bInheritHandle = w32.TRUE,
+            },
+            BofContext.max_output_len + 16,
+        );
+        defer {
+            _ = w32.CloseHandle(read_pipe);
+            _ = w32.CloseHandle(write_pipe);
+        }
+
         var info: w32.RTL_USER_PROCESS_INFORMATION = undefined;
         const status = w32.RtlCloneUserProcess(
             w32.RTL_CLONE_PROCESS_FLAGS_INHERIT_HANDLES,
@@ -1149,15 +1167,45 @@ fn bofThreadCloneProc(
             .PROCESS_CLONED => {
                 // child process
                 bof.run(context, arg_data);
+
+                _ = w32.WriteFile(write_pipe, @ptrCast(&context.result), 1, null, null);
+
+                var len: i32 = undefined;
+                const maybe_buf = bofContextGetOutput(context, &len);
+
+                _ = w32.WriteFile(write_pipe, std.mem.asBytes(&len), 4, null, null);
+
+                if (maybe_buf) |buf| {
+                    _ = w32.WriteFile(write_pipe, buf, @intCast(len), null, null);
+                }
+
+                if (arg_data) |ad| gstate.allocator.?.free(ad);
+                context.done_event.set();
             },
             .SUCCESS => {
                 // parent process
-                const wait_status = w32.WaitForSingleObject(info.ProcessHandle.?, w32.INFINITE);
-                print("Wait status: {d}\n", .{wait_status});
-                print("Status (parent): {d}\n", .{status});
+                _ = w32.WaitForSingleObject(info.ProcessHandle.?, w32.INFINITE);
 
-                // TODO: Get output and result from the child process
-                context.result = 0;
+                _ = w32.ReadFile(read_pipe, @ptrCast(&context.result), 1, null, null);
+
+                var len: u32 = 0;
+                _ = w32.ReadFile(read_pipe, std.mem.asBytes(&len), 4, null, null);
+
+                if (len > 0) {
+                    context.output_mutex.lock();
+                    defer context.output_mutex.unlock();
+
+                    _ = w32.ReadFile(read_pipe, context.output_ring.data.ptr, len, null, null);
+
+                    context.output_ring.read_index = 0;
+                    context.output_ring.write_index = len;
+                    context.output_ring_num_written_bytes = len;
+                }
+
+                if (arg_data) |ad| gstate.allocator.?.free(ad);
+                if (completion_cb) |cb| {
+                    cb(@ptrCast(context), completion_cb_context);
+                }
                 context.done_event.set();
             },
             else => {
@@ -1165,11 +1213,6 @@ fn bofThreadCloneProc(
                 context.result = 0xff; // error
                 context.done_event.set();
             },
-        }
-
-        if (arg_data) |ad| gstate.allocator.?.free(ad);
-        if (completion_cb) |cb| {
-            cb(@ptrCast(context), completion_cb_context);
         }
     } else {
         bofThread(bof, arg_data, completion_cb, completion_cb_context, context);
@@ -1258,7 +1301,7 @@ pub export fn bofObjectRunAsync(
         arg_data_len,
         completion_cb,
         completion_cb_context,
-        false,
+        false, // run in new process
         out_context,
     ) catch return -1;
     return 0; // success
