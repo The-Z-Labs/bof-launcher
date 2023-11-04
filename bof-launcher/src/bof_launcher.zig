@@ -1696,6 +1696,15 @@ fn initLauncher() !void {
 
     gstate.bof_pool = BofPool.init(gstate.allocator.?);
 
+    if (@import("builtin").os.tag == .windows) {
+        // NOTE(mziulek):
+        // Below code loads socket implementation and is required for RtlCloneUserProcess() to work correctly with sockets.
+        var wsadata: w32.WSADATA = undefined;
+        _ = w32.WSAStartup(0x0202, &wsadata);
+        const sock = w32.WSASocketW(w32.AF.INET, w32.SOCK.DGRAM, 0, null, 0, 0);
+        _ = w32.closesocket(sock);
+    }
+
     gstate.is_valid = true;
 }
 
@@ -1711,6 +1720,10 @@ pub export fn bofLauncherRelease() callconv(.C) void {
     if (!gstate.is_valid) return;
 
     gstate.is_valid = false;
+
+    if (@import("builtin").os.tag == .windows) {
+        _ = w32.WSACleanup();
+    }
 
     gstate.bof_pool.deinit(gstate.allocator.?);
 

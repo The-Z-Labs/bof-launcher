@@ -188,6 +188,10 @@ pub const PROCESSINFOCLASS = windows.PROCESSINFOCLASS;
 pub const PROCESS_BASIC_INFORMATION = windows.PROCESS_BASIC_INFORMATION;
 pub const SECURITY_ATTRIBUTES = windows.SECURITY_ATTRIBUTES;
 
+pub const WSADATA = windows.ws2_32.WSADATA;
+pub const AF = windows.ws2_32.AF;
+pub const SOCK = windows.ws2_32.SOCK;
+
 // kernel32
 pub const VirtualAlloc = windows.kernel32.VirtualAlloc;
 pub const VirtualFree = windows.kernel32.VirtualFree;
@@ -202,6 +206,7 @@ pub const CloseHandle = windows.kernel32.CloseHandle;
 pub const GetCurrentProcessId = windows.kernel32.GetCurrentProcessId;
 pub const GetCurrentThreadId = windows.kernel32.GetCurrentThreadId;
 pub const GetCurrentThread = windows.kernel32.GetCurrentThread;
+pub const FreeLibrary = windows.kernel32.FreeLibrary;
 
 pub extern "kernel32" fn GetModuleHandleA(
     lpModuleName: ?LPCSTR,
@@ -251,3 +256,10 @@ pub const CoUninitialize = windows.ole32.CoUninitialize;
 pub const CoTaskMemAlloc = windows.ole32.CoTaskMemAlloc;
 pub const CoTaskMemFree = windows.ole32.CoTaskMemFree;
 pub const CoGetCurrentProcess = windows.ole32.CoGetCurrentProcess;
+
+// ws2_32
+pub const WSAStartup = windows.ws2_32.WSAStartup;
+pub const WSACleanup = windows.ws2_32.WSACleanup;
+pub const WSASocketW = windows.ws2_32.WSASocketW;
+pub const WSAGetLastError = windows.ws2_32.WSAGetLastError;
+pub const closesocket = windows.ws2_32.closesocket;

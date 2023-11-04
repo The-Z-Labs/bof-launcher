@@ -21,6 +21,8 @@ pub fn build(
         .link_libc = options.target.os_tag == .linux,
     });
     static_lib.addModule("bofapi", bof_api_module);
+    if (options.target.os_tag == .windows)
+        static_lib.linkSystemLibrary2("ws2_32", .{});
     buildLib(static_lib);
     b.installArtifact(static_lib);
 
@@ -40,6 +42,8 @@ pub fn build(
             .link_libc = options.target.os_tag == .linux,
         });
         shared_lib.addModule("bofapi", bof_api_module);
+        if (options.target.os_tag == .windows)
+            shared_lib.linkSystemLibrary2("ws2_32", .{});
         buildLib(shared_lib);
         b.installArtifact(shared_lib);
     }
