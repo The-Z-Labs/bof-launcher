@@ -1703,6 +1703,8 @@ fn initLauncher() !void {
         _ = w32.WSAStartup(0x0202, &wsadata);
         const sock = w32.WSASocketW(w32.AF.INET, w32.SOCK.DGRAM, 0, null, 0, 0);
         _ = w32.closesocket(sock);
+
+        _ = w32.CoInitializeEx(null, w32.COINIT_MULTITHREADED);
     }
 
     gstate.is_valid = true;
@@ -1722,6 +1724,7 @@ pub export fn bofLauncherRelease() callconv(.C) void {
     gstate.is_valid = false;
 
     if (@import("builtin").os.tag == .windows) {
+        w32.CoUninitialize();
         _ = w32.WSACleanup();
     }
 

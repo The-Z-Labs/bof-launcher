@@ -16,6 +16,7 @@ pub const FALSE = windows.FALSE;
 pub const OSVERSIONINFOW = windows.OSVERSIONINFOW;
 pub const RTL_OSVERSIONINFOW = windows.RTL_OSVERSIONINFOW;
 pub const PVOID = windows.PVOID;
+pub const LPVOID = windows.LPVOID;
 pub const PSECURITY_DESCRIPTOR = PVOID;
 pub const NTSTATUS = windows.NTSTATUS;
 pub const CLIENT_ID = windows.CLIENT_ID;
@@ -24,6 +25,7 @@ pub const USHORT = windows.USHORT;
 pub const BOOLEAN = windows.BOOLEAN;
 pub const SIZE_T = windows.SIZE_T;
 pub const UCHAR = windows.UCHAR;
+pub const HRESULT = windows.HRESULT;
 
 pub const INFINITE = windows.INFINITE;
 pub const WAIT_FAILED = windows.WAIT_FAILED;
@@ -192,6 +194,11 @@ pub const WSADATA = windows.ws2_32.WSADATA;
 pub const AF = windows.ws2_32.AF;
 pub const SOCK = windows.ws2_32.SOCK;
 
+pub const COINIT_MULTITHREADED = 0x0;
+pub const COINIT_APARTMENTTHREADED = 0x2;
+pub const COINIT_DISABLE_OLE1DDE = 0x4;
+pub const COINIT_SPEED_OVER_MEMORY = 0x8;
+
 // kernel32
 pub const VirtualAlloc = windows.kernel32.VirtualAlloc;
 pub const VirtualFree = windows.kernel32.VirtualFree;
@@ -253,9 +260,11 @@ pub const MessageBoxA = windows.user32.MessageBoxA;
 // ole32
 pub const CoInitializeEx = windows.ole32.CoInitializeEx;
 pub const CoUninitialize = windows.ole32.CoUninitialize;
-pub const CoTaskMemAlloc = windows.ole32.CoTaskMemAlloc;
 pub const CoTaskMemFree = windows.ole32.CoTaskMemFree;
 pub const CoGetCurrentProcess = windows.ole32.CoGetCurrentProcess;
+
+pub extern "ole32" fn CoTaskMemAlloc(size: SIZE_T) callconv(WINAPI) ?LPVOID;
+pub extern "ole32" fn CoGetCallerTID(lpdwTID: *DWORD) callconv(WINAPI) HRESULT;
 
 // ws2_32
 pub const WSAStartup = windows.ws2_32.WSAStartup;

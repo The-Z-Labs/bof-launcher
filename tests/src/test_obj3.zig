@@ -11,6 +11,15 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
         _ = beacon.printf(0, "GetCurrentProcess() returned: 0x%x\n", @intFromPtr(w32.GetCurrentProcess()));
         _ = beacon.printf(0, "GetCurrentThreadId() returned: %d\n", w32.GetCurrentThreadId());
         _ = beacon.printf(0, "GetCurrentThread() returned: 0x%x\n", @intFromPtr(w32.GetCurrentThread()));
+
+        var tid: w32.DWORD = 123;
+        _ = w32.CoGetCallerTID(&tid);
+        _ = beacon.printf(0, "CoGetCallerTID() returned: %d\n", tid);
+
+        var i: *u32 = @ptrCast(@alignCast(w32.CoTaskMemAlloc(4)));
+        i.* = 0xc0dec0de;
+        _ = beacon.printf(0, "CoTaskMemAlloc(): 0x%x\n", i.*);
+        w32.CoTaskMemFree(i);
     }
 
     switch (@import("builtin").cpu.arch) {
