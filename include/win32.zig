@@ -26,6 +26,7 @@ pub const BOOLEAN = windows.BOOLEAN;
 pub const SIZE_T = windows.SIZE_T;
 pub const UCHAR = windows.UCHAR;
 pub const HRESULT = windows.HRESULT;
+pub const ACCESS_MASK = windows.ACCESS_MASK;
 
 pub const INFINITE = windows.INFINITE;
 pub const WAIT_FAILED = windows.WAIT_FAILED;
@@ -61,10 +62,13 @@ pub const PAGE_WRITECOMBINE = windows.PAGE_WRITECOMBINE;
 pub const READ_CONTROL = 0x00020000;
 
 pub const STANDARD_RIGHTS_REQUIRED = 0x000F0000;
+pub const SYNCHRONIZE = 0x00100000;
 
 pub const STANDARD_RIGHTS_READ = READ_CONTROL;
 pub const STANDARD_RIGHTS_WRITE = READ_CONTROL;
 pub const STANDARD_RIGHTS_EXECUTE = READ_CONTROL;
+
+pub const PROCESS_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0xffff;
 
 pub const STANDARD_RIGHTS_ALL = 0x001F0000;
 
@@ -245,6 +249,20 @@ pub extern "ntdll" fn RtlCloneUserProcess(
     ThreadSecurityDescriptor: ?PSECURITY_DESCRIPTOR,
     DebugPort: ?HANDLE,
     ProcessInformation: *RTL_USER_PROCESS_INFORMATION,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtCreateUserProcess(
+    ProcessHandle: *HANDLE,
+    ThreadHandle: *HANDLE,
+    ProcessDesiredAccess: ACCESS_MASK,
+    ThreadDesiredAccess: ACCESS_MASK,
+    ProcessObjectAttributes: ?*anyopaque,
+    ThreadObjectAttributes: ?*anyopaque,
+    ProcessFlags: ULONG, // PROCESS_CREATE_FLAGS_*
+    ThreadFlags: ULONG, // THREAD_CREATE_FLAGS_*
+    ProcessParameters: ?PVOID, // PRTL_USER_PROCESS_PARAMETERS
+    CreateInfo: ?*anyopaque,
+    AttributeList: ?*anyopaque,
 ) callconv(WINAPI) NTSTATUS;
 
 // advapi32
