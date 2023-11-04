@@ -1156,6 +1156,7 @@ fn bofThreadCloneProc(
         }
 
         var info: w32.RTL_USER_PROCESS_INFORMATION = undefined;
+        info.Length = @sizeOf(w32.RTL_USER_PROCESS_INFORMATION);
         const status = w32.RtlCloneUserProcess(
             w32.RTL_CLONE_PROCESS_FLAGS_INHERIT_HANDLES,
             null,
