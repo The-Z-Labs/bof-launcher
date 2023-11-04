@@ -7,6 +7,10 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     if (@import("builtin").os.tag == .windows) {
         w32.Sleep(0);
         _ = beacon.printf(0, "CoGetCurrentProcess() returned: %d\n", w32.CoGetCurrentProcess());
+        _ = beacon.printf(0, "GetCurrentProcessId() returned: %d\n", w32.GetCurrentProcessId());
+        _ = beacon.printf(0, "GetCurrentProcess() returned: 0x%x\n", @intFromPtr(w32.GetCurrentProcess()));
+        _ = beacon.printf(0, "GetCurrentThreadId() returned: %d\n", w32.GetCurrentThreadId());
+        _ = beacon.printf(0, "GetCurrentThread() returned: 0x%x\n", @intFromPtr(w32.GetCurrentThread()));
     }
 
     switch (@import("builtin").cpu.arch) {

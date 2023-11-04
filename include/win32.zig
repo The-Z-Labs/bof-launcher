@@ -199,6 +199,9 @@ pub const WaitForSingleObject = windows.kernel32.WaitForSingleObject;
 pub const ReadFile = windows.kernel32.ReadFile;
 pub const WriteFile = windows.kernel32.WriteFile;
 pub const CloseHandle = windows.kernel32.CloseHandle;
+pub const GetCurrentProcessId = windows.kernel32.GetCurrentProcessId;
+pub const GetCurrentThreadId = windows.kernel32.GetCurrentThreadId;
+pub const GetCurrentThread = windows.kernel32.GetCurrentThread;
 
 pub extern "kernel32" fn GetModuleHandleA(
     lpModuleName: ?LPCSTR,
