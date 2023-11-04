@@ -1122,11 +1122,11 @@ fn bofThread(
 ) void {
     bof.run(context, arg_data);
 
-    if (arg_data) |ad| gstate.allocator.?.free(ad);
     if (completion_cb) |cb| {
         cb(@ptrCast(context), completion_cb_context);
     }
 
+    if (arg_data) |ad| gstate.allocator.?.free(ad);
     context.done_event.set();
 }
 
@@ -1178,9 +1178,6 @@ fn bofThreadCloneProc(
                 if (maybe_buf) |buf| {
                     _ = w32.WriteFile(write_pipe, buf, @intCast(len), null, null);
                 }
-
-                if (arg_data) |ad| gstate.allocator.?.free(ad);
-                context.done_event.set();
             },
             .SUCCESS => {
                 // parent process
@@ -1202,18 +1199,17 @@ fn bofThreadCloneProc(
                     context.output_ring_num_written_bytes = len;
                 }
 
-                if (arg_data) |ad| gstate.allocator.?.free(ad);
                 if (completion_cb) |cb| {
                     cb(@ptrCast(context), completion_cb_context);
                 }
-                context.done_event.set();
             },
             else => {
                 print("Failed to clone the process ({d})\n", .{status});
                 context.result = 0xff; // error
-                context.done_event.set();
             },
         }
+        if (arg_data) |ad| gstate.allocator.?.free(ad);
+        context.done_event.set();
     } else {
         bofThread(bof, arg_data, completion_cb, completion_cb_context, context);
     }
