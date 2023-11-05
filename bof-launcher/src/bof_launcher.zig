@@ -239,7 +239,6 @@ const Bof = struct {
                             "secur32.dll",
                             "advapi32.dll",
                             "ws2_32.dll",
-                            //"ntdll.dll",
                             "version.dll",
                             "msvcrt.dll",
                             "shlwapi.dll",
@@ -1096,8 +1095,8 @@ fn run(
             context,
             if (arg_data_ptr) |ptr| ptr[0..@as(usize, @intCast(arg_data_len))] else null,
         );
-        context.done_event.set();
         out_context.* = @ptrCast(context);
+        context.done_event.set();
     } else unreachable;
 }
 

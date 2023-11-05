@@ -239,6 +239,10 @@ pub extern "kernel32" fn CreatePipe(
     nSize: DWORD,
 ) callconv(WINAPI) BOOL;
 
+pub extern "kernel32" fn ResumeThread(
+    hThread: HANDLE,
+) callconv(WINAPI) DWORD;
+
 // ntdll
 pub const RtlGetVersion = windows.ntdll.RtlGetVersion;
 pub const NtQueryInformationProcess = windows.ntdll.NtQueryInformationProcess;
