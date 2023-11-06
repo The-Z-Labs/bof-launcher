@@ -411,6 +411,11 @@ const Bof = struct {
         const elf_hdr = try std.elf.Header.read(&file_data_stream);
         print("Number of Sections: {d}", .{elf_hdr.shnum});
 
+        var libc: ?std.DynLib = null;
+        //defer {
+        //    if (libc != null) libc.?.close();
+        //}
+
         // Load all section headers.
         {
             var section_headers_iter = elf_hdr.section_header_iterator(&file_data_stream);
@@ -547,13 +552,24 @@ const Bof = struct {
                         // EXTERNAL PROCEDURE CALLS (all archs)
 
                         const func_name = reloc_str[0..std.mem.len(reloc_str)];
-                        const maybe_func_ptr = gstate.func_lookup.get(func_name);
+                        var maybe_func_ptr = gstate.func_lookup.get(func_name);
 
                         if (maybe_func_ptr) |func_ptr| {
                             print("\t\tNot defined in the obj: {s} 0x{x}", .{ func_name, func_ptr });
                         } else {
-                            print("\t\tFailed to find function {s}", .{func_name});
-                            return error.UnknownFunction;
+                            const func_name_z = try std.mem.concatWithSentinel(arena, u8, &.{func_name[0..]}, 0);
+                            defer arena.free(func_name_z);
+
+                            if (libc == null) {
+                                libc = std.DynLib.open("/usr/lib/libc.so") catch null;
+                            }
+                            if (libc != null) {
+                                maybe_func_ptr = @intFromPtr(libc.?.lookup(*anyopaque, func_name_z));
+                            }
+                            if (maybe_func_ptr == null) {
+                                print("\t\tFailed to find function {s}", .{func_name});
+                                return error.UnknownFunction;
+                            }
                         }
                         const func_ptr = maybe_func_ptr.?;
 
@@ -1640,7 +1656,7 @@ fn initLauncher() !void {
     try gstate.func_lookup.put(if (is32w) "___modti3" else "__modti3", @intFromPtr(&__modti3));
 
     //TODO: should be loaded dynamically with std.DynLib.open
-    if (@import("builtin").os.tag == .linux) {
+    if (false and @import("builtin").os.tag == .linux) {
         const libc = @import("bofapi").unix;
 
         try gstate.func_lookup.put("puts", @intFromPtr(&libc.puts));
