@@ -561,7 +561,7 @@ const Bof = struct {
                             defer arena.free(func_name_z);
 
                             if (libc == null) {
-                                libc = std.DynLib.open("/usr/lib/libc.so") catch null;
+                                libc = std.DynLib.open("libc.so.6") catch null;
                             }
                             if (libc != null) {
                                 maybe_func_ptr = @intFromPtr(libc.?.lookup(*anyopaque, func_name_z));
@@ -1654,23 +1654,6 @@ fn initLauncher() !void {
     try gstate.func_lookup.put(if (is32w) "___divti3" else "__divti3", @intFromPtr(&__divti3));
     try gstate.func_lookup.put(if (is32w) "___divdi3" else "__divdi3", @intFromPtr(&__divdi3));
     try gstate.func_lookup.put(if (is32w) "___modti3" else "__modti3", @intFromPtr(&__modti3));
-
-    //TODO: should be loaded dynamically with std.DynLib.open
-    if (false and @import("builtin").os.tag == .linux) {
-        const libc = @import("bofapi").unix;
-
-        try gstate.func_lookup.put("puts", @intFromPtr(&libc.puts));
-        try gstate.func_lookup.put("printf", @intFromPtr(&libc.printf));
-
-        // https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/time.h.html
-        try gstate.func_lookup.put("ctime", @intFromPtr(&libc.ctime));
-
-        // https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/utmpx.h.html
-        try gstate.func_lookup.put("setutxent", @intFromPtr(&libc.setutxent));
-        try gstate.func_lookup.put("getutxent", @intFromPtr(&libc.getutxent));
-        try gstate.func_lookup.put("getutxid", @intFromPtr(&libc.getutxid));
-        try gstate.func_lookup.put("endutxent", @intFromPtr(&libc.endutxent));
-    }
 
     if (@import("builtin").os.tag == .windows) {
         switch (@import("builtin").cpu.arch) {
