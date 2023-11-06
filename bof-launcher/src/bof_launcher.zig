@@ -1698,6 +1698,17 @@ fn initLauncher() !void {
         _ = w32.CoInitializeEx(null, w32.COINIT_MULTITHREADED);
     }
 
+    if (@import("builtin").os.tag == .linux) {
+        gstate.libc = std.DynLib.open("libc.so.6") catch null;
+
+        const getauxval = gstate.libc.?.lookup(*const fn (usize) callconv(.C) usize, "getauxval").?;
+        const at_phdr = getauxval(std.elf.AT_PHDR);
+        const at_phnum = getauxval(std.elf.AT_PHNUM);
+        const phdrs = (@as([*]std.elf.Phdr, @ptrFromInt(at_phdr)))[0..at_phnum];
+
+        std.os.linux.tls.initStaticTLS(phdrs);
+    }
+
     gstate.is_valid = true;
 }
 

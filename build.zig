@@ -48,7 +48,7 @@ pub fn build(b: *std.build.Builder) void {
         .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu },
         .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
         .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .gnu },
-        .{ .cpu_arch = .arm, .os_tag = .linux, .abi = .gnueabihf },
+        //.{ .cpu_arch = .arm, .os_tag = .linux, .abi = .gnueabihf },
     };
 
     const test_step = b.step("test", "Run all tests");

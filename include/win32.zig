@@ -27,6 +27,9 @@ pub const SIZE_T = windows.SIZE_T;
 pub const UCHAR = windows.UCHAR;
 pub const HRESULT = windows.HRESULT;
 pub const ACCESS_MASK = windows.ACCESS_MASK;
+pub const LARGE_INTEGER = windows.LARGE_INTEGER;
+pub const ULONG_PTR = windows.ULONG_PTR;
+pub const ULONGLONG = windows.ULONGLONG;
 
 pub const INFINITE = windows.INFINITE;
 pub const WAIT_FAILED = windows.WAIT_FAILED;
@@ -190,9 +193,12 @@ pub const RTL_CLONE_PROCESS_FLAGS_CREATE_SUSPENDED = 0x00000001;
 pub const RTL_CLONE_PROCESS_FLAGS_INHERIT_HANDLES = 0x00000002;
 pub const RTL_CLONE_PROCESS_FLAGS_NO_SYNCHRONIZE = 0x00000004; // don't update synchronization objects
 
+pub const THREADINFOCLASS = windows.THREADINFOCLASS;
 pub const PROCESSINFOCLASS = windows.PROCESSINFOCLASS;
 pub const PROCESS_BASIC_INFORMATION = windows.PROCESS_BASIC_INFORMATION;
 pub const SECURITY_ATTRIBUTES = windows.SECURITY_ATTRIBUTES;
+pub const SYSTEM_INFORMATION_CLASS = windows.SYSTEM_INFORMATION_CLASS;
+pub const SYSTEM_BASIC_INFORMATION = windows.SYSTEM_BASIC_INFORMATION;
 
 pub const WSADATA = windows.ws2_32.WSADATA;
 pub const AF = windows.ws2_32.AF;
@@ -202,6 +208,99 @@ pub const COINIT_MULTITHREADED = 0x0;
 pub const COINIT_APARTMENTTHREADED = 0x2;
 pub const COINIT_DISABLE_OLE1DDE = 0x4;
 pub const COINIT_SPEED_OVER_MEMORY = 0x8;
+
+pub const OBJECT_ATTRIBUTES = windows.OBJECT_ATTRIBUTES;
+pub const OBJ_INHERIT = windows.OBJ_INHERIT;
+pub const OBJ_PERMANENT = windows.OBJ_PERMANENT;
+pub const OBJ_EXCLUSIVE = windows.OBJ_EXCLUSIVE;
+pub const OBJ_CASE_INSENSITIVE = windows.OBJ_CASE_INSENSITIVE;
+pub const OBJ_OPENIF = windows.OBJ_OPENIF;
+pub const OBJ_OPENLINK = windows.OBJ_OPENLINK;
+pub const OBJ_KERNEL_HANDLE = windows.OBJ_KERNEL_HANDLE;
+pub const OBJ_VALID_ATTRIBUTES = windows.OBJ_VALID_ATTRIBUTES;
+
+pub const JOBOBJECTINFOCLASS = enum(c_int) {
+    JobObjectBasicAccountingInformation = 1, // JOBOBJECT_BASIC_ACCOUNTING_INFORMATION
+    JobObjectBasicLimitInformation, // JOBOBJECT_BASIC_LIMIT_INFORMATION
+    JobObjectBasicProcessIdList, // JOBOBJECT_BASIC_PROCESS_ID_LIST
+    JobObjectBasicUIRestrictions, // JOBOBJECT_BASIC_UI_RESTRICTIONS
+    JobObjectSecurityLimitInformation, // JOBOBJECT_SECURITY_LIMIT_INFORMATION
+    JobObjectEndOfJobTimeInformation, // JOBOBJECT_END_OF_JOB_TIME_INFORMATION
+    JobObjectAssociateCompletionPortInformation, // JOBOBJECT_ASSOCIATE_COMPLETION_PORT
+    JobObjectBasicAndIoAccountingInformation, // JOBOBJECT_BASIC_AND_IO_ACCOUNTING_INFORMATION
+    JobObjectExtendedLimitInformation, // JOBOBJECT_EXTENDED_LIMIT_INFORMATION
+    JobObjectJobSetInformation, // JOBOBJECT_JOBSET_INFORMATION
+    JobObjectGroupInformation, // USHORT
+    JobObjectNotificationLimitInformation, // JOBOBJECT_NOTIFICATION_LIMIT_INFORMATION
+    JobObjectLimitViolationInformation, // JOBOBJECT_LIMIT_VIOLATION_INFORMATION
+    JobObjectGroupInformationEx, // GROUP_AFFINITY (ARRAY)
+    JobObjectCpuRateControlInformation, // JOBOBJECT_CPU_RATE_CONTROL_INFORMATION
+    JobObjectCompletionFilter,
+    JobObjectCompletionCounter,
+    JobObjectFreezeInformation, // JOBOBJECT_FREEZE_INFORMATION
+    JobObjectExtendedAccountingInformation, // JOBOBJECT_EXTENDED_ACCOUNTING_INFORMATION
+    JobObjectWakeInformation, // JOBOBJECT_WAKE_INFORMATION
+    JobObjectBackgroundInformation,
+    JobObjectSchedulingRankBiasInformation,
+    JobObjectTimerVirtualizationInformation,
+    JobObjectCycleTimeNotification,
+    JobObjectClearEvent,
+    JobObjectInterferenceInformation, // JOBOBJECT_INTERFERENCE_INFORMATION
+    JobObjectClearPeakJobMemoryUsed,
+    JobObjectMemoryUsageInformation, // JOBOBJECT_MEMORY_USAGE_INFORMATION // JOBOBJECT_MEMORY_USAGE_INFORMATION_V2
+    JobObjectSharedCommit,
+    JobObjectContainerId,
+    JobObjectIoRateControlInformation,
+    JobObjectNetRateControlInformation, // JOBOBJECT_NET_RATE_CONTROL_INFORMATION
+    JobObjectNotificationLimitInformation2, // JOBOBJECT_NOTIFICATION_LIMIT_INFORMATION_2
+    JobObjectLimitViolationInformation2, // JOBOBJECT_LIMIT_VIOLATION_INFORMATION_2
+    JobObjectCreateSilo,
+    JobObjectSiloBasicInformation, // SILOOBJECT_BASIC_INFORMATION
+    JobObjectSiloRootDirectory, // SILOOBJECT_ROOT_DIRECTORY
+    JobObjectServerSiloBasicInformation, // SERVERSILO_BASIC_INFORMATION
+    JobObjectServerSiloUserSharedData, // SILO_USER_SHARED_DATA
+    JobObjectServerSiloInitialize,
+    JobObjectServerSiloRunningState,
+    JobObjectIoAttribution,
+    JobObjectMemoryPartitionInformation,
+    JobObjectContainerTelemetryId,
+    JobObjectSiloSystemRoot,
+    JobObjectEnergyTrackingState, // JOBOBJECT_ENERGY_TRACKING_STATE
+    JobObjectThreadImpersonationInformation,
+    JobObjectIoPriorityLimit,
+    JobObjectPagePriorityLimit,
+    MaxJobObjectInfoClass,
+};
+
+pub const IO_COUNTERS = extern struct {
+    ReadOperationCount: ULONGLONG,
+    WriteOperationCount: ULONGLONG,
+    OtherOperationCount: ULONGLONG,
+    ReadTransferCount: ULONGLONG,
+    WriteTransferCount: ULONGLONG,
+    OtherTransferCount: ULONGLONG,
+};
+
+pub const JOBOBJECT_BASIC_LIMIT_INFORMATION = extern struct {
+    PerProcessUserTimeLimit: LARGE_INTEGER,
+    PerJobUserTimeLimit: LARGE_INTEGER,
+    LimitFlags: DWORD,
+    MinimumWorkingSetSize: SIZE_T,
+    MaximumWorkingSetSize: SIZE_T,
+    ActiveProcessLimit: DWORD,
+    Affinity: ULONG_PTR,
+    PriorityClass: DWORD,
+    SchedulingClass: DWORD,
+};
+
+pub const JOBOBJECT_EXTENDED_LIMIT_INFORMATION = extern struct {
+    BasicLimitInformation: JOBOBJECT_BASIC_LIMIT_INFORMATION,
+    IoInfo: IO_COUNTERS,
+    ProcessMemoryLimit: SIZE_T,
+    JobMemoryLimit: SIZE_T,
+    PeakProcessMemoryUsed: SIZE_T,
+    PeakJobMemoryUsed: SIZE_T,
+};
 
 // kernel32
 pub const VirtualAlloc = windows.kernel32.VirtualAlloc;
@@ -255,18 +354,60 @@ pub extern "ntdll" fn RtlCloneUserProcess(
     ProcessInformation: *RTL_USER_PROCESS_INFORMATION,
 ) callconv(WINAPI) NTSTATUS;
 
-pub extern "ntdll" fn NtCreateUserProcess(
-    ProcessHandle: *HANDLE,
-    ThreadHandle: *HANDLE,
-    ProcessDesiredAccess: ACCESS_MASK,
-    ThreadDesiredAccess: ACCESS_MASK,
-    ProcessObjectAttributes: ?*anyopaque,
-    ThreadObjectAttributes: ?*anyopaque,
-    ProcessFlags: ULONG, // PROCESS_CREATE_FLAGS_*
-    ThreadFlags: ULONG, // THREAD_CREATE_FLAGS_*
-    ProcessParameters: ?PVOID, // PRTL_USER_PROCESS_PARAMETERS
-    CreateInfo: ?*anyopaque,
-    AttributeList: ?*anyopaque,
+pub extern "ntdll" fn NtResumeThread(
+    ThreadHandle: HANDLE,
+    PreviousSuspendCount: ?*ULONG,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtSuspendThread(
+    ThreadHandle: HANDLE,
+    PreviousSuspendCount: ?*ULONG,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtTerminateThread(
+    ThreadHandle: ?HANDLE,
+    ExitStatus: NTSTATUS,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtTerminateProcess(
+    ProcessHandle: ?HANDLE,
+    ExitStatus: NTSTATUS,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtResumeProcess(
+    ProcessHandle: HANDLE,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtSuspendProcess(
+    ProcessHandle: HANDLE,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtCreateJobObject(
+    JobHandle: *HANDLE,
+    DesiredAccess: ACCESS_MASK,
+    ObjectAttributes: ?*OBJECT_ATTRIBUTES,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtAssignProcessToJobObject(
+    JobHandle: HANDLE,
+    ProcessHandle: HANDLE,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtTerminateJobObject(
+    JobHandle: HANDLE,
+    ExitStatus: NTSTATUS,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtIsProcessInJob(
+    ProcessHandle: HANDLE,
+    JobHandle: ?HANDLE,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtSetInformationJobObject(
+    JobHandle: HANDLE,
+    JobObjectInformationClass: JOBOBJECTINFOCLASS,
+    JobObjectInformation: PVOID,
+    JobObjectInformationLength: ULONG,
 ) callconv(WINAPI) NTSTATUS;
 
 // advapi32
