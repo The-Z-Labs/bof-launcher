@@ -411,11 +411,6 @@ const Bof = struct {
         const elf_hdr = try std.elf.Header.read(&file_data_stream);
         print("Number of Sections: {d}", .{elf_hdr.shnum});
 
-        var libc: ?std.DynLib = null;
-        //defer {
-        //    if (libc != null) libc.?.close();
-        //}
-
         // Load all section headers.
         {
             var section_headers_iter = elf_hdr.section_header_iterator(&file_data_stream);
@@ -560,11 +555,11 @@ const Bof = struct {
                             const func_name_z = try std.mem.concatWithSentinel(arena, u8, &.{func_name[0..]}, 0);
                             defer arena.free(func_name_z);
 
-                            if (libc == null) {
-                                libc = std.DynLib.open("libc.so.6") catch null;
+                            if (gstate.libc == null) {
+                                gstate.libc = std.DynLib.open("libc.so.6") catch null;
                             }
-                            if (libc != null) {
-                                maybe_func_ptr = @intFromPtr(libc.?.lookup(*anyopaque, func_name_z));
+                            if (gstate.libc != null) {
+                                maybe_func_ptr = @intFromPtr(gstate.libc.?.lookup(*anyopaque, func_name_z));
                             }
                             if (maybe_func_ptr == null) {
                                 print("\t\tFailed to find function {s}", .{func_name});
@@ -1553,6 +1548,7 @@ const gstate = struct {
     var allocations: ?std.AutoHashMap(usize, usize) = null;
     var mutex: std.Thread.Mutex = .{};
     var func_lookup: std.StringHashMap(usize) = undefined;
+    var libc: if (@import("builtin").os.tag == .linux) ?std.DynLib else void = null;
 
     threadlocal var current_bof_context: ?*BofContext = null;
     var bof_pool: BofPool = undefined;
@@ -1721,6 +1717,12 @@ pub export fn bofLauncherRelease() callconv(.C) void {
     if (@import("builtin").os.tag == .windows) {
         w32.CoUninitialize();
         _ = w32.WSACleanup();
+    }
+    if (@import("builtin").os.tag == .linux) {
+        if (gstate.libc != null) {
+            gstate.libc.?.close();
+            gstate.libc = null;
+        }
     }
 
     gstate.bof_pool.deinit(gstate.allocator.?);
