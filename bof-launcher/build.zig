@@ -18,7 +18,7 @@ pub fn build(
         .optimize = options.optimize,
 
         // TODO: This is a workaround for `std.Thread.spawn()` on Linux.
-        //.link_libc = options.target.os_tag == .linux,
+        .link_libc = options.target.os_tag == .linux,
     });
     static_lib.addModule("bofapi", bof_api_module);
     if (options.target.os_tag == .windows) {
@@ -41,7 +41,7 @@ pub fn build(
             .optimize = options.optimize,
 
             // TODO: This is a workaround for `std.Thread.spawn()` on Linux.
-            //.link_libc = options.target.os_tag == .linux,
+            .link_libc = options.target.os_tag == .linux,
         });
         shared_lib.addModule("bofapi", bof_api_module);
         if (options.target.os_tag == .windows) {

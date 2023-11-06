@@ -1698,7 +1698,7 @@ fn initLauncher() !void {
         _ = w32.CoInitializeEx(null, w32.COINIT_MULTITHREADED);
     }
 
-    if (@import("builtin").os.tag == .linux) {
+    if (false and @import("builtin").os.tag == .linux) {
         gstate.libc = std.DynLib.open("libc.so.6") catch null;
 
         const getauxval = gstate.libc.?.lookup(*const fn (usize) callconv(.C) usize, "getauxval").?;
