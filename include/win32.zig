@@ -317,6 +317,7 @@ pub const GetCurrentProcessId = windows.kernel32.GetCurrentProcessId;
 pub const GetCurrentThreadId = windows.kernel32.GetCurrentThreadId;
 pub const GetCurrentThread = windows.kernel32.GetCurrentThread;
 pub const FreeLibrary = windows.kernel32.FreeLibrary;
+pub const CreateThread = windows.kernel32.CreateThread;
 
 pub extern "kernel32" fn GetModuleHandleA(
     lpModuleName: ?LPCSTR,

@@ -1123,106 +1123,111 @@ pub export fn bofObjectRun(
     return 0; // success
 }
 
-fn bofThread(
+const ThreadData = struct {
     bof: *Bof,
     arg_data: ?[]u8,
     completion_cb: ?@import("bofapi").bof.CompletionCallback,
     completion_cb_context: ?*anyopaque,
     context: *BofContext,
-) void {
-    bof.run(context, arg_data);
+    run_in_new_process: bool,
+};
 
-    if (completion_cb) |cb| {
-        cb(@ptrCast(context), completion_cb_context);
+fn threadProc(raw_ptr: ?*anyopaque) callconv(.C) if (@import("builtin").os.tag == .windows)
+    w32.DWORD
+else
+    ?*anyopaque {
+    const in: *ThreadData = @ptrCast(@alignCast(raw_ptr));
+    const context = in.context;
+
+    if (in.run_in_new_process and
+        @import("builtin").os.tag == .windows and
+        @import("builtin").cpu.arch == .x86_64)
+    {
+        bofThreadCloneProc(in.bof, in.arg_data, context);
+    } else {
+        in.bof.run(context, in.arg_data);
     }
 
-    if (arg_data) |ad| gstate.allocator.?.free(ad);
+    if (in.completion_cb) |cb| {
+        cb(@ptrCast(in.context), in.completion_cb_context);
+    }
+    if (in.arg_data) |ad| gstate.allocator.?.free(ad);
+    gstate.allocator.?.destroy(in);
+
     context.done_event.set();
+
+    return if (@import("builtin").os.tag == .windows) 0 else null;
 }
 
-fn bofThreadCloneProc(
-    bof: *Bof,
-    arg_data: ?[]u8,
-    completion_cb: ?@import("bofapi").bof.CompletionCallback,
-    completion_cb_context: ?*anyopaque,
-    context: *BofContext,
-) void {
-    if (@import("builtin").os.tag == .windows and @import("builtin").cpu.arch == .x86_64) {
-        var read_pipe: w32.HANDLE = undefined;
-        var write_pipe: w32.HANDLE = undefined;
-        _ = w32.CreatePipe(
-            &read_pipe,
-            &write_pipe,
-            &.{
-                .nLength = @sizeOf(w32.SECURITY_ATTRIBUTES),
-                .lpSecurityDescriptor = null,
-                .bInheritHandle = w32.TRUE,
-            },
-            BofContext.max_output_len + 16,
-        );
-        defer {
-            _ = w32.CloseHandle(read_pipe);
-            _ = w32.CloseHandle(write_pipe);
-        }
+fn bofThreadCloneProc(bof: *Bof, arg_data: ?[]u8, context: *BofContext) void {
+    var read_pipe: w32.HANDLE = undefined;
+    var write_pipe: w32.HANDLE = undefined;
+    _ = w32.CreatePipe(
+        &read_pipe,
+        &write_pipe,
+        &.{
+            .nLength = @sizeOf(w32.SECURITY_ATTRIBUTES),
+            .lpSecurityDescriptor = null,
+            .bInheritHandle = w32.TRUE,
+        },
+        BofContext.max_output_len + 16,
+    );
+    defer {
+        _ = w32.CloseHandle(read_pipe);
+        _ = w32.CloseHandle(write_pipe);
+    }
 
-        var info: w32.RTL_USER_PROCESS_INFORMATION = undefined;
-        info.Length = @sizeOf(w32.RTL_USER_PROCESS_INFORMATION);
-        const status = w32.RtlCloneUserProcess(
-            w32.RTL_CLONE_PROCESS_FLAGS_INHERIT_HANDLES,
-            null,
-            null,
-            null,
-            &info,
-        );
-        switch (status) {
-            .PROCESS_CLONED => {
-                // child process
-                bof.run(context, arg_data);
+    var info: w32.RTL_USER_PROCESS_INFORMATION = undefined;
+    info.Length = @sizeOf(w32.RTL_USER_PROCESS_INFORMATION);
+    const status = w32.RtlCloneUserProcess(
+        w32.RTL_CLONE_PROCESS_FLAGS_INHERIT_HANDLES,
+        null,
+        null,
+        null,
+        &info,
+    );
+    switch (status) {
+        .PROCESS_CLONED => {
+            // child process
+            bof.run(context, arg_data);
 
-                _ = w32.WriteFile(write_pipe, @ptrCast(&context.result), 1, null, null);
+            _ = w32.WriteFile(write_pipe, @ptrCast(&context.result), 1, null, null);
 
-                var len: i32 = undefined;
-                const maybe_buf = bofContextGetOutput(context, &len);
+            var len: i32 = undefined;
+            const maybe_buf = bofContextGetOutput(context, &len);
 
-                _ = w32.WriteFile(write_pipe, std.mem.asBytes(&len), 4, null, null);
+            _ = w32.WriteFile(write_pipe, std.mem.asBytes(&len), 4, null, null);
 
-                if (maybe_buf) |buf| {
-                    _ = w32.WriteFile(write_pipe, buf, @intCast(len), null, null);
-                }
-            },
-            .SUCCESS => {
-                // parent process
-                _ = w32.WaitForSingleObject(info.ProcessHandle.?, w32.INFINITE);
+            if (maybe_buf) |buf| {
+                _ = w32.WriteFile(write_pipe, buf, @intCast(len), null, null);
+            }
 
-                _ = w32.ReadFile(read_pipe, @ptrCast(&context.result), 1, null, null);
+            w32.ExitProcess(0);
+        },
+        .SUCCESS => {
+            // parent process
+            _ = w32.WaitForSingleObject(info.ProcessHandle.?, w32.INFINITE);
 
-                var len: u32 = 0;
-                _ = w32.ReadFile(read_pipe, std.mem.asBytes(&len), 4, null, null);
+            _ = w32.ReadFile(read_pipe, @ptrCast(&context.result), 1, null, null);
 
-                if (len > 0) {
-                    context.output_mutex.lock();
-                    defer context.output_mutex.unlock();
+            var len: u32 = 0;
+            _ = w32.ReadFile(read_pipe, std.mem.asBytes(&len), 4, null, null);
 
-                    _ = w32.ReadFile(read_pipe, context.output_ring.data.ptr, len, null, null);
+            if (len > 0) {
+                context.output_mutex.lock();
+                defer context.output_mutex.unlock();
 
-                    context.output_ring.read_index = 0;
-                    context.output_ring.write_index = len;
-                    context.output_ring_num_written_bytes = len;
-                }
+                _ = w32.ReadFile(read_pipe, context.output_ring.data.ptr, len, null, null);
 
-                if (completion_cb) |cb| {
-                    cb(@ptrCast(context), completion_cb_context);
-                }
-            },
-            else => {
-                print("Failed to clone the process ({d})\n", .{status});
-                context.result = 0xff; // error
-            },
-        }
-        if (arg_data) |ad| gstate.allocator.?.free(ad);
-        context.done_event.set();
-    } else {
-        bofThread(bof, arg_data, completion_cb, completion_cb_context, context);
+                context.output_ring.read_index = 0;
+                context.output_ring.write_index = len;
+                context.output_ring_num_written_bytes = len;
+            }
+        },
+        else => {
+            print("Failed to clone the process ({d})\n", .{status});
+            context.result = 0xff; // error
+        },
     }
 }
 
@@ -1282,13 +1287,26 @@ fn runAsync(
     }
 
     if (gstate.bof_pool.getBofPtrIfValid(bof_handle)) |bof| {
-        const thread = try std.Thread.spawn(
-            .{},
-            if (run_in_new_process) bofThreadCloneProc else bofThread,
-            .{ bof, arg_data, completion_cb, completion_cb_context, context },
-        );
+        const in = try gstate.allocator.?.create(ThreadData);
+        in.* = .{
+            .bof = bof,
+            .arg_data = arg_data,
+            .completion_cb = completion_cb,
+            .completion_cb_context = completion_cb_context,
+            .context = context,
+            .run_in_new_process = run_in_new_process,
+        };
+        if (@import("builtin").os.tag == .windows) {
+            // TODO: Handle errors
+            const handle = w32.CreateThread(null, 0, threadProc, @ptrCast(in), 0, null);
+            if (handle) |h| _ = w32.CloseHandle(h);
+        } else {
+            // TODO: Handle errors
+            var handle: std.c.pthread_t = undefined;
+            _ = gstate.pthread_create(&handle, null, threadProc, @ptrCast(in));
+            _ = gstate.pthread_detach(handle);
+        }
         out_context.* = @ptrCast(context);
-        thread.detach();
     } else unreachable;
 }
 
@@ -1554,7 +1572,10 @@ const gstate = struct {
     var allocations: ?std.AutoHashMap(usize, usize) = null;
     var mutex: std.Thread.Mutex = .{};
     var func_lookup: std.StringHashMap(usize) = undefined;
+
     var libc: if (@import("builtin").os.tag == .linux) ?std.DynLib else void = null;
+    var pthread_create: *const @TypeOf(std.c.pthread_create) = undefined;
+    var pthread_detach: *const @TypeOf(std.c.pthread_detach) = undefined;
 
     threadlocal var current_bof_context: ?*BofContext = null;
     var bof_pool: BofPool = undefined;
@@ -1704,15 +1725,12 @@ fn initLauncher() !void {
         _ = w32.CoInitializeEx(null, w32.COINIT_MULTITHREADED);
     }
 
-    if (false and @import("builtin").os.tag == .linux) {
-        gstate.libc = std.DynLib.open("libc.so.6") catch null;
+    if (@import("builtin").os.tag == .linux) {
+        gstate.libc = try std.DynLib.open("libc.so.6");
 
-        const getauxval = gstate.libc.?.lookup(*const fn (usize) callconv(.C) usize, "getauxval").?;
-        const at_phdr = getauxval(std.elf.AT_PHDR);
-        const at_phnum = getauxval(std.elf.AT_PHNUM);
-        const phdrs = (@as([*]std.elf.Phdr, @ptrFromInt(at_phdr)))[0..at_phnum];
-
-        std.os.linux.tls.initStaticTLS(phdrs);
+        gstate.pthread_create = gstate.libc.?.lookup(*const @TypeOf(std.c.pthread_create), "pthread_create").?;
+        gstate.pthread_detach = gstate.libc.?.lookup(*const @TypeOf(std.c.pthread_detach), "pthread_detach").?;
+        _ = gstate.pthread_detach(@ptrFromInt(1));
     }
 
     gstate.is_valid = true;
