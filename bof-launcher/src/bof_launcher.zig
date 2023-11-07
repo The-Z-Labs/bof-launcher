@@ -1541,6 +1541,12 @@ export fn getEnviron() callconv(.C) [*:null]?[*:0]const u8 {
 
 const mem_alignment = 16;
 
+pub fn panic(_: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
+    while (true) {
+        @breakpoint();
+    }
+}
+
 const gstate = struct {
     var is_valid: bool = false;
     var gpa: ?std.heap.GeneralPurposeAllocator(.{ .stack_trace_frames = 0 }) = null;
