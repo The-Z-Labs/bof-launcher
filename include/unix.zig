@@ -19,6 +19,8 @@ const c = std.c;
 //
 pub extern fn ctime(c.time_t) callconv(.C) [*:0]const u8;
 
+pub extern fn puts(str: [*:0]const u8) c_int;
+
 //
 // POSIX user accounting database definitions:
 // https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/utmpx.h.html
