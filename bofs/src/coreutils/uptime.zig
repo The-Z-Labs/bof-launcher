@@ -1,17 +1,17 @@
 const std = @import("std");
 const beacon = @import("bofapi").beacon;
-const unix = @import("bofapi").unix;
+const posix = @import("bofapi").posix;
 
 pub export fn go() callconv(.C) u8 {
-    unix.setutxent();
+    posix.setutxent();
 
-    var ut: ?*unix.utmpx = unix.getutxent();
+    var ut: ?*posix.utmpx = posix.getutxent();
 
     if (ut) |utx| {
         _ = beacon.printf(0, "User %s\n", utx.ut_user);
         _ = beacon.printf(0, "Type %d\n", utx.ut_type);
     }
 
-    unix.endutxent();
+    posix.endutxent();
     return 0;
 }
