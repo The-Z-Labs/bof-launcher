@@ -1730,7 +1730,6 @@ fn initLauncher() !void {
 
         gstate.pthread_create = gstate.libc.?.lookup(*const @TypeOf(std.c.pthread_create), "pthread_create").?;
         gstate.pthread_detach = gstate.libc.?.lookup(*const @TypeOf(std.c.pthread_detach), "pthread_detach").?;
-        _ = gstate.pthread_detach(@ptrFromInt(1));
     }
 
     gstate.is_valid = true;
