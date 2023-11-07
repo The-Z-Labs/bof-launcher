@@ -1577,11 +1577,11 @@ const gstate = struct {
 
     var libc: if (@import("builtin").os.tag == .linux) ?std.DynLib else void = null;
     var pthread_create: *const fn (
-        newthread: *pthread_t,
-        attr: ?*anyopaque,
+        noalias newthread: *pthread_t,
+        noalias attr: ?*anyopaque,
         start_routine: *const fn (?*anyopaque) callconv(.C) ?*anyopaque,
-        arg: ?*anyopaque,
-    ) c_int = undefined;
+        noalias arg: ?*anyopaque,
+    ) callconv(.C) c_int = undefined;
     var pthread_detach: *const fn (pthread_t) callconv(.C) c_int = undefined;
 
     threadlocal var current_bof_context: ?*BofContext = null;
