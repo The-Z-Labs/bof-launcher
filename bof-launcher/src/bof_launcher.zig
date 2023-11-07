@@ -1302,7 +1302,7 @@ fn runAsync(
             if (handle) |h| _ = w32.CloseHandle(h);
         } else {
             // TODO: Handle errors
-            var handle: std.c.pthread_t = undefined;
+            var handle: pthread_t = undefined;
             _ = gstate.pthread_create(&handle, null, threadProc, @ptrCast(in));
             _ = gstate.pthread_detach(handle);
         }
@@ -1565,6 +1565,8 @@ pub fn panic(_: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     }
 }
 
+const pthread_t = *opaque {};
+
 const gstate = struct {
     var is_valid: bool = false;
     var gpa: ?std.heap.GeneralPurposeAllocator(.{ .stack_trace_frames = 0 }) = null;
@@ -1574,8 +1576,13 @@ const gstate = struct {
     var func_lookup: std.StringHashMap(usize) = undefined;
 
     var libc: if (@import("builtin").os.tag == .linux) ?std.DynLib else void = null;
-    var pthread_create: *const @TypeOf(std.c.pthread_create) = undefined;
-    var pthread_detach: *const @TypeOf(std.c.pthread_detach) = undefined;
+    var pthread_create: *const fn (
+        newthread: *pthread_t,
+        attr: ?*anyopaque,
+        start_routine: *const fn (?*anyopaque) callconv(.C) ?*anyopaque,
+        arg: ?*anyopaque,
+    ) c_int = undefined;
+    var pthread_detach: *const fn (pthread_t) callconv(.C) c_int = undefined;
 
     threadlocal var current_bof_context: ?*BofContext = null;
     var bof_pool: BofPool = undefined;
@@ -1728,8 +1735,8 @@ fn initLauncher() !void {
     if (@import("builtin").os.tag == .linux) {
         gstate.libc = try std.DynLib.open("libc.so.6");
 
-        gstate.pthread_create = gstate.libc.?.lookup(*const @TypeOf(std.c.pthread_create), "pthread_create").?;
-        gstate.pthread_detach = gstate.libc.?.lookup(*const @TypeOf(std.c.pthread_detach), "pthread_detach").?;
+        gstate.pthread_create = gstate.libc.?.lookup(@TypeOf(gstate.pthread_create), "pthread_create").?;
+        gstate.pthread_detach = gstate.libc.?.lookup(@TypeOf(gstate.pthread_detach), "pthread_detach").?;
     }
 
     gstate.is_valid = true;
