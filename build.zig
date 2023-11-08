@@ -66,6 +66,9 @@ pub fn build(b: *std.build.Builder) void {
         //
         const bof_launcher_lib = @import("bof-launcher/build.zig").build(b, options, bof_api_module);
 
+        // TODO: Link error
+        if (target.cpu_arch == .arm and optimize == .Debug) continue;
+
         //
         // Examples: command line launcher
         //

@@ -36,16 +36,25 @@ const Bof = struct {
     fn run(bof: *Bof, context: *BofContext, arg_data: ?[]u8) void {
         assert(bof.is_allocated == true);
         assert(bof.is_loaded == true);
-        assert(gstate.current_bof_context == null);
 
         print("Trying to run go()...", .{});
 
-        gstate.current_bof_context = context;
+        const tid = getCurrentThreadId();
+
+        {
+            gstate.mutex.lock();
+            defer gstate.mutex.unlock();
+            gstate.bof_contexts.put(tid, context) catch @panic("OOM");
+        }
         context.result = bof.entry_point.?(
             if (arg_data) |ad| ad.ptr else null,
             if (arg_data) |ad| @as(i32, @intCast(ad.len)) else 0,
         );
-        gstate.current_bof_context = null;
+        {
+            gstate.mutex.lock();
+            defer gstate.mutex.unlock();
+            gstate.bof_contexts.put(tid, null) catch @panic("OOM");
+        }
 
         print("Returned '{d}' from go().", .{context.result});
     }
@@ -1533,8 +1542,19 @@ export fn allocateAndZeroMemory(num: usize, size: usize) callconv(.C) ?*anyopaqu
     return null;
 }
 
+fn getCurrentThreadId() u32 {
+    if (@import("builtin").os.tag == .windows) {
+        return @intCast(w32.GetCurrentThreadId());
+    }
+    return @intCast(std.os.linux.gettid());
+}
+
 export fn outputBofData(_: i32, data: [*]u8, len: i32, free_mem: i32) void {
-    var context = gstate.current_bof_context.?;
+    var context = context: {
+        gstate.mutex.lock();
+        defer gstate.mutex.unlock();
+        break :context gstate.bof_contexts.get(getCurrentThreadId()).?.?;
+    };
 
     context.output_mutex.lock();
     defer context.output_mutex.unlock();
@@ -1584,7 +1604,7 @@ const gstate = struct {
     ) callconv(.C) c_int = undefined;
     var pthread_detach: *const fn (pthread_t) callconv(.C) c_int = undefined;
 
-    threadlocal var current_bof_context: ?*BofContext = null;
+    var bof_contexts: std.AutoHashMap(u32, ?*BofContext) = undefined;
     var bof_pool: BofPool = undefined;
 };
 
@@ -1719,6 +1739,7 @@ fn initLauncher() !void {
         try gstate.func_lookup.put("__aeabi_ldivmod", @intFromPtr(&__aeabi_ldivmod));
     }
 
+    gstate.bof_contexts = std.AutoHashMap(u32, ?*BofContext).init(gstate.allocator.?);
     gstate.bof_pool = BofPool.init(gstate.allocator.?);
 
     if (@import("builtin").os.tag == .windows) {
@@ -1767,6 +1788,7 @@ pub export fn bofLauncherRelease() callconv(.C) void {
     }
 
     gstate.bof_pool.deinit(gstate.allocator.?);
+    gstate.bof_contexts.deinit();
 
     gstate.func_lookup.deinit();
     gstate.func_lookup = undefined;
