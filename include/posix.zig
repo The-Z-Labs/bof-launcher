@@ -61,3 +61,7 @@ pub extern fn endutxent() callconv(.C) void;
 
 // https://pubs.opengroup.org/onlinepubs/9699919799/functions/gethostid.html
 pub extern fn gethostid() callconv(.C) c_long;
+
+// https://pubs.opengroup.org/onlinepubs/9699919799/functions/gethostname.html
+pub const HOST_NAME_MAX = 64;
+pub extern fn gethostname(name: [*:0]u8, namelen: usize) callconv(.C) i32;
