@@ -16,6 +16,9 @@ pub fn build(
         .root_source_file = .{ .path = thisDir() ++ "/src/bof_launcher.zig" },
         .target = options.target,
         .optimize = options.optimize,
+
+        // TODO: Remove this
+        .link_libc = options.target.os_tag == .linux,
     });
     static_lib.addModule("bofapi", bof_api_module);
     if (options.target.os_tag == .windows) {
@@ -36,6 +39,9 @@ pub fn build(
             .root_source_file = .{ .path = thisDir() ++ "/src/bof_launcher.zig" },
             .target = options.target,
             .optimize = options.optimize,
+
+            // TODO: Remove this
+            .link_libc = options.target.os_tag == .linux,
         });
         shared_lib.addModule("bofapi", bof_api_module);
         if (options.target.os_tag == .windows) {
