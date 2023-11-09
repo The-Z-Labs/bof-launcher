@@ -1149,8 +1149,8 @@ else
     const context = in.context;
 
     if (in.run_in_new_process and
-        @import("builtin").os.tag == .windows and
-        @import("builtin").cpu.arch == .x86_64)
+        @import("builtin").cpu.arch == .x86_64 and
+        @import("builtin").os.tag == .windows)
     {
         bofThreadCloneProc(in.bof, in.arg_data, context);
     } else {
@@ -1186,10 +1186,27 @@ fn bofThreadCloneProc(bof: *Bof, arg_data: ?[]u8, context: *BofContext) void {
         _ = w32.CloseHandle(write_pipe);
     }
 
+    var job_handle: w32.HANDLE = undefined;
+    _ = w32.NtCreateJobObject(&job_handle, w32.JOB_OBJECT_ALL_ACCESS, null);
+    defer _ = w32.NtClose(job_handle);
+
+    var job_limits = std.mem.zeroes(w32.JOBOBJECT_EXTENDED_LIMIT_INFORMATION);
+    job_limits.BasicLimitInformation.LimitFlags =
+        w32.JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION |
+        w32.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE |
+        w32.JOB_OBJECT_LIMIT_BREAKAWAY_OK;
+
+    _ = w32.NtSetInformationJobObject(
+        job_handle,
+        .JobObjectExtendedLimitInformation,
+        &job_limits,
+        @sizeOf(w32.JOBOBJECT_EXTENDED_LIMIT_INFORMATION),
+    );
+
     var info: w32.RTL_USER_PROCESS_INFORMATION = undefined;
     info.Length = @sizeOf(w32.RTL_USER_PROCESS_INFORMATION);
     const status = w32.RtlCloneUserProcess(
-        w32.RTL_CLONE_PROCESS_FLAGS_INHERIT_HANDLES,
+        w32.RTL_CLONE_PROCESS_FLAGS_INHERIT_HANDLES | w32.RTL_CLONE_PROCESS_FLAGS_CREATE_SUSPENDED,
         null,
         null,
         null,
@@ -1211,10 +1228,12 @@ fn bofThreadCloneProc(bof: *Bof, arg_data: ?[]u8, context: *BofContext) void {
                 _ = w32.WriteFile(write_pipe, buf, @intCast(len), null, null);
             }
 
-            w32.ExitProcess(0);
+            _ = w32.NtTerminateProcess(w32.NtCurrentProcess(), status);
         },
         .SUCCESS => {
             // parent process
+            _ = w32.NtAssignProcessToJobObject(job_handle, info.ProcessHandle.?);
+            _ = w32.NtResumeThread(info.ThreadHandle.?, null);
             _ = w32.WaitForSingleObject(info.ProcessHandle.?, w32.INFINITE);
 
             _ = w32.ReadFile(read_pipe, @ptrCast(&context.result), 1, null, null);

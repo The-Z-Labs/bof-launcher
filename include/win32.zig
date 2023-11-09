@@ -1,6 +1,8 @@
 const std = @import("std");
 const windows = std.os.windows;
 
+pub const ATTACH_PARENT_PROCESS = 0xffff_ffff;
+
 pub const Win32Error = windows.Win32Error;
 pub const ULONG = windows.ULONG;
 pub const WCHAR = windows.WCHAR;
@@ -72,6 +74,8 @@ pub const STANDARD_RIGHTS_WRITE = READ_CONTROL;
 pub const STANDARD_RIGHTS_EXECUTE = READ_CONTROL;
 
 pub const PROCESS_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0xffff;
+
+pub const JOB_OBJECT_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0x3F;
 
 pub const STANDARD_RIGHTS_ALL = 0x001F0000;
 
@@ -302,6 +306,10 @@ pub const JOBOBJECT_EXTENDED_LIMIT_INFORMATION = extern struct {
     PeakJobMemoryUsed: SIZE_T,
 };
 
+pub const JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION = 0x00000400;
+pub const JOB_OBJECT_LIMIT_BREAKAWAY_OK = 0x00000800;
+pub const JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000;
+
 // kernel32
 pub const VirtualAlloc = windows.kernel32.VirtualAlloc;
 pub const VirtualFree = windows.kernel32.VirtualFree;
@@ -318,6 +326,12 @@ pub const GetCurrentThreadId = windows.kernel32.GetCurrentThreadId;
 pub const GetCurrentThread = windows.kernel32.GetCurrentThread;
 pub const FreeLibrary = windows.kernel32.FreeLibrary;
 pub const CreateThread = windows.kernel32.CreateThread;
+
+pub extern "kernel32" fn FreeConsole() callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn AttachConsole(
+    dwProcessId: DWORD,
+) callconv(WINAPI) BOOL;
 
 pub extern "kernel32" fn GetModuleHandleA(
     lpModuleName: ?LPCSTR,
@@ -346,6 +360,16 @@ pub extern "kernel32" fn ResumeThread(
 // ntdll
 pub const RtlGetVersion = windows.ntdll.RtlGetVersion;
 pub const NtQueryInformationProcess = windows.ntdll.NtQueryInformationProcess;
+
+pub fn NtCurrentProcess() HANDLE {
+    return @ptrFromInt(@as(usize, @bitCast(@as(isize, -1))));
+}
+pub fn NtCurrentThread() HANDLE {
+    return @ptrFromInt(@as(usize, @bitCast(@as(isize, -2))));
+}
+pub fn NtCurrentSession() HANDLE {
+    return @ptrFromInt(@as(usize, @bitCast(@as(isize, -3))));
+}
 
 pub extern "ntdll" fn RtlCloneUserProcess(
     ProcessFlags: ULONG,
@@ -409,6 +433,10 @@ pub extern "ntdll" fn NtSetInformationJobObject(
     JobObjectInformationClass: JOBOBJECTINFOCLASS,
     JobObjectInformation: PVOID,
     JobObjectInformationLength: ULONG,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtClose(
+    Handle: HANDLE,
 ) callconv(WINAPI) NTSTATUS;
 
 // advapi32
