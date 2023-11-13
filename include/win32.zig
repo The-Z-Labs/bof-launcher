@@ -333,6 +333,16 @@ pub extern "kernel32" fn AttachConsole(
     dwProcessId: DWORD,
 ) callconv(WINAPI) BOOL;
 
+pub extern "kernel32" fn IsWow64Process(
+    hProcess: HANDLE,
+    Wow64Process: *BOOL,
+) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn GetExitCodeProcess(
+    hProcess: HANDLE,
+    lpExitCode: *DWORD,
+) callconv(WINAPI) BOOL;
+
 pub extern "kernel32" fn GetModuleHandleA(
     lpModuleName: ?LPCSTR,
 ) callconv(WINAPI) ?HMODULE;
@@ -437,6 +447,10 @@ pub extern "ntdll" fn NtSetInformationJobObject(
 
 pub extern "ntdll" fn NtClose(
     Handle: HANDLE,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn RtlWow64EnableFsRedirection(
+    Wow64FsEnableRedirection: BOOLEAN,
 ) callconv(WINAPI) NTSTATUS;
 
 // advapi32
