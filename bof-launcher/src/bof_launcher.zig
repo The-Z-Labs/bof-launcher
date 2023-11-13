@@ -1141,18 +1141,18 @@ const ThreadData = struct {
     run_in_new_process: bool,
 };
 
-fn threadProc(raw_ptr: ?*anyopaque) callconv(.C) if (@import("builtin").os.tag == .windows)
+fn threadFunc(raw_ptr: ?*anyopaque) callconv(.C) if (@import("builtin").os.tag == .windows)
     w32.DWORD
 else
     ?*anyopaque {
     const in: *ThreadData = @ptrCast(@alignCast(raw_ptr));
     const context = in.context;
 
-    if (in.run_in_new_process and
-        @import("builtin").cpu.arch == .x86_64 and
-        @import("builtin").os.tag == .windows)
-    {
-        bofThreadCloneProc(in.bof, in.arg_data, context);
+    if (in.run_in_new_process) {
+        if (@import("builtin").os.tag == .windows)
+            threadFuncCloneProcessWindows(in.bof, in.arg_data, context)
+        else
+            threadFuncCloneProcessLinux(in.bof, in.arg_data, context);
     } else {
         in.bof.run(context, in.arg_data);
     }
@@ -1168,7 +1168,34 @@ else
     return if (@import("builtin").os.tag == .windows) 0 else null;
 }
 
-fn bofThreadCloneProc(bof: *Bof, arg_data: ?[]u8, context: *BofContext) void {
+fn threadFuncCloneProcessLinux(bof: *Bof, arg_data: ?[]u8, context: *BofContext) void {
+    const pipe = std.os.pipe() catch @panic("pipe() failed");
+    defer {
+        std.os.close(pipe[0]);
+        std.os.close(pipe[1]);
+    }
+
+    // TODO: Pass full output
+    const pid_result = std.os.fork() catch @panic("fork() failed");
+    if (pid_result == 0) {
+        // child process
+        bof.run(context, arg_data);
+
+        const file = std.fs.File{ .handle = pipe[1] };
+        file.writer().writeInt(u8, context.result, .little) catch @panic("OOM");
+
+        std.os.exit(0);
+    }
+    // parent process
+    _ = std.os.waitpid(pid_result, 0);
+
+    const file = std.fs.File{ .handle = pipe[0] };
+    const r = file.reader().readInt(u8, .little) catch @panic("OOM");
+
+    context.result = r;
+}
+
+fn threadFuncCloneProcessWindows(bof: *Bof, arg_data: ?[]u8, context: *BofContext) void {
     var read_pipe: w32.HANDLE = undefined;
     var write_pipe: w32.HANDLE = undefined;
     _ = w32.CreatePipe(
@@ -1326,12 +1353,12 @@ fn runAsync(
         };
         if (@import("builtin").os.tag == .windows) {
             // TODO: Handle errors
-            const handle = w32.CreateThread(null, 0, threadProc, @ptrCast(in), 0, null);
+            const handle = w32.CreateThread(null, 0, threadFunc, @ptrCast(in), 0, null);
             if (handle) |h| _ = w32.CloseHandle(h);
         } else {
             // TODO: Handle errors
             var handle: pthread_t = undefined;
-            _ = gstate.pthread_create(&handle, null, threadProc, @ptrCast(in));
+            _ = gstate.pthread_create(&handle, null, threadFunc, @ptrCast(in));
             _ = gstate.pthread_detach(handle);
         }
         out_context.* = @ptrCast(context);
@@ -1368,6 +1395,12 @@ pub export fn bofObjectRunAsyncProc(
     completion_cb_context: ?*anyopaque,
     out_context: **@import("bofapi").bof.Context,
 ) callconv(.C) c_int {
+    if (@import("builtin").cpu.arch == .x86 and @import("builtin").os.tag == .windows) {
+        var is_wow64: w32.BOOL = w32.FALSE;
+        _ = w32.IsWow64Process(w32.GetCurrentProcess(), &is_wow64);
+        if (is_wow64 == w32.TRUE)
+            return -1; // TODO: Make it work (Windows bug?)
+    }
     if (!gstate.is_valid) return -1;
     if (!gstate.bof_pool.isBofValid(bof_handle)) return 0; // ignore (no error)
     runAsync(
