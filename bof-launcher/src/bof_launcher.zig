@@ -242,6 +242,7 @@ const Bof = struct {
 
                     const static = struct {
                         const libs = [_][*:0]const u8{
+                            "ntdll.dll",
                             "kernel32.dll",
                             "ole32.dll",
                             "user32.dll",
