@@ -151,70 +151,54 @@ pub fn build(b: *std.build.Builder) void {
         test_step.dependOn(&udp_scanner_x86.step);
 
         // Try to run on aarch64 using qemu
-        aarch64_blk: {
-            const result = std.ChildProcess.run(.{
-                .allocator = b.allocator,
-                .argv = &.{ "qemu-aarch64", "--version" },
-                .cwd = thisDir(),
-            }) catch break :aarch64_blk;
+        const udp_scanner_aarch64 = b.addSystemCommand(&.{
+            "qemu-aarch64",
+            "-L",
+            "/usr/aarch64-linux-gnu",
+            "zig-out/bin/cli4bofs_lin_aarch64",
+            "zig-out/bin/udpScanner.elf.aarch64.o",
+            "192.168.0.1:2-10",
+        });
+        udp_scanner_aarch64.failing_to_execute_foreign_is_an_error = false;
+        udp_scanner_aarch64.step.dependOn(b.getInstallStep());
 
-            if (result.term.Exited == 0) {
-                const udp_scanner_aarch64 = b.addSystemCommand(&.{
-                    "qemu-aarch64",
-                    "-L",
-                    "/usr/aarch64-linux-gnu",
-                    "zig-out/bin/cli4bofs_lin_aarch64",
-                    "zig-out/bin/udpScanner.elf.aarch64.o",
-                    "192.168.0.1:2-10",
-                });
-                udp_scanner_aarch64.step.dependOn(b.getInstallStep());
+        const test_obj0_aarch64 = b.addSystemCommand(&.{
+            "qemu-aarch64",
+            "-L",
+            "/usr/aarch64-linux-gnu",
+            "zig-out/bin/cli4bofs_lin_aarch64",
+            "zig-out/bin/test_obj0.elf.aarch64.o",
+        });
+        test_obj0_aarch64.failing_to_execute_foreign_is_an_error = false;
+        test_obj0_aarch64.step.dependOn(b.getInstallStep());
 
-                const test_obj0_aarch64 = b.addSystemCommand(&.{
-                    "qemu-aarch64",
-                    "-L",
-                    "/usr/aarch64-linux-gnu",
-                    "zig-out/bin/cli4bofs_lin_aarch64",
-                    "zig-out/bin/test_obj0.elf.aarch64.o",
-                });
-                test_obj0_aarch64.step.dependOn(b.getInstallStep());
-
-                test_step.dependOn(&udp_scanner_aarch64.step);
-                test_step.dependOn(&test_obj0_aarch64.step);
-            }
-        }
+        test_step.dependOn(&udp_scanner_aarch64.step);
+        test_step.dependOn(&test_obj0_aarch64.step);
 
         // Try to run on arm using qemu
-        arm_blk: {
-            const result = std.ChildProcess.run(.{
-                .allocator = b.allocator,
-                .argv = &.{ "qemu-arm", "--version" },
-                .cwd = thisDir(),
-            }) catch break :arm_blk;
+        const udp_scanner_arm = b.addSystemCommand(&.{
+            "qemu-arm",
+            "-L",
+            "/usr/arm-linux-gnueabihf",
+            "zig-out/bin/cli4bofs_lin_arm",
+            "zig-out/bin/udpScanner.elf.arm.o",
+            "192.168.0.1:2-10",
+        });
+        udp_scanner_arm.failing_to_execute_foreign_is_an_error = false;
+        udp_scanner_arm.step.dependOn(b.getInstallStep());
 
-            if (result.term.Exited == 0) {
-                const udp_scanner_arm = b.addSystemCommand(&.{
-                    "qemu-arm",
-                    "-L",
-                    "/usr/arm-linux-gnueabihf",
-                    "zig-out/bin/cli4bofs_lin_arm",
-                    "zig-out/bin/udpScanner.elf.arm.o",
-                    "192.168.0.1:2-10",
-                });
-                udp_scanner_arm.step.dependOn(b.getInstallStep());
+        const test_obj0_arm = b.addSystemCommand(&.{
+            "qemu-arm",
+            "-L",
+            "/usr/arm-linux-gnueabihf",
+            "zig-out/bin/cli4bofs_lin_arm",
+            "zig-out/bin/test_obj0.elf.arm.o",
+        });
+        test_obj0_arm.failing_to_execute_foreign_is_an_error = false;
+        test_obj0_arm.step.dependOn(b.getInstallStep());
 
-                const test_obj0_arm = b.addSystemCommand(&.{
-                    "qemu-arm",
-                    "-L",
-                    "/usr/arm-linux-gnueabihf",
-                    "zig-out/bin/cli4bofs_lin_arm",
-                    "zig-out/bin/test_obj0.elf.arm.o",
-                });
-                test_obj0_arm.step.dependOn(b.getInstallStep());
-
-                test_step.dependOn(&udp_scanner_arm.step);
-                test_step.dependOn(&test_obj0_arm.step);
-            }
-        }
+        test_step.dependOn(&udp_scanner_arm.step);
+        test_step.dependOn(&test_obj0_arm.step);
     }
 }
 
