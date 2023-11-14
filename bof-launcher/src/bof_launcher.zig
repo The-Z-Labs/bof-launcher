@@ -1200,27 +1200,30 @@ fn threadFuncCloneProcessLinux(bof: *Bof, arg_data: ?[]u8, context: *BofContext)
     }
 
     // parent process
-    const file = std.fs.File{
-        .handle = pipe[0],
-        .capable_io_mode = .blocking,
-        .intended_io_mode = .blocking,
-    };
-    context.result = file.reader().readByte() catch @panic("OOM");
+    const child_result = std.os.waitpid(pid, 0);
+    if (child_result.status == 0) {
+        const file = std.fs.File{
+            .handle = pipe[0],
+            .capable_io_mode = .blocking,
+            .intended_io_mode = .blocking,
+        };
+        context.result = file.reader().readByte() catch @panic("OOM");
 
-    const output_len = file.reader().readInt(u32, .little) catch @panic("OOM");
+        const output_len = file.reader().readInt(u32, .little) catch @panic("OOM");
 
-    if (output_len > 0) {
-        context.output_mutex.lock();
-        defer context.output_mutex.unlock();
+        if (output_len > 0) {
+            context.output_mutex.lock();
+            defer context.output_mutex.unlock();
 
-        const read_len = file.reader().readAll(context.output_ring.data[0..output_len]) catch @panic("OOM");
+            const read_len = file.reader().readAll(context.output_ring.data[0..output_len]) catch @panic("OOM");
 
-        context.output_ring.read_index = 0;
-        context.output_ring.write_index = read_len;
-        context.output_ring_num_written_bytes = read_len;
+            context.output_ring.read_index = 0;
+            context.output_ring.write_index = read_len;
+            context.output_ring_num_written_bytes = read_len;
+        }
+    } else {
+        print("Child process crashed with status code 0x{x}\n", .{child_result.status});
     }
-
-    _ = std.os.waitpid(pid, 0);
 }
 
 fn threadFuncCloneProcessWindows(bof: *Bof, arg_data: ?[]u8, context: *BofContext) void {
