@@ -1223,6 +1223,7 @@ fn threadFuncCloneProcessLinux(bof: *Bof, arg_data: ?[]u8, context: *BofContext)
         }
     } else {
         print("Child process crashed with status code 0x{x}\n", .{child_result.status});
+        context.result = 0xff; // error
     }
 }
 
@@ -1314,6 +1315,9 @@ fn threadFuncCloneProcessWindows(bof: *Bof, arg_data: ?[]u8, context: *BofContex
                     context.output_ring.write_index = read_len;
                     context.output_ring_num_written_bytes = read_len;
                 }
+            } else {
+                print("Child process crashed with status code 0x{x}\n", .{exit_code});
+                context.result = 0xff; // error
             }
         },
         else => {
