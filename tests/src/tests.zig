@@ -341,20 +341,35 @@ test "bof-launcher.bofs.runAsyncProc" {
     );
     defer context2.release();
 
+    if (false) {
+        const context3 = try object.runAsyncProc(
+            @ptrCast(@constCast(std.mem.asBytes(&[_]i32{ 8, 30 }))),
+            8,
+            null,
+            null,
+        );
+        defer context3.release();
+    }
+
     try expect(context1.getObject().handle == object.handle);
     try expect(context2.getObject().handle == object.handle);
+    //try expect(context3.getObject().handle == object.handle);
 
     context1.wait();
     context2.wait();
+    //context3.wait();
 
     try expect(context1.isRunning() == false);
     try expect(context2.isRunning() == false);
+    //try expect(context3.isRunning() == false);
 
     try expect(context1.getReturnedValue() == 10);
     try expect(context2.getReturnedValue() == 20);
+    //try expect(context3.getReturnedValue() == 30);
 
     std.debug.print("{?s}\n", .{context1.getOutput()});
     std.debug.print("{?s}\n", .{context2.getOutput()});
+    //std.debug.print("{?s}\n", .{context3.getOutput()});
 }
 
 test "bof-launcher.info" {

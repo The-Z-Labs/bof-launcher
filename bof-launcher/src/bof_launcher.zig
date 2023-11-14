@@ -1175,24 +1175,52 @@ fn threadFuncCloneProcessLinux(bof: *Bof, arg_data: ?[]u8, context: *BofContext)
         std.os.close(pipe[1]);
     }
 
-    // TODO: Pass full output
-    const pid_result = std.os.fork() catch @panic("fork() failed");
-    if (pid_result == 0) {
+    const pid = std.os.fork() catch @panic("fork() failed");
+    if (pid == 0) {
         // child process
         bof.run(context, arg_data);
 
-        const file = std.fs.File{ .handle = pipe[1] };
-        file.writer().writeInt(u8, context.result, .little) catch @panic("OOM");
+        const file = std.fs.File{
+            .handle = pipe[1],
+            .capable_io_mode = .blocking,
+            .intended_io_mode = .blocking,
+        };
+        file.writer().writeByte(context.result) catch @panic("OOM");
+
+        var output_len: i32 = undefined;
+        const maybe_buf = bofContextGetOutput(context, &output_len);
+
+        file.writer().writeInt(i32, output_len, .little) catch @panic("OOM");
+
+        if (maybe_buf) |buf| {
+            file.writer().writeAll(buf[0..@intCast(output_len)]) catch @panic("OOM");
+        }
 
         std.os.exit(0);
     }
+
     // parent process
-    _ = std.os.waitpid(pid_result, 0);
+    const file = std.fs.File{
+        .handle = pipe[0],
+        .capable_io_mode = .blocking,
+        .intended_io_mode = .blocking,
+    };
+    context.result = file.reader().readByte() catch @panic("OOM");
 
-    const file = std.fs.File{ .handle = pipe[0] };
-    const r = file.reader().readInt(u8, .little) catch @panic("OOM");
+    const output_len = file.reader().readInt(u32, .little) catch @panic("OOM");
 
-    context.result = r;
+    if (output_len > 0) {
+        context.output_mutex.lock();
+        defer context.output_mutex.unlock();
+
+        const read_len = file.reader().readAll(context.output_ring.data[0..output_len]) catch @panic("OOM");
+
+        context.output_ring.read_index = 0;
+        context.output_ring.write_index = read_len;
+        context.output_ring_num_written_bytes = read_len;
+    }
+
+    _ = std.os.waitpid(pid, 0);
 }
 
 fn threadFuncCloneProcessWindows(bof: *Bof, arg_data: ?[]u8, context: *BofContext) void {
@@ -1246,13 +1274,13 @@ fn threadFuncCloneProcessWindows(bof: *Bof, arg_data: ?[]u8, context: *BofContex
 
             _ = w32.WriteFile(write_pipe, @ptrCast(&context.result), 1, null, null);
 
-            var len: i32 = undefined;
-            const maybe_buf = bofContextGetOutput(context, &len);
+            var output_len: i32 = undefined;
+            const maybe_buf = bofContextGetOutput(context, &output_len);
 
-            _ = w32.WriteFile(write_pipe, std.mem.asBytes(&len), 4, null, null);
+            _ = w32.WriteFile(write_pipe, std.mem.asBytes(&output_len), 4, null, null);
 
             if (maybe_buf) |buf| {
-                _ = w32.WriteFile(write_pipe, buf, @intCast(len), null, null);
+                _ = w32.WriteFile(write_pipe, buf, @intCast(output_len), null, null);
             }
 
             _ = w32.NtTerminateProcess(w32.NtCurrentProcess(), status);
@@ -1265,18 +1293,19 @@ fn threadFuncCloneProcessWindows(bof: *Bof, arg_data: ?[]u8, context: *BofContex
 
             _ = w32.ReadFile(read_pipe, @ptrCast(&context.result), 1, null, null);
 
-            var len: u32 = 0;
-            _ = w32.ReadFile(read_pipe, std.mem.asBytes(&len), 4, null, null);
+            var output_len: u32 = 0;
+            _ = w32.ReadFile(read_pipe, std.mem.asBytes(&output_len), 4, null, null);
 
-            if (len > 0) {
+            if (output_len > 0) {
                 context.output_mutex.lock();
                 defer context.output_mutex.unlock();
 
-                _ = w32.ReadFile(read_pipe, context.output_ring.data.ptr, len, null, null);
+                var read_len: w32.DWORD = 0;
+                _ = w32.ReadFile(read_pipe, context.output_ring.data.ptr, output_len, &read_len, null);
 
                 context.output_ring.read_index = 0;
-                context.output_ring.write_index = len;
-                context.output_ring_num_written_bytes = len;
+                context.output_ring.write_index = read_len;
+                context.output_ring_num_written_bytes = read_len;
             }
         },
         else => {
