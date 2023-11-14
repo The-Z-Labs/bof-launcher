@@ -1286,7 +1286,7 @@ fn threadFuncCloneProcessWindows(bof: *Bof, arg_data: ?[]u8, context: *BofContex
                 _ = w32.WriteFile(write_pipe, buf, @intCast(output_len), null, null);
             }
 
-            _ = w32.NtTerminateProcess(w32.NtCurrentProcess(), status);
+            _ = w32.NtTerminateProcess(w32.NtCurrentProcess(), .SUCCESS);
         },
         .SUCCESS => {
             // parent process
@@ -1294,21 +1294,26 @@ fn threadFuncCloneProcessWindows(bof: *Bof, arg_data: ?[]u8, context: *BofContex
             _ = w32.NtResumeThread(info.ThreadHandle.?, null);
             _ = w32.WaitForSingleObject(info.ProcessHandle.?, w32.INFINITE);
 
-            _ = w32.ReadFile(read_pipe, @ptrCast(&context.result), 1, null, null);
+            var exit_code: w32.DWORD = 0xff;
+            _ = w32.GetExitCodeProcess(info.ProcessHandle.?, &exit_code);
 
-            var output_len: u32 = 0;
-            _ = w32.ReadFile(read_pipe, std.mem.asBytes(&output_len), 4, null, null);
+            if (exit_code == 0) {
+                _ = w32.ReadFile(read_pipe, @ptrCast(&context.result), 1, null, null);
 
-            if (output_len > 0) {
-                context.output_mutex.lock();
-                defer context.output_mutex.unlock();
+                var output_len: u32 = 0;
+                _ = w32.ReadFile(read_pipe, std.mem.asBytes(&output_len), 4, null, null);
 
-                var read_len: w32.DWORD = 0;
-                _ = w32.ReadFile(read_pipe, context.output_ring.data.ptr, output_len, &read_len, null);
+                if (output_len > 0) {
+                    context.output_mutex.lock();
+                    defer context.output_mutex.unlock();
 
-                context.output_ring.read_index = 0;
-                context.output_ring.write_index = read_len;
-                context.output_ring_num_written_bytes = read_len;
+                    var read_len: w32.DWORD = 0;
+                    _ = w32.ReadFile(read_pipe, context.output_ring.data.ptr, output_len, &read_len, null);
+
+                    context.output_ring.read_index = 0;
+                    context.output_ring.write_index = read_len;
+                    context.output_ring_num_written_bytes = read_len;
+                }
             }
         },
         else => {
