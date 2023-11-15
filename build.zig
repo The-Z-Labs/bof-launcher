@@ -159,7 +159,7 @@ pub fn build(b: *std.build.Builder) void {
         if (run_qemu_tests) {
             // Try to run on aarch64 using qemu
             const udp_scanner_aarch64 = b.addSystemCommand(&.{
-                "___qemu-aarch64",
+                "qemu-aarch64",
                 "-L",
                 "/usr/aarch64-linux-gnu",
                 "zig-out/bin/cli4bofs_lin_aarch64",
