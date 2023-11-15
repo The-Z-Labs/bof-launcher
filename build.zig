@@ -150,11 +150,7 @@ pub fn build(b: *std.build.Builder) void {
         test_step.dependOn(&udp_scanner_x64.step);
         test_step.dependOn(&udp_scanner_x86.step);
 
-        const run_qemu_tests = b.option(
-            bool,
-            "qemu",
-            "Run aarch64 and arm qemu tests",
-        ) orelse false;
+        const run_qemu_tests = b.option(bool, "qemu", "Run aarch64 and arm qemu tests") orelse false;
 
         if (run_qemu_tests) {
             // Try to run on aarch64 using qemu
