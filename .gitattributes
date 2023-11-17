@@ -5,6 +5,6 @@
 *.zig text
 *.txt text
 
-*.exe binary
+fasm.exe binary
 
 * text eol=lf
