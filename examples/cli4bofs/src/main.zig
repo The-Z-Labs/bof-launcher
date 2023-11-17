@@ -105,5 +105,6 @@ pub fn main() !u8 {
         args.getBufferSize(),
     );
 
+    stdout.writer().print("BOF returned: {d}\n", .{result}) catch unreachable;
     return result;
 }

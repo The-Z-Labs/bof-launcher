@@ -7,6 +7,7 @@
 !*.inl
 !*.zig
 !*.h
+!*.asm
 !*.bat
 !Makefile
 !LICENSE*
