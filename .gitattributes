@@ -1,10 +1,10 @@
+*.exe binary
+
 *.cpp text
 *.c text
 *.h text
 *.inl text
 *.zig text
 *.txt text
-
-*.exe binary
 
 * text eol=lf
