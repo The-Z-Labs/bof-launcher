@@ -1,4 +1,4 @@
-*.exe binary
+* text=auto
 
 *.cpp text
 *.c text
@@ -8,3 +8,6 @@
 *.txt text
 
 * text eol=lf
+
+*.exe binary
+
