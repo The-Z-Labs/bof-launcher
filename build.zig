@@ -129,8 +129,20 @@ pub fn build(b: *std.build.Builder) void {
         });
         udp_scanner_x86.step.dependOn(b.getInstallStep());
 
+        const winver_x64 = b.addSystemCommand(
+            &.{ "zig-out/bin/cli4bofs_win_x64.exe", "zig-out/bin/wWinverC.coff.x64.o" },
+        );
+        winver_x64.step.dependOn(b.getInstallStep());
+
+        const winver_x86 = b.addSystemCommand(
+            &.{ "zig-out/bin/cli4bofs_win_x86.exe", "zig-out/bin/wWinverC.coff.x86.o" },
+        );
+        winver_x86.step.dependOn(b.getInstallStep());
+
         test_step.dependOn(&udp_scanner_x64.step);
         test_step.dependOn(&udp_scanner_x86.step);
+        test_step.dependOn(&winver_x64.step);
+        test_step.dependOn(&winver_x86.step);
     }
 
     //

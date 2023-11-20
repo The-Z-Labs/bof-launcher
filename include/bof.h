@@ -117,8 +117,8 @@ bofObjectRun(BofObjectHandle bof_handle,
 /// Returns negative value when error occurs.
 int
 bofObjectRunAsyncThread(BofObjectHandle bof_handle,
-                        unsigned char* arg_data_ptr,
-                        int arg_data_len,
+                        unsigned char* arg_data_ptr, // usually: bofArgsGetBuffer()
+                        int arg_data_len, // usually: bofArgsGetBufferSize()
                         BofCompletionCallback completion_cb, // optional (can be NULL)
                         void* completion_cb_context, // optional (can be NULL)
                         BofContext** out_context); // required (can't be NULL)
@@ -141,8 +141,8 @@ bofObjectRunAsyncThread(BofObjectHandle bof_handle,
 /// Returns negative value when error occurs.
 int
 bofObjectRunAsyncProcess(BofObjectHandle bof_handle,
-                         unsigned char* arg_data_ptr,
-                         int arg_data_len,
+                         unsigned char* arg_data_ptr, // usually: bofArgsGetBuffer()
+                         int arg_data_len, // usually: bofArgsGetBufferSize()
                          BofCompletionCallback completion_cb, // optional (can be NULL)
                          void* completion_cb_context, // optional (can be NULL)
                          BofContext** out_context); // required (can't be NULL)
