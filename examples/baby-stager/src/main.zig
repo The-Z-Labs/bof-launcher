@@ -181,7 +181,7 @@ pub fn main() !u8 {
                 } else if (std.mem.eql(u8, exec_mode, "thread")) {
                     stdout.writer().print("Execution mode: {s}-based\n", .{exec_mode}) catch unreachable;
 
-                    bof_context = try bof_object.runAsync(
+                    bof_context = try bof_object.runAsyncThread(
                         @constCast(bof_args.ptr),
                         @intCast(bof_args.len),
                         null,

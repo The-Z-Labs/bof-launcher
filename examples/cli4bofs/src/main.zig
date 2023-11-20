@@ -17,7 +17,7 @@ fn runBofFromFile(
     const object = try bof.Object.initFromMemory(file_data.ptr, @intCast(file_data.len));
     defer object.release();
 
-    const context = try object.runAsync(arg_data_ptr, arg_data_len, null, null);
+    const context = try object.runAsyncThread(arg_data_ptr, arg_data_len, null, null);
     defer context.release();
 
     context.wait();
@@ -25,7 +25,7 @@ fn runBofFromFile(
     if (context.getOutput()) |output| {
         try std.io.getStdOut().writer().print("{s}", .{output});
     }
-    return context.getReturnedValue();
+    return context.getExitCode();
 }
 
 fn usage(name: [:0]const u8) void {
@@ -105,6 +105,6 @@ pub fn main() !u8 {
         args.getBufferSize(),
     );
 
-    stdout.writer().print("BOF returned: {d}\n", .{result}) catch unreachable;
+    stdout.writer().print("BOF exit code: {d}\n", .{result}) catch unreachable;
     return result;
 }

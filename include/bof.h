@@ -49,6 +49,7 @@ bofLauncherRelease(void);
 /// `bofObjectInitFromMemory()` takes raw object file data (COFF or ELF) and prepares
 /// it for the execution on a local machine.
 /// It parses data, maps object file to memory, performs relocations, resolves external symbols, etc.
+///
 /// Returns zero on success.
 /// Returns negative value when error occurs.
 int
@@ -67,27 +68,84 @@ bofObjectRelease(BofObjectHandle bof_handle);
 int
 bofObjectIsValid(BofObjectHandle bof_handle);
 
-/// Returns value returned from bof (zero or greater)
-/// Returns negative value when error occurs
+/// `bofObjectRun()` executes loaded object file identified by `bof_handle` in a synchronous mode.
+/// `bofObjectRun()` will return when BOF finishes its execution.
+///
+/// Unique `BofContext` object is returned in `out_context` parameter and must be released
+/// with `bofContextRelease()` when no longer needed.
+///
+/// `bofContextGetOutput()` - should be used to retrieve BOF output.
+/// `bofContextGetExitCode()` - should be used to retrieve BOF's exit code.
+///
+/// Returns zero on success.
+/// Returns negative value when error occurs.
+///
+/// Example:
+///
+/// BofContext* exec_ctx = NULL;
+/// if (bofObjectRun(bof_handle, NULL, 0, &exec_ctx) != 0) {
+///     // handle error
+/// }
+/// if (exec_ctx) {
+///     const char* output = bofContextGetOutput(exec_ctx, NULL);
+///     printf("Exit code: %d.\nOutput: %s\n",
+///            bofContextGetExitCode(exec_ctx), output ? output : "empty output");
+///     bofContextRelease(exec_ctx);
+///     exec_ctx = NULL;
+/// }
 int
 bofObjectRun(BofObjectHandle bof_handle,
-             unsigned char* arg_data_ptr,
-             int arg_data_len,
+             unsigned char* arg_data_ptr, // usually: bofArgsGetBuffer()
+             int arg_data_len, // usually: bofArgsGetBufferSize()
              BofContext** out_context); // required (can't be NULL)
+
+/// `bofObjectRunAsyncThread()` executes loaded object file identified by `bof_handle` in an asynchronous mode.
+/// `bofObjectRunAsyncThread()` executes BOF in a dedicated thread - it launches BOF in a thread and
+/// returns immediately (does not block main thread).
+///
+/// Unique `BofContext` object is returned in `out_context` parameter and must be released
+/// with `bofContextRelease()` when no longer needed.
+///
+/// `bofContextIsRunning()` - should be used to check if BOF has finished its execution.
+/// `bofContextWait()` - should be used to wait for BOF to finish its execution.
+///
+/// When BOF has finished its execution below functions can be used:
+/// `bofContextGetOutput()` - to retrieve BOF output.
+/// `bofContextGetExitCode()` - to retrieve BOF's exit code.
+///
+/// Returns zero on success.
+/// Returns negative value when error occurs.
 int
-bofObjectRunAsync(BofObjectHandle bof_handle,
-                  unsigned char* arg_data_ptr,
-                  int arg_data_len,
-                  BofCompletionCallback completion_cb, // optional (can be NULL)
-                  void* completion_cb_context, // optional (can be NULL)
-                  BofContext** out_context); // required (can't be NULL)
+bofObjectRunAsyncThread(BofObjectHandle bof_handle,
+                        unsigned char* arg_data_ptr,
+                        int arg_data_len,
+                        BofCompletionCallback completion_cb, // optional (can be NULL)
+                        void* completion_cb_context, // optional (can be NULL)
+                        BofContext** out_context); // required (can't be NULL)
+
+/// `bofObjectRunAsyncProcess()` executes loaded object file identified by `bof_handle` in an asynchronous mode.
+/// `bofObjectRunAsyncProcess()` executes BOF in a new dedicated process - it launches BOF in a cloned process and
+/// returns immediately (does not block main thread).
+///
+/// Unique `BofContext` object is returned in `out_context` parameter and must be released
+/// with `bofContextRelease()` when no longer needed.
+///
+/// `bofContextIsRunning()` - should be used to check if BOF has finished its execution.
+/// `bofContextWait()` - should be used to wait for BOF to finish its execution.
+///
+/// When BOF has finished its execution below functions can be used:
+/// `bofContextGetOutput()` - to retrieve BOF output.
+/// `bofContextGetExitCode()` - to retrieve BOF's exit code.
+///
+/// Returns zero on success.
+/// Returns negative value when error occurs.
 int
-bofObjectRunAsyncProc(BofObjectHandle bof_handle,
-                      unsigned char* arg_data_ptr,
-                      int arg_data_len,
-                      BofCompletionCallback completion_cb, // optional (can be NULL)
-                      void* completion_cb_context, // optional (can be NULL)
-                      BofContext** out_context); // required (can't be NULL)
+bofObjectRunAsyncProcess(BofObjectHandle bof_handle,
+                         unsigned char* arg_data_ptr,
+                         int arg_data_len,
+                         BofCompletionCallback completion_cb, // optional (can be NULL)
+                         void* completion_cb_context, // optional (can be NULL)
+                         BofContext** out_context); // required (can't be NULL)
 //------------------------------------------------------------------------------
 //
 // Context functions
@@ -99,14 +157,14 @@ bofContextRelease(BofContext* context);
 int
 bofContextIsRunning(BofContext* context);
 
-unsigned char
-bofContextGetReturnedValue(BofContext* context);
-
 BofObjectHandle
 bofContextGetObjectHandle(BofContext* context);
 
 void
 bofContextWait(BofContext* context);
+
+unsigned char
+bofContextGetExitCode(BofContext* context);
 
 const char*
 bofContextGetOutput(BofContext* context,

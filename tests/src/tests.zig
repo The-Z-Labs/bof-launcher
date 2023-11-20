@@ -23,7 +23,7 @@ fn runBofFromFile(
         std.debug.print("{s}", .{output});
     }
 
-    return context.getReturnedValue();
+    return context.getExitCode();
 }
 
 fn testRunBofFromFile(
@@ -177,27 +177,27 @@ test "bof-launcher.bofs.load_run" {
 
     const context0 = try object0.run(&bytes, @intCast(bytes.len));
     defer context0.release();
-    try expect(6 == context0.getReturnedValue());
+    try expect(6 == context0.getExitCode());
     try expect(context0.getObject().handle == object0.handle);
 
     const context1 = try object1.run(&bytes, @intCast(bytes.len));
     defer context1.release();
-    try expect(15 == context1.getReturnedValue());
+    try expect(15 == context1.getExitCode());
     try expect(context1.isRunning() == false);
     try expect(context1.getObject().handle == object1.handle);
 
     const context2 = try object1.run(&bytes, @intCast(bytes.len));
     defer context2.release();
-    try expect(15 == context2.getReturnedValue());
+    try expect(15 == context2.getExitCode());
 
     const context3 = try object0.run(&bytes, @intCast(bytes.len));
     defer context3.release();
-    try expect(6 == context3.getReturnedValue());
+    try expect(6 == context3.getExitCode());
     try expect(context3.isRunning() == false);
 
     const context4 = try object1.run(&bytes, @intCast(bytes.len));
     defer context4.release();
-    try expect(15 == context4.getReturnedValue());
+    try expect(15 == context4.getExitCode());
 
     try expect(context3.getOutput() != null);
     if (context3.getOutput()) |output| {
@@ -250,7 +250,7 @@ test "bof-launcher.stress" {
     }
 }
 
-test "bof-launcher.bofs.runAsync" {
+test "bof-launcher.bofs.runAsyncThread" {
     try bof.initLauncher();
     defer bof.releaseLauncher();
 
@@ -264,7 +264,7 @@ test "bof-launcher.bofs.runAsync" {
 
     try expect(object.isValid());
 
-    const context1 = try object.runAsync(
+    const context1 = try object.runAsyncThread(
         @ptrCast(@constCast(std.mem.asBytes(&[_]i32{ 8, 1 }))),
         8,
         null,
@@ -272,7 +272,7 @@ test "bof-launcher.bofs.runAsync" {
     );
     defer context1.release();
 
-    const context2 = try object.runAsync(
+    const context2 = try object.runAsyncThread(
         @ptrCast(@constCast(std.mem.asBytes(&[_]i32{ 8, 2 }))),
         8,
         null,
@@ -280,7 +280,7 @@ test "bof-launcher.bofs.runAsync" {
     );
     defer context2.release();
 
-    const context3 = try object.runAsync(
+    const context3 = try object.runAsyncThread(
         @ptrCast(@constCast(std.mem.asBytes(&[_]i32{ 8, 3 }))),
         8,
         null,
@@ -300,16 +300,16 @@ test "bof-launcher.bofs.runAsync" {
     try expect(context2.isRunning() == false);
     try expect(context3.isRunning() == false);
 
-    try expect(context1.getReturnedValue() == 1);
-    try expect(context2.getReturnedValue() == 2);
-    try expect(context3.getReturnedValue() == 3);
+    try expect(context1.getExitCode() == 1);
+    try expect(context2.getExitCode() == 2);
+    try expect(context3.getExitCode() == 3);
 
     std.debug.print("{?s}\n", .{context1.getOutput()});
     std.debug.print("{?s}\n", .{context2.getOutput()});
     std.debug.print("{?s}\n", .{context3.getOutput()});
 }
 
-test "bof-launcher.bofs.runAsyncProc" {
+test "bof-launcher.bofs.runAsyncProcess" {
     if (@import("builtin").cpu.arch == .x86 and @import("builtin").os.tag == .windows) return error.SkipZigTest;
 
     try bof.initLauncher();
@@ -325,7 +325,7 @@ test "bof-launcher.bofs.runAsyncProc" {
 
     try expect(object.isValid());
 
-    const context1 = try object.runAsyncProc(
+    const context1 = try object.runAsyncProcess(
         @ptrCast(@constCast(std.mem.asBytes(&[_]i32{ 8, 10 }))),
         8,
         null,
@@ -333,7 +333,7 @@ test "bof-launcher.bofs.runAsyncProc" {
     );
     defer context1.release();
 
-    const context2 = try object.runAsyncProc(
+    const context2 = try object.runAsyncProcess(
         @ptrCast(@constCast(std.mem.asBytes(&[_]i32{ 8, 20 }))),
         8,
         null,
@@ -342,7 +342,7 @@ test "bof-launcher.bofs.runAsyncProc" {
     defer context2.release();
 
     if (false) {
-        const context3 = try object.runAsyncProc(
+        const context3 = try object.runAsyncProcess(
             @ptrCast(@constCast(std.mem.asBytes(&[_]i32{ 8, 30 }))),
             8,
             null,
@@ -363,9 +363,9 @@ test "bof-launcher.bofs.runAsyncProc" {
     try expect(context2.isRunning() == false);
     //try expect(context3.isRunning() == false);
 
-    try expect(context1.getReturnedValue() == 10);
-    try expect(context2.getReturnedValue() == 20);
-    //try expect(context3.getReturnedValue() == 30);
+    try expect(context1.getExitCode() == 10);
+    try expect(context2.getExitCode() == 20);
+    //try expect(context3.getExitCode() == 30);
 
     std.debug.print("{?s}\n", .{context1.getOutput()});
     std.debug.print("{?s}\n", .{context2.getOutput()});

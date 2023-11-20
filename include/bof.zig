@@ -79,7 +79,7 @@ pub const Object = extern struct {
         return context;
     }
 
-    pub fn runAsync(
+    pub fn runAsyncThread(
         bof_handle: Object,
         arg_data_ptr: ?[*]u8,
         arg_data_len: c_int,
@@ -87,7 +87,7 @@ pub const Object = extern struct {
         completion_cb_context: ?*anyopaque,
     ) Error!*Context {
         var context: *Context = undefined;
-        if (bofObjectRunAsync(
+        if (bofObjectRunAsyncThread(
             bof_handle,
             arg_data_ptr,
             arg_data_len,
@@ -98,7 +98,7 @@ pub const Object = extern struct {
         return context;
     }
 
-    pub fn runAsyncProc(
+    pub fn runAsyncProcess(
         bof_handle: Object,
         arg_data_ptr: ?[*]u8,
         arg_data_len: c_int,
@@ -106,7 +106,7 @@ pub const Object = extern struct {
         completion_cb_context: ?*anyopaque,
     ) Error!*Context {
         var context: *Context = undefined;
-        if (bofObjectRunAsyncProc(
+        if (bofObjectRunAsyncProcess(
             bof_handle,
             arg_data_ptr,
             arg_data_len,
@@ -136,7 +136,7 @@ pub const Context = opaque {
 
     pub const wait = bofContextWait;
 
-    pub const getReturnedValue = bofContextGetReturnedValue;
+    pub const getExitCode = bofContextGetExitCode;
 
     pub const getObject = bofContextGetObjectHandle;
 
@@ -201,7 +201,7 @@ extern fn bofObjectRun(
     out_context: **Context,
 ) callconv(.C) c_int;
 
-extern fn bofObjectRunAsync(
+extern fn bofObjectRunAsyncThread(
     bof_handle: Object,
     arg_data_ptr: ?[*]u8,
     arg_data_len: c_int,
@@ -210,7 +210,7 @@ extern fn bofObjectRunAsync(
     out_context: **Context,
 ) callconv(.C) c_int;
 
-extern fn bofObjectRunAsyncProc(
+extern fn bofObjectRunAsyncProcess(
     bof_handle: Object,
     arg_data_ptr: ?[*]u8,
     arg_data_len: c_int,
@@ -222,7 +222,7 @@ extern fn bofObjectRunAsyncProc(
 extern fn bofContextRelease(context: *Context) callconv(.C) void;
 extern fn bofContextIsRunning(context: *Context) callconv(.C) c_int;
 extern fn bofContextWait(context: *Context) callconv(.C) void;
-extern fn bofContextGetReturnedValue(context: *Context) callconv(.C) u8;
+extern fn bofContextGetExitCode(context: *Context) callconv(.C) u8;
 extern fn bofContextGetObjectHandle(context: *Context) callconv(.C) Object;
 extern fn bofContextGetOutput(context: *Context, out_output_len: ?*c_int) callconv(.C) ?[*:0]const u8;
 

@@ -1407,7 +1407,7 @@ fn runAsync(
     } else unreachable;
 }
 
-pub export fn bofObjectRunAsync(
+pub export fn bofObjectRunAsyncThread(
     bof_handle: BofHandle,
     arg_data_ptr: ?[*]u8,
     arg_data_len: c_int,
@@ -1429,7 +1429,7 @@ pub export fn bofObjectRunAsync(
     return 0; // success
 }
 
-pub export fn bofObjectRunAsyncProc(
+pub export fn bofObjectRunAsyncProcess(
     bof_handle: BofHandle,
     arg_data_ptr: ?[*]u8,
     arg_data_len: c_int,
@@ -1476,7 +1476,7 @@ pub export fn bofContextGetObjectHandle(context: *@import("bofapi").bof.Context)
     return ctx.handle;
 }
 
-pub export fn bofContextGetReturnedValue(context: *@import("bofapi").bof.Context) u8 {
+pub export fn bofContextGetExitCode(context: *@import("bofapi").bof.Context) u8 {
     if (!gstate.is_valid) return 0;
     const ctx = @as(*BofContext, @ptrCast(@alignCast(context)));
     return ctx.result;
