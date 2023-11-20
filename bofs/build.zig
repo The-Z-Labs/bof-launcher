@@ -10,6 +10,7 @@ const bofs = [_]Bof{
     .{ .name = "wWinver", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWhoami", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    .{ .name = "wDirectSyscall", .formats = &.{.coff}, .archs = &.{.x64} },
     .{ .name = "uname", .dir = "coreutils/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "hostid", .dir = "coreutils/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "hostname", .dir = "coreutils/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
@@ -25,7 +26,7 @@ const bofs = [_]Bof{
 const std = @import("std");
 const Options = @import("../build.zig").Options;
 
-const BofLang = enum { zig, c };
+const BofLang = enum { zig, c, fasm };
 const BofFormat = enum { coff, elf };
 const BofArch = enum { x64, x86, aarch64, arm };
 
@@ -91,7 +92,14 @@ pub fn build(
             std.fs.accessAbsolute(
                 std.mem.join(b.allocator, "", &.{ bof_src_path, ".zig" }) catch unreachable,
                 .{},
-            ) catch break :blk .c;
+            ) catch {
+                std.fs.accessAbsolute(
+                    std.mem.join(b.allocator, "", &.{ bof_src_path, ".asm" }) catch unreachable,
+                    .{},
+                ) catch break :blk .c;
+
+                break :blk .fasm;
+            };
             break :blk .zig;
         };
 
@@ -100,8 +108,42 @@ pub fn build(
                 if (format == .coff and arch == .aarch64) continue;
                 if (format == .coff and arch == .arm) continue;
 
+                const full_bof_name = std.mem.join(
+                    b.allocator,
+                    "",
+                    &.{ bof.name, ".", @tagName(format), ".", @tagName(arch), ".o" },
+                ) catch unreachable;
+
+                const bin_full_bof_name = std.mem.join(
+                    b.allocator,
+                    "",
+                    &.{ "bin/", full_bof_name },
+                ) catch unreachable;
+
+                if (lang == .fasm) {
+                    if (@import("builtin").os.tag == .windows) {
+                        const run_fasm = b.addSystemCommand(&.{
+                            thisDir() ++ "/../bin/fasm.exe",
+                        });
+                        run_fasm.addFileArg(.{
+                            .path = std.mem.join(
+                                b.allocator,
+                                "",
+                                &.{ bof_src_path, ".asm" },
+                            ) catch unreachable,
+                        });
+                        const output_path = run_fasm.addOutputFileArg(full_bof_name);
+
+                        b.getInstallStep().dependOn(
+                            &b.addInstallFile(output_path, bin_full_bof_name).step,
+                        );
+                    }
+                    continue;
+                }
+
                 const target = Bof.getCrossTarget(format, arch);
                 const obj = switch (lang) {
+                    .fasm => unreachable,
                     .zig => b.addObject(.{
                         .name = bof.name,
                         .root_source_file = .{
@@ -167,18 +209,7 @@ pub fn build(
                 obj.unwind_tables = false;
 
                 b.getInstallStep().dependOn(
-                    &b.addInstallFile(
-                        obj.getOutputSource(),
-                        std.mem.join(b.allocator, "", &.{
-                            "bin/",
-                            bof.name,
-                            ".",
-                            @tagName(format),
-                            ".",
-                            @tagName(arch),
-                            ".o",
-                        }) catch unreachable,
-                    ).step,
+                    &b.addInstallFile(obj.getOutputSource(), bin_full_bof_name).step,
                 );
             }
         }

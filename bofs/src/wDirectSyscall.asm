@@ -70,9 +70,11 @@ align 8
 file_status_block:
     virtual at $
     .Status dd ?
+    end virtual
+    virtual at $
     .Pointer dq ?
     end virtual
-    dq 0 ; storage for above union
+    dq 0 ; storage for the above union
     .Information dq 0
 
 align 8
