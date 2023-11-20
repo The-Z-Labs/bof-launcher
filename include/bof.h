@@ -31,11 +31,14 @@ typedef void (*BofCompletionCallback)(BofContext* bof_context, void* user_contex
 // Launcher functions
 //
 //------------------------------------------------------------------------------
-/// Returns zero on success
-/// Returns negative value when error occurs
+/// `bofLauncherInit()` needs to be called to initialize this library.
+/// Returns zero on success.
+/// Returns negative value when error occurs.
 int
 bofLauncherInit(void);
 
+/// `bofLauncherRelease()` releases all the resources (it will release all unreleased BOF objects
+/// but not contexts).
 void
 bofLauncherRelease(void);
 //------------------------------------------------------------------------------
@@ -43,15 +46,24 @@ bofLauncherRelease(void);
 // Object functions
 //
 //------------------------------------------------------------------------------
-/// Returns value returned from bof (zero or greater)
-/// Returns negative value when error occurs
+/// `bofObjectInitFromMemory()` takes raw object file data (COFF or ELF) and prepares
+/// it for the execution on a local machine.
+/// It parses data, maps object file to memory, performs relocations, resolves external symbols, etc.
+/// Returns zero on success.
+/// Returns negative value when error occurs.
 int
 bofObjectInitFromMemory(const unsigned char* file_data_ptr,
-                        int file_data_len,
+                        int file_data_len, // in bytes
                         BofObjectHandle* out_bof_handle); // required (can't be NULL)
+
+/// `bofObjectRelease()` releases all the resources associtated with a BOF object.
+/// After this call `bof_handle` becomes invalid.
 void
 bofObjectRelease(BofObjectHandle bof_handle);
 
+/// Returns positive value when `bof_handle` is valid.
+/// Returns zero if `bof_handle` is invalid (released or not returned from successful call
+/// to `bofObjectInitFromMemory()`).
 int
 bofObjectIsValid(BofObjectHandle bof_handle);
 

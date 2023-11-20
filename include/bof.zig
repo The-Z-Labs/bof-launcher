@@ -17,12 +17,13 @@ pub const CompletionCallback = *const fn (
 // Launcher functions
 //
 //------------------------------------------------------------------------------
-/// Returns zero on success
-/// Returns negative value when error occurs
+/// `initLauncher()` needs to be called to initialize this library.
 pub fn initLauncher() Error!void {
     if (bofLauncherInit() < 0) return error.Unknown;
 }
 
+/// `releaseLauncher()` releases all the resources (it will release all unreleased BOF objects
+/// but not contexts).
 pub const releaseLauncher = bofLauncherRelease;
 //------------------------------------------------------------------------------
 //
@@ -36,6 +37,9 @@ pub const releaseLauncher = bofLauncherRelease;
 pub const Object = extern struct {
     handle: u32,
 
+    /// `initFromMemory()` takes raw object file data (COFF or ELF) and prepares
+    /// it for the execution on a local machine.
+    /// It parses data, maps object file to memory, performs relocations, resolves external symbols, etc.
     pub fn initFromMemory(
         file_data_ptr: [*]const u8,
         file_data_len: c_int,
@@ -49,8 +53,13 @@ pub const Object = extern struct {
         return object;
     }
 
+    /// `release()` releases all the resources associtated with a BOF object.
+    /// After this call `Object` becomes invalid.
     pub const release = bofObjectRelease;
 
+    /// Returns `true` when this object is valid.
+    /// Returns `false` when this object is invalid (released or not returned from successful call
+    /// to `bofObjectInitFromMemory()`).
     pub fn isValid(bof_handle: Object) bool {
         return bofObjectIsValid(bof_handle) != 0;
     }
