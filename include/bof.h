@@ -1,4 +1,5 @@
 #pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -7,10 +8,23 @@ extern "C" {
 // Types
 //
 //------------------------------------------------------------------------------
+/// `BofObjectHandle` is an opaque handle to the object file (COFF or ELF).
+/// `bofObjectInitFromMemory()` returns a valid handle if it succeeds.
+/// You can execute underlying object file as many times you want using `bofObjectRun*()` functions.
+/// When you are done using object file you should call `bofObjectRelease()`.
 typedef struct BofObjectHandle { unsigned int bits; } BofObjectHandle;
+
+/// `BofContext` represents an execution context for a single BOF run.
+/// Every successful call to `bofObjectRun*()` returns an unique `BofContext` object.
+/// `BofContext` stores BOF's output, BOF's return value and provides synchronization operations
+/// for async BOF runs.
+/// You should call `bofContextRelease()` when you no longer need it.
 typedef struct BofContext BofContext;
+
+/// `BofArgs` represents a set of user-provided arguments that will be passed to a BOF.
 typedef struct BofArgs BofArgs;
 
+/// `BofCompletionCallback` is a callback function type for `bofObjectRunAsync*()` functions.
 typedef void (*BofCompletionCallback)(BofContext* bof_context, void* user_context);
 //------------------------------------------------------------------------------
 //

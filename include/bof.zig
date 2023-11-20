@@ -7,6 +7,7 @@ pub const Error = error{
     Unknown,
 };
 
+/// `CompletionCallback` is a callback function type for `Object.runAsync*()` functions.
 pub const CompletionCallback = *const fn (
     bof_context: *Context,
     user_context: ?*anyopaque,
@@ -28,6 +29,10 @@ pub const releaseLauncher = bofLauncherRelease;
 // Object
 //
 //------------------------------------------------------------------------------
+/// `Object` is an opaque handle to the object file (COFF or ELF).
+/// `Object.initFromMemory()` returns a valid handle if it succeeds.
+/// You can execute underlying object file as many times you want using `Object.run*()` functions.
+/// When you are done using object file you should call `Object.release()`.
 pub const Object = extern struct {
     handle: u32,
 
@@ -108,6 +113,11 @@ pub const Object = extern struct {
 // Context
 //
 //------------------------------------------------------------------------------
+/// `Context` represents an execution context for a single BOF run.
+/// Every successful call to `Object.run*()` returns an unique `Context` object.
+/// `Context` stores BOF's output, BOF's return value and provides synchronization operations
+/// for async BOF runs.
+/// You should call `Context.release()` when you no longer need it.
 pub const Context = opaque {
     pub const release = bofContextRelease;
 
@@ -133,6 +143,7 @@ pub const Context = opaque {
 // Args
 //
 //------------------------------------------------------------------------------
+/// `Args` represents a set of user-provided arguments that will be passed to a BOF.
 pub const Args = opaque {
     pub fn init() Error!*Args {
         var args: *Args = undefined;
