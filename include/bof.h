@@ -55,7 +55,7 @@ bofLauncherRelease(void);
 int
 bofObjectInitFromMemory(const unsigned char* file_data_ptr,
                         int file_data_len, // in bytes
-                        BofObjectHandle* out_bof_handle); // required (can't be NULL)
+                        BofObjectHandle* out_bof_handle); // required (can't be `NULL`)
 
 /// `bofObjectRelease()` releases all the resources associtated with a BOF object.
 /// After this call `bof_handle` becomes invalid.
@@ -74,14 +74,14 @@ bofObjectIsValid(BofObjectHandle bof_handle);
 /// Unique `BofContext` object is returned in `out_context` parameter and must be released
 /// with `bofContextRelease()` when no longer needed.
 ///
-/// `bofContextGetOutput()` - should be used to retrieve BOF output.
+/// `bofContextGetOutput()` - should be used to retrieve BOF's output.
 /// `bofContextGetExitCode()` - should be used to retrieve BOF's exit code.
 ///
 /// Returns zero on success.
 /// Returns negative value when error occurs.
 ///
 /// Example:
-///
+/// ```
 /// BofContext* exec_ctx = NULL;
 /// if (bofObjectRun(bof_handle, NULL, 0, &exec_ctx) != 0) {
 ///     // handle error
@@ -93,11 +93,12 @@ bofObjectIsValid(BofObjectHandle bof_handle);
 ///     bofContextRelease(exec_ctx);
 ///     exec_ctx = NULL;
 /// }
+/// ```
 int
 bofObjectRun(BofObjectHandle bof_handle,
              unsigned char* arg_data_ptr, // usually: bofArgsGetBuffer()
              int arg_data_len, // usually: bofArgsGetBufferSize()
-             BofContext** out_context); // required (can't be NULL)
+             BofContext** out_context); // required (can't be `NULL`)
 
 /// `bofObjectRunAsyncThread()` executes loaded object file identified by `bof_handle` in an asynchronous mode.
 /// `bofObjectRunAsyncThread()` executes BOF in a dedicated thread - it launches BOF in a thread and
@@ -110,7 +111,7 @@ bofObjectRun(BofObjectHandle bof_handle,
 /// `bofContextWait()` - should be used to wait for BOF to finish its execution.
 ///
 /// When BOF has finished its execution below functions can be used:
-/// `bofContextGetOutput()` - to retrieve BOF output.
+/// `bofContextGetOutput()` - to retrieve BOF's output.
 /// `bofContextGetExitCode()` - to retrieve BOF's exit code.
 ///
 /// Returns zero on success.
@@ -119,9 +120,9 @@ int
 bofObjectRunAsyncThread(BofObjectHandle bof_handle,
                         unsigned char* arg_data_ptr, // usually: bofArgsGetBuffer()
                         int arg_data_len, // usually: bofArgsGetBufferSize()
-                        BofCompletionCallback completion_cb, // optional (can be NULL)
-                        void* completion_cb_context, // optional (can be NULL)
-                        BofContext** out_context); // required (can't be NULL)
+                        BofCompletionCallback completion_cb, // optional (can be `NULL`)
+                        void* completion_cb_context, // optional (can be `NULL`)
+                        BofContext** out_context); // required (can't be `NULL`)
 
 /// `bofObjectRunAsyncProcess()` executes loaded object file identified by `bof_handle` in an asynchronous mode.
 /// `bofObjectRunAsyncProcess()` executes BOF in a new dedicated process - it launches BOF in a cloned process and
@@ -134,7 +135,7 @@ bofObjectRunAsyncThread(BofObjectHandle bof_handle,
 /// `bofContextWait()` - should be used to wait for BOF to finish its execution.
 ///
 /// When BOF has finished its execution below functions can be used:
-/// `bofContextGetOutput()` - to retrieve BOF output.
+/// `bofContextGetOutput()` - to retrieve BOF's output.
 /// `bofContextGetExitCode()` - to retrieve BOF's exit code.
 ///
 /// Returns zero on success.
@@ -143,32 +144,44 @@ int
 bofObjectRunAsyncProcess(BofObjectHandle bof_handle,
                          unsigned char* arg_data_ptr, // usually: bofArgsGetBuffer()
                          int arg_data_len, // usually: bofArgsGetBufferSize()
-                         BofCompletionCallback completion_cb, // optional (can be NULL)
-                         void* completion_cb_context, // optional (can be NULL)
-                         BofContext** out_context); // required (can't be NULL)
+                         BofCompletionCallback completion_cb, // optional (can be `NULL`)
+                         void* completion_cb_context, // optional (can be `NULL`)
+                         BofContext** out_context); // required (can't be `NULL`)
 //------------------------------------------------------------------------------
 //
 // Context functions
 //
 //------------------------------------------------------------------------------
+/// Internally `BofContext` object allocates some memory and other resources.
+/// User is responsible for releasing those resources by calling `bofContextRelease()`
+/// when context is no longer needed. Keep in mind that BOF's output will no longer be
+/// available when you call this function.
 void
 bofContextRelease(BofContext* context);
 
+/// `bofContextIsRunning` returns positive value when BOF still hasn't finished its execution.
+/// When this function returns zero it means that BOF has completed and its output is ready.
 int
 bofContextIsRunning(BofContext* context);
 
-BofObjectHandle
-bofContextGetObjectHandle(BofContext* context);
-
+/// `bofContextWait()` function blocks execution until BOF completes.
 void
 bofContextWait(BofContext* context);
 
+/// `bofContextGetExitCode()` returns BOF's exit code. `0xff` will be returned if BOF hasn't completed yet.
 unsigned char
 bofContextGetExitCode(BofContext* context);
 
+/// `bofContextGetOutput()` returns BOF's output printed with `BeaconPrintf()`.
+/// `NULL` will be returned if BOF hasn't completed yet.
+/// Optionally it can also return number of bytes that the output buffer contains.
 const char*
 bofContextGetOutput(BofContext* context,
-                    int* out_output_len); // optional (can be NULL)
+                    int* out_output_len); // optional (can be `NULL`)
+
+/// Helper function for checking which object file is associtated with a given `context`.
+BofObjectHandle
+bofContextGetObjectHandle(BofContext* context);
 //------------------------------------------------------------------------------
 //
 // Args functions
