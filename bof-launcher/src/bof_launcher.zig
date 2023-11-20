@@ -46,17 +46,18 @@ const Bof = struct {
             defer gstate.mutex.unlock();
             gstate.bof_contexts.put(tid, context) catch @panic("OOM");
         }
-        context.result = bof.entry_point.?(
+        const exit_code = bof.entry_point.?(
             if (arg_data) |ad| ad.ptr else null,
             if (arg_data) |ad| @as(i32, @intCast(ad.len)) else 0,
         );
+        _ = context.exit_code.swap(exit_code, .SeqCst);
         {
             gstate.mutex.lock();
             defer gstate.mutex.unlock();
             gstate.bof_contexts.put(tid, null) catch @panic("OOM");
         }
 
-        print("Returned '{d}' from go().", .{context.result});
+        print("Returned '{d}' from go().", .{exit_code});
     }
 
     fn load(bof: *Bof, allocator: std.mem.Allocator, file_data: []const u8) !void {
@@ -1186,7 +1187,7 @@ fn threadFuncCloneProcessLinux(bof: *Bof, arg_data: ?[]u8, context: *BofContext)
             .capable_io_mode = .blocking,
             .intended_io_mode = .blocking,
         };
-        file.writer().writeByte(context.result) catch @panic("OOM");
+        file.writer().writeByte(context.exit_code.load(.SeqCst)) catch @panic("OOM");
 
         var output_len: i32 = undefined;
         const maybe_buf = bofContextGetOutput(context, &output_len);
@@ -1208,7 +1209,8 @@ fn threadFuncCloneProcessLinux(bof: *Bof, arg_data: ?[]u8, context: *BofContext)
             .capable_io_mode = .blocking,
             .intended_io_mode = .blocking,
         };
-        context.result = file.reader().readByte() catch @panic("OOM");
+        const exit_code = file.reader().readByte() catch @panic("OOM");
+        _ = context.exit_code.swap(exit_code, .SeqCst);
 
         const output_len = file.reader().readInt(u32, .little) catch @panic("OOM");
 
@@ -1224,7 +1226,7 @@ fn threadFuncCloneProcessLinux(bof: *Bof, arg_data: ?[]u8, context: *BofContext)
         }
     } else {
         print("Child process crashed with status code 0x{x}\n", .{child_result.status});
-        context.result = 0xff; // error
+        _ = context.exit_code.swap(0xff, .SeqCst); // error
     }
 }
 
@@ -1277,7 +1279,8 @@ fn threadFuncCloneProcessWindows(bof: *Bof, arg_data: ?[]u8, context: *BofContex
             // child process
             bof.run(context, arg_data);
 
-            _ = w32.WriteFile(write_pipe, @ptrCast(&context.result), 1, null, null);
+            const exit_code = context.exit_code.load(.SeqCst);
+            _ = w32.WriteFile(write_pipe, @ptrCast(&exit_code), 1, null, null);
 
             var output_len: i32 = undefined;
             const maybe_buf = bofContextGetOutput(context, &output_len);
@@ -1296,11 +1299,14 @@ fn threadFuncCloneProcessWindows(bof: *Bof, arg_data: ?[]u8, context: *BofContex
             _ = w32.NtResumeThread(info.ThreadHandle.?, null);
             _ = w32.WaitForSingleObject(info.ProcessHandle.?, w32.INFINITE);
 
-            var exit_code: w32.DWORD = 0xff;
-            _ = w32.GetExitCodeProcess(info.ProcessHandle.?, &exit_code);
+            var process_exit_code: w32.DWORD = 0xff;
+            _ = w32.GetExitCodeProcess(info.ProcessHandle.?, &process_exit_code);
 
-            if (exit_code == 0) {
-                _ = w32.ReadFile(read_pipe, @ptrCast(&context.result), 1, null, null);
+            if (process_exit_code == 0) {
+                var exit_code: u8 = undefined;
+                _ = w32.ReadFile(read_pipe, @ptrCast(&exit_code), 1, null, null);
+
+                _ = context.exit_code.swap(exit_code, .SeqCst);
 
                 var output_len: u32 = 0;
                 _ = w32.ReadFile(read_pipe, std.mem.asBytes(&output_len), 4, null, null);
@@ -1317,13 +1323,13 @@ fn threadFuncCloneProcessWindows(bof: *Bof, arg_data: ?[]u8, context: *BofContex
                     context.output_ring_num_written_bytes = read_len;
                 }
             } else {
-                print("Child process crashed with status code 0x{x}\n", .{exit_code});
-                context.result = 0xff; // error
+                print("Child process crashed with status code 0x{x}\n", .{process_exit_code});
+                _ = context.exit_code.swap(0xff, .SeqCst); // error
             }
         },
         else => {
             print("Failed to clone the process ({d})\n", .{status});
-            context.result = 0xff; // error
+            _ = context.exit_code.swap(0xff, .SeqCst); // error
         },
     }
 }
@@ -1335,7 +1341,7 @@ const BofContext = struct {
 
     done_event: std.Thread.ResetEvent = .{},
     handle: BofHandle,
-    result: u8 = 0xff, // TODO: Make atomic
+    exit_code: std.atomic.Atomic(u8) = std.atomic.Atomic(u8).init(0xff),
 
     output: std.ArrayList(u8),
     output_ring: std.RingBuffer,
@@ -1479,7 +1485,7 @@ pub export fn bofContextGetObjectHandle(context: *@import("bofapi").bof.Context)
 pub export fn bofContextGetExitCode(context: *@import("bofapi").bof.Context) u8 {
     if (!gstate.is_valid) return 0;
     const ctx = @as(*BofContext, @ptrCast(@alignCast(context)));
-    return ctx.result;
+    return ctx.exit_code.load(.SeqCst);
 }
 
 pub export fn bofContextWait(context: *@import("bofapi").bof.Context) void {
