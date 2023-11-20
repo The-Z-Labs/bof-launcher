@@ -10,7 +10,7 @@ extern "C" {
 //------------------------------------------------------------------------------
 /// `BofObjectHandle` is an opaque handle to the object file (COFF or ELF).
 /// `bofObjectInitFromMemory()` returns a valid handle if it succeeds.
-/// You can execute underlying object file as many times you want using `bofObjectRun*()` functions.
+/// You can execute underlying object file as many times as you want using `bofObjectRun*()` functions.
 /// When you are done using object file you should call `bofObjectRelease()`.
 typedef struct BofObjectHandle { unsigned int bits; } BofObjectHandle;
 
@@ -70,6 +70,7 @@ bofObjectIsValid(BofObjectHandle bof_handle);
 
 /// `bofObjectRun()` executes loaded object file identified by `bof_handle` in a synchronous mode.
 /// `bofObjectRun()` will return when BOF finishes its execution.
+/// You can run underlying object file as many times as you want, each run will return unique `BofContext` object.
 ///
 /// Unique `BofContext` object is returned in `out_context` parameter and must be released
 /// with `bofContextRelease()` when no longer needed.
@@ -103,6 +104,7 @@ bofObjectRun(BofObjectHandle bof_handle,
 /// `bofObjectRunAsyncThread()` executes loaded object file identified by `bof_handle` in an asynchronous mode.
 /// `bofObjectRunAsyncThread()` executes BOF in a dedicated thread - it launches BOF in a thread and
 /// returns immediately (does not block main thread).
+/// You can run underlying object file as many times as you want, each run will return unique `BofContext` object.
 ///
 /// Unique `BofContext` object is returned in `out_context` parameter and must be released
 /// with `bofContextRelease()` when no longer needed.
@@ -127,6 +129,7 @@ bofObjectRunAsyncThread(BofObjectHandle bof_handle,
 /// `bofObjectRunAsyncProcess()` executes loaded object file identified by `bof_handle` in an asynchronous mode.
 /// `bofObjectRunAsyncProcess()` executes BOF in a new dedicated process - it launches BOF in a cloned process and
 /// returns immediately (does not block main thread).
+/// You can run underlying object file as many times as you want, each run will return unique `BofContext` object.
 ///
 /// Unique `BofContext` object is returned in `out_context` parameter and must be released
 /// with `bofContextRelease()` when no longer needed.
