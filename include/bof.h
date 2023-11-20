@@ -16,12 +16,12 @@ typedef struct BofObjectHandle { unsigned int bits; } BofObjectHandle;
 
 /// `BofContext` represents an execution context for a single BOF run.
 /// Every successful call to `bofObjectRun*()` returns an unique `BofContext` object.
-/// `BofContext` stores BOF's output, BOF's return value and provides synchronization operations
+/// `BofContext` stores BOF's output, BOF's exit code and provides synchronization operations
 /// for async BOF runs.
 /// You should call `bofContextRelease()` when you no longer need it.
 typedef struct BofContext BofContext;
 
-/// `BofArgs` represents a set of user-provided arguments that will be passed to a BOF.
+/// `BofArgs` represents a set of user-provided arguments that can be passed to any BOF.
 typedef struct BofArgs BofArgs;
 
 /// `BofCompletionCallback` is a callback function type for `bofObjectRunAsync*()` functions.
