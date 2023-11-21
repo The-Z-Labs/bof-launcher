@@ -8,7 +8,7 @@ section '.text' code readable executable align 8
 align 8
 go:
 .STACK_SIZE = 128+8
-    sub	rsp, .STACK_SIZE ; allocate some stack space and align it to 16 bytes
+    sub	rsp, .STACK_SIZE ; allocate stack space and align it to 16 bytes
 
     mov rax, [gs:0x60] ; PEB address
     mov rax, [rax+32] ; ProcessParameters address
@@ -28,13 +28,13 @@ go:
     mov dword [rsp+80], 0 ; EaLength
     call nt_create_file
 
-    mov ecx, 0
-    mov rdx, str_fmt
-    mov r8d, eax
-    call BeaconPrintf
+    mov ecx, 0 ; `type`
+    mov rdx, str_fmt ; `fmt`
+    mov r8d, eax ; `...`
+    call BeaconPrintf ; print result returned from syscall (NTSTATUS)
 
     add rsp, .STACK_SIZE
-    xor eax, eax
+    xor eax, eax ; BOF exit code
     ret
 
 ; syscall numbers for Windows 10+ x64:

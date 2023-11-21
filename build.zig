@@ -139,12 +139,14 @@ pub fn build(b: *std.build.Builder) void {
         );
         winver_x86.step.dependOn(b.getInstallStep());
 
-        // TODO: Check if we are running on Windows 10+
-        //const direct_syscall_x64 = b.addSystemCommand(
-        //    &.{ "zig-out/bin/cli4bofs_win_x64.exe", "zig-out/bin/wDirectSyscall.coff.x64.o" },
-        //);
-        //direct_syscall_x64.step.dependOn(b.getInstallStep());
-        //test_step.dependOn(&direct_syscall_x64.step);
+        const detected_version = std.zig.system.windows.detectRuntimeVersion();
+        if (detected_version.isAtLeast(.win10)) {
+            const direct_syscall_x64 = b.addSystemCommand(
+                &.{ "zig-out/bin/cli4bofs_win_x64.exe", "zig-out/bin/wDirectSyscall.coff.x64.o" },
+            );
+            direct_syscall_x64.step.dependOn(b.getInstallStep());
+            test_step.dependOn(&direct_syscall_x64.step);
+        }
 
         test_step.dependOn(&udp_scanner_x64.step);
         test_step.dependOn(&udp_scanner_x86.step);
