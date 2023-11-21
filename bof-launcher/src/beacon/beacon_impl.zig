@@ -152,7 +152,7 @@ pub export fn BeaconFormatToString(format: ?*formatp, size: ?*i32) callconv(.C) 
 }
 
 pub export fn BeaconFormatInt(format: ?*formatp, value: i32) callconv(.C) void {
-    var indata: i32 = value;
+    const indata: i32 = value;
     var outdata: i32 = 0;
     if (format.?.length + 4 > format.?.size) {
         return;

@@ -16,7 +16,7 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
         _ = w32.CoGetCallerTID(&tid);
         _ = beacon.printf(0, "CoGetCallerTID() returned: %d\n", tid);
 
-        var i: *u32 = @ptrCast(@alignCast(w32.CoTaskMemAlloc(4)));
+        const i: *u32 = @ptrCast(@alignCast(w32.CoTaskMemAlloc(4)));
         i.* = 0xc0dec0de;
         _ = beacon.printf(0, "CoTaskMemAlloc(): 0x%x\n", i.*);
         w32.CoTaskMemFree(i);

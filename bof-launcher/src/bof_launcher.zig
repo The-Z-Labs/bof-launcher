@@ -478,7 +478,7 @@ const Bof = struct {
 
             switch (section.sh_type) {
                 std.elf.SHT_STRTAB => {
-                    var section_string_table = file_data[section_offset..][0..section_size];
+                    const section_string_table = file_data[section_offset..][0..section_size];
                     print("\t\tString Table: {s}", .{section_string_table});
                 },
                 std.elf.SHT_SYMTAB => {
@@ -845,12 +845,12 @@ const BofPool = struct {
     fn init(allocator: std.mem.Allocator) BofPool {
         return .{
             .bofs = blk: {
-                var bofs = allocator.alloc(Bof, max_num_bofs + 1) catch @panic("OOM");
+                const bofs = allocator.alloc(Bof, max_num_bofs + 1) catch @panic("OOM");
                 for (bofs) |*bof| bof.* = Bof.init();
                 break :blk bofs;
             },
             .generations = blk: {
-                var generations = allocator.alloc(u16, max_num_bofs + 1) catch @panic("OOM");
+                const generations = allocator.alloc(u16, max_num_bofs + 1) catch @panic("OOM");
                 for (generations) |*gen| gen.* = 0;
                 break :blk generations;
             },
@@ -1075,7 +1075,7 @@ pub export fn bofObjectInitFromMemory(
     const res = bofLauncherInit();
     if (res < 0) return res;
 
-    var bof_handle = gstate.bof_pool.allocateBofHandle();
+    const bof_handle = gstate.bof_pool.allocateBofHandle();
     var bof = gstate.bof_pool.getBofPtrIfValid(bof_handle).?;
 
     bof.load(gstate.allocator.?, file_data_ptr[0..@as(usize, @intCast(file_data_len))]) catch {
