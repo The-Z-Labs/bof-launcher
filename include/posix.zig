@@ -99,6 +99,8 @@ pub extern fn getegid() callconv(.C) c.gid_t;
 // https://pubs.opengroup.org/onlinepubs/9699919799/functions/getgrgid.html
 pub extern fn getgrgid(c.gid_t) callconv(.C) ?*group;
 // https://pubs.opengroup.org/onlinepubs/9699919799/functions/getgroups.html
-pub extern fn getgroups(gidsetsize: i32, grouplist: []c.gid_t) callconv(.C) i32;
+pub extern fn getgroups(gidsetsize: i32, grouplist: [*]c.gid_t) callconv(.C) i32;
 // https://pubs.opengroup.org/onlinepubs/9699919799/functions/getpwuid.html
 pub extern fn getpwuid(uid: c.uid_t) callconv(.C) ?*c.passwd;
+// https://pubs.opengroup.org/onlinepubs/9699919799/functions/getpwnam.html
+pub extern fn getpwnam(name: [*:0]u8) callconv(.C) ?*c.passwd;
