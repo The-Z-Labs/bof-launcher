@@ -1,11 +1,14 @@
 format MS64 COFF
+
 public go
+extrn 'BeaconPrintf' as BeaconPrintf:qword
 
 section '.text' code readable executable align 8
 
 align 8
 go:
-    sub rsp, 128 ; allocate some space on the stack
+.STACK_SIZE = 128+8
+    sub	rsp, .STACK_SIZE ; allocate some stack space and align it to 16 bytes
 
     mov rax, [gs:0x60] ; PEB address
     mov rax, [rax+32] ; ProcessParameters address
@@ -25,7 +28,13 @@ go:
     mov dword [rsp+80], 0 ; EaLength
     call nt_create_file
 
-    add rsp, 128
+    mov ecx, 0
+    mov rdx, str_fmt
+    mov r8d, eax
+    call BeaconPrintf
+
+    add rsp, .STACK_SIZE
+    xor eax, eax
     ret
 
 ; syscall numbers for Windows 10+ x64:
@@ -40,6 +49,9 @@ nt_create_file:
     ret
 
 section '.data' data readable writeable align 8
+
+align 8
+str_fmt db 'NtCreateFile syscall (called directly) returned: %d', 0xd, 0xa, 0
 
 ; https://codeverge.com/utf16-encode
 ; 'file.txt'
