@@ -13,6 +13,8 @@ const NGROUPS_MAX = 32;
 pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     var ruid: c.uid_t = undefined;
     var rgid: c.gid_t = undefined;
+    var euid: c.gid_t = undefined;
+    var egid: c.gid_t = undefined;
     var ngroups: i32 = NGROUPS_MAX;
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -30,6 +32,9 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     if (args_len == 0) {
         ruid = posix.getuid();
         rgid = posix.getgid();
+
+        euid = posix.geteuid();
+        egid = posix.getegid();
 
         pwd = posix.getpwuid(ruid);
         grp = posix.getgrgid(rgid);
@@ -69,20 +74,30 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
 
     _ = beacon.printf(0, "uid=%d", ruid);
     if (pwd) |p|
-        _ = beacon.printf(0, "(%s) ", p.pw_name);
+        _ = beacon.printf(0, "(%s)", p.pw_name);
 
-    _ = beacon.printf(0, "gid=%d", rgid);
+    _ = beacon.printf(0, " gid=%d", rgid);
     grp = posix.getgrgid(rgid);
     if (grp) |gr|
         _ = beacon.printf(0, "(%s)", gr.gr_name);
 
-    //if (euid != ruid)
-    //{
-    //  printf (_(" euid=%s"), uidtostr (euid));
-    //  pwd = getpwuid (euid);
-    //  if (pwd)
-    //    printf ("(%s)", pwd->pw_name);
-    //}
+    if (args_len == 0) {
+        if (euid != ruid) {
+            _ = beacon.printf(0, " euid=%d", euid);
+            pwd = posix.getpwuid(euid);
+            if (pwd) |p| {
+                _ = beacon.printf(0, "(%s)", p.pw_name);
+            }
+        }
+
+        if (egid != rgid) {
+            _ = beacon.printf(0, " egid=%d", egid);
+            grp = posix.getgrgid(egid);
+            if (grp) |g| {
+                _ = beacon.printf(0, "(%s)", g.gr_name);
+            }
+        }
+    }
 
     _ = beacon.printf(0, " groups=");
 
