@@ -71,6 +71,11 @@ pub fn build(
         &.{ std.fs.path.dirname(b.zig_exe).?, "/lib/libc/include/generic-glibc" },
     ) catch unreachable;
 
+    const linux_any_include_dir = std.fs.path.join(
+        b.allocator,
+        &.{ std.fs.path.dirname(b.zig_exe).?, "/lib/libc/include/any-linux-any" },
+    ) catch unreachable;
+
     var bofsList = std.ArrayList(Bof).init(b.allocator);
     defer bofsList.deinit();
 
@@ -176,9 +181,7 @@ pub fn build(
                                 "-D_CRTIMP=",
                                 "-DLDAPAPI=",
                                 "-DBOF",
-                                "-std=c99",
-                                "-masm=intel",
-                                "-inline-asm=intel",
+                                "-D_GNU_SOURCE",
                                 if (format == .coff) "-DDECLSPEC_IMPORT=" else "",
                             },
                         });
@@ -198,6 +201,7 @@ pub fn build(
                             ) catch unreachable;
                             obj.addIncludePath(.{ .path = linux_include_dir });
                             obj.addIncludePath(.{ .path = linux_libc_include_dir });
+                            obj.addIncludePath(.{ .path = linux_any_include_dir });
                         }
                         break :blk obj;
                     },
