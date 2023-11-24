@@ -464,12 +464,11 @@ pub extern "advapi32" fn OpenProcessToken(
 pub const MessageBoxA = windows.user32.MessageBoxA;
 
 // ole32
-pub const CoInitializeEx = windows.ole32.CoInitializeEx;
-pub const CoUninitialize = windows.ole32.CoUninitialize;
-pub const CoTaskMemFree = windows.ole32.CoTaskMemFree;
-pub const CoGetCurrentProcess = windows.ole32.CoGetCurrentProcess;
-
+pub extern "ole32" fn CoInitializeEx(pvReserved: ?LPVOID, dwCoInit: DWORD) callconv(WINAPI) HRESULT;
+pub extern "ole32" fn CoUninitialize() callconv(WINAPI) void;
 pub extern "ole32" fn CoTaskMemAlloc(size: SIZE_T) callconv(WINAPI) ?LPVOID;
+pub extern "ole32" fn CoTaskMemFree(pv: LPVOID) callconv(WINAPI) void;
+pub extern "ole32" fn CoGetCurrentProcess() callconv(WINAPI) DWORD;
 pub extern "ole32" fn CoGetCallerTID(lpdwTID: *DWORD) callconv(WINAPI) HRESULT;
 
 // ws2_32
