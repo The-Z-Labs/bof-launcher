@@ -1,10 +1,13 @@
 format ELF64
 
+public go
+
 section '.text' executable
 
-public go
+align 8
 go:
     xor eax, eax
+    ret
 
 section '.data' writeable
 

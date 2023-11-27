@@ -811,7 +811,7 @@ const Bof = struct {
         print("SYMBOLS", .{});
         var go: ?*const fn (arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 = null;
         for (symbol_table) |sym| {
-            if (sym.st_shndx != 0 and sym.st_size != 0 and sym.st_shndx < section_headers.items.len) {
+            if (sym.st_shndx != 0 and sym.st_shndx < section_headers.items.len) {
                 const name = @as([*:0]const u8, @ptrCast(&string_table[sym.st_name]));
                 print(
                     "\tName: {s: <50} Address(real): 0x{x}",
