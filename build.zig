@@ -168,8 +168,14 @@ pub fn build(b: *std.build.Builder) void {
         });
         udp_scanner_x86.step.dependOn(b.getInstallStep());
 
+        const asm_bof_x64 = b.addSystemCommand(&.{
+            "zig-out/bin/cli4bofs_lin_x64", "zig-out/bin/lAsmTest.elf.x64.o",
+        });
+        asm_bof_x64.step.dependOn(b.getInstallStep());
+
         test_step.dependOn(&udp_scanner_x64.step);
         test_step.dependOn(&udp_scanner_x86.step);
+        test_step.dependOn(&asm_bof_x64.step);
 
         const run_qemu_tests = b.option(bool, "qemu", "Run aarch64 and arm qemu tests") orelse false;
 
