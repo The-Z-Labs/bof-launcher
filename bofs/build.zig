@@ -11,6 +11,7 @@ const bofs = [_]Bof{
     .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWhoami", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wDirectSyscall", .formats = &.{.coff}, .archs = &.{.x64} },
+    .{ .name = "lAsmTest", .formats = &.{.elf}, .archs = &.{.x64} },
     .{ .name = "uname", .dir = "coreutils/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "hostid", .dir = "coreutils/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "hostname", .dir = "coreutils/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
@@ -127,24 +128,27 @@ pub fn build(
                 ) catch unreachable;
 
                 if (lang == .fasm) {
-                    if (@import("builtin").os.tag == .windows) {
-                        const run_fasm = b.addSystemCommand(&.{
-                            thisDir() ++ "/../bin/fasm.exe",
-                        });
-                        run_fasm.addFileArg(.{
-                            .path = std.mem.join(
-                                b.allocator,
-                                "",
-                                &.{ bof_src_path, ".asm" },
-                            ) catch unreachable,
-                        });
-                        const output_path = run_fasm.addOutputFileArg(full_bof_name);
+                    const run_fasm = b.addSystemCommand(&.{
+                        std.mem.join(
+                            b.allocator,
+                            "",
+                            &.{ thisDir() ++ "/../bin/fasm", if (format == .coff) ".exe" else "" },
+                        ) catch unreachable,
+                    });
+                    run_fasm.addFileArg(.{
+                        .path = std.mem.join(
+                            b.allocator,
+                            "",
+                            &.{ bof_src_path, ".asm" },
+                        ) catch unreachable,
+                    });
+                    const output_path = run_fasm.addOutputFileArg(full_bof_name);
 
-                        b.getInstallStep().dependOn(
-                            &b.addInstallFile(output_path, bin_full_bof_name).step,
-                        );
-                    }
-                    continue;
+                    b.getInstallStep().dependOn(
+                        &b.addInstallFile(output_path, bin_full_bof_name).step,
+                    );
+
+                    continue; // This is all we need to do in case of asm BOF. Continue to the next BOF.
                 }
 
                 const target = Bof.getCrossTarget(format, arch);

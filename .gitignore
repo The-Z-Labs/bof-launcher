@@ -16,7 +16,8 @@
 !*.txt
 !*.md
 
-!*.exe
+!bin/fasm.exe
+!bin/fasm
 
 !.ignore
 !.gitkeep
