@@ -38,7 +38,7 @@ pub const Object = extern struct {
     handle: u32,
 
     /// `initFromMemory()` takes raw object file data (COFF or ELF) and prepares
-    /// it for the execution on a local machine.
+    /// it for execution on a local machine.
     /// It parses data, maps object file to memory, performs relocations, resolves external symbols, etc.
     pub fn initFromMemory(
         file_data_ptr: [*]const u8,
@@ -64,6 +64,27 @@ pub const Object = extern struct {
         return bofObjectIsValid(bof_handle) != 0;
     }
 
+    /// `run()` executes loaded object file identified by `bof_handle` in a
+    /// synchronous mode.
+    /// `run()` will return when BOF finishes its execution.
+    /// You can run underlying object file as many times as you want, each run will
+    /// return unique `Context` object.
+    ///
+    /// Unique `Context` object is returned and
+    /// must be released with `Context.release()` when no longer needed.
+    ///
+    /// `Context.getOutput()` - should be used to retrieve BOF's output.
+    /// `Context.getExitCode()` - should be used to retrieve BOF's exit code.
+    ///
+    /// Example:
+    /// ```
+    /// const exec_ctx = try object.run(null, 0);
+    /// defer exec_ctx.release();
+    ///
+    /// if (exec_ctx.getOutput()) |output| {
+    ///     std.debug.print("Exit code: {d}.\nOutput: {s}\n", exec_ctx.getExitCode(), output);
+    /// }
+    /// ```
     pub fn run(
         bof_handle: Object,
         arg_data_ptr: ?[*]u8,
@@ -79,6 +100,23 @@ pub const Object = extern struct {
         return context;
     }
 
+    /// `runAsyncThread()` executes loaded object file identified by
+    /// `bof_handle` in an asynchronous mode.
+    /// `runAsyncThread()` executes BOF in a dedicated thread - it launches
+    /// BOF in a thread and returns immediately (does not block main thread).
+    /// You can run underlying object file as many times as you want, each run will
+    /// return unique `Context` object.
+    ///
+    /// Unique `Context` object is returned and
+    /// must be released with `Context.release()` when no longer needed.
+    ///
+    /// `Context.isRunning()` - should be used to check if BOF has finished its
+    ///                         execution.
+    /// `Context.wait()` - should be used to wait for BOF to finish its execution.
+    ///
+    /// When BOF has finished its execution below functions can be used:
+    /// `Context.getOutput()` - to retrieve BOF's output.
+    /// `Context.getExitCode()` - to retrieve BOF's exit code.
     pub fn runAsyncThread(
         bof_handle: Object,
         arg_data_ptr: ?[*]u8,
@@ -98,6 +136,24 @@ pub const Object = extern struct {
         return context;
     }
 
+    /// `runAsyncProcess()` executes loaded object file identified by
+    /// `bof_handle` in an asynchronous mode.
+    /// `runAsyncProcess()` executes BOF in a new dedicated process - it
+    /// launches BOF in a cloned process and returns immediately
+    /// (does not block main thread).
+    /// You can run underlying object file as many times as you want, each run will
+    /// return unique `Context` object.
+    ///
+    /// Unique `Context` object is returned and
+    /// must be released with `Context.release()` when no longer needed.
+    ///
+    /// `Context.isRunning()` - should be used to check if BOF has finished its
+    ///                         execution.
+    /// `Context.wait()` - should be used to wait for BOF to finish its execution.
+    ///
+    /// When BOF has finished its execution below functions can be used:
+    /// `Context.getOutput()` - to retrieve BOF's output.
+    /// `Context.getExitCode()` - to retrieve BOF's exit code.
     pub fn runAsyncProcess(
         bof_handle: Object,
         arg_data_ptr: ?[*]u8,
@@ -128,24 +184,39 @@ pub const Object = extern struct {
 /// for async BOF runs.
 /// You should call `Context.release()` when you no longer need it.
 pub const Context = opaque {
+    /// Internally `Context` object allocates some memory and other resources.
+    /// User is responsible for releasing those resources by calling
+    /// `Context.release()` when context is no longer needed. Keep in mind that
+    /// BOF's output will no longer be available after you call this function.
     pub const release = bofContextRelease;
 
+    /// `Context.isRunning` returns `true` when BOF still hasn't finished
+    /// its execution.
+    /// When this function returns `false` it means that BOF has completed and its
+    /// output is ready.
     pub fn isRunning(context: *Context) bool {
         return bofContextIsRunning(context) != 0;
     }
 
+    /// `Context.wait()` function blocks execution until BOF completes.
     pub const wait = bofContextWait;
 
+    /// `Context.getExitCode()` returns BOF's exit code. `0xff` will be returned if
+    /// BOF hasn't completed yet.
     pub const getExitCode = bofContextGetExitCode;
 
-    pub const getObject = bofContextGetObjectHandle;
-
+    /// `Context.getOutput()` returns BOF's output printed with `BeaconPrintf()`.
+    /// `null` will be returned if BOF hasn't completed yet.
     pub fn getOutput(context: *Context) ?[]const u8 {
         var len: c_int = 0;
         const ptr = bofContextGetOutput(context, &len);
         if (ptr == null) return null;
         return ptr.?[0..@intCast(len)];
     }
+
+    /// Helper function for checking which object file is associtated with a given
+    /// `context`.
+    pub const getObject = bofContextGetObjectHandle;
 };
 //------------------------------------------------------------------------------
 //
@@ -154,6 +225,8 @@ pub const Context = opaque {
 //------------------------------------------------------------------------------
 /// `Args` represents a set of user-provided arguments that will be passed to a BOF.
 pub const Args = opaque {
+    /// `Args.init()` creates `Args` object which is used to parse and store
+    /// arguments that are intended to be consumed by a BOF.
     pub fn init() Error!*Args {
         var args: *Args = undefined;
         if (bofArgsInit(&args) < 0) return error.Unknown;
@@ -166,14 +239,18 @@ pub const Args = opaque {
 
     pub const end = bofArgsEnd;
 
-    /// Returns zero on success
-    /// Returns negative value when error occurs
-    pub fn add(args: *Args, arg: [*]const u8, arg_len: c_int) Error!void {
-        if (bofArgsAdd(args, arg, arg_len) < 0) return error.Unknown;
+    /// `Args.add()` adds an argument to a `Args` object. Has to be called
+    /// between `Args.begin()` and `Args.end()` calls.
+    pub fn add(args: *Args, arg: []const u8) Error!void {
+        if (bofArgsAdd(args, arg.ptr, @intCast(arg.len)) < 0) return error.Unknown;
     }
 
+    /// `Args.getBuffer()` returns a pointer to a raw buffer that can be directly
+    /// passed to a BOF.
     pub const getBuffer = bofArgsGetBuffer;
 
+    /// `Args.getBufferSize()` returns size in bytes of the internal data buffer
+    /// (can be passed directly to Object.run*() functions).
     pub const getBufferSize = bofArgsGetBufferSize;
 };
 //------------------------------------------------------------------------------

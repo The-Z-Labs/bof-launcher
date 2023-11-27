@@ -50,7 +50,7 @@ bofLauncherRelease(void);
 //
 //------------------------------------------------------------------------------
 /// `bofObjectInitFromMemory()` takes raw object file data (COFF or ELF) and
-/// prepares it for the execution on a local machine.
+/// prepares it for execution on a local machine.
 /// It parses data, maps object file to memory, performs relocations, resolves
 /// external symbols, etc.
 ///

@@ -91,7 +91,7 @@ pub fn main() !u8 {
 
     args.begin();
     while (iter.next()) |arg| {
-        try args.add(arg.ptr, @intCast(arg.len));
+        try args.add(arg);
     }
     args.end();
 
