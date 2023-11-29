@@ -1,3 +1,75 @@
+/// bof-launcher 1.0.0 (Beta)
+///
+/// Basic usage:
+///
+/// ```
+/// // Init the library
+/// if (bofLauncherInit() < 0) {
+///     // handle the error
+/// }
+///
+/// // Load object file (COFF or ELF) and get a handle to it
+/// BofObjectHandle bof_handle;
+/// if (bofObjectInitFromMemory(obj_file_data, obj_file_data_size, &bof_handle) < 0) {
+///     // handle the error
+/// }
+///
+/// BofArgs* args0 = NULL;
+/// if (bofArgsInit(&args0) < 0) {
+///     // handle the error
+/// }
+/// bofArgsBegin(args0);
+/// bofArgsAdd(args0, "my str", 6);
+/// bofArgsEnd(args0);
+///
+/// // Run BOF with arguments `args0`
+/// BofContext* context0 = NULL;
+/// if (bofObjectRun(bof_handle,
+///                  bofArgsGetBuffer(args0),
+///                  bofArgsGetBufferSize(args0),
+///                  &context0) < 0) {
+///     // handle the error
+/// }
+///
+/// const char* output0 = bofContextGetOutput(context0, NULL);
+/// if (output0) {
+///     // handle BOF output
+/// }
+/// bofArgsRelease(args0);
+/// bofContextRelease(context0);
+///
+///
+/// // Run the same BOF with different arguments (`args1`)
+/// BofArgs* args1 = NULL;
+/// if (bofArgsInit(&args1) < 0) {
+///     // handle the error
+/// }
+/// bofArgsBegin(args1);
+/// bofArgsAdd(args1, "my str 2", 8);
+/// bofArgsEnd(args1);
+///
+/// BofContext* context1 = NULL;
+/// if (bofObjectRun(bof_handle,
+///                  bofArgsGetBuffer(args1),
+///                  bofArgsGetBufferSize(args1),
+///                  &context1) < 0) {
+///     // handle the error
+/// }
+///
+/// // Get output from the second BOF run
+/// const char* output1 = bofContextGetOutput(context1, NULL);
+/// if (output1) {
+///     // handle BOF output
+/// }
+/// bofArgsRelease(args1);
+/// bofContextRelease(context1);
+///
+///
+/// // Cleanup
+/// bofObjectRelease(bof_handle);
+/// bofLauncherRelease();
+/// ```
+///
 #pragma once
 
 #ifdef __cplusplus
