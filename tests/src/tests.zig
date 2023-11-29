@@ -13,10 +13,12 @@ fn runBofFromFile(
     const file_data = file.reader().readAllAlloc(allocator, 16 * 1024 * 1024) catch unreachable;
     defer allocator.free(file_data);
 
-    const object = try bof.Object.initFromMemory(file_data.ptr, @intCast(file_data.len));
+    const object = try bof.Object.initFromMemory(file_data);
     defer object.release();
 
-    const context = try object.run(arg_data_ptr, arg_data_len);
+    const context = try object.run(
+        if (arg_data_ptr) |d| d[0..@intCast(arg_data_len)] else null,
+    );
     defer context.release();
 
     if (context.getOutput()) |output| {
@@ -162,10 +164,10 @@ test "bof-launcher.bofs.load_run" {
     const bof_data1 = try loadBofFromFile(allocator, "zig-out/bin/test_obj2");
     defer allocator.free(bof_data1);
 
-    const object0 = try bof.Object.initFromMemory(bof_data0.ptr, @intCast(bof_data0.len));
+    const object0 = try bof.Object.initFromMemory(bof_data0);
     defer object0.release();
 
-    const object1 = try bof.Object.initFromMemory(bof_data1.ptr, @intCast(bof_data1.len));
+    const object1 = try bof.Object.initFromMemory(bof_data1);
     defer object1.release();
 
     try expect(object0.isValid());
@@ -175,27 +177,27 @@ test "bof-launcher.bofs.load_run" {
     var bytes: [hex_stream.len / 2]u8 = undefined;
     _ = try std.fmt.hexToBytes(&bytes, hex_stream);
 
-    const context0 = try object0.run(&bytes, @intCast(bytes.len));
+    const context0 = try object0.run(&bytes);
     defer context0.release();
     try expect(6 == context0.getExitCode());
     try expect(context0.getObject().handle == object0.handle);
 
-    const context1 = try object1.run(&bytes, @intCast(bytes.len));
+    const context1 = try object1.run(&bytes);
     defer context1.release();
     try expect(15 == context1.getExitCode());
     try expect(context1.isRunning() == false);
     try expect(context1.getObject().handle == object1.handle);
 
-    const context2 = try object1.run(&bytes, @intCast(bytes.len));
+    const context2 = try object1.run(&bytes);
     defer context2.release();
     try expect(15 == context2.getExitCode());
 
-    const context3 = try object0.run(&bytes, @intCast(bytes.len));
+    const context3 = try object0.run(&bytes);
     defer context3.release();
     try expect(6 == context3.getExitCode());
     try expect(context3.isRunning() == false);
 
-    const context4 = try object1.run(&bytes, @intCast(bytes.len));
+    const context4 = try object1.run(&bytes);
     defer context4.release();
     try expect(15 == context4.getExitCode());
 
@@ -208,12 +210,12 @@ test "bof-launcher.bofs.load_run" {
     try expect(context0.getObject().isValid());
 
     object0.release();
-    _ = object0.run(&bytes, @intCast(bytes.len)) catch {};
+    _ = object0.run(&bytes) catch {};
     try expect(context0.getOutput() != null);
 
     object1.release();
     object1.release();
-    _ = object1.run(&bytes, @intCast(bytes.len)) catch {};
+    _ = object1.run(&bytes) catch {};
 
     try expect(!object0.isValid());
     try expect(!object1.isValid());
@@ -230,22 +232,16 @@ test "bof-launcher.stress" {
     defer bof.releaseLauncher();
 
     for (0..64) |i| {
-        var object = try bof.Object.initFromMemory(
-            bof_data.ptr,
-            @intCast(bof_data.len),
-        );
-        (try object.run(null, 0)).release();
+        var object = try bof.Object.initFromMemory(bof_data);
+        (try object.run(null)).release();
         if (i == 63) {
             try expect(object.isValid());
             object.release();
             try expect(!object.isValid());
 
-            object = try bof.Object.initFromMemory(
-                bof_data.ptr,
-                @intCast(bof_data.len),
-            );
+            object = try bof.Object.initFromMemory(bof_data);
             try expect(object.isValid());
-            (try object.run(null, 0)).release();
+            (try object.run(null)).release();
         }
     }
 }
@@ -259,30 +255,27 @@ test "bof-launcher.bofs.runAsyncThread" {
     const bof_data = try loadBofFromFile(allocator, "zig-out/bin/test_async");
     defer allocator.free(bof_data);
 
-    const object = try bof.Object.initFromMemory(bof_data.ptr, @intCast(bof_data.len));
+    const object = try bof.Object.initFromMemory(bof_data);
     defer object.release();
 
     try expect(object.isValid());
 
     const context1 = try object.runAsyncThread(
-        @ptrCast(@constCast(std.mem.asBytes(&[_]i32{ 8, 1 }))),
-        8,
+        @constCast(std.mem.asBytes(&[_]i32{ 8, 1 })),
         null,
         null,
     );
     defer context1.release();
 
     const context2 = try object.runAsyncThread(
-        @ptrCast(@constCast(std.mem.asBytes(&[_]i32{ 8, 2 }))),
-        8,
+        @constCast(std.mem.asBytes(&[_]i32{ 8, 2 })),
         null,
         null,
     );
     defer context2.release();
 
     const context3 = try object.runAsyncThread(
-        @ptrCast(@constCast(std.mem.asBytes(&[_]i32{ 8, 3 }))),
-        8,
+        @constCast(std.mem.asBytes(&[_]i32{ 8, 3 })),
         null,
         null,
     );
@@ -320,22 +313,20 @@ test "bof-launcher.bofs.runAsyncProcess" {
     const bof_data = try loadBofFromFile(allocator, "zig-out/bin/test_async");
     defer allocator.free(bof_data);
 
-    const object = try bof.Object.initFromMemory(bof_data.ptr, @intCast(bof_data.len));
+    const object = try bof.Object.initFromMemory(bof_data);
     defer object.release();
 
     try expect(object.isValid());
 
     const context1 = try object.runAsyncProcess(
-        @ptrCast(@constCast(std.mem.asBytes(&[_]i32{ 8, 10 }))),
-        8,
+        @constCast(std.mem.asBytes(&[_]i32{ 8, 10 })),
         null,
         null,
     );
     defer context1.release();
 
     const context2 = try object.runAsyncProcess(
-        @ptrCast(@constCast(std.mem.asBytes(&[_]i32{ 8, 20 }))),
-        8,
+        @constCast(std.mem.asBytes(&[_]i32{ 8, 20 })),
         null,
         null,
     );
@@ -343,8 +334,7 @@ test "bof-launcher.bofs.runAsyncProcess" {
 
     if (false) {
         const context3 = try object.runAsyncProcess(
-            @ptrCast(@constCast(std.mem.asBytes(&[_]i32{ 8, 30 }))),
-            8,
+            @constCast(std.mem.asBytes(&[_]i32{ 8, 30 })),
             null,
             null,
         );
@@ -405,10 +395,10 @@ test "bof-launcher.info" {
     const bof_data = try loadBofFromFile(allocator, "zig-out/bin/test_obj3");
     defer allocator.free(bof_data);
 
-    const object = try bof.Object.initFromMemory(bof_data.ptr, @intCast(bof_data.len));
+    const object = try bof.Object.initFromMemory(bof_data);
     defer object.release();
 
-    const context = try object.run(written.ptr, @intCast(written.len));
+    const context = try object.run(written);
     defer context.release();
 
     std.debug.print("{s}", .{context.getOutput().?});

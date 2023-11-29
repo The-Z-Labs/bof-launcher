@@ -5,8 +5,7 @@ const bof = @import("bofapi").bof;
 fn runBofFromFile(
     allocator: std.mem.Allocator,
     bof_path: [:0]const u8,
-    arg_data_ptr: ?[*]u8,
-    arg_data_len: i32,
+    arg_data: ?[]u8,
 ) !u8 {
     const file = std.fs.openFileAbsoluteZ(bof_path, .{}) catch unreachable;
     defer file.close();
@@ -14,10 +13,10 @@ fn runBofFromFile(
     const file_data = file.reader().readAllAlloc(allocator, 16 * 1024 * 1024) catch unreachable;
     defer allocator.free(file_data);
 
-    const object = try bof.Object.initFromMemory(file_data.ptr, @intCast(file_data.len));
+    const object = try bof.Object.initFromMemory(file_data);
     defer object.release();
 
-    const context = try object.runAsyncThread(arg_data_ptr, arg_data_len, null, null);
+    const context = try object.runAsyncThread(arg_data, null, null);
     defer context.release();
 
     context.wait();
@@ -102,7 +101,6 @@ pub fn main() !u8 {
         allocator,
         &bof_path_buffer,
         args.getBuffer(),
-        args.getBufferSize(),
     );
 
     stdout.writer().print("BOF exit code: {d}\n", .{result}) catch unreachable;

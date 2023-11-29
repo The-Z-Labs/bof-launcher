@@ -1,3 +1,46 @@
+/// bof-launcher 1.0.0 (Beta)
+///
+/// Basic usage:
+///
+/// ```
+/// const bof = @import("bofapi").bof;
+///
+/// try bof.initLauncher();
+/// defer bof.releaseLauncher();
+///
+/// // Load object file (COFF or ELF) and get a handle to it
+/// const bof_handle = try bof.Object.initFromMemory(obj_file_data);
+/// defer bof_handle.release();
+///
+/// const args0 = try bof.Args.init();
+/// defer args0.release();
+/// args0.begin();
+/// args0.add("my str");
+/// args0.end();
+///
+/// // Run BOF with arguments `args0`
+/// const context0 = try bof_handle.run(args0.getBuffer());
+/// defer context0.release();
+///
+/// if (context0.getOutput()) |output| {
+///     // handle BOF output
+/// }
+///
+///
+/// // Run the same BOF with different arguments (`args1`)
+/// const args1 = try bof.Args.init();
+/// defer args1.release();
+/// args1.begin();
+/// args1.add("my str 2");
+/// args1.end();
+///
+/// const context1 = try bof_handle.run(args1.getBuffer());
+/// defer context1.release();
+///
+/// if (context0.getOutput()) |output| {
+///     // handle BOF output
+/// }
+/// ```
 //------------------------------------------------------------------------------
 //
 // Various types
@@ -40,14 +83,11 @@ pub const Object = extern struct {
     /// `initFromMemory()` takes raw object file data (COFF or ELF) and prepares
     /// it for execution on a local machine.
     /// It parses data, maps object file to memory, performs relocations, resolves external symbols, etc.
-    pub fn initFromMemory(
-        file_data_ptr: [*]const u8,
-        file_data_len: c_int,
-    ) Error!Object {
+    pub fn initFromMemory(file_data: []const u8) Error!Object {
         var object: Object = undefined;
         if (bofObjectInitFromMemory(
-            file_data_ptr,
-            file_data_len,
+            file_data.ptr,
+            @intCast(file_data.len),
             &object,
         ) < 0) return error.Unknown;
         return object;
@@ -78,23 +118,19 @@ pub const Object = extern struct {
     ///
     /// Example:
     /// ```
-    /// const exec_ctx = try object.run(null, 0);
+    /// const exec_ctx = try object.run(null);
     /// defer exec_ctx.release();
     ///
     /// if (exec_ctx.getOutput()) |output| {
     ///     std.debug.print("Exit code: {d}.\nOutput: {s}\n", exec_ctx.getExitCode(), output);
     /// }
     /// ```
-    pub fn run(
-        bof_handle: Object,
-        arg_data_ptr: ?[*]u8,
-        arg_data_len: c_int,
-    ) Error!*Context {
+    pub fn run(bof_handle: Object, arg_data: ?[]u8) Error!*Context {
         var context: *Context = undefined;
         if (bofObjectRun(
             bof_handle,
-            arg_data_ptr,
-            arg_data_len,
+            if (arg_data) |d| d.ptr else null,
+            if (arg_data) |d| @intCast(d.len) else 0,
             &context,
         ) < 0) return error.Unknown;
         return context;
@@ -119,16 +155,15 @@ pub const Object = extern struct {
     /// `Context.getExitCode()` - to retrieve BOF's exit code.
     pub fn runAsyncThread(
         bof_handle: Object,
-        arg_data_ptr: ?[*]u8,
-        arg_data_len: c_int,
+        arg_data: ?[]u8,
         completion_cb: ?CompletionCallback,
         completion_cb_context: ?*anyopaque,
     ) Error!*Context {
         var context: *Context = undefined;
         if (bofObjectRunAsyncThread(
             bof_handle,
-            arg_data_ptr,
-            arg_data_len,
+            if (arg_data) |d| d.ptr else null,
+            if (arg_data) |d| @intCast(d.len) else 0,
             completion_cb,
             completion_cb_context,
             &context,
@@ -156,16 +191,15 @@ pub const Object = extern struct {
     /// `Context.getExitCode()` - to retrieve BOF's exit code.
     pub fn runAsyncProcess(
         bof_handle: Object,
-        arg_data_ptr: ?[*]u8,
-        arg_data_len: c_int,
+        arg_data: ?[]u8,
         completion_cb: ?CompletionCallback,
         completion_cb_context: ?*anyopaque,
     ) Error!*Context {
         var context: *Context = undefined;
         if (bofObjectRunAsyncProcess(
             bof_handle,
-            arg_data_ptr,
-            arg_data_len,
+            if (arg_data) |d| d.ptr else null,
+            if (arg_data) |d| @intCast(d.len) else 0,
             completion_cb,
             completion_cb_context,
             &context,
@@ -223,7 +257,7 @@ pub const Context = opaque {
 // Args
 //
 //------------------------------------------------------------------------------
-/// `Args` represents a set of user-provided arguments that will be passed to a BOF.
+/// `Args` represents a set of user-provided arguments that can be passed to a BOF.
 pub const Args = opaque {
     /// `Args.init()` creates `Args` object which is used to parse and store
     /// arguments that are intended to be consumed by a BOF.
@@ -245,13 +279,13 @@ pub const Args = opaque {
         if (bofArgsAdd(args, arg.ptr, @intCast(arg.len)) < 0) return error.Unknown;
     }
 
-    /// `Args.getBuffer()` returns a pointer to a raw buffer that can be directly
-    /// passed to a BOF.
-    pub const getBuffer = bofArgsGetBuffer;
-
-    /// `Args.getBufferSize()` returns size in bytes of the internal data buffer
-    /// (can be passed directly to Object.run*() functions).
-    pub const getBufferSize = bofArgsGetBufferSize;
+    pub fn getBuffer(args: *Args) ?[]u8 {
+        const size = bofArgsGetBufferSize(args);
+        if (bofArgsGetBuffer(args)) |buffer| {
+            return buffer[0..@intCast(size)];
+        }
+        return null;
+    }
 };
 //------------------------------------------------------------------------------
 //

@@ -160,7 +160,7 @@ pub fn main() !u8 {
                 const bof_content = try fetchBofContent(allocator, bof_path);
                 defer allocator.free(bof_content);
 
-                const bof_object = try bof.Object.initFromMemory(bof_content.ptr, @intCast(bof_content.len));
+                const bof_object = try bof.Object.initFromMemory(bof_content);
 
                 // process header
                 const bof_header = root.object.get("header").?.string;
@@ -174,16 +174,12 @@ pub fn main() !u8 {
                 if (std.mem.eql(u8, exec_mode, "inline")) {
                     stdout.writer().print("Execution mode: {s}-based\n", .{exec_mode}) catch unreachable;
 
-                    bof_context = try bof_object.run(
-                        @constCast(bof_args.ptr),
-                        @intCast(bof_args.len),
-                    );
+                    bof_context = try bof_object.run(@constCast(bof_args));
                 } else if (std.mem.eql(u8, exec_mode, "thread")) {
                     stdout.writer().print("Execution mode: {s}-based\n", .{exec_mode}) catch unreachable;
 
                     bof_context = try bof_object.runAsyncThread(
-                        @constCast(bof_args.ptr),
-                        @intCast(bof_args.len),
+                        @constCast(bof_args),
                         null,
                         null,
                     );
