@@ -37,7 +37,7 @@
 /// const context1 = try bof_handle.run(args1.getBuffer());
 /// defer context1.release();
 ///
-/// if (context0.getOutput()) |output| {
+/// if (context1.getOutput()) |output| {
 ///     // handle BOF output
 /// }
 /// ```
