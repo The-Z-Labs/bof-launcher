@@ -22,10 +22,11 @@ We at [Z-Labs](https://z-labs.eu) saw a big potential in BOFs and decided to ext
 - Seamless support for either Windows COFF format and UNIX/Linux ELF format.
 - ARM and AARCH64 support on Linux.
 
-## Basic library usage
+## BOF launcher library
 
-For more info please see [C API](include/bof.h) or [Zig API](include/bof.zig).
+We provide open-source and standalone library that can be used to execute any BOF build with this project, it exposes both [C API](include/bof.h) and [Zig API](include/bof.zig). Library parses COFF/ELF object data, does the relocations, loads all needed symbols and handles BOF output for you. See the API and tests for details.
 
+Basic C API usage:
 ```c
 // Load object file (COFF or ELF) and get a handle to it
 BofObjectHandle bof_handle;
@@ -91,10 +92,6 @@ To run a BOF you can use our [cli4bofs](examples/cli4bofs), for example:
 https://github.com/The-Z-Labs/bof-launcher/blob/074d002720702248efd3343fae7fb7501be8fc81/bofs/src/wWinver.zig#L1-L19
 
 https://github.com/The-Z-Labs/bof-launcher/blob/06e7d8c4cf941c22557eca5d97dcab6eab038003/bofs/src/wWinverC.c#L1-L21
-
-## BOF launcher library
-
-We provide an open-source and standalone library that can be used to execute any BOF build with this project, it exposes both [C API](include/bof.h) and [Zig API](include/bof.zig). Library parses COFF/ELF object data, does the relocations, loads all needed symbols and handles BOF output for you. See the API and tests for details.
 
 ## Example usage scenarios
 
