@@ -1,5 +1,5 @@
 const std = @import("std");
-const beacon = @import("bofapi").beacon;
+const beacon = @import("bof_api").beacon;
 
 noinline fn func(msg: []const u8) u8 {
     std.debug.print("debug: test {s}\n", .{msg});

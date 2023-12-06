@@ -3,7 +3,7 @@
 /// Basic usage:
 ///
 /// ```
-/// const bof = @import("bofapi").bof;
+/// const bof = @import("bof_launcher_api");
 ///
 /// try bof.initLauncher();
 /// defer bof.releaseLauncher();

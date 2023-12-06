@@ -1,6 +1,6 @@
 const std = @import("std");
-const beacon = @import("bofapi").beacon;
-const posix = @import("bofapi").posix;
+const beacon = @import("bof_api").beacon;
+const posix = @import("bof_api").posix;
 
 pub export fn go() callconv(.C) u8 {
     const id = posix.gethostid();

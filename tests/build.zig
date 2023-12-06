@@ -7,6 +7,7 @@ pub fn runTests(
     b: *std.build.Builder,
     options: Options,
     bof_launcher_lib: *std.Build.CompileStep,
+    bof_launcher_api_module: *std.Build.Module,
     bof_api_module: *std.Build.Module,
 ) *std.build.RunStep {
     const tests = b.addTest(.{
@@ -15,14 +16,15 @@ pub fn runTests(
         .target = options.target,
         .optimize = options.optimize,
     });
-    tests.addIncludePath(.{ .path = thisDir() ++ "/../include" });
+    tests.addIncludePath(.{ .path = thisDir() ++ "/../bof-launcher/src" });
     tests.linkLibrary(bof_launcher_lib);
     tests.addCSourceFile(.{
         .file = .{ .path = thisDir() ++ "/src/tests.c" },
         .flags = &.{"-std=c99"},
     });
     tests.linkLibC();
-    tests.addModule("bofapi", bof_api_module);
+    tests.addModule("bof_api", bof_api_module);
+    tests.addModule("bof_launcher_api", bof_launcher_api_module);
     tests.step.dependOn(b.getInstallStep());
     return b.addRunArtifact(tests);
 }
@@ -46,7 +48,7 @@ pub fn buildTestBofs(
             .target = options.target,
             .optimize = .ReleaseSmall,
         });
-        obj.addModule("bofapi", bof_api_module);
+        obj.addModule("bof_api", bof_api_module);
         obj.force_pic = true;
         obj.single_threaded = true;
         obj.strip = true;

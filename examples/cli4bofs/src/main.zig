@@ -1,6 +1,6 @@
 const std = @import("std");
 const assert = std.debug.assert;
-const bof = @import("bofapi").bof;
+const bof = @import("bof_launcher_api");
 
 fn runBofFromFile(
     allocator: std.mem.Allocator,

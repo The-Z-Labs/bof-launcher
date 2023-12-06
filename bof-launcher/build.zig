@@ -20,7 +20,7 @@ pub fn build(
         // TODO: Remove this
         .link_libc = options.target.os_tag == .linux,
     });
-    static_lib.addModule("bofapi", bof_api_module);
+    static_lib.addModule("bof_api", bof_api_module);
     if (options.target.os_tag == .windows) {
         static_lib.linkSystemLibrary2("ws2_32", .{});
         static_lib.linkSystemLibrary2("ole32", .{});
@@ -43,7 +43,7 @@ pub fn build(
             // TODO: Remove this
             .link_libc = options.target.os_tag == .linux,
         });
-        shared_lib.addModule("bofapi", bof_api_module);
+        shared_lib.addModule("bof_api", bof_api_module);
         if (options.target.os_tag == .windows) {
             shared_lib.linkSystemLibrary2("ws2_32", .{});
             shared_lib.linkSystemLibrary2("ole32", .{});

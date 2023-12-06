@@ -1,6 +1,6 @@
 const std = @import("std");
 const fmt = std.fmt;
-const beacon = @import("bofapi").beacon;
+const beacon = @import("bof_api").beacon;
 
 var global_var: i32 = 3;
 

@@ -1,6 +1,6 @@
 const std = @import("std");
 const assert = std.debug.assert;
-const bof = @import("bofapi").bof;
+const bof = @import("bof_launcher_api");
 
 const c2_host = "127.0.0.1:8000";
 const c2_endpoint = "/endpoint";

@@ -39,7 +39,10 @@ pub fn build(b: *std.build.Builder) void {
     ) orelse .ReleaseSmall;
 
     const bof_api_module = b.createModule(.{
-        .source_file = .{ .path = thisDir() ++ "/include/bofapi.zig" },
+        .source_file = .{ .path = thisDir() ++ "/include/bof_api.zig" },
+    });
+    const bof_launcher_api_module = b.createModule(.{
+        .source_file = .{ .path = thisDir() ++ "/bof-launcher/src/bof_launcher_api.zig" },
     });
 
     const supported_targets = [_]std.zig.CrossTarget{
@@ -69,12 +72,24 @@ pub fn build(b: *std.build.Builder) void {
         //
         // Examples: command line launcher
         //
-        @import("examples/cli4bofs/build.zig").build(b, options, bof_launcher_lib, bof_api_module);
+        @import("examples/cli4bofs/build.zig").build(
+            b,
+            options,
+            bof_launcher_lib,
+            bof_launcher_api_module,
+            bof_api_module,
+        );
 
         //
         // Examples: baby stager
         //
-        @import("examples/baby-stager/build.zig").build(b, options, bof_launcher_lib, bof_api_module);
+        @import("examples/baby-stager/build.zig").build(
+            b,
+            options,
+            bof_launcher_lib,
+            bof_launcher_api_module,
+            bof_api_module,
+        );
 
         //
         // Examples: integration with c
@@ -91,6 +106,7 @@ pub fn build(b: *std.build.Builder) void {
                 b,
                 options,
                 bof_launcher_lib,
+                bof_launcher_api_module,
                 bof_api_module,
             ).step);
         }
@@ -105,6 +121,7 @@ pub fn build(b: *std.build.Builder) void {
                 b,
                 options,
                 bof_launcher_lib,
+                bof_launcher_api_module,
                 bof_api_module,
             ).step);
         }

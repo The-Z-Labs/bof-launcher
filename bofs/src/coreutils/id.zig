@@ -2,8 +2,8 @@ const std = @import("std");
 const os = std.os;
 const c = std.c;
 const mem = std.mem;
-const beacon = @import("bofapi").beacon;
-const posix = @import("bofapi").posix;
+const beacon = @import("bof_api").beacon;
+const posix = @import("bof_api").posix;
 
 // https://man7.org/linux/man-pages/man3/getgrouplist.3.html
 pub extern fn getgrouplist(user: [*:0]const u8, group: c.gid_t, groups: [*]c.gid_t, ngroups: *i32) callconv(.C) i32;

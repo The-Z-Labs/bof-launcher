@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "bof.h"
+#include "bof_launcher_api.h"
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {

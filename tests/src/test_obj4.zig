@@ -1,6 +1,6 @@
 const std = @import("std");
 const fmt = std.fmt;
-const beacon = @import("bofapi").beacon;
+const beacon = @import("bof_api").beacon;
 
 pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     var parser = beacon.datap{};

@@ -1,5 +1,5 @@
 const std = @import("std");
-const bof = @import("bofapi").bof;
+const bof = @import("bof_launcher_api");
 
 fn runBofFromFile(
     allocator: std.mem.Allocator,

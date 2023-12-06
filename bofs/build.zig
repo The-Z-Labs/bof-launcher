@@ -210,7 +210,7 @@ pub fn build(
                         break :blk obj;
                     },
                 };
-                obj.addModule("bofapi", bof_api_module);
+                obj.addModule("bof_api", bof_api_module);
                 obj.addIncludePath(.{ .path = thisDir() ++ "/../include" });
                 obj.force_pic = true;
                 obj.single_threaded = true;

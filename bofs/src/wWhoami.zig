@@ -1,5 +1,5 @@
-const w32 = @import("bofapi").win32;
-const beacon = @import("bofapi").beacon;
+const w32 = @import("bof_api").win32;
+const beacon = @import("bof_api").beacon;
 
 fn getTokenInfo(token_type: w32.TOKEN_INFORMATION_CLASS) ?*anyopaque {
     _ = token_type;

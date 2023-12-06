@@ -1,7 +1,7 @@
 const std = @import("std");
 const os = @import("std").os;
 const c = @import("std").c;
-const beacon = @import("bofapi").beacon;
+const beacon = @import("bof_api").beacon;
 
 pub const ifaddrs = extern struct {
     ifa_next: *ifaddrs,

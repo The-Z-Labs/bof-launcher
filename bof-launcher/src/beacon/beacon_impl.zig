@@ -52,7 +52,7 @@ pub export fn BeaconDataInt(parser: *datap) callconv(.C) i32 {
     if (parser.length < 4) {
         return 0;
     }
-    mem.copy(u8, std.mem.asBytes(&fourbyteint), parser.buffer[0..4]);
+    @memcpy(std.mem.asBytes(&fourbyteint), parser.buffer[0..4]);
 
     parser.buffer += 4;
     parser.length -= 4;
@@ -64,7 +64,7 @@ pub export fn BeaconDataShort(parser: *datap) callconv(.C) i16 {
     if (parser.length < 2) {
         return 0;
     }
-    mem.copy(u8, std.mem.asBytes(&twobyteint), parser.buffer[0..2]);
+    @memcpy(std.mem.asBytes(&twobyteint), parser.buffer[0..2]);
 
     parser.buffer += 2;
     parser.length -= 2;
@@ -76,7 +76,7 @@ pub export fn BeaconDataUSize(parser: *datap) callconv(.C) usize {
     if (parser.length < @sizeOf(usize)) {
         return 0;
     }
-    mem.copy(u8, std.mem.asBytes(&data), parser.buffer[0..@sizeOf(usize)]);
+    @memcpy(std.mem.asBytes(&data), parser.buffer[0..@sizeOf(usize)]);
 
     parser.buffer += @sizeOf(usize);
     parser.length -= @sizeOf(usize);
@@ -94,7 +94,7 @@ pub export fn BeaconDataExtract(parser: ?*datap, size: ?*i32) callconv(.C) ?[*]u
     if (parser.?.length < 4) {
         return null;
     }
-    mem.copy(u8, std.mem.asBytes(&length), parser.?.buffer[0..4]);
+    @memcpy(std.mem.asBytes(&length), parser.?.buffer[0..4]);
 
     parser.?.buffer += 4;
 
@@ -141,7 +141,7 @@ pub export fn BeaconFormatFree(format: ?*formatp) callconv(.C) void {
 }
 
 pub export fn BeaconFormatAppend(format: ?*formatp, text: [*]u8, len: i32) callconv(.C) void {
-    mem.copy(u8, format.?.buffer.?[0..@as(usize, @intCast(len))], text[0..@as(usize, @intCast(len))]);
+    @memcpy(format.?.buffer.?[0..@as(usize, @intCast(len))], text[0..@as(usize, @intCast(len))]);
     format.?.buffer.? += @as(usize, @intCast(len));
     format.?.length += len;
 }
@@ -158,7 +158,7 @@ pub export fn BeaconFormatInt(format: ?*formatp, value: i32) callconv(.C) void {
         return;
     }
     outdata = @byteSwap(indata);
-    mem.copy(u8, format.?.buffer.?[0..4], std.mem.asBytes(&outdata));
+    @memcpy(format.?.buffer.?[0..4], std.mem.asBytes(&outdata));
     format.?.length += 4;
     format.?.buffer.? += @as(usize, 4);
 }

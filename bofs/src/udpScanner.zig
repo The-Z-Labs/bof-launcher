@@ -1,6 +1,6 @@
 const std = @import("std");
-const beacon = @import("bofapi").beacon;
-const os = @import("bofapi").os;
+const beacon = @import("bof_api").beacon;
+const os = @import("bof_api").os;
 const fmt = std.fmt;
 const mem = std.mem;
 const net = std.net;
@@ -37,13 +37,13 @@ fn parseRawPayloads(allocator: mem.Allocator, payloads: []const []const u8) ![]P
         const service_name_spec = iter.next() orelse return error.BadData;
         const service_name = try allocator.alloc(u8, service_name_spec.len);
         errdefer allocator.free(service_name);
-        mem.copy(u8, service_name, service_name_spec);
+        @memcpy(service_name, service_name_spec);
 
         // get data
         const data_spec = iter.next() orelse return error.BadData;
         const data = try allocator.alloc(u8, data_spec.len);
         errdefer allocator.free(data);
-        mem.copy(u8, data, data_spec);
+        @memcpy(data, data_spec);
 
         // adding payload to the list
         try list.append(.{
@@ -114,7 +114,7 @@ fn extractIPs(allocator: mem.Allocator, ip_spec: []const u8) ![][]const u8 {
         // badly formatted ip_spec, return empty list
         if (mem.eql(u8, ip_spec, ip_octet))
             return list.toOwnedSlice();
-        mem.copy(u8, buf[buf_index..], ip_octet);
+        @memcpy(buf[buf_index..], ip_octet);
         buf_index += ip_octet.len;
         buf[buf_index] = '.';
         buf_index += 1;

@@ -8,6 +8,7 @@ pub fn build(
     b: *std.build.Builder,
     options: Options,
     bof_launcher_lib: *std.Build.CompileStep,
+    bof_launcher_api_module: *std.Build.Module,
     bof_api_module: *std.Build.Module,
 ) void {
     const exe = b.addExecutable(.{
@@ -25,7 +26,8 @@ pub fn build(
 
     exe.linkLibrary(bof_launcher_lib);
 
-    exe.addModule("bofapi", bof_api_module);
+    exe.addModule("bof_api", bof_api_module);
+    exe.addModule("bof_launcher_api", bof_launcher_api_module);
 
     b.installArtifact(exe);
 }

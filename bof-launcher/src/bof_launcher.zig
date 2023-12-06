@@ -3,6 +3,8 @@ const assert = std.debug.assert;
 
 const print = if (@import("builtin").mode == .Debug) log else dummyLog;
 
+const pubapi = @import("bof_launcher_api.zig");
+
 fn dummyLog(_: []const u8, _: anytype) void {}
 fn log(comptime fmt: []const u8, args: anytype) void {
     std.debug.print(fmt ++ "\n", args);
@@ -13,7 +15,7 @@ const BofHandle = packed struct(u32) {
     generation: u16 = 0,
 };
 comptime {
-    assert(@sizeOf(BofHandle) == @sizeOf(@import("bofapi").bof.Object));
+    assert(@sizeOf(BofHandle) == @sizeOf(pubapi.Object));
 }
 
 const Bof = struct {
@@ -143,8 +145,7 @@ const Bof = struct {
                 const section_data = all_sections_mem[section_offset .. section_offset +
                     section_header.size_of_raw_data];
 
-                std.mem.copy(
-                    u8,
+                @memcpy(
                     section_data,
                     file_data[section_header.pointer_to_raw_data..][0..section_header.size_of_raw_data],
                 );
@@ -306,10 +307,9 @@ const Bof = struct {
                     const func_map_addr = got_base_addr + got_entry * thunk_trampoline.len;
 
                     var trampoline = [_]u8{0} ** thunk_trampoline.len;
-                    std.mem.copy(u8, trampoline[0..], thunk_trampoline[0..]);
-                    std.mem.copy(u8, trampoline[thunk_offset..], std.mem.asBytes(&func_addr));
-                    std.mem.copy(
-                        u8,
+                    @memcpy(trampoline[0..], thunk_trampoline[0..]);
+                    @memcpy(trampoline[thunk_offset..][0..@sizeOf(usize)], std.mem.asBytes(&func_addr));
+                    @memcpy(
                         @as([*]u8, @ptrFromInt(func_map_addr))[0..thunk_trampoline.len],
                         trampoline[0..],
                     );
@@ -469,7 +469,7 @@ const Bof = struct {
 
                 try section_mappings.append(@alignCast(img));
 
-                std.mem.copy(u8, img, file_data[section_offset..][0..section_size]);
+                @memcpy(img, file_data[section_offset..][0..section_size]);
 
                 map_offset += max_section_size;
             } else {
@@ -593,9 +593,9 @@ const Bof = struct {
                         const a1 = @intFromPtr(got.ptr) + got_entry * thunk_trampoline.len;
 
                         var trampoline = [_]u8{0} ** thunk_trampoline.len;
-                        std.mem.copy(u8, trampoline[0..], thunk_trampoline[0..]);
-                        std.mem.copy(u8, trampoline[thunk_offset..], std.mem.asBytes(&func_ptr));
-                        std.mem.copy(u8, @as([*]u8, @ptrFromInt(a1))[0..thunk_trampoline.len], trampoline[0..]);
+                        @memcpy(trampoline[0..], thunk_trampoline[0..]);
+                        @memcpy(trampoline[thunk_offset..][0..@sizeOf(usize)], std.mem.asBytes(&func_ptr));
+                        @memcpy(@as([*]u8, @ptrFromInt(a1))[0..thunk_trampoline.len], trampoline[0..]);
 
                         switch (@import("builtin").cpu.arch) {
                             .aarch64 => {
@@ -915,61 +915,45 @@ const BofArgs = extern struct {
     const blob_size = 128;
 };
 
-pub export fn bofArgsInit(
-    out_args: **@import("bofapi").bof.Args,
-) callconv(.C) c_int {
+export fn bofArgsInit(out_args: **pubapi.Args) callconv(.C) c_int {
     const args = gstate.allocator.?.create(BofArgs) catch return -1;
     args.* = .{};
     out_args.* = @ptrCast(args);
     return 0;
 }
 
-pub export fn bofArgsRelease(
-    args: *@import("bofapi").bof.Args,
-) callconv(.C) void {
+export fn bofArgsRelease(args: *pubapi.Args) callconv(.C) void {
     const bof_args = @as(*BofArgs, @ptrCast(@alignCast(args)));
     if (bof_args.blob) |b| gstate.allocator.?.free(b[0..BofArgs.blob_size]);
     gstate.allocator.?.destroy(bof_args);
 }
 
-pub export fn bofArgsBegin(
-    args: *@import("bofapi").bof.Args,
-) callconv(.C) void {
+export fn bofArgsBegin(args: *pubapi.Args) callconv(.C) void {
     const bof_args = @as(*BofArgs, @ptrCast(@alignCast(args)));
     if (bof_args.blob) |b| gstate.allocator.?.free(b[0..BofArgs.blob_size]);
     bof_args.* = .{};
 }
 
-pub export fn bofArgsEnd(
-    args: *@import("bofapi").bof.Args,
-) callconv(.C) void {
+export fn bofArgsEnd(args: *pubapi.Args) callconv(.C) void {
     const bof_args = @as(*BofArgs, @ptrCast(@alignCast(args)));
     if (bof_args.blob != null) {
         bof_args.size = bof_args.size - bof_args.length;
         const len = bof_args.size - 4;
-        std.mem.copy(u8, bof_args.original.?[0..4], std.mem.asBytes(&len));
+        @memcpy(bof_args.original.?[0..4], std.mem.asBytes(&len));
     }
 }
 
-pub export fn bofArgsGetBuffer(
-    args: *@import("bofapi").bof.Args,
-) callconv(.C) ?[*]u8 {
+export fn bofArgsGetBuffer(args: *pubapi.Args) callconv(.C) ?[*]u8 {
     const bof_args = @as(*BofArgs, @ptrCast(@alignCast(args)));
     return bof_args.original;
 }
 
-pub export fn bofArgsGetBufferSize(
-    args: *@import("bofapi").bof.Args,
-) callconv(.C) c_int {
+export fn bofArgsGetBufferSize(args: *pubapi.Args) callconv(.C) c_int {
     const bof_args = @as(*BofArgs, @ptrCast(@alignCast(args)));
     return bof_args.size;
 }
 
-pub export fn bofArgsAdd(
-    args: *@import("bofapi").bof.Args,
-    arg: [*]const u8,
-    arg_size: c_int,
-) callconv(.C) c_int {
+export fn bofArgsAdd(args: *pubapi.Args, arg: [*]const u8, arg_size: c_int) callconv(.C) c_int {
     if (!gstate.is_valid) return -1;
     if (arg_size < 1) return -1;
 
@@ -1026,11 +1010,11 @@ pub export fn bofArgsAdd(
         print("Str param: {s} {d}", .{ sArg, sArg.len });
 
         const arg_len_w0 = arg_len + 1;
-        std.mem.copy(u8, params.buffer.?[0..4], std.mem.asBytes(&arg_len_w0));
+        @memcpy(params.buffer.?[0..4], std.mem.asBytes(&arg_len_w0));
         params.length -= 4;
         params.buffer.? += 4;
 
-        std.mem.copy(u8, params.buffer.?[0..@intCast(arg_len)], sArg);
+        @memcpy(params.buffer.?[0..@intCast(arg_len)], sArg);
         params.length -= arg_len;
         params.buffer.? += @as(usize, @intCast(arg_len));
 
@@ -1045,7 +1029,7 @@ pub export fn bofArgsAdd(
         if (arg_len > params.length)
             return -1;
 
-        std.mem.copy(u8, params.buffer.?[0..4], std.mem.asBytes(&numArg));
+        @memcpy(params.buffer.?[0..4], std.mem.asBytes(&numArg));
         params.length -= 4;
         params.buffer.? += 4;
     } else if (std.mem.eql(u8, sArg_type, "short") or std.mem.eql(u8, sArg_type, "s")) {
@@ -1056,7 +1040,7 @@ pub export fn bofArgsAdd(
         if (arg_len > params.length)
             return -1;
 
-        std.mem.copy(u8, params.buffer.?[0..2], std.mem.asBytes(&numArg));
+        @memcpy(params.buffer.?[0..2], std.mem.asBytes(&numArg));
         params.length -= 2;
         params.buffer.? += 2;
     }
@@ -1065,7 +1049,7 @@ pub export fn bofArgsAdd(
     return 0;
 }
 
-pub export fn bofObjectInitFromMemory(
+export fn bofObjectInitFromMemory(
     file_data_ptr: [*]const u8,
     file_data_len: c_int,
     out_bof_handle: ?*BofHandle,
@@ -1087,13 +1071,13 @@ pub export fn bofObjectInitFromMemory(
     return 0;
 }
 
-pub export fn bofObjectRelease(bof_handle: BofHandle) callconv(.C) void {
+export fn bofObjectRelease(bof_handle: BofHandle) callconv(.C) void {
     if (!gstate.is_valid) return;
 
     gstate.bof_pool.unloadBofAndDeallocateHandle(bof_handle);
 }
 
-pub export fn bofObjectIsValid(bof_handle: BofHandle) callconv(.C) c_int {
+export fn bofObjectIsValid(bof_handle: BofHandle) callconv(.C) c_int {
     if (!gstate.is_valid) return 0;
 
     return @intFromBool(gstate.bof_pool.isBofValid(bof_handle));
@@ -1103,7 +1087,7 @@ fn run(
     bof_handle: BofHandle,
     arg_data_ptr: ?[*]u8,
     arg_data_len: c_int,
-    out_context: **@import("bofapi").bof.Context,
+    out_context: **pubapi.Context,
 ) !void {
     const context = try gstate.allocator.?.create(BofContext);
     context.* = BofContext.init(gstate.allocator.?, bof_handle);
@@ -1122,11 +1106,11 @@ fn run(
     } else unreachable;
 }
 
-pub export fn bofObjectRun(
+export fn bofObjectRun(
     bof_handle: BofHandle,
     arg_data_ptr: ?[*]u8,
     arg_data_len: c_int,
-    out_context: **@import("bofapi").bof.Context,
+    out_context: **pubapi.Context,
 ) callconv(.C) c_int {
     if (!gstate.is_valid) return -1;
     if (!gstate.bof_pool.isBofValid(bof_handle)) return 0; // ignore (no error)
@@ -1137,7 +1121,7 @@ pub export fn bofObjectRun(
 const ThreadData = struct {
     bof: *Bof,
     arg_data: ?[]u8,
-    completion_cb: ?@import("bofapi").bof.CompletionCallback,
+    completion_cb: ?pubapi.CompletionCallback,
     completion_cb_context: ?*anyopaque,
     context: *BofContext,
     run_in_new_process: bool,
@@ -1368,10 +1352,10 @@ fn runAsync(
     bof_handle: BofHandle,
     arg_data_ptr: ?[*]u8,
     arg_data_len: c_int,
-    completion_cb: ?@import("bofapi").bof.CompletionCallback,
+    completion_cb: ?pubapi.CompletionCallback,
     completion_cb_context: ?*anyopaque,
     comptime run_in_new_process: bool,
-    out_context: **@import("bofapi").bof.Context,
+    out_context: **pubapi.Context,
 ) !void {
     const context = try gstate.allocator.?.create(BofContext);
     context.* = BofContext.init(gstate.allocator.?, bof_handle);
@@ -1413,13 +1397,13 @@ fn runAsync(
     } else unreachable;
 }
 
-pub export fn bofObjectRunAsyncThread(
+export fn bofObjectRunAsyncThread(
     bof_handle: BofHandle,
     arg_data_ptr: ?[*]u8,
     arg_data_len: c_int,
-    completion_cb: ?@import("bofapi").bof.CompletionCallback,
+    completion_cb: ?pubapi.CompletionCallback,
     completion_cb_context: ?*anyopaque,
-    out_context: **@import("bofapi").bof.Context,
+    out_context: **pubapi.Context,
 ) callconv(.C) c_int {
     if (!gstate.is_valid) return -1;
     if (!gstate.bof_pool.isBofValid(bof_handle)) return 0; // ignore (no error)
@@ -1435,13 +1419,13 @@ pub export fn bofObjectRunAsyncThread(
     return 0; // success
 }
 
-pub export fn bofObjectRunAsyncProcess(
+export fn bofObjectRunAsyncProcess(
     bof_handle: BofHandle,
     arg_data_ptr: ?[*]u8,
     arg_data_len: c_int,
-    completion_cb: ?@import("bofapi").bof.CompletionCallback,
+    completion_cb: ?pubapi.CompletionCallback,
     completion_cb_context: ?*anyopaque,
-    out_context: **@import("bofapi").bof.Context,
+    out_context: **pubapi.Context,
 ) callconv(.C) c_int {
     if (@import("builtin").cpu.arch == .x86 and @import("builtin").os.tag == .windows) {
         var is_wow64: w32.BOOL = w32.FALSE;
@@ -1463,38 +1447,38 @@ pub export fn bofObjectRunAsyncProcess(
     return 0; // success
 }
 
-pub export fn bofContextRelease(context: *@import("bofapi").bof.Context) void {
+export fn bofContextRelease(context: *pubapi.Context) void {
     if (!gstate.is_valid) return;
     const ctx = @as(*BofContext, @ptrCast(@alignCast(context)));
     ctx.deinit();
     gstate.allocator.?.destroy(ctx);
 }
 
-pub export fn bofContextIsRunning(context: *@import("bofapi").bof.Context) c_int {
+export fn bofContextIsRunning(context: *pubapi.Context) c_int {
     if (!gstate.is_valid) return 0;
     const ctx = @as(*BofContext, @ptrCast(@alignCast(context)));
     return @intFromBool(ctx.done_event.isSet() == false);
 }
 
-pub export fn bofContextGetObjectHandle(context: *@import("bofapi").bof.Context) BofHandle {
+export fn bofContextGetObjectHandle(context: *pubapi.Context) BofHandle {
     if (!gstate.is_valid) return .{};
     const ctx = @as(*BofContext, @ptrCast(@alignCast(context)));
     return ctx.handle;
 }
 
-pub export fn bofContextGetExitCode(context: *@import("bofapi").bof.Context) u8 {
+export fn bofContextGetExitCode(context: *pubapi.Context) u8 {
     if (!gstate.is_valid) return 0;
     const ctx = @as(*BofContext, @ptrCast(@alignCast(context)));
     return ctx.exit_code.load(.SeqCst);
 }
 
-pub export fn bofContextWait(context: *@import("bofapi").bof.Context) void {
+export fn bofContextWait(context: *pubapi.Context) void {
     if (!gstate.is_valid) return;
     const ctx = @as(*BofContext, @ptrCast(@alignCast(context)));
     ctx.done_event.wait();
 }
 
-pub export fn bofContextGetOutput(context: *BofContext, len: ?*c_int) callconv(.C) ?[*:0]const u8 {
+export fn bofContextGetOutput(context: *BofContext, len: ?*c_int) callconv(.C) ?[*:0]const u8 {
     if (!gstate.is_valid) return null;
 
     context.output_mutex.lock();
@@ -1520,7 +1504,7 @@ const page_size = 4096;
 const max_section_size = 8 * page_size;
 const max_num_external_functions = 256;
 
-const w32 = @import("bofapi").win32;
+const w32 = @import("win32.zig");
 
 const thunk_offset = switch (@import("builtin").cpu.arch) {
     .x86_64 => 2,
@@ -1679,7 +1663,7 @@ export fn getEnviron() callconv(.C) [*:null]?[*:0]const u8 {
 
 const mem_alignment = 16;
 
-pub fn panic(_: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
+fn panic(_: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     while (true) {
         @breakpoint();
     }
@@ -1863,12 +1847,12 @@ fn initLauncher() !void {
     gstate.is_valid = true;
 }
 
-pub export fn bofLauncherInit() callconv(.C) c_int {
+export fn bofLauncherInit() callconv(.C) c_int {
     initLauncher() catch return -1;
     return 0;
 }
 
-pub export fn bofLauncherRelease() callconv(.C) void {
+export fn bofLauncherRelease() callconv(.C) void {
     gstate.mutex.lock();
     defer gstate.mutex.unlock();
 

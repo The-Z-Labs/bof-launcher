@@ -19,7 +19,7 @@ pub fn build(
     if (options.optimize == .ReleaseSmall)
         exe.strip = true;
 
-    exe.addIncludePath(.{ .path = thisDir() ++ "/../../include" });
+    exe.addIncludePath(.{ .path = thisDir() ++ "/../../bof-launcher/src" });
     exe.addCSourceFile(.{
         .file = .{ .path = thisDir() ++ "/main.c" },
         .flags = &.{"-std=c99"},
