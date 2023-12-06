@@ -9,7 +9,7 @@ pub fn build(
 ) void {
     const exe = b.addExecutable(.{
         .name = std.mem.join(b.allocator, "_", &.{
-            "integration-with-c",
+            "integration_with_c",
             options.osTagStr(),
             options.cpuArchStr(),
         }) catch @panic("OOM"),

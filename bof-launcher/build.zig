@@ -34,7 +34,7 @@ pub const Options = struct {
 pub fn build(b: *std.build.Builder, options: Options) *std.Build.CompileStep {
     const static_lib = b.addStaticLibrary(.{
         .name = std.mem.join(b.allocator, "_", &.{
-            "bof-launcher",
+            "bof_launcher",
             options.osTagStr(),
             options.cpuArchStr(),
         }) catch @panic("OOM"),
@@ -55,7 +55,7 @@ pub fn build(b: *std.build.Builder, options: Options) *std.Build.CompileStep {
     if (options.target.getCpuArch() != .x86) { // TODO: Shared library fails to build on x86.
         const shared_lib = b.addSharedLibrary(.{
             .name = std.mem.join(b.allocator, "_", &.{
-                "bof-launcher",
+                "bof_launcher",
                 options.osTagStr(),
                 options.cpuArchStr(),
                 "shared",
