@@ -24,7 +24,7 @@ We at [Z-Labs](https://z-labs.eu) saw a big potential in BOFs and decided to ext
 
 ## BOF launcher library
 
-We provide open-source, standalone library that can be used to execute any BOF built with supported toolchain (`clang`, `zig cc`, `zig`, `fasm`). On Windows we support x86 and x86_64 architectures, on Linux we support x86, x86_64, ARM and AArch64 architectures. Our library exposes both [C API](include/bof.h) and [Zig API](include/bof.zig). It parses COFF/ELF object data, does the relocations, loads all needed symbols and handles BOF output for you. See the API and tests for details.
+We provide open-source, standalone library that can be used to execute any BOF built with supported toolchain (`clang`, `zig cc`, `zig`, `fasm`). On Windows we support x86 and x86_64 architectures, on Linux we support x86, x86_64, ARM and AArch64 architectures. Our library exposes both [C API](bof-launcher/src/bof_launcher_api.h) and [Zig API](bof-launcher/src/bof_launcher.zig). It parses COFF/ELF object data, does the relocations, loads all needed symbols and handles BOF output for you. See the API and tests for details.
 
 Basic C API usage:
 ```c
