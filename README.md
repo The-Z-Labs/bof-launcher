@@ -12,14 +12,15 @@
 
 We at [Z-Labs](https://z-labs.eu) saw a big potential in BOFs and decided to extend its capabilities, versatility and usefulness even further. That's how this project came to live.
 
-[bof-launcher](include/bof.h) is an open-source library for loading, relocating and launching BOFs on Windows and UNIX/Linux systems. It's an alternative to Trustedsec's [COFFLoader](https://github.com/trustedsec/COFFLoader) and [ELFLoader](https://github.com/trustedsec/ELFLoader) with some very interesting features:
+[bof-launcher](bof-launcher/src/bof_launcher_api.h) is an open-source library for loading, relocating and launching BOFs on Windows and UNIX/Linux systems. It's an alternative to Trustedsec's [COFFLoader](https://github.com/trustedsec/COFFLoader) and [ELFLoader](https://github.com/trustedsec/ELFLoader) with some very interesting features:
 
 - Fully compatibile with [Cobalt Strike's Beacon](https://www.cobaltstrike.com/). Can compile and run every BOF available at [Cobalt Strike Community Kit](https://cobalt-strike.github.io/community_kit/) and every other open-source BOF that adheres to [generic BOF template](https://github.com/Cobalt-Strike/bof_template).
 - Distributed as a fully standalone library with zero dependency (it does not even use `libc`).
 - Fully integrable with programs written in C/C++ and/or [Zig](https://ziglang.org/) progamming languages.
 - Adds capability to write BOFs in [Zig programming language](https://ziglang.org/) - which is a low-level langauge with a goal of being a "better C". All the features of the language and rich standard library can be used in BOFs (hash maps and other data structures, cross-platform OS layer, http, networking, threading, crypto and more).
-- Asynchronous BOF execution - additional capability to launch more time-consuming BOFs in a separate thread. 
-- Seamless support for either Windows COFF format and UNIX/Linux ELF format.
+- Asynchronous BOF execution - additional capability to launch more time-consuming BOFs in a separate thread.
+- Asynchronous BOF execution - additional capability to launch more risky BOFs (i.e. privilege escalation exploits) in a separate process.
+- Seamless support for either Windows COFF and UNIX/Linux ELF formats.
 - ARM and AARCH64 support on Linux.
 
 ## BOF launcher library
