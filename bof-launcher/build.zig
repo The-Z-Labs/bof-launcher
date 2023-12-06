@@ -1,12 +1,37 @@
 const std = @import("std");
 
-const Options = @import("../build.zig").Options;
+pub const Options = struct {
+    target: std.zig.CrossTarget,
+    optimize: std.builtin.Mode,
 
-pub fn build(
-    b: *std.build.Builder,
-    options: Options,
-    bof_api_module: *std.Build.Module,
-) *std.Build.CompileStep {
+    pub fn osTagStr(options: Options) []const u8 {
+        return switch (options.target.getOsTag()) {
+            .windows => "win",
+            .linux => "lin",
+            else => unreachable,
+        };
+    }
+
+    pub fn cpuArchStr(options: Options) []const u8 {
+        return switch (options.target.getCpuArch()) {
+            .x86_64 => "x64",
+            .x86 => "x86",
+            .aarch64 => "aarch64",
+            .arm => "arm",
+            else => unreachable,
+        };
+    }
+
+    pub fn objFormatStr(options: Options) []const u8 {
+        return switch (options.target.getOsTag()) {
+            .windows => "coff",
+            .linux => "elf",
+            else => unreachable,
+        };
+    }
+};
+
+pub fn build(b: *std.build.Builder, options: Options) *std.Build.CompileStep {
     const static_lib = b.addStaticLibrary(.{
         .name = std.mem.join(b.allocator, "_", &.{
             "bof-launcher",
@@ -20,7 +45,6 @@ pub fn build(
         // TODO: Remove this
         .link_libc = options.target.os_tag == .linux,
     });
-    static_lib.addModule("bof_api", bof_api_module);
     if (options.target.os_tag == .windows) {
         static_lib.linkSystemLibrary2("ws2_32", .{});
         static_lib.linkSystemLibrary2("ole32", .{});
@@ -43,7 +67,6 @@ pub fn build(
             // TODO: Remove this
             .link_libc = options.target.os_tag == .linux,
         });
-        shared_lib.addModule("bof_api", bof_api_module);
         if (options.target.os_tag == .windows) {
             shared_lib.linkSystemLibrary2("ws2_32", .{});
             shared_lib.linkSystemLibrary2("ole32", .{});

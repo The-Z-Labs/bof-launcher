@@ -2,14 +2,13 @@ const std = @import("std");
 
 const bof_launcher = @import("../../bof-launcher/build.zig");
 
-const Options = @import("../../build.zig").Options;
+const Options = @import("../../bof-launcher/build.zig").Options;
 
 pub fn build(
     b: *std.build.Builder,
     options: Options,
     bof_launcher_lib: *std.Build.CompileStep,
     bof_launcher_api_module: *std.Build.Module,
-    bof_api_module: *std.Build.Module,
 ) void {
     const exe = b.addExecutable(.{
         .name = std.mem.join(b.allocator, "_", &.{
@@ -26,7 +25,6 @@ pub fn build(
 
     exe.linkLibrary(bof_launcher_lib);
 
-    exe.addModule("bof_api", bof_api_module);
     exe.addModule("bof_launcher_api", bof_launcher_api_module);
 
     b.installArtifact(exe);

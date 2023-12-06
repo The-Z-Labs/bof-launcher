@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const Options = @import("../../build.zig").Options;
+const Options = @import("../../bof-launcher/build.zig").Options;
 
 pub fn build(
     b: *std.build.Builder,

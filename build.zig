@@ -2,36 +2,7 @@ const std = @import("std");
 
 pub const min_zig_version = std.SemanticVersion{ .major = 0, .minor = 12, .patch = 0, .pre = "dev.1769" };
 
-pub const Options = struct {
-    target: std.zig.CrossTarget,
-    optimize: std.builtin.Mode,
-
-    pub fn osTagStr(options: Options) []const u8 {
-        return switch (options.target.getOsTag()) {
-            .windows => "win",
-            .linux => "lin",
-            else => unreachable,
-        };
-    }
-
-    pub fn cpuArchStr(options: Options) []const u8 {
-        return switch (options.target.getCpuArch()) {
-            .x86_64 => "x64",
-            .x86 => "x86",
-            .aarch64 => "aarch64",
-            .arm => "arm",
-            else => unreachable,
-        };
-    }
-
-    pub fn objFormatStr(options: Options) []const u8 {
-        return switch (options.target.getOsTag()) {
-            .windows => "coff",
-            .linux => "elf",
-            else => unreachable,
-        };
-    }
-};
+const Options = @import("bof-launcher/build.zig").Options;
 
 pub fn build(b: *std.build.Builder) void {
     ensureZigVersion() catch return;
@@ -71,7 +42,7 @@ pub fn build(b: *std.build.Builder) void {
         //
         // Bof-launcher library
         //
-        const bof_launcher_lib = @import("bof-launcher/build.zig").build(b, options, bof_api_module);
+        const bof_launcher_lib = @import("bof-launcher/build.zig").build(b, options);
 
         //
         // Examples: command line launcher
@@ -81,7 +52,6 @@ pub fn build(b: *std.build.Builder) void {
             options,
             bof_launcher_lib,
             bof_launcher_api_module,
-            bof_api_module,
         );
 
         //
@@ -92,7 +62,6 @@ pub fn build(b: *std.build.Builder) void {
             options,
             bof_launcher_lib,
             bof_launcher_api_module,
-            bof_api_module,
         );
 
         //

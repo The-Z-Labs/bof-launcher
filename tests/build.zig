@@ -1,7 +1,7 @@
 const std = @import("std");
 const bof_launcher = @import("../bof-launcher/build.zig");
 
-const Options = @import("../build.zig").Options;
+const Options = @import("../bof-launcher/build.zig").Options;
 
 pub fn runTests(
     b: *std.build.Builder,
