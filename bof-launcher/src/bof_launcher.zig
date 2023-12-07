@@ -320,6 +320,22 @@ const Bof = struct {
                             @as([*]u8, @ptrFromInt(func_map_addr))[0..@sizeOf(usize)],
                             std.mem.asBytes(&func_addr),
                         );
+
+                        if (@import("builtin").cpu.arch == .x86_64) {
+                            // IMAGE_REL_AMD64_REL32
+                            const addr: i32 = @intCast(
+                                @as(isize, @intCast(func_map_addr)) - @as(isize, @intCast(addr_p)) - 4,
+                            );
+
+                            @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
+                        } else if (@import("builtin").cpu.arch == .x86) {
+                            // IMAGE_REL_I386_DIR32
+                            const addr: i32 = @intCast(
+                                @as(isize, @intCast(func_map_addr)),
+                            );
+
+                            @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
+                        }
                     } else {
                         // We need to copy entire trampoline
                         var trampoline = [_]u8{0} ** thunk_trampoline.len;
@@ -329,13 +345,13 @@ const Bof = struct {
                             @as([*]u8, @ptrFromInt(func_map_addr))[0..thunk_trampoline.len],
                             trampoline[0..],
                         );
+
+                        const addr: i32 = @intCast(
+                            @as(isize, @intCast(func_map_addr)) - @as(isize, @intCast(addr_p)) - 4,
+                        );
+
+                        @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
                     }
-
-                    const addr: i32 = @intCast(
-                        @as(isize, @intCast(func_map_addr)) - @as(isize, @intCast(addr_p)) - 4,
-                    );
-
-                    @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
                 } else if (@import("builtin").cpu.arch == .x86_64) {
                     switch (reloc.type) {
                         coff.IMAGE_REL_AMD64_ADDR64 => {

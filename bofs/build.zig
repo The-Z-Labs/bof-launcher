@@ -181,12 +181,8 @@ pub fn build(
                                 ) catch unreachable,
                             },
                             .flags = &.{
-                                "-DWINBASEAPI=",
-                                "-D_CRTIMP=",
-                                "-DLDAPAPI=",
                                 "-DBOF",
                                 "-D_GNU_SOURCE",
-                                if (format == .coff) "-DDECLSPEC_IMPORT=" else "",
                             },
                         });
                         if (format == .coff) {
