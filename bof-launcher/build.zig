@@ -43,9 +43,9 @@ pub fn build(b: *std.build.Builder, options: Options) *std.Build.CompileStep {
         .optimize = options.optimize,
 
         // TODO: Remove this
-        .link_libc = options.target.os_tag == .linux,
+        .link_libc = options.target.getOsTag() == .linux,
     });
-    if (options.target.os_tag == .windows) {
+    if (options.target.getOsTag() == .windows) {
         static_lib.linkSystemLibrary2("ws2_32", .{});
         static_lib.linkSystemLibrary2("ole32", .{});
     }
@@ -65,9 +65,9 @@ pub fn build(b: *std.build.Builder, options: Options) *std.Build.CompileStep {
             .optimize = options.optimize,
 
             // TODO: Remove this
-            .link_libc = options.target.os_tag == .linux,
+            .link_libc = options.target.getOsTag() == .linux,
         });
-        if (options.target.os_tag == .windows) {
+        if (options.target.getOsTag() == .windows) {
             shared_lib.linkSystemLibrary2("ws2_32", .{});
             shared_lib.linkSystemLibrary2("ole32", .{});
         }
