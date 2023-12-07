@@ -172,17 +172,25 @@ const Bof = struct {
 
             for (relocs) |reloc| {
                 const sym = symtab.at(reloc.symbol_table_index, .symbol);
-                const sym_name = sym_name: {
-                    if (sym.symbol.getName()) |sym_name| {
-                        break :sym_name sym_name;
-                    } else if (sym.symbol.getNameOffset()) |sym_name_offset| {
-                        break :sym_name strtab.get(sym_name_offset);
-                    } else {
-                        unreachable;
+                const sym_name, const declspec_dllimport = sym_info: {
+                    const p_sym_name = p_sym_name: {
+                        if (sym.symbol.getName()) |name| {
+                            break :p_sym_name name;
+                        } else if (sym.symbol.getNameOffset()) |offset| {
+                            break :p_sym_name strtab.get(offset);
+                        } else {
+                            unreachable;
+                        }
+                    };
+                    const prefix = "__imp_";
+                    if (p_sym_name.len > prefix.len and std.mem.eql(u8, prefix, p_sym_name[0..prefix.len])) {
+                        break :sym_info .{ p_sym_name[prefix.len..], true };
                     }
+                    break :sym_info .{ p_sym_name, false };
                 };
 
                 print("SYMBOL NAME: {s}", .{sym_name});
+                print("__declspec(dllimport): {}", .{declspec_dllimport});
                 print("{any}", .{reloc});
                 print("{any}", .{sym.symbol});
 
@@ -306,13 +314,22 @@ const Bof = struct {
 
                     const func_map_addr = got_base_addr + got_entry * thunk_trampoline.len;
 
-                    var trampoline = [_]u8{0} ** thunk_trampoline.len;
-                    @memcpy(trampoline[0..], thunk_trampoline[0..]);
-                    @memcpy(trampoline[thunk_offset..][0..@sizeOf(usize)], std.mem.asBytes(&func_addr));
-                    @memcpy(
-                        @as([*]u8, @ptrFromInt(func_map_addr))[0..thunk_trampoline.len],
-                        trampoline[0..],
-                    );
+                    if (declspec_dllimport) {
+                        // We need to copy just an address
+                        @memcpy(
+                            @as([*]u8, @ptrFromInt(func_map_addr))[0..@sizeOf(usize)],
+                            std.mem.asBytes(&func_addr),
+                        );
+                    } else {
+                        // We need to copy entire trampoline
+                        var trampoline = [_]u8{0} ** thunk_trampoline.len;
+                        @memcpy(trampoline[0..], thunk_trampoline[0..]);
+                        @memcpy(trampoline[thunk_offset..][0..@sizeOf(usize)], std.mem.asBytes(&func_addr));
+                        @memcpy(
+                            @as([*]u8, @ptrFromInt(func_map_addr))[0..thunk_trampoline.len],
+                            trampoline[0..],
+                        );
+                    }
 
                     const addr: i32 = @intCast(
                         @as(isize, @intCast(func_map_addr)) - @as(isize, @intCast(addr_p)) - 4,
