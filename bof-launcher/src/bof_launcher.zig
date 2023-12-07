@@ -1536,11 +1536,13 @@ const thunk_trampoline = switch (@import("builtin").cpu.arch) {
         0x48, 0xb8, // mov rax, imm64
         undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined,
         0xff, 0xe0, // jmp rax
+        0, 0, 0, 0, // padding to 16 bytes
     },
     .x86 => [_]u8{
         0xb8, // mov eax, imm32
         undefined, undefined, undefined, undefined,
         0xff, 0xe0, // jmp eax
+        0, // padding to 8
     },
     .aarch64 => [_]u8{
         0x50, 0x00, 0x00, 0x58, // ldr x16, #8
