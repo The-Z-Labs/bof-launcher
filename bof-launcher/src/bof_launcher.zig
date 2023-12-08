@@ -1,14 +1,11 @@
 const std = @import("std");
 const assert = std.debug.assert;
 
-const print = if (@import("builtin").mode == .Debug) log else dummyLog;
-
 const pubapi = @import("bof_launcher_api.zig");
 
-fn dummyLog(_: []const u8, _: anytype) void {}
-fn log(comptime fmt: []const u8, args: anytype) void {
-    std.debug.print(fmt ++ "\n", args);
-}
+pub const std_options = struct {
+    pub const log_level: std.log.Level = std.log.default_level;
+};
 
 const BofHandle = packed struct(u32) {
     index: u16 = 0,
@@ -39,7 +36,7 @@ const Bof = struct {
         assert(bof.is_allocated == true);
         assert(bof.is_loaded == true);
 
-        print("Trying to run go()...", .{});
+        std.log.debug("Trying to run go()...", .{});
 
         const tid = getCurrentThreadId();
 
@@ -59,7 +56,7 @@ const Bof = struct {
             gstate.bof_contexts.put(tid, null) catch @panic("OOM");
         }
 
-        print("Returned '{d}' from go().", .{exit_code});
+        std.log.debug("Returned '{d}' from go().", .{exit_code});
     }
 
     fn load(bof: *Bof, allocator: std.mem.Allocator, file_data: []const u8) !void {
@@ -110,8 +107,8 @@ const Bof = struct {
         const arena = arena_state.allocator();
 
         const header = parser.getCoffHeader();
-        print("COFF HEADER:", .{});
-        print("{any}\n\n", .{header});
+        std.log.debug("COFF HEADER:", .{});
+        std.log.debug("{any}\n\n", .{header});
 
         var section_mappings = std.ArrayList([]align(page_size) u8).init(arena);
         defer section_mappings.deinit();
@@ -138,8 +135,8 @@ const Bof = struct {
         var section_offset: usize = max_section_size;
         for (section_headers) |section_header| {
             const section_name = parser.getSectionName(&section_header);
-            print("SECTION NAME: {!s}", .{section_name});
-            print("{any}\n\n", .{section_header});
+            std.log.debug("SECTION NAME: {!s}", .{section_name});
+            std.log.debug("{any}\n\n", .{section_header});
 
             if (section_header.size_of_raw_data > 0) {
                 const section_data = all_sections_mem[section_offset .. section_offset +
@@ -163,7 +160,7 @@ const Bof = struct {
 
         for (section_headers, 0..) |section_header, section_index| {
             const section_name = parser.getSectionName(&section_header);
-            print("SECTION NAME: {!s} ({d})", .{ section_name, section_index });
+            std.log.debug("SECTION NAME: {!s} ({d})", .{ section_name, section_index });
 
             const relocs = @as(
                 [*]align(1) const coff.Reloc,
@@ -189,10 +186,10 @@ const Bof = struct {
                     break :sym_info .{ p_sym_name, false };
                 };
 
-                print("SYMBOL NAME: {s}", .{sym_name});
-                print("__declspec(dllimport): {}", .{declspec_dllimport});
-                print("{any}", .{reloc});
-                print("{any}", .{sym.symbol});
+                std.log.debug("SYMBOL NAME: {s}", .{sym_name});
+                std.log.debug("__declspec(dllimport): {}", .{declspec_dllimport});
+                std.log.debug("{any}", .{reloc});
+                std.log.debug("{any}", .{sym.symbol});
 
                 var maybe_func_addr = gstate.func_lookup.get(sym_name);
 
@@ -205,7 +202,7 @@ const Bof = struct {
 
                     assert(!std.mem.eql(u8, dll_name, sym_name));
 
-                    print("Parsing LibName$FuncName symbol:", .{});
+                    std.log.debug("Parsing LibName$FuncName symbol:", .{});
 
                     const dll_name_z = try if (@import("builtin").cpu.arch == .x86)
                         // Skip the '_' prefix and add '0' at the end
@@ -224,8 +221,8 @@ const Bof = struct {
                     );
                     defer arena.free(func_name_z);
 
-                    print("LibName is: {s}", .{dll_name_z});
-                    print("FuncName is: {s}", .{func_name_z});
+                    std.log.debug("LibName is: {s}", .{dll_name_z});
+                    std.log.debug("FuncName is: {s}", .{func_name_z});
 
                     const dll = if (w32.GetModuleHandleA(dll_name_z)) |hmod|
                         hmod
@@ -286,7 +283,7 @@ const Bof = struct {
                 }
 
                 if (maybe_func_addr == null and @intFromEnum(sym.symbol.section_number) == 0) {
-                    print("SYMBOL NAME: {s} NOT FOUND!", .{sym_name});
+                    std.log.err("SYMBOL NAME: {s} NOT FOUND!", .{sym_name});
                     return error.UnknownFunction;
                 }
 
@@ -304,7 +301,7 @@ const Bof = struct {
                     const got_entry = if (func_addr_to_got_entry.get(func_addr)) |entry| entry else blk: {
                         const entry = func_addr_to_got_entry.count();
                         if (entry >= max_num_external_functions) {
-                            print("Too many external functions used. Consider increasing `max_num_external_functions` constant.", .{});
+                            std.log.err("Too many external functions used. Consider increasing `max_num_external_functions` constant.", .{});
                             return error.TooManyExternalFunctions;
                         }
 
@@ -394,7 +391,7 @@ const Bof = struct {
                         else => {},
                     }
                 }
-                print("", .{});
+                std.log.debug("", .{});
             }
         }
 
@@ -415,7 +412,7 @@ const Bof = struct {
                 (sym_name.len == 3 and sym_name[0] == '_' and sym_name[1] == 'g' and sym_name[2] == 'o')) // 32-bit
             {
                 const section_index = @intFromEnum(sym.symbol.section_number) - 1;
-                print("go() section index: {d}", .{section_index});
+                std.log.debug("go() section index: {d}", .{section_index});
                 go = @as(
                     @TypeOf(go),
                     @ptrFromInt(@intFromPtr(section_mappings.items[section_index].ptr) + sym.symbol.value),
@@ -425,9 +422,9 @@ const Bof = struct {
         }
 
         if (go) |_| {
-            print("go() FOUND.", .{});
+            std.log.debug("go() FOUND.", .{});
         } else {
-            print("go() NOT FOUND.", .{});
+            std.log.err("go() NOT FOUND.", .{});
             return error.GoFuncNotFound;
         }
 
@@ -453,7 +450,7 @@ const Bof = struct {
         var file_data_stream = std.io.fixedBufferStream(file_data);
 
         const elf_hdr = try std.elf.Header.read(&file_data_stream);
-        print("Number of Sections: {d}", .{elf_hdr.shnum});
+        std.log.debug("Number of Sections: {d}", .{elf_hdr.shnum});
 
         // Load all section headers.
         {
@@ -480,16 +477,16 @@ const Bof = struct {
 
         var map_offset: usize = max_section_size;
         for (section_headers.items, 0..) |section, section_index| {
-            print("Section Index: {d}", .{section_index});
-            print("\tName is {d}", .{section.sh_name});
-            print("\tFlags are 0x{x}", .{section.sh_flags});
-            print("\tType is 0x{x}", .{section.sh_type});
-            print("\tSize is {d}", .{section.sh_size});
-            print("\tEntSize is {d}", .{section.sh_entsize});
-            print("\tOffset is 0x{x}", .{section.sh_offset});
-            print("\tAddr is 0x{x}", .{section.sh_addr});
-            print("\tLink is {d}", .{section.sh_link});
-            print("\tInfo is {d}", .{section.sh_info});
+            std.log.debug("Section Index: {d}", .{section_index});
+            std.log.debug("\tName is {d}", .{section.sh_name});
+            std.log.debug("\tFlags are 0x{x}", .{section.sh_flags});
+            std.log.debug("\tType is 0x{x}", .{section.sh_type});
+            std.log.debug("\tSize is {d}", .{section.sh_size});
+            std.log.debug("\tEntSize is {d}", .{section.sh_entsize});
+            std.log.debug("\tOffset is 0x{x}", .{section.sh_offset});
+            std.log.debug("\tAddr is 0x{x}", .{section.sh_addr});
+            std.log.debug("\tLink is {d}", .{section.sh_link});
+            std.log.debug("\tInfo is {d}", .{section.sh_info});
 
             const section_offset = @as(usize, @intCast(section.sh_offset));
             const section_size = @as(usize, @intCast(section.sh_size));
@@ -512,7 +509,7 @@ const Bof = struct {
             switch (section.sh_type) {
                 std.elf.SHT_STRTAB => {
                     const section_string_table = file_data[section_offset..][0..section_size];
-                    print("\t\tString Table: {s}", .{section_string_table});
+                    std.log.debug("\t\tString Table: {s}", .{section_string_table});
                 },
                 std.elf.SHT_SYMTAB => {
                     symbol_table = @as(
@@ -525,11 +522,11 @@ const Bof = struct {
                     const link_size = @as(usize, @intCast(link.sh_size));
                     string_table = file_data[link_offset..][0..link_size];
 
-                    print("\t\tSymbol Table", .{});
-                    print("\t\tString Table: {s}", .{string_table});
+                    std.log.debug("\t\tSymbol Table", .{});
+                    std.log.debug("\t\tString Table: {s}", .{string_table});
                 },
                 else => {
-                    print("\t\tCase Not Handled", .{});
+                    std.log.debug("\t\tCase Not Handled", .{});
                 },
             }
         }
@@ -542,13 +539,13 @@ const Bof = struct {
             const section_size = @as(usize, @intCast(section.sh_size));
 
             if (section.sh_type == std.elf.SHT_RELA) {
-                print("\tSection type: SHT_RELA", .{});
+                std.log.debug("\tSection type: SHT_RELA", .{});
             } else if (section.sh_type == std.elf.SHT_REL) {
-                print("\tSection type: SHT_REL", .{});
+                std.log.debug("\tSection type: SHT_REL", .{});
             }
 
             if (section.sh_type == sht_rel_type) {
-                print("\tENTRIES (Section Index: {d})", .{section_index});
+                std.log.debug("\tENTRIES (Section Index: {d})", .{section_index});
 
                 const relocs = @as(
                     [*]const ElfRel,
@@ -566,15 +563,15 @@ const Bof = struct {
                         reloc.r_addend;
 
                     const reloc_str = @as([*:0]const u8, @ptrCast(&string_table[symbol.st_name]));
-                    print("\t\tSymbol: {s}", .{reloc_str});
-                    print("\t\tReloc type: {d}", .{reloc.r_type()});
-                    print("\t\tSymbol Value: 0x{x}", .{symbol.st_value});
-                    print("\t\tShndx: 0x{x}", .{symbol.st_shndx});
-                    print("\t\tInfo: 0x{x}", .{reloc.r_info});
-                    print("\t\tOffset: 0x{x}", .{reloc.r_offset});
-                    print("\t\tAddend: 0x{x}", .{addend});
-                    print("\t\taddr_p: 0x{x}", .{addr_p});
-                    print("\t\taddr_s: 0x{x}", .{addr_s});
+                    std.log.debug("\t\tSymbol: {s}", .{reloc_str});
+                    std.log.debug("\t\tReloc type: {d}", .{reloc.r_type()});
+                    std.log.debug("\t\tSymbol Value: 0x{x}", .{symbol.st_value});
+                    std.log.debug("\t\tShndx: 0x{x}", .{symbol.st_shndx});
+                    std.log.debug("\t\tInfo: 0x{x}", .{reloc.r_info});
+                    std.log.debug("\t\tOffset: 0x{x}", .{reloc.r_offset});
+                    std.log.debug("\t\tAddend: 0x{x}", .{addend});
+                    std.log.debug("\t\taddr_p: 0x{x}", .{addr_p});
+                    std.log.debug("\t\taddr_s: 0x{x}", .{addr_s});
 
                     if (symbol.st_shndx == 0 and reloc.r_type() == 0xa and @import("builtin").cpu.arch == .x86) {
                         // EXTERNAL PROCEDURE CALLS (x86 special case)
@@ -594,7 +591,7 @@ const Bof = struct {
                         var maybe_func_ptr = gstate.func_lookup.get(func_name);
 
                         if (maybe_func_ptr) |func_ptr| {
-                            print("\t\tNot defined in the obj: {s} 0x{x}", .{ func_name, func_ptr });
+                            std.log.debug("\t\tNot defined in the obj: {s} 0x{x}", .{ func_name, func_ptr });
                         } else {
                             const func_name_z = try std.mem.concatWithSentinel(arena, u8, &.{func_name[0..]}, 0);
                             defer arena.free(func_name_z);
@@ -606,7 +603,7 @@ const Bof = struct {
                                 maybe_func_ptr = @intFromPtr(gstate.libc.?.lookup(*anyopaque, func_name_z));
                             }
                             if (maybe_func_ptr == null) {
-                                print("\t\tFailed to find function {s}", .{func_name});
+                                std.log.err("\t\tFailed to find function {s}", .{func_name});
                                 return error.UnknownFunction;
                             }
                         }
@@ -615,7 +612,7 @@ const Bof = struct {
                         const got_entry = if (func_addr_to_got_entry.get(func_ptr)) |entry| entry else blk: {
                             const entry = func_addr_to_got_entry.count();
                             if (entry >= max_num_external_functions) {
-                                print("Too many external functions used. Consider increasing `max_num_external_functions` constant.", .{});
+                                std.log.err("Too many external functions used. Consider increasing `max_num_external_functions` constant.", .{});
                                 return error.TooManyExternalFunctions;
                             }
 
@@ -835,18 +832,18 @@ const Bof = struct {
                             else => {},
                         }
                     }
-                    print("\t\t-------------------------------------------------", .{});
+                    std.log.debug("\t\t-------------------------------------------------", .{});
                 }
             }
         }
 
         // Print all symbols; get pointer to `go()`.
-        print("SYMBOLS", .{});
+        std.log.debug("SYMBOLS", .{});
         var go: ?*const fn (arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 = null;
         for (symbol_table) |sym| {
             if (sym.st_shndx != 0 and sym.st_shndx < section_headers.items.len) {
                 const name = @as([*:0]const u8, @ptrCast(&string_table[sym.st_name]));
-                print(
+                std.log.debug(
                     "\tName: {s: <50} Address(real): 0x{x}",
                     .{ name, @intFromPtr(section_mappings.items[sym.st_shndx].ptr) + sym.st_value },
                 );
@@ -859,9 +856,9 @@ const Bof = struct {
             }
         }
         if (go) |_| {
-            print("go() FOUND.", .{});
+            std.log.debug("go() FOUND.", .{});
         } else {
-            print("go() NOT FOUND.", .{});
+            std.log.err("go() NOT FOUND.", .{});
             return error.GoFuncNotFound;
         }
 
@@ -1040,7 +1037,7 @@ export fn bofArgsAdd(args: *pubapi.Args, arg: [*]const u8, arg_size: c_int) call
         if (arg_len > params.length - 5) {
             return -1;
         }
-        print("Str param: {s} {d}", .{ sArg, sArg.len });
+        std.log.debug("Str param: {s} {d}", .{ sArg, sArg.len });
 
         const arg_len_w0 = arg_len + 1;
         @memcpy(params.buffer.?[0..4], std.mem.asBytes(&arg_len_w0));
@@ -1057,7 +1054,7 @@ export fn bofArgsAdd(args: *pubapi.Args, arg: [*]const u8, arg_size: c_int) call
     } else if (std.mem.eql(u8, sArg_type, "int") or std.mem.eql(u8, sArg_type, "i")) {
         const numArg = std.fmt.parseUnsigned(u32, sArg, 10) catch return -1;
 
-        print("Int param: {s} {d}", .{ sArg, sArg.len });
+        std.log.debug("Int param: {s} {d}", .{ sArg, sArg.len });
 
         if (arg_len > params.length)
             return -1;
@@ -1068,7 +1065,7 @@ export fn bofArgsAdd(args: *pubapi.Args, arg: [*]const u8, arg_size: c_int) call
     } else if (std.mem.eql(u8, sArg_type, "short") or std.mem.eql(u8, sArg_type, "s")) {
         const numArg = std.fmt.parseUnsigned(u16, sArg, 10) catch return -1;
 
-        print("Short param: {s} {d}", .{ sArg, sArg.len });
+        std.log.debug("Short param: {s} {d}", .{ sArg, sArg.len });
 
         if (arg_len > params.length)
             return -1;
@@ -1096,7 +1093,7 @@ export fn bofObjectInitFromMemory(
     var bof = gstate.bof_pool.getBofPtrIfValid(bof_handle).?;
 
     bof.load(gstate.allocator.?, file_data_ptr[0..@as(usize, @intCast(file_data_len))]) catch {
-        print("Failed to load BOF. Aborting.", .{});
+        std.log.debug("Failed to load BOF. Aborting.", .{});
         return -1;
     };
 
@@ -1242,7 +1239,7 @@ fn threadFuncCloneProcessLinux(bof: *Bof, arg_data: ?[]u8, context: *BofContext)
             context.output_ring_num_written_bytes = read_len;
         }
     } else {
-        print("Child process crashed with status code 0x{x}\n", .{child_result.status});
+        std.log.err("Child process crashed with status code 0x{x}\n", .{child_result.status});
         _ = context.exit_code.swap(0xff, .SeqCst); // error
     }
 }
@@ -1340,12 +1337,12 @@ fn threadFuncCloneProcessWindows(bof: *Bof, arg_data: ?[]u8, context: *BofContex
                     context.output_ring_num_written_bytes = read_len;
                 }
             } else {
-                print("Child process crashed with status code 0x{x}\n", .{process_exit_code});
+                std.log.err("Child process crashed with status code 0x{x}\n", .{process_exit_code});
                 _ = context.exit_code.swap(0xff, .SeqCst); // error
             }
         },
         else => {
-            print("Failed to clone the process ({d})\n", .{status});
+            std.log.err("Failed to clone the process ({d})\n", .{status});
             _ = context.exit_code.swap(0xff, .SeqCst); // error
         },
     }

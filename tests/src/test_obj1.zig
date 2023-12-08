@@ -40,7 +40,7 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
         const stdout = std.io.getStdErr().writer();
         const slice = arg_data.?[0..@as(usize, @intCast(arg_len))];
         const str = fmt.fmtSliceHexLower(slice);
-        stdout.print("debug: arg_data (slice): {any}\n", .{str}) catch unreachable;
+        stdout.print("bof debug: arg_data (slice): {any}\n", .{str}) catch unreachable;
 
         _ = beacon.printf(0, "permissions: (from go): %s\n", permissions);
         _ = beacon.printf(0, "path: (from go): %s\n", path);
