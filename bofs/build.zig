@@ -129,11 +129,7 @@ pub fn build(
 
                 if (lang == .fasm) {
                     const run_fasm = b.addSystemCommand(&.{
-                        std.mem.join(
-                            b.allocator,
-                            "",
-                            &.{ thisDir() ++ "/../bin/fasm", if (format == .coff) ".exe" else "" },
-                        ) catch unreachable,
+                        thisDir() ++ "/../bin/fasm" ++ if (@import("builtin").os.tag == .windows) ".exe" else "",
                     });
                     run_fasm.addFileArg(.{
                         .path = std.mem.join(
