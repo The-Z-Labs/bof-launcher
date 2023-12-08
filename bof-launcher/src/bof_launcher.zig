@@ -343,6 +343,7 @@ const Bof = struct {
                             trampoline[0..],
                         );
 
+                        // IMAGE_REL_AMD64_REL32 (x86_64) / IMAGE_REL_I386_REL32 (x86)
                         const addr: i32 = @intCast(
                             @as(isize, @intCast(func_map_addr)) - @as(isize, @intCast(addr_p)) - 4,
                         );
