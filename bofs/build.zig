@@ -176,10 +176,7 @@ pub fn build(
                                     &.{ bof_src_path, ".c" },
                                 ) catch unreachable,
                             },
-                            .flags = &.{
-                                "-DBOF",
-                                "-D_GNU_SOURCE",
-                            },
+                            .flags = &.{ "-DBOF", "-D_GNU_SOURCE" },
                         });
                         if (format == .coff) {
                             obj.addIncludePath(.{ .path = windows_include_dir });
