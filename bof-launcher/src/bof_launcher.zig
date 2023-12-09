@@ -70,10 +70,15 @@ const Bof = struct {
 
         bof.is_loaded = true;
 
+        const aligned_file_data = try allocator.alignedAlloc(u8, 512, file_data.len);
+        defer allocator.free(aligned_file_data);
+
+        @memcpy(aligned_file_data, file_data);
+
         if (@import("builtin").os.tag == .linux) {
-            try bof.loadElf(allocator, file_data);
+            try bof.loadElf(allocator, aligned_file_data);
         } else {
-            try bof.loadCoff(allocator, file_data);
+            try bof.loadCoff(allocator, aligned_file_data);
         }
     }
 
@@ -94,7 +99,7 @@ const Bof = struct {
         }
     }
 
-    fn loadCoff(bof: *Bof, allocator: std.mem.Allocator, file_data: []const u8) !void {
+    fn loadCoff(bof: *Bof, allocator: std.mem.Allocator, file_data: []align(16) const u8) !void {
         var parser = std.coff.Coff{
             .data = file_data,
             .is_loaded = false,

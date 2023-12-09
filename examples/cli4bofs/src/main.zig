@@ -10,12 +10,10 @@ fn runBofFromFile(
     const file = std.fs.openFileAbsoluteZ(bof_path, .{}) catch unreachable;
     defer file.close();
 
-    var file_data = std.ArrayListAligned(u8, 16).init(allocator);
-    defer file_data.deinit();
+    const file_data = file.reader().readAllAlloc(allocator, 16 * 1024 * 1024) catch unreachable;
+    defer allocator.free(file_data);
 
-    try file.reader().readAllArrayListAligned(16, &file_data, 16 * 1024 * 1024);
-
-    const object = try bof.Object.initFromMemory(file_data.items);
+    const object = try bof.Object.initFromMemory(file_data);
     defer object.release();
 
     const context = try object.runAsyncThread(arg_data, null, null);
