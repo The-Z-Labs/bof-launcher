@@ -59,6 +59,8 @@ const Bof = struct {
         std.log.debug("Returned '{d}' from go().", .{exit_code});
     }
 
+    const obj_file_data_alignment = 512;
+
     fn load(bof: *Bof, allocator: std.mem.Allocator, file_data: []const u8) !void {
         assert(bof.is_allocated == true);
 
@@ -70,7 +72,7 @@ const Bof = struct {
 
         bof.is_loaded = true;
 
-        const aligned_file_data = try allocator.alignedAlloc(u8, 512, file_data.len);
+        const aligned_file_data = try allocator.alignedAlloc(u8, obj_file_data_alignment, file_data.len);
         defer allocator.free(aligned_file_data);
 
         @memcpy(aligned_file_data, file_data);
@@ -99,7 +101,11 @@ const Bof = struct {
         }
     }
 
-    fn loadCoff(bof: *Bof, allocator: std.mem.Allocator, file_data: []align(16) const u8) !void {
+    fn loadCoff(
+        bof: *Bof,
+        allocator: std.mem.Allocator,
+        file_data: []align(obj_file_data_alignment) const u8,
+    ) !void {
         var parser = std.coff.Coff{
             .data = file_data,
             .is_loaded = false,
@@ -437,7 +443,11 @@ const Bof = struct {
         bof.entry_point = go;
     }
 
-    fn loadElf(bof: *Bof, allocator: std.mem.Allocator, file_data: []const u8) !void {
+    fn loadElf(
+        bof: *Bof,
+        allocator: std.mem.Allocator,
+        file_data: []align(obj_file_data_alignment) const u8,
+    ) !void {
         const os = std.os;
 
         var arena_state = std.heap.ArenaAllocator.init(allocator);
