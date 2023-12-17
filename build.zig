@@ -45,16 +45,6 @@ pub fn build(b: *std.build.Builder) void {
         const bof_launcher_lib = @import("bof-launcher/build.zig").build(b, options);
 
         //
-        // Examples: command line launcher
-        //
-        @import("examples/cli4bofs/build.zig").build(
-            b,
-            options,
-            bof_launcher_lib,
-            bof_launcher_api_module,
-        );
-
-        //
         // Examples: baby stager
         //
         @import("examples/baby-stager/build.zig").build(

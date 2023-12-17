@@ -85,7 +85,7 @@ Below you can see the same BOF written in Zig and in C. When compiled, Zig versi
 
 For an example of larger and cross-platform BOF please see our [UDP port scanner](bofs/src/udpScanner.zig).
 
-To run a BOF you can use our [cli4bofs](examples/cli4bofs), for example:
+To run a BOF you can use our [cli4bofs](https://github.com/The-Z-Labs/cli4bofs), for example:
 
     .\zig-out\bin\cli4bofs_win_x64.exe .\zig-out\bin\wWinver.coff.x64.o
     .\zig-out\bin\cli4bofs_win_x64.exe .\zig-out\bin\udpScanner.coff.x64.o 162.159.200.1-5:123,88
@@ -100,7 +100,7 @@ https://github.com/The-Z-Labs/bof-launcher/blob/06e7d8c4cf941c22557eca5d97dcab6e
 
 *Rapid launching, testing and debugging BOFs*
 
-[cli4bofs](examples/cli4bofs) - standalone command line program for running BOFs. Handy during testing/verifying 3rd BOFs or during developing/debugging BOFs. Does not require [Cobalt Strike's Beacon](https://www.cobaltstrike.com/) and its aggresor scripts to run.
+[cli4bofs](https://github.com/The-Z-Labs/cli4bofs) - standalone command line program for running BOFs. Handy also during testing/verifying 3rd BOFs or during developing/debugging BOFs. Does not require [Cobalt Strike's Beacon](https://www.cobaltstrike.com/) and its aggresor scripts to run.
 
 ### Sample C application
 
