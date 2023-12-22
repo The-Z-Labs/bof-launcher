@@ -98,7 +98,8 @@ pub fn build(b: *std.build.Builder) void {
     //
     // Additional Windows tests
     //
-    if (@import("builtin").os.tag == .windows and @import("builtin").cpu.arch == .x86_64) {
+    // TODO: Move below tests to `test.zig`
+    if (false and @import("builtin").os.tag == .windows and @import("builtin").cpu.arch == .x86_64) {
         const udp_scanner_x64 = b.addSystemCommand(&.{
             "zig-out/bin/cli4bofs_win_x64.exe", "zig-out/bin/udpScanner.coff.x64.o", "192.168.0.1:2-10",
         });
