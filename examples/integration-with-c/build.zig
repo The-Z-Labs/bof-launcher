@@ -3,9 +3,9 @@ const std = @import("std");
 const Options = @import("../../bof-launcher/build.zig").Options;
 
 pub fn build(
-    b: *std.build.Builder,
+    b: *std.Build,
     options: Options,
-    bof_launcher_lib: *std.Build.CompileStep,
+    bof_launcher_lib: *std.Build.Step.Compile,
 ) void {
     const exe = b.addExecutable(.{
         .name = std.mem.join(b.allocator, "_", &.{
@@ -17,7 +17,7 @@ pub fn build(
         .optimize = options.optimize,
     });
     if (options.optimize == .ReleaseSmall)
-        exe.strip = true;
+        exe.root_module.strip = true;
 
     exe.addIncludePath(.{ .path = thisDir() ++ "/../../bof-launcher/src" });
     exe.addCSourceFile(.{

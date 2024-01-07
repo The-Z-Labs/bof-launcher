@@ -4,12 +4,12 @@ const bof_launcher = @import("../bof-launcher/build.zig");
 const Options = @import("../bof-launcher/build.zig").Options;
 
 pub fn runTests(
-    b: *std.build.Builder,
+    b: *std.Build,
     options: Options,
-    bof_launcher_lib: *std.Build.CompileStep,
+    bof_launcher_lib: *std.Build.Step.Compile,
     bof_launcher_api_module: *std.Build.Module,
     bof_api_module: *std.Build.Module,
-) *std.build.RunStep {
+) *std.Build.Step.Run {
     const tests = b.addTest(.{
         .name = "bof-launcher-tests",
         .root_source_file = .{ .path = thisDir() ++ "/src/tests.zig" },
@@ -23,14 +23,14 @@ pub fn runTests(
         .flags = &.{"-std=c99"},
     });
     tests.linkLibC();
-    tests.addModule("bof_api", bof_api_module);
-    tests.addModule("bof_launcher_api", bof_launcher_api_module);
+    tests.root_module.addImport("bof_api", bof_api_module);
+    tests.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
     tests.step.dependOn(b.getInstallStep());
     return b.addRunArtifact(tests);
 }
 
 pub fn buildTestBofs(
-    b: *std.build.Builder,
+    b: *std.Build,
     options: Options,
     bof_api_module: *std.Build.Module,
 ) void {
@@ -48,11 +48,11 @@ pub fn buildTestBofs(
             .target = options.target,
             .optimize = .ReleaseSmall,
         });
-        obj.addModule("bof_api", bof_api_module);
-        obj.force_pic = true;
-        obj.single_threaded = true;
-        obj.strip = true;
-        obj.unwind_tables = false;
+        obj.root_module.addImport("bof_api", bof_api_module);
+        obj.root_module.pic = true;
+        obj.root_module.single_threaded = true;
+        obj.root_module.strip = true;
+        obj.root_module.unwind_tables = false;
 
         const dest_path = std.mem.join(b.allocator, ".", &.{
             "bin/" ++ name,
@@ -62,7 +62,7 @@ pub fn buildTestBofs(
         }) catch @panic("OOM");
 
         b.getInstallStep().dependOn(
-            &b.addInstallFile(obj.getOutputSource(), dest_path).step,
+            &b.addInstallFile(obj.getEmittedBin(), dest_path).step,
         );
     }
 
@@ -81,10 +81,10 @@ pub fn buildTestBofs(
             .file = .{ .path = thisDir() ++ "/src/" ++ name ++ ".c" },
             .flags = &.{"-std=c99"},
         });
-        obj.force_pic = true;
-        obj.single_threaded = true;
-        obj.strip = true;
-        obj.unwind_tables = false;
+        obj.root_module.pic = true;
+        obj.root_module.single_threaded = true;
+        obj.root_module.strip = true;
+        obj.root_module.unwind_tables = false;
 
         const dest_path = std.mem.join(b.allocator, ".", &.{
             "bin/" ++ name,
@@ -94,7 +94,7 @@ pub fn buildTestBofs(
         }) catch @panic("OOM");
 
         b.getInstallStep().dependOn(
-            &b.addInstallFile(obj.getOutputSource(), dest_path).step,
+            &b.addInstallFile(obj.getEmittedBin(), dest_path).step,
         );
     }
 }

@@ -21,9 +21,9 @@ fn runBofFromFile(
     );
     defer context.release();
 
-    if (context.getOutput()) |output| {
-        std.debug.print("{s}", .{output});
-    }
+    //if (context.getOutput()) |output| {
+    //    std.debug.print("{s}", .{output});
+    //}
 
     return context.getExitCode();
 }
@@ -202,9 +202,9 @@ test "bof-launcher.bofs.load_run" {
     try expect(15 == context4.getExitCode());
 
     try expect(context3.getOutput() != null);
-    if (context3.getOutput()) |output| {
-        std.debug.print("{s}", .{output});
-    }
+    //if (context3.getOutput()) |output| {
+    //    std.debug.print("{s}", .{output});
+    //}
 
     try expect(object0.isValid());
     try expect(context0.getObject().isValid());
@@ -297,9 +297,9 @@ test "bof-launcher.bofs.runAsyncThread" {
     try expect(context2.getExitCode() == 2);
     try expect(context3.getExitCode() == 3);
 
-    std.debug.print("{?s}\n", .{context1.getOutput()});
-    std.debug.print("{?s}\n", .{context2.getOutput()});
-    std.debug.print("{?s}\n", .{context3.getOutput()});
+    //std.debug.print("{?s}\n", .{context1.getOutput()});
+    //std.debug.print("{?s}\n", .{context2.getOutput()});
+    //std.debug.print("{?s}\n", .{context3.getOutput()});
 }
 
 test "bof-launcher.bofs.runAsyncProcess" {
@@ -357,8 +357,8 @@ test "bof-launcher.bofs.runAsyncProcess" {
     try expect(context2.getExitCode() == 20);
     //try expect(context3.getExitCode() == 30);
 
-    std.debug.print("{?s}\n", .{context1.getOutput()});
-    std.debug.print("{?s}\n", .{context2.getOutput()});
+    //std.debug.print("{?s}\n", .{context1.getOutput()});
+    //std.debug.print("{?s}\n", .{context2.getOutput()});
     //std.debug.print("{?s}\n", .{context3.getOutput()});
 }
 
@@ -401,7 +401,7 @@ test "bof-launcher.info" {
     const context = try object.run(written);
     defer context.release();
 
-    std.debug.print("{s}", .{context.getOutput().?});
+    //std.debug.print("{s}", .{context.getOutput().?});
 
     try expect(data[0] == 2);
     try expect(data[50] == 0x70de_c0de);

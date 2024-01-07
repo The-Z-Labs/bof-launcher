@@ -1,11 +1,11 @@
 const std = @import("std");
 
 pub const Options = struct {
-    target: std.zig.CrossTarget,
+    target: std.Build.ResolvedTarget,
     optimize: std.builtin.Mode,
 
     pub fn osTagStr(options: Options) []const u8 {
-        return switch (options.target.getOsTag()) {
+        return switch (options.target.result.os.tag) {
             .windows => "win",
             .linux => "lin",
             else => unreachable,
@@ -13,7 +13,7 @@ pub const Options = struct {
     }
 
     pub fn cpuArchStr(options: Options) []const u8 {
-        return switch (options.target.getCpuArch()) {
+        return switch (options.target.result.cpu.arch) {
             .x86_64 => "x64",
             .x86 => "x86",
             .aarch64 => "aarch64",
@@ -23,7 +23,7 @@ pub const Options = struct {
     }
 
     pub fn objFormatStr(options: Options) []const u8 {
-        return switch (options.target.getOsTag()) {
+        return switch (options.target.result.os.tag) {
             .windows => "coff",
             .linux => "elf",
             else => unreachable,
@@ -31,7 +31,7 @@ pub const Options = struct {
     }
 };
 
-pub fn build(b: *std.build.Builder, options: Options) *std.Build.CompileStep {
+pub fn build(b: *std.Build, options: Options) *std.Build.Step.Compile {
     const static_lib = b.addStaticLibrary(.{
         .name = std.mem.join(b.allocator, "_", &.{
             "bof_launcher",
@@ -43,16 +43,16 @@ pub fn build(b: *std.build.Builder, options: Options) *std.Build.CompileStep {
         .optimize = options.optimize,
 
         // TODO: Remove this
-        .link_libc = options.target.getOsTag() == .linux,
+        .link_libc = options.target.result.os.tag == .linux,
     });
-    if (options.target.getOsTag() == .windows) {
+    if (options.target.result.os.tag == .windows) {
         static_lib.linkSystemLibrary2("ws2_32", .{});
         static_lib.linkSystemLibrary2("ole32", .{});
     }
     buildLib(static_lib);
     b.installArtifact(static_lib);
 
-    if (options.target.getCpuArch() != .x86) { // TODO: Shared library fails to build on x86.
+    if (options.target.result.cpu.arch != .x86) { // TODO: Shared library fails to build on x86.
         const shared_lib = b.addSharedLibrary(.{
             .name = std.mem.join(b.allocator, "_", &.{
                 "bof_launcher",
@@ -65,9 +65,9 @@ pub fn build(b: *std.build.Builder, options: Options) *std.Build.CompileStep {
             .optimize = options.optimize,
 
             // TODO: Remove this
-            .link_libc = options.target.getOsTag() == .linux,
+            .link_libc = options.target.result.os.tag == .linux,
         });
-        if (options.target.getOsTag() == .windows) {
+        if (options.target.result.os.tag == .windows) {
             shared_lib.linkSystemLibrary2("ws2_32", .{});
             shared_lib.linkSystemLibrary2("ole32", .{});
         }
@@ -78,8 +78,8 @@ pub fn build(b: *std.build.Builder, options: Options) *std.Build.CompileStep {
     return static_lib;
 }
 
-fn buildLib(lib: *std.Build.CompileStep) void {
-    lib.force_pic = true;
+fn buildLib(lib: *std.Build.Step.Compile) void {
+    lib.root_module.pic = true;
     lib.addCSourceFile(.{
         .file = .{ .path = thisDir() ++ "/src/beacon/beacon_impl.c" },
         .flags = &.{"-std=c99"},

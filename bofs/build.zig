@@ -40,7 +40,7 @@ const Bof = struct {
     formats: []const BofFormat,
     archs: []const BofArch,
 
-    fn getCrossTarget(format: BofFormat, arch: BofArch) std.zig.CrossTarget {
+    fn getTargetQuery(format: BofFormat, arch: BofArch) std.Target.Query {
         return .{
             .cpu_arch = switch (arch) {
                 .x64 => .x86_64,
@@ -58,7 +58,7 @@ const Bof = struct {
 };
 
 pub fn build(
-    b: *std.build.Builder,
+    b: *std.Build,
     bof_api_module: *std.Build.Module,
 ) void {
     // Get directory with `windows.h` (and others windows headers) from zig installation.
@@ -147,7 +147,7 @@ pub fn build(
                     continue; // This is all we need to do in case of asm BOF. Continue to the next BOF.
                 }
 
-                const target = Bof.getCrossTarget(format, arch);
+                const target = b.resolveTargetQuery(Bof.getTargetQuery(format, arch));
                 const obj = switch (lang) {
                     .fasm => unreachable,
                     .zig => b.addObject(.{
@@ -187,9 +187,9 @@ pub fn build(
                                 &.{
                                     std.fs.path.dirname(b.zig_exe).?,
                                     "/lib/libc/include/",
-                                    @tagName(target.cpu_arch.?),
+                                    @tagName(target.result.cpu.arch),
                                     "-linux-",
-                                    @tagName(target.abi.?),
+                                    @tagName(target.result.abi),
                                 },
                             ) catch unreachable;
                             obj.addIncludePath(.{ .path = linux_include_dir });
@@ -199,15 +199,15 @@ pub fn build(
                         break :blk obj;
                     },
                 };
-                obj.addModule("bof_api", bof_api_module);
                 obj.addIncludePath(.{ .path = thisDir() ++ "/../include" });
-                obj.force_pic = true;
-                obj.single_threaded = true;
-                obj.strip = true;
-                obj.unwind_tables = false;
+                obj.root_module.addImport("bof_api", bof_api_module);
+                obj.root_module.pic = true;
+                obj.root_module.single_threaded = true;
+                obj.root_module.strip = true;
+                obj.root_module.unwind_tables = false;
 
                 b.getInstallStep().dependOn(
-                    &b.addInstallFile(obj.getOutputSource(), bin_full_bof_name).step,
+                    &b.addInstallFile(obj.getEmittedBin(), bin_full_bof_name).step,
                 );
             }
         }

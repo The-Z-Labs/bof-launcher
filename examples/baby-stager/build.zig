@@ -5,9 +5,9 @@ const bof_launcher = @import("../../bof-launcher/build.zig");
 const Options = @import("../../bof-launcher/build.zig").Options;
 
 pub fn build(
-    b: *std.build.Builder,
+    b: *std.Build,
     options: Options,
-    bof_launcher_lib: *std.Build.CompileStep,
+    bof_launcher_lib: *std.Build.Step.Compile,
     bof_launcher_api_module: *std.Build.Module,
 ) void {
     const exe = b.addExecutable(.{
@@ -21,11 +21,11 @@ pub fn build(
         .optimize = options.optimize,
     });
     if (options.optimize == .ReleaseSmall)
-        exe.strip = true;
+        exe.root_module.strip = true;
 
     exe.linkLibrary(bof_launcher_lib);
 
-    exe.addModule("bof_launcher_api", bof_launcher_api_module);
+    exe.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
 
     b.installArtifact(exe);
 }

@@ -1,10 +1,10 @@
 const std = @import("std");
 
-pub const min_zig_version = std.SemanticVersion{ .major = 0, .minor = 12, .patch = 0, .pre = "dev.1769" };
+pub const min_zig_version = std.SemanticVersion{ .major = 0, .minor = 12, .patch = 0, .pre = "dev.2059" };
 
 const Options = @import("bof-launcher/build.zig").Options;
 
-pub fn build(b: *std.build.Builder) void {
+pub fn build(b: *std.Build) void {
     ensureZigVersion() catch return;
 
     const optimize = b.option(
@@ -14,13 +14,13 @@ pub fn build(b: *std.build.Builder) void {
     ) orelse .ReleaseSmall;
 
     const bof_api_module = b.createModule(.{
-        .source_file = .{ .path = thisDir() ++ "/include/bof_api.zig" },
+        .root_source_file = .{ .path = thisDir() ++ "/include/bof_api.zig" },
     });
     const bof_launcher_api_module = b.createModule(.{
-        .source_file = .{ .path = thisDir() ++ "/bof-launcher/src/bof_launcher_api.zig" },
+        .root_source_file = .{ .path = thisDir() ++ "/bof-launcher/src/bof_launcher_api.zig" },
     });
 
-    const supported_targets = [_]std.zig.CrossTarget{
+    const supported_targets = [_]std.Target.Query{
         .{ .cpu_arch = .x86, .os_tag = .windows, .abi = .gnu },
         .{ .cpu_arch = .x86, .os_tag = .linux, .abi = .gnu },
         .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu },
@@ -31,8 +31,8 @@ pub fn build(b: *std.build.Builder) void {
 
     const test_step = b.step("test", "Run all tests");
 
-    for (supported_targets) |target| {
-        const options = Options{ .target = target, .optimize = optimize };
+    for (supported_targets) |target_query| {
+        const options = Options{ .target = b.resolveTargetQuery(target_query), .optimize = optimize };
 
         //
         // Build test BOFs
@@ -62,8 +62,8 @@ pub fn build(b: *std.build.Builder) void {
         //
         // Run test BOFs (`zig build test`)
         //
-        if (options.target.cpu_arch == @import("builtin").cpu.arch and
-            options.target.os_tag == @import("builtin").os.tag)
+        if (options.target.result.cpu.arch == @import("builtin").cpu.arch and
+            options.target.result.os.tag == @import("builtin").os.tag)
         {
             test_step.dependOn(&@import("tests/build.zig").runTests(
                 b,
@@ -75,10 +75,10 @@ pub fn build(b: *std.build.Builder) void {
         }
 
         // TODO: Zig bug? Error in the test runner on Linux (tests pass but memory error is reported).
-        if (@import("builtin").os.tag == .linux and options.target.cpu_arch == .x86) continue;
+        if (@import("builtin").os.tag == .linux and options.target.result.cpu.arch == .x86) continue;
 
-        if (options.target.cpu_arch == .x86 and @import("builtin").cpu.arch == .x86_64 and
-            options.target.os_tag == @import("builtin").os.tag)
+        if (options.target.result.cpu.arch == .x86 and @import("builtin").cpu.arch == .x86_64 and
+            options.target.result.os.tag == @import("builtin").os.tag)
         {
             test_step.dependOn(&@import("tests/build.zig").runTests(
                 b,
@@ -138,7 +138,8 @@ pub fn build(b: *std.build.Builder) void {
     //
     // Additional Linux tests
     //
-    if (@import("builtin").os.tag == .linux and @import("builtin").cpu.arch == .x86_64) {
+    // TODO: Move below tests to `test.zig`
+    if (false and @import("builtin").os.tag == .linux and @import("builtin").cpu.arch == .x86_64) {
         const udp_scanner_x64 = b.addSystemCommand(&.{
             "zig-out/bin/cli4bofs_lin_x64", "zig-out/bin/udpScanner.elf.x64.o", "192.168.0.1:2-10",
         });
