@@ -407,3 +407,44 @@ test "bof-launcher.info" {
     try expect(data[50] == 0x70de_c0de);
     try expect(data[99] == 113);
 }
+
+test "bof-launcher.udpScanner" {
+    try bof.initLauncher();
+    defer bof.releaseLauncher();
+
+    const allocator = std.testing.allocator;
+
+    const bof_data = try loadBofFromFile(allocator, "zig-out/bin/udpScanner");
+    defer allocator.free(bof_data);
+
+    const object = try bof.Object.initFromMemory(bof_data);
+    defer object.release();
+
+    {
+        const context = try object.run(@constCast("192.168.0.1:2-10"));
+        defer context.release();
+        try expect(context.getExitCode() == 0);
+    }
+    {
+        const context = try object.run(null);
+        defer context.release();
+        try expect(context.getExitCode() == 1);
+    }
+}
+
+test "bof-launcher.wWinverC" {
+    try bof.initLauncher();
+    defer bof.releaseLauncher();
+
+    const allocator = std.testing.allocator;
+
+    const bof_data = try loadBofFromFile(allocator, "zig-out/bin/wWinverC");
+    defer allocator.free(bof_data);
+
+    const object = try bof.Object.initFromMemory(bof_data);
+    defer object.release();
+
+    const context = try object.run(null);
+    defer context.release();
+    try expect(context.getExitCode() == 0);
+}
