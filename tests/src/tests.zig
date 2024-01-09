@@ -41,7 +41,13 @@ fn testRunBofFromFile(
     const pathname = try std.mem.join(allocator, ".", &.{
         bof_path,
         if (@import("builtin").os.tag == .windows) "coff" else "elf",
-        if (@import("builtin").cpu.arch == .x86_64) "x64" else "x86",
+        switch (@import("builtin").cpu.arch) {
+            .x86_64 => "x64",
+            .x86 => "x86",
+            .aarch64 => "aarch64",
+            .arm => "arm",
+            else => unreachable,
+        },
         "o",
     });
     defer allocator.free(pathname);
@@ -57,7 +63,13 @@ fn loadBofFromFile(allocator: std.mem.Allocator, bof_name: [:0]const u8) ![]u8 {
     const pathname = try std.mem.join(allocator, ".", &.{
         bof_name,
         if (@import("builtin").os.tag == .windows) "coff" else "elf",
-        if (@import("builtin").cpu.arch == .x86_64) "x64" else "x86",
+        switch (@import("builtin").cpu.arch) {
+            .x86_64 => "x64",
+            .x86 => "x86",
+            .aarch64 => "aarch64",
+            .arm => "arm",
+            else => unreachable,
+        },
         "o",
     });
     defer allocator.free(pathname);
@@ -297,6 +309,10 @@ test "bof-launcher.bofs.runAsyncThread" {
     try expect(context2.getExitCode() == 2);
     try expect(context3.getExitCode() == 3);
 
+    try expect(context1.getOutput() != null);
+    try expect(context2.getOutput() != null);
+    try expect(context3.getOutput() != null);
+
     //std.debug.print("{?s}\n", .{context1.getOutput()});
     //std.debug.print("{?s}\n", .{context2.getOutput()});
     //std.debug.print("{?s}\n", .{context3.getOutput()});
@@ -356,6 +372,10 @@ test "bof-launcher.bofs.runAsyncProcess" {
     try expect(context1.getExitCode() == 10);
     try expect(context2.getExitCode() == 20);
     //try expect(context3.getExitCode() == 30);
+
+    try expect(context1.getOutput() != null);
+    try expect(context2.getOutput() != null);
+    //try expect(context3.getOutput() != null);
 
     //std.debug.print("{?s}\n", .{context1.getOutput()});
     //std.debug.print("{?s}\n", .{context2.getOutput()});
@@ -429,10 +449,13 @@ test "bof-launcher.udpScanner" {
         const context = try object.run(null);
         defer context.release();
         try expect(context.getExitCode() == 1);
+        try expect(context.getOutput() != null); // error message
     }
 }
 
 test "bof-launcher.wWinverC" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+
     try bof.initLauncher();
     defer bof.releaseLauncher();
 
@@ -446,5 +469,54 @@ test "bof-launcher.wWinverC" {
 
     const context = try object.run(null);
     defer context.release();
+
     try expect(context.getExitCode() == 0);
+    try expect(context.getOutput() != null);
+}
+
+test "bof-launcher.wDirectSyscall" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+    if (@import("builtin").cpu.arch != .x86_64) return error.SkipZigTest;
+
+    const detected_version = std.zig.system.windows.detectRuntimeVersion();
+    if (!detected_version.isAtLeast(.win10)) return error.SkipZigTest;
+
+    try bof.initLauncher();
+    defer bof.releaseLauncher();
+
+    const allocator = std.testing.allocator;
+
+    const bof_data = try loadBofFromFile(allocator, "zig-out/bin/wDirectSyscall");
+    defer allocator.free(bof_data);
+
+    const object = try bof.Object.initFromMemory(bof_data);
+    defer object.release();
+
+    const context = try object.run(null);
+    defer context.release();
+
+    try expect(context.getExitCode() == 0);
+    try expect(context.getOutput() != null);
+}
+
+test "bof-launcher.lAsmTest" {
+    if (@import("builtin").os.tag != .linux) return error.SkipZigTest;
+    if (@import("builtin").cpu.arch != .x86_64) return error.SkipZigTest;
+
+    try bof.initLauncher();
+    defer bof.releaseLauncher();
+
+    const allocator = std.testing.allocator;
+
+    const bof_data = try loadBofFromFile(allocator, "zig-out/bin/lAsmTest");
+    defer allocator.free(bof_data);
+
+    const object = try bof.Object.initFromMemory(bof_data);
+    defer object.release();
+
+    const context = try object.run(null);
+    defer context.release();
+
+    try expect(context.getExitCode() == 0);
+    try expect(context.getOutput() != null);
 }

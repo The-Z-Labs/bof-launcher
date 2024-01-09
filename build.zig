@@ -97,69 +97,10 @@ pub fn build(b: *std.Build) void {
     @import("bofs/build.zig").build(b, bof_api_module);
 
     //
-    // Additional Windows tests
-    //
-    // TODO: Move below tests to `test.zig`
-    if (false and @import("builtin").os.tag == .windows and @import("builtin").cpu.arch == .x86_64) {
-        const udp_scanner_x64 = b.addSystemCommand(&.{
-            "zig-out/bin/cli4bofs_win_x64.exe", "zig-out/bin/udpScanner.coff.x64.o", "192.168.0.1:2-10",
-        });
-        udp_scanner_x64.step.dependOn(b.getInstallStep());
-
-        const udp_scanner_x86 = b.addSystemCommand(&.{
-            "zig-out/bin/cli4bofs_win_x86.exe", "zig-out/bin/udpScanner.coff.x86.o", "192.168.0.1:2-10",
-        });
-        udp_scanner_x86.step.dependOn(b.getInstallStep());
-
-        const winver_x64 = b.addSystemCommand(
-            &.{ "zig-out/bin/cli4bofs_win_x64.exe", "zig-out/bin/wWinverC.coff.x64.o" },
-        );
-        winver_x64.step.dependOn(b.getInstallStep());
-
-        const winver_x86 = b.addSystemCommand(
-            &.{ "zig-out/bin/cli4bofs_win_x86.exe", "zig-out/bin/wWinverC.coff.x86.o" },
-        );
-        winver_x86.step.dependOn(b.getInstallStep());
-
-        const detected_version = std.zig.system.windows.detectRuntimeVersion();
-        if (detected_version.isAtLeast(.win10)) {
-            const direct_syscall_x64 = b.addSystemCommand(
-                &.{ "zig-out/bin/cli4bofs_win_x64.exe", "zig-out/bin/wDirectSyscall.coff.x64.o" },
-            );
-            direct_syscall_x64.step.dependOn(b.getInstallStep());
-            test_step.dependOn(&direct_syscall_x64.step);
-        }
-
-        test_step.dependOn(&udp_scanner_x64.step);
-        test_step.dependOn(&udp_scanner_x86.step);
-        test_step.dependOn(&winver_x64.step);
-        test_step.dependOn(&winver_x86.step);
-    }
-
-    //
     // Additional Linux tests
     //
     // TODO: Move below tests to `test.zig`
     if (false and @import("builtin").os.tag == .linux and @import("builtin").cpu.arch == .x86_64) {
-        const udp_scanner_x64 = b.addSystemCommand(&.{
-            "zig-out/bin/cli4bofs_lin_x64", "zig-out/bin/udpScanner.elf.x64.o", "192.168.0.1:2-10",
-        });
-        udp_scanner_x64.step.dependOn(b.getInstallStep());
-
-        const udp_scanner_x86 = b.addSystemCommand(&.{
-            "zig-out/bin/cli4bofs_lin_x86", "zig-out/bin/udpScanner.elf.x86.o", "192.168.0.1:2-10",
-        });
-        udp_scanner_x86.step.dependOn(b.getInstallStep());
-
-        const asm_bof_x64 = b.addSystemCommand(&.{
-            "zig-out/bin/cli4bofs_lin_x64", "zig-out/bin/lAsmTest.elf.x64.o",
-        });
-        asm_bof_x64.step.dependOn(b.getInstallStep());
-
-        test_step.dependOn(&udp_scanner_x64.step);
-        test_step.dependOn(&udp_scanner_x86.step);
-        test_step.dependOn(&asm_bof_x64.step);
-
         const run_qemu_tests = b.option(bool, "qemu", "Run aarch64 and arm qemu tests") orelse false;
 
         if (run_qemu_tests) {
