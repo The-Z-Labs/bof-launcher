@@ -192,26 +192,31 @@ test "bof-launcher.bofs.load_run" {
     const context0 = try object0.run(&bytes);
     defer context0.release();
     try expect(6 == context0.getExitCode());
+    try std.testing.expectEqualStrings("--- test_obj1.zig ---", context0.getOutput().?[0..21]);
     try expect(context0.getObject().handle == object0.handle);
 
     const context1 = try object1.run(&bytes);
     defer context1.release();
     try expect(15 == context1.getExitCode());
+    try std.testing.expectEqualStrings("--- test_obj2.c ---", context1.getOutput().?[0..19]);
     try expect(context1.isRunning() == false);
     try expect(context1.getObject().handle == object1.handle);
 
     const context2 = try object1.run(&bytes);
     defer context2.release();
     try expect(15 == context2.getExitCode());
+    try std.testing.expectEqualStrings("--- test_obj2.c ---", context2.getOutput().?[0..19]);
 
     const context3 = try object0.run(&bytes);
     defer context3.release();
     try expect(6 == context3.getExitCode());
+    try std.testing.expectEqualStrings("--- test_obj1.zig ---", context3.getOutput().?[0..21]);
     try expect(context3.isRunning() == false);
 
     const context4 = try object1.run(&bytes);
     defer context4.release();
     try expect(15 == context4.getExitCode());
+    try std.testing.expectEqualStrings("--- test_obj2.c ---", context4.getOutput().?[0..19]);
 
     try expect(context3.getOutput() != null);
     //if (context3.getOutput()) |output| {
@@ -313,6 +318,10 @@ test "bof-launcher.bofs.runAsyncThread" {
     try expect(context2.getOutput() != null);
     try expect(context3.getOutput() != null);
 
+    try std.testing.expectEqualStrings("--- test_async.zig ---", context1.getOutput().?[0..22]);
+    try std.testing.expectEqualStrings("--- test_async.zig ---", context2.getOutput().?[0..22]);
+    try std.testing.expectEqualStrings("--- test_async.zig ---", context3.getOutput().?[0..22]);
+
     //std.debug.print("{?s}\n", .{context1.getOutput()});
     //std.debug.print("{?s}\n", .{context2.getOutput()});
     //std.debug.print("{?s}\n", .{context3.getOutput()});
@@ -376,6 +385,10 @@ test "bof-launcher.bofs.runAsyncProcess" {
     try expect(context1.getOutput() != null);
     try expect(context2.getOutput() != null);
     //try expect(context3.getOutput() != null);
+
+    try std.testing.expectEqualStrings("--- test_async.zig ---", context1.getOutput().?[0..22]);
+    try std.testing.expectEqualStrings("--- test_async.zig ---", context2.getOutput().?[0..22]);
+    //try std.testing.expectEqualStrings("--- test_async.zig ---", context3.getOutput().?[0..22]);
 
     //std.debug.print("{?s}\n", .{context1.getOutput()});
     //std.debug.print("{?s}\n", .{context2.getOutput()});
@@ -497,6 +510,7 @@ test "bof-launcher.wDirectSyscall" {
 
     try expect(context.getExitCode() == 0);
     try expect(context.getOutput() != null);
+    try std.testing.expectEqualStrings("NtCreateFile syscall (called directly)", context.getOutput().?[0..38]);
 }
 
 test "bof-launcher.lAsmTest" {
@@ -519,4 +533,5 @@ test "bof-launcher.lAsmTest" {
 
     try expect(context.getExitCode() == 0);
     try expect(context.getOutput() != null);
+    try std.testing.expectEqualStrings("Hello from asm BOF on Linux! eax is 12345", context.getOutput().?[0..40]);
 }
