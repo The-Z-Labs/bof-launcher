@@ -6,6 +6,7 @@
 !*.cpp
 !*.inl
 !*.zig
+!*.zig.zon
 !*.h
 !*.asm
 !*.bat

@@ -1,0 +1,17 @@
+.{
+    .name = "bof-launcher-repo",
+    .version = "0.1.0",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "bof-launcher",
+        "include",
+        "bofs",
+        "examples",
+        "tests",
+        "utils",
+        "bin",
+        "LICENSE",
+        "README.md",
+    },
+}
