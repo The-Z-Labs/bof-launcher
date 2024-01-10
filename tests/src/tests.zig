@@ -533,5 +533,5 @@ test "bof-launcher.lAsmTest" {
 
     try expect(context.getExitCode() == 0);
     try expect(context.getOutput() != null);
-    try std.testing.expectEqualStrings("Hello from asm BOF on Linux! eax is 12345", context.getOutput().?[0..40]);
+    try std.testing.expectEqualStrings("Hello from asm BOF on Linux! eax is 12345", context.getOutput().?[0..41]);
 }
