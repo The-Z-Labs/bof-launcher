@@ -13,10 +13,10 @@ pub fn build(b: *std.Build) void {
         "Prioritize performance, safety, or binary size (-O flag)",
     ) orelse .ReleaseSmall;
 
-    const bof_api_module = b.createModule(.{
+    const bof_api_module = b.addModule("bof_api", .{
         .root_source_file = .{ .path = thisDir() ++ "/include/bof_api.zig" },
     });
-    const bof_launcher_api_module = b.createModule(.{
+    const bof_launcher_api_module = b.addModule("bof_launcher_api", .{
         .root_source_file = .{ .path = thisDir() ++ "/bof-launcher/src/bof_launcher_api.zig" },
     });
 
