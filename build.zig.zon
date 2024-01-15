@@ -1,6 +1,6 @@
 .{
-    .name = "bof-launcher-repo",
-    .version = "0.1.0",
+    .name = "bof-launcher",
+    .version = "1.0.0",
     .paths = .{
         "build.zig",
         "build.zig.zon",
