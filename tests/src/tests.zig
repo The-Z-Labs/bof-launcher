@@ -454,9 +454,28 @@ test "bof-launcher.udpScanner" {
     defer object.release();
 
     {
-        const context = try object.run(@constCast("192.168.0.1:2-10"));
+        const args = try bof.Args.init();
+        defer args.release();
+
+        args.begin();
+        try args.add("127.0.0.1:1");
+        args.end();
+
+        const context = try object.run(args.getBuffer());
         defer context.release();
         try expect(context.getExitCode() == 0);
+    }
+    {
+        const args = try bof.Args.init();
+        defer args.release();
+
+        args.begin();
+        try args.add("127-0.0.1:1"); // bad data
+        args.end();
+
+        const context = try object.run(args.getBuffer());
+        defer context.release();
+        try expect(context.getExitCode() == 1);
     }
     {
         const context = try object.run(null);

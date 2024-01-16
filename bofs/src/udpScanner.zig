@@ -113,7 +113,7 @@ fn extractIPs(allocator: mem.Allocator, ip_spec: []const u8) ![][]const u8 {
     while (iter.next()) |ip_octet| {
         // badly formatted ip_spec, return empty list
         if (mem.eql(u8, ip_spec, ip_octet))
-            return list.toOwnedSlice();
+            return error.BadData;
         @memcpy(buf[buf_index..], ip_octet);
         buf_index += ip_octet.len;
         buf[buf_index] = '.';
@@ -122,19 +122,19 @@ fn extractIPs(allocator: mem.Allocator, ip_spec: []const u8) ![][]const u8 {
         i += 1;
         if (i == 3) break;
     }
-    const ip_last_octet = iter.next() orelse return list.toOwnedSlice();
+    const ip_last_octet = iter.next() orelse return error.BadData;
 
     // Expanding last octet
     if (mem.containsAtLeast(u8, ip_last_octet, 1, "-")) {
         var iter2 = mem.tokenize(u8, ip_last_octet, "-");
 
-        const sFirst_Num = iter2.next() orelse return list.toOwnedSlice();
-        const first_num = fmt.parseInt(u16, sFirst_Num, 10) catch return list.toOwnedSlice();
+        const sFirst_Num = iter2.next() orelse return error.BadData;
+        const first_num = fmt.parseInt(u16, sFirst_Num, 10) catch return error.BadData;
 
-        const sLast_Num = iter2.next() orelse return list.toOwnedSlice();
-        const last_num = fmt.parseInt(u16, sLast_Num, 10) catch return list.toOwnedSlice();
+        const sLast_Num = iter2.next() orelse return error.BadData;
+        const last_num = fmt.parseInt(u16, sLast_Num, 10) catch return error.BadData;
 
-        //std.debug.print("IP range: {d} - {d}\n", .{ first_num, last_num });
+        //debugPrint("IP range: {d} - {d}\n", .{ first_num, last_num });
 
         var n = first_num;
         while (n <= last_num) {
@@ -154,6 +154,8 @@ fn extractIPs(allocator: mem.Allocator, ip_spec: []const u8) ![][]const u8 {
 /// cUDPScan 102.168.1.1-2:22
 /// cUDPScan 102.168.1.1-32:22-32,427
 pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
+    //debugPrint("args: {?s}\n", .{if (args) |a| a[0..@intCast(args_len)] else null});
+
     if (args_len == 0) {
         _ = beacon.printf(0, "Usage: cUDPscan <IPs>:<ports> <file:filename>\n");
         return 1;
@@ -167,15 +169,25 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     const allocator = gpa.allocator();
 
     beacon.dataParse(&parser, args, args_len);
+    debugPrint("parser: {any}\n", .{parser});
+
     const targets_spec = beacon.dataExtract(&parser, &opt_len);
+
+    debugPrint("parser: {any}\n", .{parser});
+    debugPrint("opt_len: {d}\n", .{opt_len});
 
     // creating slice without terminating 0
     const sTargets_spec = targets_spec.?[0..@as(usize, @intCast(opt_len - 1))];
+
+    debugPrint("sTargets_spec: {s}\n", .{sTargets_spec});
 
     // spliting arguemnts to IPs and ports parts
     var iter = mem.split(u8, sTargets_spec, ":");
     const sIP_spec = iter.next() orelse unreachable;
     const sPort_spec = iter.next() orelse unreachable;
+
+    debugPrint("sIP_spec: {s}\n", .{sIP_spec});
+    debugPrint("sPort_spec: {s}\n", .{sPort_spec});
 
     // IPs to scan
     const sIPs = extractIPs(allocator, sIP_spec) catch return 1;
@@ -230,13 +242,16 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
 
         for (sPorts) |port| {
             if (ports_data_map.get(port)) |pkt_content| {
-                //std.debug.print("Scanning IP: {s} and port number: {d}; payload used:\n{s}\n", .{ IP, port, pkt_content });
+                //debugPrint("Scanning IP: {s} and port number: {d}; payload used:\n{s}\n", .{ IP, port, pkt_content });
                 dest_addr.setPort(port);
 
                 _ = os.sendto(fd, pkt_content, 0, &dest_addr.any, sl) catch continue;
             }
         }
     }
+
+    debugPrint("sIPs: {any}\n", .{sIPs});
+    debugPrint("sPorts: {any}\n", .{sPorts});
 
     // Handling responses
     const timeout = 1000 * 3;
@@ -245,24 +260,32 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
 
     var answer_buf = [_]u8{0} ** 512;
 
-    while (t2 - t0 < timeout) : (t2 = @as(u64, @bitCast(std.time.milliTimestamp()))) {
-        while (true) {
-            const rlen = os.recvfrom(fd, &answer_buf, 0, &sa.any, &sl) catch break;
+    loop: while (t2 - t0 < timeout) : (t2 = @as(u64, @bitCast(std.time.milliTimestamp()))) {
+        const rlen = os.recvfrom(fd, &answer_buf, 0, &sa.any, &sl) catch |err| {
+            debugPrint("error {s}\n", .{@errorName(err)});
+            continue :loop;
+        };
 
-            // Ignore non-identifiable packets
-            if (rlen < 4) continue;
+        debugPrint("rlen: {d}\n", .{rlen});
 
-            for (sIPs) |IP| {
-                for (sPorts) |port| {
-                    const scanned_addr = net.Address.parseIp(IP, port) catch continue;
-                    if (sa.eql(scanned_addr)) {
-                        std.debug.print("Host: {s}\tPort: {d}\tState: open\n", .{ IP, port });
-                        _ = beacon.printf(0, "Host: %s\tPort: %d\tState: open\n", IP.ptr, port);
-                    }
+        // Ignore non-identifiable packets
+        if (rlen < 4) continue;
+
+        for (sIPs) |IP| {
+            for (sPorts) |port| {
+                const scanned_addr = net.Address.parseIp(IP, port) catch continue;
+                if (sa.eql(scanned_addr)) {
+                    debugPrint("Host: {s}\tPort: {d}\tState: open\n", .{ IP, port });
+                    _ = beacon.printf(0, "Host: %s\tPort: %d\tState: open\n", IP.ptr, port);
                 }
             }
         }
     }
 
+    debugPrint("DONE\n", .{});
     return 0;
+}
+
+fn debugPrint(comptime format: []const u8, args: anytype) void {
+    if (false) std.debug.print(format, args);
 }

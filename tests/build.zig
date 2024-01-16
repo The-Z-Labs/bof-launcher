@@ -15,6 +15,7 @@ pub fn runTests(
         .root_source_file = .{ .path = thisDir() ++ "/src/tests.zig" },
         .target = options.target,
         .optimize = options.optimize,
+        //.filter = "udpScanner",
     });
     tests.addIncludePath(.{ .path = thisDir() ++ "/../bof-launcher/src" });
     tests.linkLibrary(bof_launcher_lib);
@@ -26,6 +27,7 @@ pub fn runTests(
     tests.root_module.addImport("bof_api", bof_api_module);
     tests.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
     tests.step.dependOn(b.getInstallStep());
+
     return b.addRunArtifact(tests);
 }
 
