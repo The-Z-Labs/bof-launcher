@@ -75,6 +75,7 @@ pub fn buildTestBofs(
     }) |name| {
         const obj = b.addObject(.{
             .name = name,
+            // TODO: Zig bug. Remove below line once fixed.
             .root_source_file = .{ .path = thisDir() ++ "/src/dummy.zig" },
             .target = options.target,
             .optimize = .ReleaseSmall,
