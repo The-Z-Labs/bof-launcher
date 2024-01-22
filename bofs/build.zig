@@ -165,6 +165,7 @@ pub fn build(
                     .c => blk: {
                         const obj = b.addObject(.{
                             .name = bof.name,
+                            .root_source_file = .{ .path = thisDir() ++ "/../tests/src/dummy.zig" },
                             .target = target,
                             .optimize = .ReleaseSmall,
                         });

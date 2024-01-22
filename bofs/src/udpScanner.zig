@@ -164,9 +164,10 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     var opt_len: i32 = 0;
     var parser = beacon.datap{};
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    //var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    //defer _ = gpa.deinit();
+    //const allocator = gpa.allocator();
+    const allocator = std.heap.page_allocator;
 
     beacon.dataParse(&parser, args, args_len);
     debugPrint("parser: {any}\n", .{parser});

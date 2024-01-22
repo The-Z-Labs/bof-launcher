@@ -93,7 +93,7 @@ pub const TOKEN_ADJUST_SESSIONID = 0x0100;
 
 pub const TOKEN_READ = STANDARD_RIGHTS_READ | TOKEN_QUERY;
 
-pub const TOKEN_INFORMATION_CLASS = enum(u32) {
+pub const TOKEN_INFORMATION_CLASS = enum(c_int) {
     TokenUser = 1,
     TokenGroups,
     TokenPrivileges,
@@ -458,6 +458,14 @@ pub extern "advapi32" fn OpenProcessToken(
     ProcessHandle: HANDLE,
     DesiredAccess: DWORD,
     TokenHandle: *HANDLE,
+) callconv(WINAPI) BOOL;
+
+pub extern "advapi32" fn GetTokenInformation(
+    TokenHandle: HANDLE,
+    TokenInformationClass: TOKEN_INFORMATION_CLASS,
+    TokenInformation: ?*anyopaque,
+    TokenInformationLength: DWORD,
+    ReturnLength: *DWORD,
 ) callconv(WINAPI) BOOL;
 
 // user32
