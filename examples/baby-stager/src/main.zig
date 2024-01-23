@@ -6,6 +6,10 @@ const c2_host = "127.0.0.1:8000";
 const c2_endpoint = "/endpoint";
 const jitter = 3;
 
+pub const std_options = struct {
+    pub const http_disable_tls = true;
+};
+
 fn fetchBofContent(allocator: std.mem.Allocator, bof_uri: []const u8) ![]u8 {
     var h = std.http.Headers{ .allocator = allocator };
     defer h.deinit();
