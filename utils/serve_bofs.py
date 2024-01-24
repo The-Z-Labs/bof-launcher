@@ -183,7 +183,7 @@ def heartbeat():
 
 @app.route(bofsRootDir + '<path:path>')
 def send_report(path):
-    return send_from_directory('bofs', path)
+    return send_from_directory('bofs', path, mimetype='application/octet-stream')
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1',port=8000,debug=True)
