@@ -150,6 +150,11 @@ fn extractIPs(allocator: mem.Allocator, ip_spec: []const u8) ![][]const u8 {
 /// udpScanner 102.168.1.1-2:22
 /// udpScanner 102.168.1.1-32:22-32,427
 pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
+    if (args_len == 0) {
+        _ = beacon.printf(0, "Usage: cUDPscan <IPs>:<ports> <file:filename>\n");
+        return 1;
+    }
+
     var opt_len: i32 = 0;
     var parser = beacon.datap{};
 
