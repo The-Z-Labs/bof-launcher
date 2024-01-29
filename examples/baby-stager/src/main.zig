@@ -190,11 +190,11 @@ fn process(allocator: std.mem.Allocator, state: *State) !void {
             var bof_context: ?*bof.Context = null;
 
             if (std.mem.eql(u8, exec_mode, "inline")) {
-                std.log.info("Execution mode: {s}-based\n", .{exec_mode});
+                std.log.info("Execution mode: {s}-based", .{exec_mode});
 
                 bof_context = try bof_object.run(@constCast(bof_args));
             } else if (std.mem.eql(u8, exec_mode, "thread")) {
-                std.log.info("Execution mode: {s}-based\n", .{exec_mode});
+                std.log.info("Execution mode: {s}-based", .{exec_mode});
 
                 bof_context = try bof_object.runAsyncThread(
                     @constCast(bof_args),
@@ -203,7 +203,7 @@ fn process(allocator: std.mem.Allocator, state: *State) !void {
                 );
                 bof_context.?.wait();
             } else if (std.mem.eql(u8, exec_mode, "process")) {
-                std.log.info("Execution mode: {s}-based\n", .{exec_mode});
+                std.log.info("Execution mode: {s}-based", .{exec_mode});
             }
 
             if (bof_context) |context| if (context.getOutput()) |output| {
@@ -233,7 +233,7 @@ fn process(allocator: std.mem.Allocator, state: *State) !void {
 
             // tasked to execute builtin command?
         } else if (std.mem.eql(u8, cmd_prefix, "cmd")) {
-            std.log.info("Executing builtin command: {s}\n", .{cmd_name});
+            std.log.info("Executing builtin command: {s}", .{cmd_name});
         }
     }
 }
