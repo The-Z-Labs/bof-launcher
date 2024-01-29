@@ -165,6 +165,7 @@ fn process(allocator: std.mem.Allocator, state: *State) !void {
         if (std.mem.eql(u8, cmd_prefix, "bof")) {
             std.log.info("Executing bof: {s}", .{cmd_name});
 
+            // TODO: Crashes in debug mode because `args` is `null`
             const bof_args_b64 = root.object.get("args").?.string;
             const base64_decoder = std.base64.Base64Decoder.init(std.base64.standard_alphabet_chars, '=');
             const len = try std.base64.Base64Decoder.calcSizeForSlice(&base64_decoder, bof_args_b64);
