@@ -19,9 +19,10 @@ We at [Z-Labs](https://z-labs.eu) saw a big potential in BOFs and decided to ext
 - Fully integrable with programs written in C/C++ and/or [Zig](https://ziglang.org/) progamming languages.
 - Adds capability to write BOFs in [Zig programming language](https://ziglang.org/) - which is a low-level langauge with a goal of being a "better C". All the features of the language and rich standard library can be used in BOFs (hash maps and other data structures, cross-platform OS layer, http, networking, threading, crypto and more).
 - Asynchronous BOF execution - additional capability to launch more time-consuming BOFs in a separate thread.
-- Asynchronous BOF execution - additional capability to launch more risky BOFs (i.e. privilege escalation exploits) in a separate process.
+- BOF process injection - additional capability to launch more risky BOFs (i.e. privilege escalation exploits) by injecting it to new process.
 - Seamless support for either Windows COFF and UNIX/Linux ELF formats.
 - ARM and AARCH64 support on Linux.
+- Used in [cli4bofs tool](https://github.com/The-Z-Labs/cli4bofs) that allows for running BOF files directly from a filesystem.
 
 ## BOF launcher library
 
@@ -50,7 +51,7 @@ if (output) {
 bofContextRelease(context);
 ```
 
-## Building
+## Building library
 
 Being a zero-dependency, drop-in C/C++ compiler that supports cross-compilation out-of-the-box, [Zig](https://ziglang.org/) can be used to build this project. To do so [Zig's tarball (master)](https://ziglang.org/download/) needs to be downloaded and dropped in the directory of choice. After adding that directory to the `PATH` environment variable, buliding the whole project is as easy as running:
 
@@ -73,26 +74,34 @@ cd bof-launcher
 zig build
 zig test
 ```
-You can use qemu to run on foreign CPU architectures, for example:
 
-    zig build
-    qemu-aarch64 -L /usr/aarch64-linux-gnu ./zig-out/bin/cli4bofs_lin_aarch64 zig-out/bin/test_obj0.elf.aarch64.o
-    qemu-arm -L /usr/arm-linux-gnueabihf ./zig-out/bin/cli4bofs_lin_arm zig-out/bin/test_obj0.elf.arm.o
+## BOF collection
 
-## Example BOFs
+In an addition to the bof-launcher library, we provide [a collection of BOFs](bofs/src) that we have written. We plan to gradually extend this collection. We focus on developing BOFs in Zig language but it is perfectly okay to implement it in C and add it to the collection. To do so, just drop your BOF to `bofs/src` directory and add an entry for it in [bofs/build.zig](https://github.com/The-Z-Labs/bof-launcher/blob/main/bofs/build.zig) file, like that:
+
+    .{ .name = "YOUR_BOF_NAME", .formats = &.{.elf, .coff}, .archs = &.{ .x64, .x86 } },
+    
+The build system will figure out the file extension and will build it using proper compiler.
 
 Below you can see the same BOF written in Zig and in C. When compiled, Zig version weights 860 bytes, C version weights 916 bytes.
 
-For an example of larger and cross-platform BOF please see our [UDP port scanner](bofs/src/udpScanner.zig).
-
-To run a BOF you can use our [cli4bofs](https://github.com/The-Z-Labs/cli4bofs), for example:
-
-    .\zig-out\bin\cli4bofs_win_x64.exe .\zig-out\bin\wWinver.coff.x64.o
-    .\zig-out\bin\cli4bofs_win_x64.exe .\zig-out\bin\udpScanner.coff.x64.o 162.159.200.1-5:123,88
+For an example of larger and cross-platform BOF please refer to our [UDP port scanner](bofs/src/udpScanner.zig).
 
 https://github.com/The-Z-Labs/bof-launcher/blob/074d002720702248efd3343fae7fb7501be8fc81/bofs/src/wWinver.zig#L1-L19
 
 https://github.com/The-Z-Labs/bof-launcher/blob/06e7d8c4cf941c22557eca5d97dcab6eab038003/bofs/src/wWinverC.c#L1-L21
+
+## Running BOFs from filesystem
+
+Often during the developemnt/debugging, testing or just playing with a new piece of BOF code it is convenient to run it directly from a filesystem. For that purpose we created [cli4bofs](https://github.com/The-Z-Labs/cli4bofs) tool. After downloading and building it you can run every BOF out there. Below, an example of running [our BOFs](bofs/src) is shown:
+
+    .\cli4bofs.exe .\zig-out\bin\wWinver.coff.x64.o
+    .\cli4bofs.exe .\zig-out\bin\udpScanner.coff.x64.o 162.159.200.1-5:123,88
+
+To run it on foreign CPU architectures, you can use [QEMU](https://www.qemu.org/):
+
+    qemu-aarch64 -L /usr/aarch64-linux-gnu ./zig-out/bin/cli4bofs zig-out/bin/test_obj0.elf.aarch64.o
+    qemu-arm -L /usr/arm-linux-gnueabihf ./zig-out/bin/cli4bofs zig-out/bin/test_obj0.elf.arm.o
 
 ## Example usage scenarios
 
