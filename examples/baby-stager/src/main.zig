@@ -229,7 +229,7 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
                     .context = context,
                     .request_id = try allocator.dupe(u8, request_id),
                 });
-            }
+            } else bof_object.release();
 
             // tasked to execute builtin command?
         } else if (std.mem.eql(u8, cmd_prefix, "cmd")) {
