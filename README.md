@@ -19,10 +19,11 @@ We at [Z-Labs](https://z-labs.eu) saw a big potential in BOFs and decided to ext
 - Fully integrable with programs written in C/C++ and/or [Zig](https://ziglang.org/) progamming languages.
 - Adds capability to write BOFs in [Zig programming language](https://ziglang.org/) - which is a low-level langauge with a goal of being a "better C". All the features of the language and rich standard library can be used in BOFs (hash maps and other data structures, cross-platform OS layer, http, networking, threading, crypto and more).
 - Asynchronous BOF execution - additional capability to launch more time-consuming BOFs in a separate thread.
-- BOF process injection - additional capability to launch more risky BOFs (i.e. privilege escalation exploits) by injecting it to new process.
+- BOF process injection - additional capability to launch more risky BOFs (i.e. privilege escalation exploits) by injecting it to a new process.
 - Seamless support for either Windows COFF and UNIX/Linux ELF formats.
 - ARM and AARCH64 support on Linux.
 - Used in [cli4bofs tool](https://github.com/The-Z-Labs/cli4bofs) that allows for running BOF files directly from a filesystem.
+- Very flexible and efficient [API](bof-launcher/src/bof_launcher_api.h) allowing so called BOF chaining.
 
 ## BOF launcher library
 
@@ -81,9 +82,9 @@ In an addition to the bof-launcher library, we provide [a collection of BOFs](bo
 
     .{ .name = "YOUR_BOF_NAME", .formats = &.{.elf, .coff}, .archs = &.{ .x64, .x86 } },
     
-The build system will figure out the file extension and will build it using proper compiler.
+The build system will figure out the file extension and will build it (for all specified architectures) using proper compiler. This way you could also build any 3rd party BOF out there.
 
-Below you can see the same BOF written in Zig and in C. When compiled, Zig version weights 860 bytes, C version weights 916 bytes.
+Below you can see one of our BOFs in two versions: one written in Zig and the second one written in C. When compiled, Zig version weights 860 bytes, C version weights 916 bytes.
 
 For an example of larger and cross-platform BOF please refer to our [UDP port scanner](bofs/src/udpScanner.zig).
 
