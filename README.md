@@ -76,8 +76,8 @@ zig test
 You can use qemu to run on foreign CPU architectures, for example:
 
     zig build
-    qemu-aarch64 -L /usr/aarch64-linux-gnu ./zig-out/bin/cli4bofs_lin_aarch64 zig-out/bin/test_obj0.elf.aarch64.o
-    qemu-arm -L /usr/arm-linux-gnueabihf ./zig-out/bin/cli4bofs_lin_arm zig-out/bin/test_obj0.elf.arm.o
+    qemu-aarch64 -L /usr/aarch64-linux-gnu ./zig-out/bin/cli4bofs zig-out/bin/test_obj0.elf.aarch64.o
+    qemu-arm -L /usr/arm-linux-gnueabihf ./zig-out/bin/cli4bofs zig-out/bin/test_obj0.elf.arm.o
 
 ## Example BOFs
 
@@ -87,8 +87,8 @@ For an example of larger and cross-platform BOF please see our [UDP port scanner
 
 To run a BOF you can use our [cli4bofs](https://github.com/The-Z-Labs/cli4bofs), for example:
 
-    .\zig-out\bin\cli4bofs_win_x64.exe .\zig-out\bin\wWinver.coff.x64.o
-    .\zig-out\bin\cli4bofs_win_x64.exe .\zig-out\bin\udpScanner.coff.x64.o 162.159.200.1-5:123,88
+    .\cli4bofs.exe .\zig-out\bin\wWinver.coff.x64.o
+    .\cli4bofs.exe .\zig-out\bin\udpScanner.coff.x64.o 162.159.200.1-5:123,88
 
 https://github.com/The-Z-Labs/bof-launcher/blob/074d002720702248efd3343fae7fb7501be8fc81/bofs/src/wWinver.zig#L1-L19
 
