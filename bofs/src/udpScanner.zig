@@ -169,7 +169,8 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     const targets_spec = beacon.dataExtract(&parser, &opt_len);
     const sTargets_spec = targets_spec.?[0..@as(usize, @intCast(opt_len - 1))];
 
-    const buf_len = beacon.dataInt(&parser);
+    //const buf_len = beacon.dataInt(&parser);
+    const buf_len = 0;
 
     var payloads_buf: []const u8 = undefined;
     if (buf_len > 0) {

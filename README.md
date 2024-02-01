@@ -18,11 +18,11 @@ We at [Z-Labs](https://z-labs.eu) saw a big potential in BOFs and decided to ext
 - Distributed as a fully standalone library with zero dependency (it does not even use `libc`).
 - Fully integrable with programs written in C/C++ and/or [Zig](https://ziglang.org/) progamming languages.
 - Adds capability to write BOFs in [Zig programming language](https://ziglang.org/) - which is a low-level langauge with a goal of being a "better C". All the features of the language and rich standard library can be used in BOFs (hash maps and other data structures, cross-platform OS layer, http, networking, threading, crypto and more).
-- Asynchronous BOF execution - additional capability to launch more time-consuming BOFs in a separate thread.
-- BOF process injection - additional capability to launch more risky BOFs (i.e. privilege escalation exploits) by injecting it to a new process.
+- Asynchronous BOF execution - capability to launch more time-consuming BOFs in a separate thread.
+- BOF process injection - capability to launch more risky BOFs (i.e. privilege escalation exploits) by injecting it to a new process.
 - Seamless support for either Windows COFF and UNIX/Linux ELF formats.
 - ARM and AARCH64 support on Linux.
-- Used in [cli4bofs tool](https://github.com/The-Z-Labs/cli4bofs) that allows for running BOF files directly from a filesystem.
+- Used in our [cli4bofs tool](https://github.com/The-Z-Labs/cli4bofs) that allows for running BOF files directly from a filesystem.
 - Very flexible and efficient [API](bof-launcher/src/bof_launcher_api.h) allowing for so called BOF chaining.
 
 ## BOF launcher library
@@ -52,7 +52,7 @@ if (output) {
 bofContextRelease(context);
 ```
 
-## Building library
+## Building project
 
 Being a zero-dependency, drop-in C/C++ compiler that supports cross-compilation out-of-the-box, [Zig](https://ziglang.org/) can be used to build this project. To do so [Zig's tarball (master)](https://ziglang.org/download/) needs to be downloaded and dropped in the directory of choice. After adding that directory to the `PATH` environment variable, buliding the whole project is as easy as running:
 
@@ -73,16 +73,16 @@ chmod +x zigupdate.sh; ./zigupdate.sh
 git clone https://github.com/The-Z-Labs/bof-launcher
 cd bof-launcher
 zig build
-zig test
+zig build test
 ```
 
 ## BOF collection
 
-In an addition to the bof-launcher library, we provide [a collection of BOFs](bofs/src) that we have written. We plan to gradually extend this collection. We focus on developing BOFs in Zig language but it is perfectly okay to implement it in C and add it to the collection. To do so, just drop your BOF to `bofs/src` directory and add an entry for it in [bofs/build.zig](https://github.com/The-Z-Labs/bof-launcher/blob/main/bofs/build.zig) file, like that:
+In an addition to the bof-launcher library itself, we provide [a collection of BOFs](bofs/src) that we have authored. We plan to gradually extend this collection. We focus on developing BOFs in Zig language but it is perfectly okay to implement it in C and add it to the collection. To do so, just drop your BOF to `bofs/src` directory and add an entry for it in [bofs/build.zig](https://github.com/The-Z-Labs/bof-launcher/blob/main/bofs/build.zig) file, like that:
 
     .{ .name = "YOUR_BOF_NAME", .formats = &.{.elf, .coff}, .archs = &.{ .x64, .x86 } },
     
-The build system will figure out the file extension and will build it (for all specified architectures) using proper compiler. This way you could also build any 3rd party BOF out there.
+The build system will figure out the file extension and will build it (for all specified architectures) using proper compiler. This way you could also build any 3rd party BOF of choice.
 
 Below you can see one of our BOFs in two versions: one written in Zig and the second one written in C. When compiled, Zig version weights 860 bytes, C version weights 916 bytes.
 

