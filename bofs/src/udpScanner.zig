@@ -11,6 +11,7 @@ const Payload = struct {
     data: []u8,
 };
 
+const builtin_major_ports: []const u8 = "53,161,137,427";
 const builtin_payloads: []const u8 =
     \\53,69,135,1761 dnsReq 000010000000000000000000
     \\161,260,3401 snmpGetReq 3082002f02010004067075626c6963a082002002044c33a756020100020100308200103082000c06082b060102010105000500
@@ -146,14 +147,18 @@ fn extractIPs(allocator: mem.Allocator, ip_spec: []const u8) ![][]const u8 {
 }
 
 /// Arguments:
-/// type: string; value: <target_specification:port_specification>
-/// type: integer; value: [udpProbesLen]
-/// type: string; value: [udpProbesPtr]
-/// Example runs:
-/// udpScanner 192.168.0.1:21,80 3200 MEMORY_ADDRESS
-/// udpScanner 192.168.0.1:80-85
-/// udpScanner 102.168.1.1-2:22 64 MEMORY_ADDRESS
-/// udpScanner 102.168.1.1-32:22-32,427
+/// type: string (IP part is mandatory); value: <target_specification[:port_specification]>
+/// type: integer (optional); value: [udpProbesLen]
+/// type: string (optional); value: [udpProbesPtr]
+/// BOF invocation:
+/// udpScanner str(192.168.0.1:21,80) int(3200) str(MEMORY_ADDRESS)
+/// udpScanner str(192.168.0.1)
+/// udpScanner str(102.168.1.1-2) int(64) str(MEMORY_ADDRESS)
+/// udpScanner str(102.168.1.1-32:427)
+/// Example run via cli4bofs:
+/// cli4bofs exec udpScanner 102.168.1.31
+/// cli4bofs exec udpScanner 102.168.1.1-32:161
+/// cli4bofs exec udpScanner 102.168.1.1-32:22-32,427 file:/tmp/udpProbes
 pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     if (args_len == 0) {
         _ = beacon.printf(0, "Usage: udpScanner <str:targetSpec:portSpec> [int:udpProbesLen str:udpProbesPtr]\n");
@@ -198,7 +203,13 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     defer allocator.free(sIPs);
 
     // ports to scan
-    const sPorts = extractPorts(allocator, sPort_spec) catch return 1;
+    var sPorts: []u16 = undefined;
+    // if no ports specification is provided, scan major ports with builtin UDP probes
+    if (sPort_spec.len == 0) {
+        sPorts = extractPorts(allocator, builtin_major_ports) catch return 1;
+    } else {
+        sPorts = extractPorts(allocator, sPort_spec) catch return 1;
+    }
     defer allocator.free(sPorts);
 
     // Creating socket
