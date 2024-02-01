@@ -11,7 +11,12 @@ const Payload = struct {
     data: []u8,
 };
 
-const sample_payloads: []const u8 = "53,69,135,1761 DNSStatusRequest \x00\x00\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+const builtin_payloads: []const u8 =
+    \\53,69,135,1761 dnsReq 000010000000000000000000
+    \\161,260,3401 snmpGetReq 3082002f02010004067075626c6963a082002002044c33a756020100020100308200103082000c06082b060102010105000500
+    \\137 nbStat 80f00010000100000000000020434b4141414141414141414141414141414141414141414141414141414141410000210001
+    \\427 srvLoc 0201000036200000000000010002656e00000015736572766963653a736572766963652d6167656e74000764656661756c7400000000
+;
 
 fn parseRawPayloads(allocator: mem.Allocator, payloads_buf: []const u8) ![]Payload {
     var list = std.ArrayList(Payload).init(allocator);
@@ -35,9 +40,9 @@ fn parseRawPayloads(allocator: mem.Allocator, payloads_buf: []const u8) ![]Paylo
 
         // get data
         const data_spec = iter.next() orelse return error.BadData;
-        const data = try allocator.alloc(u8, data_spec.len);
+        var data = try allocator.alloc(u8, data_spec.len / 2);
         errdefer allocator.free(data);
-        @memcpy(data, data_spec);
+        data = try fmt.hexToBytes(data, data_spec);
 
         // adding payload to the list
         try list.append(.{
@@ -142,44 +147,48 @@ fn extractIPs(allocator: mem.Allocator, ip_spec: []const u8) ![][]const u8 {
 
 /// Arguments:
 /// type: string; value: <target_specification:port_specification>
-/// type: integer; value: <payloads_len>
-/// type: string; value: <payloads_buf address>
+/// type: integer; value: [udpProbesLen]
+/// type: string; value: [udpProbesPtr]
 /// Example runs:
-/// udpScanner 192.168.0.1:21,80
+/// udpScanner 192.168.0.1:21,80 3200 MEMORY_ADDRESS
 /// udpScanner 192.168.0.1:80-85
-/// udpScanner 102.168.1.1-2:22
+/// udpScanner 102.168.1.1-2:22 64 MEMORY_ADDRESS
 /// udpScanner 102.168.1.1-32:22-32,427
 pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     if (args_len == 0) {
-        _ = beacon.printf(0, "Usage: cUDPscan <IPs>:<ports> <file:filename>\n");
+        _ = beacon.printf(0, "Usage: udpScanner <str:targetSpec:portSpec> [int:udpProbesLen str:udpProbesPtr]\n");
         return 1;
     }
 
+    var payloads_buf: []const u8 = undefined;
     var opt_len: i32 = 0;
+    const allocator = std.heap.page_allocator;
     var parser = beacon.datap{};
 
-    //var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    //defer _ = gpa.deinit();
-    //const allocator = gpa.allocator();
-    const allocator = std.heap.page_allocator;
-
-    beacon.dataParse(&parser, args, args_len);
     debugPrint("parser: {any}\n", .{parser});
 
+    // parse 1st (mandatory) argument:
+    beacon.dataParse(&parser, args, args_len);
     const targets_spec = beacon.dataExtract(&parser, &opt_len);
     const sTargets_spec = targets_spec.?[0..@as(usize, @intCast(opt_len - 1))];
 
-    //const buf_len = beacon.dataInt(&parser);
-    const buf_len = 0;
+    debugPrint("args_len: {d}; opt_len: {d}\n", .{ args_len, opt_len });
 
-    var payloads_buf: []const u8 = undefined;
-    if (buf_len > 0) {
+    // verify if additional (optional) arguments are provided and if so process it:
+    if (args_len - 8 > opt_len) {
+        const buf_len = beacon.dataInt(&parser);
+
         const buf_ptr = beacon.dataExtract(&parser, &opt_len);
         const sBuf_ptr = buf_ptr.?[0..@as(usize, @intCast(opt_len - 1))];
-        payloads_buf = @as([*]u8, @ptrFromInt(mem.readInt(usize, sBuf_ptr[0..@sizeOf(usize)], .little)))[0..@as(usize, @intCast(buf_len))];
-    } else payloads_buf = sample_payloads;
 
-    // spliting arguemnts to IPs and ports parts
+        payloads_buf = @as([*]u8, @ptrFromInt(mem.readInt(usize, sBuf_ptr[0..@sizeOf(usize)], .little)))[0..@as(usize, @intCast(buf_len))];
+    } else {
+        payloads_buf = builtin_payloads;
+    }
+
+    debugPrint("UDP probes:\n {s}\n", .{payloads_buf});
+
+    // spliting IP:port specification argument to IPs and ports parts
     var iter = mem.split(u8, sTargets_spec, ":");
     const sIP_spec = iter.next() orelse unreachable;
     const sPort_spec = iter.next() orelse unreachable;
@@ -257,7 +266,8 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
 
     loop: while (t2 - t0 < timeout) : (t2 = @as(u64, @bitCast(std.time.milliTimestamp()))) {
         const rlen = os.recvfrom(fd, &answer_buf, 0, &sa.any, &sl) catch |err| {
-            debugPrint("error {s}\n", .{@errorName(err)});
+            //debugPrint("error {s}\n", .{@errorName(err)});
+            _ = @errorName(err);
             continue :loop;
         };
 
