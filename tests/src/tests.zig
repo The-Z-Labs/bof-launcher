@@ -459,7 +459,6 @@ test "bof-launcher.udpScanner" {
 
         args.begin();
         try args.add("127.0.0.1:1");
-        try args.add("i:0");
         args.end();
 
         const context = try object.run(args.getBuffer());
@@ -472,7 +471,6 @@ test "bof-launcher.udpScanner" {
 
         args.begin();
         try args.add("127-0.0.1:1"); // bad data
-        try args.add("i:0");
         args.end();
 
         const context = try object.run(args.getBuffer());
