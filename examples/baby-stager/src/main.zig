@@ -260,6 +260,15 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
             };
         } else if (std.mem.eql(u8, cmd_prefix, "cmd")) {
             std.log.info("Executing builtin command: {s}", .{cmd_name});
+
+            if (std.mem.eql(u8, cmd_name, "release_persistent_bofs")) {
+                var it = state.persistent_bofs.valueIterator();
+                while (it.next()) |v| {
+                    const bof_object = v.*;
+                    bof_object.release();
+                }
+                state.persistent_bofs.clearAndFree();
+            }
         }
     }
 }
