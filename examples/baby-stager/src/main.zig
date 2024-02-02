@@ -114,6 +114,8 @@ const State = struct {
     fn deinit(state: *State) void {
         state.http_client.deinit();
         state.heartbeat_header.deinit();
+        state.pending_bofs.deinit();
+        state.* = undefined;
     }
 };
 
@@ -123,8 +125,6 @@ const PendingBof = struct {
 };
 
 fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.json.Value) !void {
-    const request_id = root.object.get("id").?.string;
-
     const bof_args = if (root.object.get("args")) |value| bof_args: {
         const len = try state.base64_decoder.calcSizeForSlice(value.string);
         const bof_args = try allocator.alloc(u8, len);
@@ -177,7 +177,7 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
     if (bof_context) |context| {
         try state.pending_bofs.append(.{
             .context = context,
-            .request_id = try allocator.dupe(u8, request_id),
+            .request_id = try allocator.dupe(u8, root.object.get("id").?.string),
         });
     } else bof_object.release();
 }
