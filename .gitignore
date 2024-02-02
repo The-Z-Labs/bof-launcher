@@ -10,6 +10,7 @@
 !*.h
 !*.asm
 !*.bat
+!*.py
 !Makefile
 !LICENSE*
 

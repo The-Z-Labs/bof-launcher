@@ -883,7 +883,7 @@ const Bof = struct {
 };
 
 const BofPool = struct {
-    const max_num_bofs = 64;
+    const max_num_bofs = 1024;
 
     bofs: []Bof,
     generations: []u16,

