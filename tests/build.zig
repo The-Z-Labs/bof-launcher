@@ -28,7 +28,9 @@ pub fn runTests(
     tests.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
     tests.step.dependOn(b.getInstallStep());
 
-    return b.addRunArtifact(tests);
+    const run_step = b.addRunArtifact(tests);
+    run_step.skip_foreign_checks = true;
+    return run_step;
 }
 
 pub fn buildTestBofs(

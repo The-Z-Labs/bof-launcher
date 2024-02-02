@@ -142,7 +142,7 @@ def heartbeat():
         resp['path'] = bofsRootDir + name + "." + os + "." + arch + ".o"
 
     header = cmdData['header']
-    _, args_spec = header.split(':')
+    args_spec = header.split(':')[1]
 
     # check if 'header' contains buffer:
     for c in args_spec:
