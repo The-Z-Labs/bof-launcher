@@ -159,15 +159,23 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
     const bof_object = if (is_persistent) blk: {
         const hash = std.hash.XxHash64.hash(123, bof_content);
 
-        if (state.persistent_bofs.get(hash)) |existing_bof| break :blk existing_bof;
+        if (state.persistent_bofs.get(hash)) |existing_bof| {
+            std.log.info("Re-using existing persistent BOF (hash: 0x{x})", .{hash});
+            break :blk existing_bof;
+        }
 
         const new_bof = try bof.Object.initFromMemory(bof_content);
         errdefer new_bof.release();
 
         try state.persistent_bofs.put(hash, new_bof);
 
+        std.log.info("Loaded new persistent BOF (hash: 0x{x})", .{hash});
         break :blk new_bof;
-    } else try bof.Object.initFromMemory(bof_content);
+    } else blk: {
+        const new_bof = try bof.Object.initFromMemory(bof_content);
+        std.log.info("Loaded new non-persistent BOF", .{});
+        break :blk new_bof;
+    };
     errdefer if (!is_persistent) bof_object.release();
 
     var bof_context: ?*bof.Context = null;
