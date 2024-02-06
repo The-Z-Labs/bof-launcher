@@ -64,17 +64,17 @@ pub fn build(
     // Get directory with `windows.h` (and others windows headers) from zig installation.
     const windows_include_dir = std.fs.path.join(
         b.allocator,
-        &.{ std.fs.path.dirname(b.zig_exe).?, "/lib/libc/include/any-windows-any" },
+        &.{ std.fs.path.dirname(b.graph.zig_exe).?, "/lib/libc/include/any-windows-any" },
     ) catch unreachable;
 
     const linux_libc_include_dir = std.fs.path.join(
         b.allocator,
-        &.{ std.fs.path.dirname(b.zig_exe).?, "/lib/libc/include/generic-glibc" },
+        &.{ std.fs.path.dirname(b.graph.zig_exe).?, "/lib/libc/include/generic-glibc" },
     ) catch unreachable;
 
     const linux_any_include_dir = std.fs.path.join(
         b.allocator,
-        &.{ std.fs.path.dirname(b.zig_exe).?, "/lib/libc/include/any-linux-any" },
+        &.{ std.fs.path.dirname(b.graph.zig_exe).?, "/lib/libc/include/any-linux-any" },
     ) catch unreachable;
 
     var bofsList = std.ArrayList(Bof).init(b.allocator);
@@ -187,7 +187,7 @@ pub fn build(
                                 b.allocator,
                                 "",
                                 &.{
-                                    std.fs.path.dirname(b.zig_exe).?,
+                                    std.fs.path.dirname(b.graph.zig_exe).?,
                                     "/lib/libc/include/",
                                     @tagName(target.result.cpu.arch),
                                     "-linux-",
