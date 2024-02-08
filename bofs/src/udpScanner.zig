@@ -1,3 +1,43 @@
+///name: "udpScanner"
+///description: "Universal UDP port sweeper."
+///author: "Z-Labs"
+///tags: ['net-recon']
+///OS: "cross"
+///header: ['thread', 'zib']
+///sources:
+///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/udpScanner.zig'
+///usage: '
+///    udpScanner str:IPSpec[:portSpec] [int:BUF_LEN str:BUF_MEMORY_ADDR]
+///
+///Arguments:
+///
+/// str:IPSpec[:portSpec]    ex: 192.168.0.1; 10.0.0-255.1-254; 192.168.0.1:161,427,10-15
+/// [int:BUF_LEN]            length of UDP probes buffer
+/// [str:BUF_MEMORY_ADDR]    pointer to the buffer containing one or more UDP probe(s). One probe per line is allowed.
+///
+///UDP probe syntax (with example):
+///
+///<portSpec> <probeName> <hexadecimal encoded probe data>\n
+///53,69,135,1761 dnsReq 000010000000000000000000'
+///
+///examples: '
+/// Scanning provided IP range on most common UDP ports with builtin UDP probes:
+///
+///   udpScanner str:192.168.0.1-32
+///
+/// Scanning only cherry-picked ports (if no builtin UDP probe for the chosen port is available then length and content of the packet payload will be randomly generated:
+///
+///   udpScanner str:192.168.0.1:123,161
+///   udpScanner str:102.168.1.1-128:53,427,137
+///   udpScanner str:192.168.0.1:100-200
+///
+/// Example of running with provided UDP probes:
+///
+///   udpScanner str:192.168.0.1-32 int:BUF_LEN str:BUF_MEMORY_ADDRESS
+///
+/// Example of running udpScanner using cli4bofs tool and with UDP probes provided from the file:
+///
+///   cli4bofs exec udpScanner 102.168.1.1-4:161,427 file:/tmp/udpPayloads'
 const std = @import("std");
 const beacon = @import("bof_api").beacon;
 const os = @import("bof_api").os;
@@ -146,22 +186,9 @@ fn extractIPs(allocator: mem.Allocator, ip_spec: []const u8) ![][]const u8 {
     return list.toOwnedSlice();
 }
 
-/// Arguments:
-/// type: string (IP part is mandatory); value: <target_specification[:port_specification]>
-/// type: integer (optional); value: [udpProbesLen]
-/// type: string (optional); value: [udpProbesPtr]
-/// BOF invocation:
-/// udpScanner str(192.168.0.1:21,80) int(3200) str(MEMORY_ADDRESS)
-/// udpScanner str(192.168.0.1)
-/// udpScanner str(102.168.1.1-2) int(64) str(MEMORY_ADDRESS)
-/// udpScanner str(102.168.1.1-32:427)
-/// Example run via cli4bofs:
-/// cli4bofs exec udpScanner 102.168.1.31
-/// cli4bofs exec udpScanner 102.168.1.1-32:161
-/// cli4bofs exec udpScanner 102.168.1.1-32:22-32,427 file:/tmp/udpProbes
 pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     if (args_len == 0) {
-        _ = beacon.printf(0, "Usage: udpScanner <str:targetSpec:portSpec> [int:udpProbesLen str:udpProbesPtr]\n");
+        _ = beacon.printf(0, "Usage: udpScanner str:IPSpec[:portSpec] [int:BUF_LEN str:BUF_MEMORY_ADDR]\n");
         return 1;
     }
 
