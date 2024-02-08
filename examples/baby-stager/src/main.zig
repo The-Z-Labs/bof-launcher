@@ -88,7 +88,7 @@ const State = struct {
             defer allocator.free(authz_b64);
 
             _ = std.base64.Base64Encoder.encode(&base64_encoder, authz_b64, authz);
-            try heartbeat_header.append("authorization", authz_b64);
+            try heartbeat_header.append("Authorization", authz_b64);
         }
 
         const http_client: std.http.Client = .{
@@ -261,8 +261,8 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
                     .location = .{ .uri = state.heartbeat_uri },
                     .response_strategy = .none,
                 };
-                try options.headers.append("authorization", request_id);
-                try options.headers.append("user-agent", "1"); // error code
+                try options.headers.append("Authorization", request_id);
+                try options.headers.append("User-Agent", "1"); // error code
                 var result = try state.http_client.fetch(allocator, options);
                 defer result.deinit();
             };
@@ -301,8 +301,8 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
 
                 var headers = std.http.Headers.init(allocator);
                 defer headers.deinit();
-                try headers.append("content-type", "text/plain");
-                try headers.append("authorization", pending_bof.request_id);
+                try headers.append("Content-Type", "text/plain");
+                try headers.append("Authorization", pending_bof.request_id);
 
                 var request = try state.http_client.open(.POST, state.heartbeat_uri, headers, .{});
                 defer request.deinit();

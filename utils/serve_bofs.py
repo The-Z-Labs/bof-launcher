@@ -103,13 +103,13 @@ def addTask():
 def heartbeat():
 
     if request.method == 'POST':
-        reqID = request.headers.get('authorization')
+        reqID = request.headers.get('Authorization')
         data = base64.b64decode(request.get_data())
         outputDict[reqID] = data
         return ""
 
     # get arch and os from 'Authorization' header
-    authz = base64.b64decode(request.headers.get('authorization')).decode('utf-8')
+    authz = base64.b64decode(request.headers.get('Authorization')).decode('utf-8')
     if not authz:
         return "go away"
 
