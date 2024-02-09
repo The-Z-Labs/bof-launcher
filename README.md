@@ -27,7 +27,7 @@ We at [Z-Labs](https://z-labs.eu) saw a big potential in BOFs and decided to ext
 
 ## BOF launcher library
 
-We provide open-source, standalone library that can be used to execute any BOF built with supported toolchain (`clang`, `zig cc`, `zig`, `fasm`). On Windows we support x86 and x86_64 architectures, on Linux we support x86, x86_64, ARM and AArch64 architectures. Our library exposes both [C API](bof-launcher/src/bof_launcher_api.h) and [Zig API](bof-launcher/src/bof_launcher_api.zig). It parses COFF/ELF object data, does the relocations, loads all needed symbols and handles BOF output for you. See the API and tests for details.
+We provide open-source, standalone library that can be used to execute any BOF built with supported toolchain (`cl`, `clang`, `zig cc`, `zig`, `fasm`). On Windows we support x86 and x86_64 architectures, on Linux we support x86, x86_64, ARM and AArch64 architectures. Our library exposes both [C API](bof-launcher/src/bof_launcher_api.h) and [Zig API](bof-launcher/src/bof_launcher_api.zig). It parses COFF/ELF object data, does the relocations, loads all needed symbols and handles BOF output for you. See the API and tests for details.
 
 Basic C API usage:
 ```c
@@ -84,13 +84,60 @@ In an addition to the bof-launcher library itself, we provide [a collection of B
     
 The build system will figure out the file extension and will build it (for all specified architectures) using proper compiler. This way you could also build any 3rd party BOF of choice.
 
-Below you can see one of our BOFs in two versions: one written in Zig and the second one written in C. When compiled, Zig version weights 860 bytes, C version weights 916 bytes.
+Below you can see one of our BOFs in two versions: one written in Zig and the second one written in C. When compiled, Zig version weights **only 574 bytes**, C version weights 923 bytes.
 
 For an example of larger and cross-platform BOF please refer to our [UDP port scanner](bofs/src/udpScanner.zig).
 
-https://github.com/The-Z-Labs/bof-launcher/blob/074d002720702248efd3343fae7fb7501be8fc81/bofs/src/wWinver.zig#L1-L19
+```zig
+const w32 = @import("bof_api").win32;
+const beacon = @import("bof_api").beacon;
 
-https://github.com/The-Z-Labs/bof-launcher/blob/06e7d8c4cf941c22557eca5d97dcab6eab038003/bofs/src/wWinverC.c#L1-L21
+pub extern fn @"ntdll$RtlGetVersion"(
+    lpVersionInformation: *w32.RTL_OSVERSIONINFOW,
+) callconv(w32.WINAPI) w32.NTSTATUS;
+
+const RtlGetVersion = @"ntdll$RtlGetVersion";
+
+pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
+    var version_info: w32.OSVERSIONINFOW = undefined;
+    version_info.dwOSVersionInfoSize = @sizeOf(@TypeOf(version_info));
+
+    if (RtlGetVersion(&version_info) != .SUCCESS)
+        return 1;
+
+    _ = beacon.printf(
+        0,
+        "Windows version: %d.%d, OS build number: %d\n",
+        version_info.dwMajorVersion,
+        version_info.dwMinorVersion,
+        version_info.dwBuildNumber,
+    );
+    return 0;
+}
+```
+```c
+#include <windows.h>
+#include "beacon.h"
+
+NTSYSAPI NTSTATUS NTAPI NTDLL$RtlGetVersion(OSVERSIONINFOW* lpVersionInformation);
+
+unsigned char go(unsigned char* arg_data, int arg_len) {
+    OSVERSIONINFOW version_info;
+    version_info.dwOSVersionInfoSize = sizeof(version_info);
+
+    if (NTDLL$RtlGetVersion(&version_info) != 0)
+        return 1;
+
+    BeaconPrintf(
+        0,
+        "Windows version: %d.%d, OS build number: %d\n",
+        version_info.dwMajorVersion,
+        version_info.dwMinorVersion,
+        version_info.dwBuildNumber
+    );
+    return 0;
+}
+```
 
 ## Running BOFs from filesystem
 

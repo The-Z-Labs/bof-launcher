@@ -1,11 +1,17 @@
 const w32 = @import("bof_api").win32;
 const beacon = @import("bof_api").beacon;
 
+pub extern fn @"ntdll$RtlGetVersion"(
+    lpVersionInformation: *w32.RTL_OSVERSIONINFOW,
+) callconv(w32.WINAPI) w32.NTSTATUS;
+
+const RtlGetVersion = @"ntdll$RtlGetVersion";
+
 pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
     var version_info: w32.OSVERSIONINFOW = undefined;
     version_info.dwOSVersionInfoSize = @sizeOf(@TypeOf(version_info));
 
-    if (w32.RtlGetVersion(&version_info) != .SUCCESS)
+    if (RtlGetVersion(&version_info) != .SUCCESS)
         return 1;
 
     _ = beacon.printf(
