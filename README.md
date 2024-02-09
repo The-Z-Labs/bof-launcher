@@ -92,7 +92,7 @@ For an example of larger and cross-platform BOF please refer to our [UDP port sc
 const w32 = @import("bof_api").win32;
 const beacon = @import("bof_api").beacon;
 
-pub extern fn @"ntdll$RtlGetVersion"(
+extern fn @"ntdll$RtlGetVersion"(
     lpVersionInformation: *w32.RTL_OSVERSIONINFOW,
 ) callconv(w32.WINAPI) w32.NTSTATUS;
 
