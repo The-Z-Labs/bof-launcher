@@ -3,8 +3,8 @@ const assert = std.debug.assert;
 
 const pubapi = @import("bof_launcher_api.zig");
 
-pub const std_options = struct {
-    pub const log_level: std.log.Level = std.log.default_level;
+pub const std_options = .{
+    .log_level = std.log.default_level,
 };
 
 const BofHandle = packed struct(u32) {
@@ -480,7 +480,7 @@ const Bof = struct {
             null,
             (1 + section_headers.items.len) * max_section_size,
             os.PROT.READ | os.PROT.WRITE | os.PROT.EXEC,
-            os.MAP.PRIVATE | os.MAP.ANONYMOUS,
+            .{ .TYPE = .PRIVATE, .ANONYMOUS = true },
             -1,
             0,
         );
@@ -1212,11 +1212,7 @@ fn threadFuncCloneProcessLinux(bof: *Bof, arg_data: ?[]u8, context: *BofContext)
         // child process
         bof.run(context, arg_data);
 
-        const file = std.fs.File{
-            .handle = pipe[1],
-            .capable_io_mode = .blocking,
-            .intended_io_mode = .blocking,
-        };
+        const file = std.fs.File{ .handle = pipe[1] };
         file.writer().writeByte(context.exit_code.load(.SeqCst)) catch @panic("OOM");
 
         var output_len: i32 = undefined;
@@ -1234,11 +1230,7 @@ fn threadFuncCloneProcessLinux(bof: *Bof, arg_data: ?[]u8, context: *BofContext)
     // parent process
     const child_result = std.os.waitpid(pid, 0);
     if (child_result.status == 0) {
-        const file = std.fs.File{
-            .handle = pipe[0],
-            .capable_io_mode = .blocking,
-            .intended_io_mode = .blocking,
-        };
+        const file = std.fs.File{ .handle = pipe[0] };
         const exit_code = file.reader().readByte() catch @panic("OOM");
         _ = context.exit_code.swap(exit_code, .SeqCst);
 
