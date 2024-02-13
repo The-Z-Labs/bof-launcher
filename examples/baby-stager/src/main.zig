@@ -292,7 +292,10 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
         if (pending_bof.context != null and pending_bof.context.?.isRunning()) {
             pending_bof_index += 1;
         } else {
-            const bof_exit_code_or_launcher_error: i32 = if (pending_bof.context) |context| @intCast(context.getExitCode()) else pending_bof.launcher_error_code;
+            const bof_exit_code_or_launcher_error: i32 = if (pending_bof.context) |context|
+                @intCast(context.getExitCode())
+            else
+                pending_bof.launcher_error_code;
 
             const result_str = try generateUserAgentString(allocator, bof_exit_code_or_launcher_error);
             defer allocator.free(result_str);
@@ -308,8 +311,6 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
 
             if (pending_bof.context) |context| {
                 if (context.getOutput()) |output| {
-                    std.log.info("Bof output:\n{s}", .{output});
-
                     const out_b64 = try allocator.alloc(u8, state.base64_encoder.calcSize(output.len));
                     defer allocator.free(out_b64);
 
@@ -320,9 +321,13 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
                     try request.send(.{});
                     try request.writeAll(out_b64);
                     try request.finish();
+
+                    std.log.info("Bof exit code sent: {d}", .{bof_exit_code_or_launcher_error});
+                    std.log.info("Bof output sent:\n{s}", .{output});
                 } else {
-                    // BOF hasn't generated any output, just send the result (always positive or zero) in http headers
                     try request.send(.{});
+
+                    std.log.info("Bof exit code sent: {d}", .{bof_exit_code_or_launcher_error});
                 }
 
                 if (!pending_bof.is_persistent)
@@ -330,9 +335,9 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
 
                 context.release();
             } else {
-                // `context` is null which means that there was an error when launching BOF
-                // just send launcher error code (always negative) in http headers
                 try request.send(.{});
+
+                std.log.info("Bof launcher error code sent: {d}", .{bof_exit_code_or_launcher_error});
             }
             try request.wait();
 
