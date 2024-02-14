@@ -119,22 +119,14 @@ pub fn build(
                     &.{ bof.name, ".", @tagName(format), ".", @tagName(arch), ".o" },
                 );
 
-                const bin_full_bof_name = try std.mem.join(
-                    b.allocator,
-                    "",
-                    &.{ "bin/", full_bof_name },
-                );
+                const bin_full_bof_name = try std.mem.join(b.allocator, "", &.{ "bin/", full_bof_name });
 
                 if (lang == .fasm) {
                     const run_fasm = b.addSystemCommand(&.{
                         thisDir() ++ "/../bin/fasm" ++ if (@import("builtin").os.tag == .windows) ".exe" else "",
                     });
                     run_fasm.addFileArg(.{
-                        .path = try std.mem.join(
-                            b.allocator,
-                            "",
-                            &.{ bof_src_path, ".asm" },
-                        ),
+                        .path = try std.mem.join(b.allocator, "", &.{ bof_src_path, ".asm" }),
                     });
                     const output_path = run_fasm.addOutputFileArg(full_bof_name);
 
@@ -151,11 +143,7 @@ pub fn build(
                     .zig => b.addObject(.{
                         .name = bof.name,
                         .root_source_file = .{
-                            .path = std.mem.join(
-                                b.allocator,
-                                "",
-                                &.{ bof_src_path, ".zig" },
-                            ) catch unreachable,
+                            .path = try std.mem.join(b.allocator, "", &.{ bof_src_path, ".zig" }),
                         },
                         .target = target,
                         .optimize = .ReleaseSmall,
@@ -170,11 +158,7 @@ pub fn build(
                         });
                         obj.addCSourceFile(.{
                             .file = .{
-                                .path = std.mem.join(
-                                    b.allocator,
-                                    "",
-                                    &.{ bof_src_path, ".c" },
-                                ) catch unreachable,
+                                .path = try std.mem.join(b.allocator, "", &.{ bof_src_path, ".c" }),
                             },
                             .flags = &.{ "-DBOF", "-D_GNU_SOURCE" },
                         });
