@@ -157,9 +157,7 @@ pub fn build(
                             .optimize = .ReleaseSmall,
                         });
                         obj.addCSourceFile(.{
-                            .file = .{
-                                .path = try std.mem.join(b.allocator, "", &.{ bof_src_path, ".c" }),
-                            },
+                            .file = .{ .path = try std.mem.join(b.allocator, "", &.{ bof_src_path, ".c" }) },
                             .flags = &.{ "-DBOF", "-D_GNU_SOURCE" },
                         });
                         if (format == .coff) {
