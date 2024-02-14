@@ -16,7 +16,7 @@ const bofs_included_in_launcher = [_]Bof{
     //.{ .name = "adcs_enum_com2", .go = "entry", .dir = "adcs_enum_com2/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
 };
 
-// Additional/3rdparty BOFs for building should be appended below
+// Additional/3rdparty BOFs for building should be added below
 
 //const bofs_my_custom = [_]Bof{
 //    .{ .name = "bof1", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
@@ -61,30 +61,26 @@ const Bof = struct {
     }
 };
 
-pub fn build(
-    b: *std.Build,
-    bof_api_module: *std.Build.Module,
-) !void {
-    // Get directory with `windows.h` (and others windows headers) from zig installation.
+pub fn build(b: *std.Build, bof_api_module: *std.Build.Module) !void {
+    var bofs_to_build = std.ArrayList(Bof).init(b.allocator);
+    defer bofs_to_build.deinit();
+
+    try addBofsToBuild(&bofs_to_build);
+
     const windows_include_dir = try std.fs.path.join(
         b.allocator,
         &.{ std.fs.path.dirname(b.graph.zig_exe).?, "/lib/libc/include/any-windows-any" },
     );
-
     const linux_libc_include_dir = try std.fs.path.join(
         b.allocator,
         &.{ std.fs.path.dirname(b.graph.zig_exe).?, "/lib/libc/include/generic-glibc" },
     );
-
     const linux_any_include_dir = try std.fs.path.join(
         b.allocator,
         &.{ std.fs.path.dirname(b.graph.zig_exe).?, "/lib/libc/include/any-linux-any" },
     );
 
-    var bofs_to_build = std.ArrayList(Bof).init(b.allocator);
-    defer bofs_to_build.deinit();
-
-    try addBofsToBuild(&bofs_to_build);
+    //const doc_file = try std.fs.cwd().openFile("BOF-collection.yaml", .{.mode = .write_only});
 
     for (bofs_to_build.items) |bof| {
         const bof_src_path = try std.mem.join(
@@ -115,36 +111,34 @@ pub fn build(
 
                 const full_bof_name = try std.mem.join(
                     b.allocator,
-                    "",
-                    &.{ bof.name, ".", @tagName(format), ".", @tagName(arch), ".o" },
+                    ".",
+                    &.{ bof.name, @tagName(format), @tagName(arch), "o" },
                 );
 
-                const bin_full_bof_name = try std.mem.join(b.allocator, "", &.{ "bin/", full_bof_name });
+                const bin_full_bof_name = try std.mem.join(b.allocator, "/", &.{ "bin", full_bof_name });
 
                 if (lang == .fasm) {
                     const run_fasm = b.addSystemCommand(&.{
                         thisDir() ++ "/../bin/fasm" ++ if (@import("builtin").os.tag == .windows) ".exe" else "",
                     });
                     run_fasm.addFileArg(.{
-                        .path = try std.mem.join(b.allocator, "", &.{ bof_src_path, ".asm" }),
+                        .path = try std.mem.join(b.allocator, ".", &.{ bof_src_path, "asm" }),
                     });
                     const output_path = run_fasm.addOutputFileArg(full_bof_name);
 
-                    b.getInstallStep().dependOn(
-                        &b.addInstallFile(output_path, bin_full_bof_name).step,
-                    );
+                    b.getInstallStep().dependOn(&b.addInstallFile(output_path, bin_full_bof_name).step);
 
                     continue; // This is all we need to do in case of asm BOF. Continue to the next BOF.
                 }
+
+                const source_file = try std.mem.join(b.allocator, ".", &.{ bof_src_path, @tagName(lang) });
 
                 const target = b.resolveTargetQuery(Bof.getTargetQuery(format, arch));
                 const obj = switch (lang) {
                     .fasm => unreachable,
                     .zig => b.addObject(.{
                         .name = bof.name,
-                        .root_source_file = .{
-                            .path = try std.mem.join(b.allocator, "", &.{ bof_src_path, ".zig" }),
-                        },
+                        .root_source_file = .{ .path = source_file },
                         .target = target,
                         .optimize = .ReleaseSmall,
                     }),
@@ -157,7 +151,7 @@ pub fn build(
                             .optimize = .ReleaseSmall,
                         });
                         obj.addCSourceFile(.{
-                            .file = .{ .path = try std.mem.join(b.allocator, "", &.{ bof_src_path, ".c" }) },
+                            .file = .{ .path = source_file },
                             .flags = &.{ "-DBOF", "-D_GNU_SOURCE" },
                         });
                         if (format == .coff) {
@@ -188,9 +182,7 @@ pub fn build(
                 obj.root_module.strip = true;
                 obj.root_module.unwind_tables = false;
 
-                b.getInstallStep().dependOn(
-                    &b.addInstallFile(obj.getEmittedBin(), bin_full_bof_name).step,
-                );
+                b.getInstallStep().dependOn(&b.addInstallFile(obj.getEmittedBin(), bin_full_bof_name).step);
             }
         }
     }
