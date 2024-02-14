@@ -1,9 +1,4 @@
-// -----------------------------------------------------------------------------
-// BOFs TABLEs
-// -----------------------------------------------------------------------------
-
-// BOFs included with bof-launcher
-const bofs = [_]Bof{
+const bofs_included_in_launcher = [_]Bof{
     .{ .name = "helloBof", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "misc", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "udpScanner", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
@@ -21,9 +16,18 @@ const bofs = [_]Bof{
     //.{ .name = "adcs_enum_com2", .go = "entry", .dir = "adcs_enum_com2/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
 };
 
-// other BOFs for building should be defined here
-// ...
-// -----------------------------------------------------------------------------
+// Additional/3rdparty BOFs for building should be appended below
+
+//const bofs_my_custom = [_]Bof{
+//    .{ .name = "bof1", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+//    .{ .name = "bof2", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+//};
+
+fn addBofsToBuild(bofs_to_build: *std.ArrayList(Bof)) !void {
+    try bofs_to_build.appendSlice(bofs_included_in_launcher[0..]);
+
+    //try bofs_to_build.appendSlice(bofs_my_custom[0..]);
+}
 
 const std = @import("std");
 const Options = @import("../build.zig").Options;
@@ -60,48 +64,42 @@ const Bof = struct {
 pub fn build(
     b: *std.Build,
     bof_api_module: *std.Build.Module,
-) void {
+) !void {
     // Get directory with `windows.h` (and others windows headers) from zig installation.
-    const windows_include_dir = std.fs.path.join(
+    const windows_include_dir = try std.fs.path.join(
         b.allocator,
         &.{ std.fs.path.dirname(b.graph.zig_exe).?, "/lib/libc/include/any-windows-any" },
-    ) catch unreachable;
+    );
 
-    const linux_libc_include_dir = std.fs.path.join(
+    const linux_libc_include_dir = try std.fs.path.join(
         b.allocator,
         &.{ std.fs.path.dirname(b.graph.zig_exe).?, "/lib/libc/include/generic-glibc" },
-    ) catch unreachable;
+    );
 
-    const linux_any_include_dir = std.fs.path.join(
+    const linux_any_include_dir = try std.fs.path.join(
         b.allocator,
         &.{ std.fs.path.dirname(b.graph.zig_exe).?, "/lib/libc/include/any-linux-any" },
-    ) catch unreachable;
+    );
 
-    var bofsList = std.ArrayList(Bof).init(b.allocator);
-    defer bofsList.deinit();
+    var bofs_to_build = std.ArrayList(Bof).init(b.allocator);
+    defer bofs_to_build.deinit();
 
-    // appending BOFs included with bof-launcher
-    for (bofs) |bof| {
-        bofsList.append(bof) catch unreachable;
-    }
+    try addBofsToBuild(&bofs_to_build);
 
-    // additional/3rdparty BOFs for building should be appended here
-    // ...
-
-    for (bofsList.items) |bof| {
-        const bof_src_path = std.mem.join(
+    for (bofs_to_build.items) |bof| {
+        const bof_src_path = try std.mem.join(
             b.allocator,
             "",
             &.{ thisDir(), "/src/", if (bof.dir) |dir| dir else "", if (bof.go) |go| go else bof.name },
-        ) catch unreachable;
+        );
 
         const lang: BofLang = blk: {
             std.fs.accessAbsolute(
-                std.mem.join(b.allocator, "", &.{ bof_src_path, ".zig" }) catch unreachable,
+                try std.mem.join(b.allocator, "", &.{ bof_src_path, ".zig" }),
                 .{},
             ) catch {
                 std.fs.accessAbsolute(
-                    std.mem.join(b.allocator, "", &.{ bof_src_path, ".asm" }) catch unreachable,
+                    try std.mem.join(b.allocator, "", &.{ bof_src_path, ".asm" }),
                     .{},
                 ) catch break :blk .c;
 
@@ -115,28 +113,28 @@ pub fn build(
                 if (format == .coff and arch == .aarch64) continue;
                 if (format == .coff and arch == .arm) continue;
 
-                const full_bof_name = std.mem.join(
+                const full_bof_name = try std.mem.join(
                     b.allocator,
                     "",
                     &.{ bof.name, ".", @tagName(format), ".", @tagName(arch), ".o" },
-                ) catch unreachable;
+                );
 
-                const bin_full_bof_name = std.mem.join(
+                const bin_full_bof_name = try std.mem.join(
                     b.allocator,
                     "",
                     &.{ "bin/", full_bof_name },
-                ) catch unreachable;
+                );
 
                 if (lang == .fasm) {
                     const run_fasm = b.addSystemCommand(&.{
                         thisDir() ++ "/../bin/fasm" ++ if (@import("builtin").os.tag == .windows) ".exe" else "",
                     });
                     run_fasm.addFileArg(.{
-                        .path = std.mem.join(
+                        .path = try std.mem.join(
                             b.allocator,
                             "",
                             &.{ bof_src_path, ".asm" },
-                        ) catch unreachable,
+                        ),
                     });
                     const output_path = run_fasm.addOutputFileArg(full_bof_name);
 
@@ -183,7 +181,7 @@ pub fn build(
                         if (format == .coff) {
                             obj.addIncludePath(.{ .path = windows_include_dir });
                         } else if (format == .elf) {
-                            const linux_include_dir = std.mem.join(
+                            const linux_include_dir = try std.mem.join(
                                 b.allocator,
                                 "",
                                 &.{
@@ -193,7 +191,7 @@ pub fn build(
                                     "-linux-",
                                     @tagName(target.result.abi),
                                 },
-                            ) catch unreachable;
+                            );
                             obj.addIncludePath(.{ .path = linux_include_dir });
                             obj.addIncludePath(.{ .path = linux_libc_include_dir });
                             obj.addIncludePath(.{ .path = linux_any_include_dir });

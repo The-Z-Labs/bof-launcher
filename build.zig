@@ -77,7 +77,7 @@ pub fn build(b: *std.Build) void {
     //
     // BOFs
     //
-    @import("bofs/build.zig").build(b, bof_api_module);
+    @import("bofs/build.zig").build(b, bof_api_module) catch unreachable;
 }
 
 inline fn thisDir() []const u8 {
