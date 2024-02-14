@@ -157,7 +157,7 @@ To run it on foreign CPU architectures, you can use [QEMU](https://www.qemu.org/
 
 ### Minimal Windows-based C application that uses bof-launcher
 
-*bof-launcher's "Hello world"*
+*bof-launcher's "Hello world" program*
 
 [bof-minimal_win_x64](https://github.com/The-Z-Labs/bof-minimal_win_x64) - if you're new to `bof-launcher`, be sure to check out this repo and read this [blog post](https://blog.z-labs.eu/2024/02/08/bof-launcher.html).
 
