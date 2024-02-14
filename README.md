@@ -155,13 +155,19 @@ To run it on foreign CPU architectures, you can use [QEMU](https://www.qemu.org/
 
 ## Example usage scenarios
 
-### Run BOF from disk
+### Minimal Windows-based C application that uses bof-launcher
+
+*bof-launcher's "Hello world"*
+
+[bof-minimal_win_x64](https://github.com/The-Z-Labs/bof-minimal_win_x64) - if you're new to `bof-launcher`, be sure to check out this repo and read this [blog post](https://blog.z-labs.eu/2024/02/08/bof-launcher.html).
+
+### Running BOFs from disk
 
 *Rapid launching, testing and debugging BOFs*
 
-[cli4bofs](https://github.com/The-Z-Labs/cli4bofs) - standalone command line program for running BOFs. Handy also during testing/verifying 3rd BOFs or during developing/debugging BOFs. Does not require [Cobalt Strike's Beacon](https://www.cobaltstrike.com/) and its aggresor scripts to run.
+[cli4bofs](https://github.com/The-Z-Labs/cli4bofs) - standalone command line program for running BOFs directly from a filesystem. Handy also during testing/verifying 3rd BOFs or during developing/debugging BOFs. Does not require [Cobalt Strike's Beacon](https://www.cobaltstrike.com/) and its aggresor scripts to run.
 
-### Sample C application
+### Examples of using bof-launcher from C
 
 *Integrating bof-launcher in program written in C*
 
@@ -171,4 +177,4 @@ To run it on foreign CPU architectures, you can use [QEMU](https://www.qemu.org/
 
 *Implementing custom, cross-platform C2 solutions capable of running BOFs*
 
-[baby-stager](examples/baby-stager) - example of simple C2 solution that uses BOFs as its post-exploitation modules and communicates over HTTP with the C2 server.
+[baby-stager](examples/baby-stager) - example of simple, cross-platform C2 implant that uses BOFs as its post-exploitation modules and communicates over HTTP with the C2 server.
