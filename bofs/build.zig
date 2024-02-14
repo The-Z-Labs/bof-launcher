@@ -104,6 +104,8 @@ pub fn build(b: *std.Build, bof_api_module: *std.Build.Module) !void {
             break :blk .zig;
         };
 
+        const source_file = try std.mem.join(b.allocator, ".", &.{ bof_src_path, @tagName(lang) });
+
         for (bof.formats) |format| {
             for (bof.archs) |arch| {
                 if (format == .coff and arch == .aarch64) continue;
@@ -130,8 +132,6 @@ pub fn build(b: *std.Build, bof_api_module: *std.Build.Module) !void {
 
                     continue; // This is all we need to do in case of asm BOF. Continue to the next BOF.
                 }
-
-                const source_file = try std.mem.join(b.allocator, ".", &.{ bof_src_path, @tagName(lang) });
 
                 const target = b.resolveTargetQuery(Bof.getTargetQuery(format, arch));
                 const obj = switch (lang) {
