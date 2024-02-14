@@ -78,9 +78,9 @@ zig build
 zig build test
 ```
 
-## BOF collection
+## Z-Labs BOFs collection
 
-In an addition to the bof-launcher library itself, we provide [a collection of BOFs](bofs/src) that we have authored. We plan to gradually extend this collection. We focus on developing BOFs in Zig language but it is perfectly okay to implement it in C and add it to the collection. To do so, just drop your BOF to `bofs/src` directory and add an entry for it in [bofs/build.zig](https://github.com/The-Z-Labs/bof-launcher/blob/main/bofs/build.zig) file, like that:
+In an addition to the bof-launcher library itself, we provide [a collection of BOFs](bofs/) that we have authored. We plan to gradually extend this collection. We focus on developing BOFs in Zig language but it is perfectly okay to implement it in C and add it to the collection. To do so, just drop your BOF to `bofs/src` directory and add an entry for it in [bofs/build.zig](https://github.com/The-Z-Labs/bof-launcher/blob/main/bofs/build.zig) file, like that:
 
     .{ .name = "YOUR_BOF_NAME", .formats = &.{.elf, .coff}, .archs = &.{ .x64, .x86 } },
     
@@ -157,7 +157,7 @@ To run it on foreign CPU architectures, you can use [QEMU](https://www.qemu.org/
 
 ### Minimal Windows-based C application that uses bof-launcher
 
-*bof-launcher's "Hello world"*
+*bof-launcher's "Hello world" program*
 
 [bof-minimal_win_x64](https://github.com/The-Z-Labs/bof-minimal_win_x64) - if you're new to `bof-launcher`, be sure to check out this repo and read this [blog post](https://blog.z-labs.eu/2024/02/08/bof-launcher.html).
 
@@ -167,7 +167,7 @@ To run it on foreign CPU architectures, you can use [QEMU](https://www.qemu.org/
 
 [cli4bofs](https://github.com/The-Z-Labs/cli4bofs) - standalone command line program for running BOFs directly from a filesystem. Handy also during testing/verifying 3rd BOFs or during developing/debugging BOFs. Does not require [Cobalt Strike's Beacon](https://www.cobaltstrike.com/) and its aggresor scripts to run.
 
-### Examples of using bof-launcher from C
+### Examples of using bof-launcher in C
 
 *Integrating bof-launcher in program written in C*
 
