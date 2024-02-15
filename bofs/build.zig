@@ -32,7 +32,7 @@ fn addBofsToBuild(bofs_to_build: *std.ArrayList(Bof)) !void {
 const std = @import("std");
 const Options = @import("../build.zig").Options;
 
-const BofLang = enum { zig, c, fasm };
+const BofLang = enum { zig, c, @"asm" };
 const BofFormat = enum { coff, elf };
 const BofArch = enum { x64, x86, aarch64, arm };
 
@@ -67,6 +67,8 @@ pub fn build(b: *std.Build, bof_api_module: *std.Build.Module) !void {
 
     try addBofsToBuild(&bofs_to_build);
 
+    try generateBofCollectionYaml(b.allocator, bofs_to_build);
+
     const windows_include_dir = try std.fs.path.join(
         b.allocator,
         &.{ std.fs.path.dirname(b.graph.zig_exe).?, "/lib/libc/include/any-windows-any" },
@@ -80,42 +82,8 @@ pub fn build(b: *std.Build, bof_api_module: *std.Build.Module) !void {
         &.{ std.fs.path.dirname(b.graph.zig_exe).?, "/lib/libc/include/any-linux-any" },
     );
 
-    const doc_file = try std.fs.cwd().createFile("BOF-collection.yaml", .{});
-    defer doc_file.close();
-
     for (bofs_to_build.items) |bof| {
-        const bof_src_path = try std.mem.join(
-            b.allocator,
-            "",
-            &.{ thisDir(), "/src/", if (bof.dir) |dir| dir else "", if (bof.go) |go| go else bof.name },
-        );
-
-        const lang: BofLang = blk: {
-            std.fs.accessAbsolute(
-                try std.mem.join(b.allocator, "", &.{ bof_src_path, ".zig" }),
-                .{},
-            ) catch {
-                std.fs.accessAbsolute(
-                    try std.mem.join(b.allocator, "", &.{ bof_src_path, ".asm" }),
-                    .{},
-                ) catch break :blk .c;
-
-                break :blk .fasm;
-            };
-            break :blk .zig;
-        };
-
-        const source_file_path = try std.mem.join(b.allocator, ".", &.{ bof_src_path, @tagName(lang) });
-
-        if (lang != .fasm) {
-            const source_file = try std.fs.openFileAbsolute(source_file_path, .{});
-            defer source_file.close();
-
-            const source = try source_file.readToEndAlloc(b.allocator, std.math.maxInt(u32));
-            defer b.allocator.free(source);
-
-            //std.debug.print("{s}\n", .{source});
-        }
+        const source_file_path, const lang = try getBofSourcePathAndLang(b.allocator, bof);
 
         for (bof.formats) |format| {
             for (bof.archs) |arch| {
@@ -130,13 +98,11 @@ pub fn build(b: *std.Build, bof_api_module: *std.Build.Module) !void {
 
                 const bin_full_bof_name = try std.mem.join(b.allocator, "/", &.{ "bin", full_bof_name });
 
-                if (lang == .fasm) {
+                if (lang == .@"asm") {
                     const run_fasm = b.addSystemCommand(&.{
                         thisDir() ++ "/../bin/fasm" ++ if (@import("builtin").os.tag == .windows) ".exe" else "",
                     });
-                    run_fasm.addFileArg(.{
-                        .path = try std.mem.join(b.allocator, ".", &.{ bof_src_path, "asm" }),
-                    });
+                    run_fasm.addFileArg(.{ .path = source_file_path });
                     const output_path = run_fasm.addOutputFileArg(full_bof_name);
 
                     b.getInstallStep().dependOn(&b.addInstallFile(output_path, bin_full_bof_name).step);
@@ -146,7 +112,7 @@ pub fn build(b: *std.Build, bof_api_module: *std.Build.Module) !void {
 
                 const target = b.resolveTargetQuery(Bof.getTargetQuery(format, arch));
                 const obj = switch (lang) {
-                    .fasm => unreachable,
+                    .@"asm" => unreachable,
                     .zig => b.addObject(.{
                         .name = bof.name,
                         .root_source_file = .{ .path = source_file_path },
@@ -197,6 +163,74 @@ pub fn build(b: *std.Build, bof_api_module: *std.Build.Module) !void {
             }
         }
     }
+}
+
+fn generateBofCollectionYaml(
+    allocator: std.mem.Allocator,
+    bofs_to_build: std.ArrayList(Bof),
+) !void {
+    const doc_file = try std.fs.cwd().createFile("BOF-collection.yaml", .{});
+    defer doc_file.close();
+
+    for (bofs_to_build.items) |bof| {
+        const source_file_path, const lang = try getBofSourcePathAndLang(allocator, bof);
+
+        if (lang != .@"asm") {
+            const source_file = try std.fs.openFileAbsolute(source_file_path, .{});
+            defer source_file.close();
+
+            const source = try source_file.readToEndAlloc(allocator, std.math.maxInt(u32));
+            defer allocator.free(source);
+
+            _ = std.mem.replace(u8, source, "\r\n", "\n", source);
+
+            var line_number: u32 = 1;
+            var iter = std.mem.splitSequence(u8, source, "\n");
+            while (iter.next()) |source_line| {
+                if (source_line.len >= 3 and std.mem.eql(u8, source_line[0..3], "///")) {
+                    if (line_number == 1) try doc_file.writeAll("---\n");
+                    line_number += 1;
+                    try doc_file.writeAll(source_line[3..]);
+                    try doc_file.writeAll("\n");
+                }
+            }
+        }
+    }
+}
+
+fn getBofSourcePathAndLang(
+    allocator: std.mem.Allocator,
+    bof: Bof,
+) !struct { []const u8, BofLang } {
+    const bof_src_path = try std.mem.join(
+        allocator,
+        "",
+        &.{
+            thisDir(),
+            "/src/",
+            if (bof.dir) |dir| dir else "",
+            if (bof.go) |go| go else bof.name,
+        },
+    );
+
+    const lang: BofLang = blk: {
+        std.fs.accessAbsolute(
+            try std.mem.join(allocator, ".", &.{ bof_src_path, "zig" }),
+            .{},
+        ) catch {
+            std.fs.accessAbsolute(
+                try std.mem.join(allocator, ".", &.{ bof_src_path, "asm" }),
+                .{},
+            ) catch break :blk .c;
+
+            break :blk .@"asm";
+        };
+        break :blk .zig;
+    };
+
+    const source_file_path = try std.mem.join(allocator, ".", &.{ bof_src_path, @tagName(lang) });
+
+    return .{ source_file_path, lang };
 }
 
 inline fn thisDir() []const u8 {
