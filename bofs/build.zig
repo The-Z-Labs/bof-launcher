@@ -19,8 +19,8 @@ const bofs_included_in_launcher = [_]Bof{
 // Additional/3rdparty BOFs for building should be added below
 
 //const bofs_my_custom = [_]Bof{
-//    .{ .name = "bof1", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-//    .{ .name = "bof2", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+//    .{ .name = "bof1", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+//    .{ .name = "bof2", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
 //};
 
 fn addBofsToBuild(bofs_to_build: *std.ArrayList(Bof)) !void {
