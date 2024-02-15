@@ -5,7 +5,7 @@
 ///OS: linux
 ///header: ['inline', '']
 ///sources:
-///    - https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/id.zig
+///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/id.zig'
 ///usage: '
 /// id [str:USER]
 ///'
@@ -13,6 +13,7 @@
 /// id
 /// id root
 ///'
+///
 const std = @import("std");
 const os = std.os;
 const c = std.c;

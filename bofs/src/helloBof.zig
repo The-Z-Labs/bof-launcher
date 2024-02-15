@@ -1,18 +1,18 @@
-///name: String:name of the BOF
-///description: String:description of the BOF
-///author: String:BOF author name
-///tags: list of BOF's tags (in inline format)
-///OS: String:possible values:cross|windows|linux
-///header: list of BOF's special 'hints' and arguments specification (in inline format)
-///sources:
-///    -  List if URLs to BOF's source code
-///    - ...
-///usage: '
-/// Multiline string: BOF arguments specification
-///'
-///examples: '
-/// Multiline string: Examples of BOF usage
-///'
+//name: "String:name of the BOF"
+//description: "String:description of the BOF"
+//author: "String:BOF author name"
+//tags: 'list of BOF tags (in inline format)'
+//OS: 'String:possible values:cross|windows|linux'
+//header: 'list of BOF special hints and arguments specification (in inline format)'
+//sources:
+//    - 'List if URLs to BOF source code'
+//    - '...'
+//usage: '
+// Multiline string: BOF arguments specification
+//'
+//examples: '
+// Multiline string: Examples of BOF usage
+//'
 
 // Including internal, builtin API:
 const beacon = @import("bof_api").beacon;

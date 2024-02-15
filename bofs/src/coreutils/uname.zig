@@ -5,7 +5,7 @@
 ///OS: linux
 ///header: ['inline', '']
 ///sources:
-///    - https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/uname.zig
+///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/uname.zig'
 ///usage: '
 /// uname [str:FLAGS]
 ///
@@ -21,6 +21,7 @@
 /// uname
 /// uname -a
 ///'
+///
 const std = @import("std");
 const beacon = @import("bof_api").beacon;
 

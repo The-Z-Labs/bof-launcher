@@ -5,13 +5,14 @@
 ///OS: linux
 ///header: ['inline', '']
 ///sources:
-///    - https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/hostid.zig
+///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/hostid.zig'
 ///usage: '
 /// hostid
 ///'
 ///examples: '
 /// hostid
 ///'
+///
 const std = @import("std");
 const beacon = @import("bof_api").beacon;
 const posix = @import("bof_api").posix;
