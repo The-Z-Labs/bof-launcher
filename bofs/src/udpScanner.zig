@@ -126,7 +126,7 @@ fn extractPorts(allocator: mem.Allocator, port_spec: []const u8) ![]u16 {
                 n += 1;
             }
         } else {
-            //we're dealing with just one port number in a set
+            // we're dealing with just one port number in a set
             const port = fmt.parseInt(u16, port_set, 10) catch continue;
             try list.append(port);
         }
