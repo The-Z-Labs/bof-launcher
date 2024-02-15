@@ -1,3 +1,18 @@
+///name: id
+///description: "Print user and group information for each specified USER, or (when USER omitted) for the current process"
+///author: Z-Labs
+///tags: ['host-recon']
+///OS: linux
+///header: ['inline', '']
+///sources:
+///    - https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/id.zig
+///usage: '
+/// id [str:USER]
+///'
+///examples: '
+/// id
+/// id root
+///'
 const std = @import("std");
 const os = std.os;
 const c = std.c;

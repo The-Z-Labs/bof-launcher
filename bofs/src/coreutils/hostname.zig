@@ -1,3 +1,17 @@
+///name: hostname
+///description: "Show system host name"
+///author: Z-Labs
+///tags: ['host-recon']
+///OS: linux
+///header: ['inline', '']
+///sources:
+///    - https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/hostname.zig
+///usage: '
+/// hostname
+///'
+///examples: '
+/// hostname
+///'
 const std = @import("std");
 const beacon = @import("bof_api").beacon;
 const posix = @import("bof_api").posix;
