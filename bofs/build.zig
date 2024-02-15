@@ -80,7 +80,8 @@ pub fn build(b: *std.Build, bof_api_module: *std.Build.Module) !void {
         &.{ std.fs.path.dirname(b.graph.zig_exe).?, "/lib/libc/include/any-linux-any" },
     );
 
-    //const doc_file = try std.fs.cwd().openFile("BOF-collection.yaml", .{.mode = .write_only});
+    const doc_file = try std.fs.cwd().createFile("BOF-collection.yaml", .{});
+    defer doc_file.close();
 
     for (bofs_to_build.items) |bof| {
         const bof_src_path = try std.mem.join(
@@ -104,7 +105,17 @@ pub fn build(b: *std.Build, bof_api_module: *std.Build.Module) !void {
             break :blk .zig;
         };
 
-        const source_file = try std.mem.join(b.allocator, ".", &.{ bof_src_path, @tagName(lang) });
+        const source_file_path = try std.mem.join(b.allocator, ".", &.{ bof_src_path, @tagName(lang) });
+
+        if (lang != .fasm) {
+            const source_file = try std.fs.openFileAbsolute(source_file_path, .{});
+            defer source_file.close();
+
+            const source = try source_file.readToEndAlloc(b.allocator, std.math.maxInt(u32));
+            defer b.allocator.free(source);
+
+            //std.debug.print("{s}\n", .{source});
+        }
 
         for (bof.formats) |format| {
             for (bof.archs) |arch| {
@@ -138,7 +149,7 @@ pub fn build(b: *std.Build, bof_api_module: *std.Build.Module) !void {
                     .fasm => unreachable,
                     .zig => b.addObject(.{
                         .name = bof.name,
-                        .root_source_file = .{ .path = source_file },
+                        .root_source_file = .{ .path = source_file_path },
                         .target = target,
                         .optimize = .ReleaseSmall,
                     }),
@@ -151,7 +162,7 @@ pub fn build(b: *std.Build, bof_api_module: *std.Build.Module) !void {
                             .optimize = .ReleaseSmall,
                         });
                         obj.addCSourceFile(.{
-                            .file = .{ .path = source_file },
+                            .file = .{ .path = source_file_path },
                             .flags = &.{ "-DBOF", "-D_GNU_SOURCE" },
                         });
                         if (format == .coff) {
