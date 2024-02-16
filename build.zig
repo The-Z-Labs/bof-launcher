@@ -7,6 +7,16 @@ const Options = @import("bof-launcher/build.zig").Options;
 pub fn build(b: *std.Build) void {
     ensureZigVersion() catch return;
 
+    const supported_targets: []const std.Target.Query = &.{
+        .{ .cpu_arch = .x86, .os_tag = .windows, .abi = .gnu },
+        .{ .cpu_arch = .x86, .os_tag = .linux, .abi = .gnu },
+        .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu },
+        .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
+        .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .gnu },
+        .{ .cpu_arch = .arm, .os_tag = .linux, .abi = .gnueabihf },
+    };
+
+    const target = b.standardTargetOptions(.{ .whitelist = supported_targets });
     const optimize = b.option(
         std.builtin.Mode,
         "optimize",
@@ -20,19 +30,15 @@ pub fn build(b: *std.Build) void {
         .root_source_file = .{ .path = thisDir() ++ "/bof-launcher/src/bof_launcher_api.zig" },
     });
 
-    const supported_targets = [_]std.Target.Query{
-        .{ .cpu_arch = .x86, .os_tag = .windows, .abi = .gnu },
-        .{ .cpu_arch = .x86, .os_tag = .linux, .abi = .gnu },
-        .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu },
-        .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
-        .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .gnu },
-        .{ .cpu_arch = .arm, .os_tag = .linux, .abi = .gnueabihf },
-    };
+    const targets_to_build: []const std.Target.Query = if (b.user_input_options.contains("target"))
+        &.{target.query}
+    else
+        supported_targets;
 
     const test_step = b.step("test", "Run all tests");
     test_step.dependOn(b.getInstallStep());
 
-    for (supported_targets) |target_query| {
+    for (targets_to_build) |target_query| {
         const options = Options{ .target = b.resolveTargetQuery(target_query), .optimize = optimize };
 
         //
