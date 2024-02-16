@@ -16,7 +16,7 @@ pub fn build(b: *std.Build) void {
         .{ .cpu_arch = .arm, .os_tag = .linux, .abi = .gnueabihf },
     };
 
-    const target = b.standardTargetOptions(.{ .whitelist = supported_targets });
+    const std_target = b.standardTargetOptions(.{ .whitelist = supported_targets });
     const optimize = b.option(
         std.builtin.Mode,
         "optimize",
@@ -31,7 +31,7 @@ pub fn build(b: *std.Build) void {
     });
 
     const targets_to_build: []const std.Target.Query = if (b.user_input_options.contains("target"))
-        &.{target.query}
+        &.{std_target.query}
     else
         supported_targets;
 
