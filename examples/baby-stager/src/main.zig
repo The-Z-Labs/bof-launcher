@@ -64,6 +64,7 @@ const State = struct {
     base64_decoder: std.base64.Base64Decoder,
     base64_encoder: std.base64.Base64Encoder,
     http_client: std.http.Client,
+    http_proxy: if (debug_proxy_port) std.http.Client.Proxy else void,
     heartbeat_header: std.http.Headers,
     heartbeat_uri: std.Uri,
     pending_bofs: std.ArrayList(PendingBof),
@@ -91,15 +92,21 @@ const State = struct {
             try heartbeat_header.append("Authorization", authz_b64);
         }
 
-        const http_client: std.http.Client = .{
-            .allocator = allocator,
-            .http_proxy = if (debug_proxy_enabled) .{
+        const http_proxy = if (debug_proxy_port) blk: {
+            const proxy = try allocator.create(std.http.Client.Proxy);
+            proxy.* = .{
                 .allocator = allocator,
                 .headers = heartbeat_header,
                 .protocol = .plain,
                 .host = debug_proxy_host,
                 .port = debug_proxy_port,
-            } else null,
+            };
+            break :blk proxy;
+        } else {};
+
+        const http_client: std.http.Client = .{
+            .allocator = allocator,
+            .http_proxy = http_proxy,
         };
 
         return State{

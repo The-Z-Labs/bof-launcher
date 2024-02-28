@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub const min_zig_version = std.SemanticVersion{ .major = 0, .minor = 12, .patch = 0, .pre = "dev.2701" };
+pub const min_zig_version = std.SemanticVersion{ .major = 0, .minor = 12, .patch = 0, .pre = "dev.3052" };
 
 const Options = @import("bof-launcher/build.zig").Options;
 
@@ -54,12 +54,15 @@ pub fn build(b: *std.Build) void {
         //
         // Examples: baby stager
         //
-        @import("examples/baby-stager/build.zig").build(
-            b,
-            options,
-            bof_launcher_lib,
-            bof_launcher_api_module,
-        );
+        if (false) {
+            // TODO: Re-enable this
+            @import("examples/baby-stager/build.zig").build(
+                b,
+                options,
+                bof_launcher_lib,
+                bof_launcher_api_module,
+            );
+        }
 
         //
         // Examples: integration with c

@@ -8,15 +8,23 @@ const system = std.os.system;
 const errno = system.getErrno;
 const unexpectedErrno = std.os.unexpectedErrno;
 const RecvFromError = std.os.RecvFromError;
+const w32 = @import("win32.zig");
 
 pub const SOCK = os.SOCK;
 pub const AF = os.AF;
 pub const socket = os.socket;
-pub const closeSocket = os.closeSocket;
 pub const bind = os.bind;
 pub const socklen_t = os.socklen_t;
 pub const sockaddr = os.sockaddr;
 pub const sa_family_t = os.sa_family_t;
+
+pub fn closeSocket(sock: socket_t) void {
+    if (builtin.os.tag == .windows) {
+        _ = w32.closesocket(sock);
+    } else {
+        os.close(sock);
+    }
+}
 
 pub fn sendto(
     /// The file descriptor of the sending socket.
