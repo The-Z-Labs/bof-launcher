@@ -107,8 +107,7 @@ pub extern fn getpwuid(uid: c.uid_t) callconv(.C) ?*c.passwd;
 // https://pubs.opengroup.org/onlinepubs/9699919799/functions/getpwnam.html
 pub extern fn getpwnam(name: [*:0]u8) callconv(.C) ?*c.passwd;
 
-/// If `sockfd` is opened in non blocking mode, the function will
-/// return error.WouldBlock when EAGAIN is received.
+// TODO: Remove this and use std.posix.recvfrom() once fixed (current version requires libc).
 pub fn recvfrom(
     sockfd: std.posix.socket_t,
     buf: []u8,
