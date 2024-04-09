@@ -1,5 +1,5 @@
 const std = @import("std");
-const os = @import("std").os;
+const posix = @import("std").posix;
 const c = @import("std").c;
 const beacon = @import("bof_api").beacon;
 
@@ -7,11 +7,11 @@ pub const ifaddrs = extern struct {
     ifa_next: *ifaddrs,
     ifa_name: [*:0]u8,
     ifa_flags: u32,
-    ifa_addr: *os.sockaddr,
-    ifa_netmask: *os.sockaddr,
+    ifa_addr: *posix.sockaddr,
+    ifa_netmask: *posix.sockaddr,
     pub const ifa_ifu = extern union {
-        ifu_broadaddr: *os.sockaddr,
-        ifu_dstaddr: *os.sockaddr,
+        ifu_broadaddr: *posix.sockaddr,
+        ifu_dstaddr: *posix.sockaddr,
     };
 };
 

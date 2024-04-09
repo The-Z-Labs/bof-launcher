@@ -40,7 +40,7 @@
 ///   cli4bofs exec udpScanner 102.168.1.1-4:161,427 file:/tmp/udpPayloads'
 const std = @import("std");
 const beacon = @import("bof_api").beacon;
-const os = @import("bof_api").os;
+const posix = @import("bof_api").posix;
 const fmt = std.fmt;
 const mem = std.mem;
 const net = std.net;
@@ -240,20 +240,20 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     defer allocator.free(sPorts);
 
     // Creating socket
-    const fd = os.socket(
-        os.AF.INET,
-        os.SOCK.DGRAM | os.SOCK.CLOEXEC | os.SOCK.NONBLOCK,
+    const fd = std.posix.socket(
+        std.posix.AF.INET,
+        std.posix.SOCK.DGRAM | std.posix.SOCK.CLOEXEC | std.posix.SOCK.NONBLOCK,
         0,
     ) catch return 1;
-    defer os.closeSocket(fd);
+    defer closeSocket(fd);
 
     // Get local address and open/bind a socket
-    var sl: os.socklen_t = @sizeOf(os.sockaddr.in);
-    const family: os.sa_family_t = os.AF.INET;
+    var sl: std.posix.socklen_t = @sizeOf(std.posix.sockaddr.in);
+    const family: std.posix.sa_family_t = std.posix.AF.INET;
     var sa: net.Address = undefined;
     @memset(@as([*]u8, @ptrCast(&sa))[0..@sizeOf(net.Address)], 0);
     sa.any.family = family;
-    os.bind(fd, &sa.any, sl) catch return 1;
+    std.posix.bind(fd, &sa.any, sl) catch return 1;
 
     // Packet payloads parsing and preparation
     const payloads = parseRawPayloads(allocator, payloads_buf) catch return 1;
@@ -287,7 +287,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
                 //debugPrint("Scanning IP: {s} and port number: {d}; payload used:\n{s}\n", .{ IP, port, pkt_content });
                 dest_addr.setPort(port);
 
-                _ = os.sendto(fd, pkt_content, 0, &dest_addr.any, sl) catch continue;
+                _ = std.posix.sendto(fd, pkt_content, 0, &dest_addr.any, sl) catch continue;
             }
         }
     }
@@ -303,7 +303,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     var answer_buf = [_]u8{0} ** 512;
 
     loop: while (t2 - t0 < timeout) : (t2 = @as(u64, @bitCast(std.time.milliTimestamp()))) {
-        const rlen = os.recvfrom(fd, &answer_buf, 0, &sa.any, &sl) catch |err| {
+        const rlen = posix.recvfrom(fd, &answer_buf, 0, &sa.any, &sl) catch |err| {
             //debugPrint("error {s}\n", .{@errorName(err)});
             _ = @errorName(err);
             continue :loop;
@@ -327,6 +327,14 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
 
     debugPrint("DONE\n", .{});
     return 0;
+}
+
+pub fn closeSocket(sock: std.posix.socket_t) void {
+    if (@import("builtin").os.tag == .windows) {
+        _ = @import("bof_api").win32.closesocket(sock);
+    } else {
+        std.posix.close(sock);
+    }
 }
 
 fn debugPrint(comptime format: []const u8, args: anytype) void {

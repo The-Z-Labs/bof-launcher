@@ -12,6 +12,8 @@
 const std = @import("std");
 const os = std.os;
 const c = std.c;
+const native_os = @import("builtin").os.tag;
+const windows = std.os.windows;
 
 //
 // POSIX time types:
@@ -104,3 +106,34 @@ pub extern fn getgroups(gidsetsize: i32, grouplist: [*]c.gid_t) callconv(.C) i32
 pub extern fn getpwuid(uid: c.uid_t) callconv(.C) ?*c.passwd;
 // https://pubs.opengroup.org/onlinepubs/9699919799/functions/getpwnam.html
 pub extern fn getpwnam(name: [*:0]u8) callconv(.C) ?*c.passwd;
+
+/// If `sockfd` is opened in non blocking mode, the function will
+/// return error.WouldBlock when EAGAIN is received.
+pub fn recvfrom(
+    sockfd: std.posix.socket_t,
+    buf: []u8,
+    flags: u32,
+    src_addr: ?*std.posix.sockaddr,
+    addrlen: ?*std.posix.socklen_t,
+) std.posix.RecvFromError!usize {
+    if (native_os == .windows) {
+        const rc = windows.recvfrom(sockfd, buf.ptr, buf.len, flags, src_addr, addrlen);
+        if (rc == windows.ws2_32.SOCKET_ERROR) {
+            switch (windows.ws2_32.WSAGetLastError()) {
+                .WSANOTINITIALISED => unreachable,
+                .WSAECONNRESET => return error.ConnectionResetByPeer,
+                .WSAEINVAL => return error.SocketNotBound,
+                .WSAEMSGSIZE => return error.MessageTooBig,
+                .WSAENETDOWN => return error.NetworkSubsystemFailed,
+                .WSAENOTCONN => return error.SocketNotConnected,
+                .WSAEWOULDBLOCK => return error.WouldBlock,
+                .WSAETIMEDOUT => return error.ConnectionTimedOut,
+                // TODO: handle more errors
+                else => |err| return windows.unexpectedWSAError(err),
+            }
+        } else {
+            return @intCast(rc);
+        }
+    }
+    return std.posix.recvfrom(sockfd, buf, flags, src_addr, addrlen);
+}

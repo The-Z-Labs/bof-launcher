@@ -15,7 +15,7 @@
 ///'
 ///
 const std = @import("std");
-const os = std.os;
+const os = std.posix;
 const c = std.c;
 const mem = std.mem;
 const beacon = @import("bof_api").beacon;

@@ -26,7 +26,7 @@ const std = @import("std");
 const beacon = @import("bof_api").beacon;
 
 pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
-    const utsn: std.os.utsname = std.os.uname();
+    const utsn: std.posix.utsname = std.posix.uname();
 
     if (args_len == 0) {
         _ = beacon.printf(0, "%s\n", &utsn.sysname);

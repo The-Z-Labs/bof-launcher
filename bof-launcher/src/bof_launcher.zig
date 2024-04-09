@@ -92,7 +92,7 @@ const Bof = struct {
                 if (@import("builtin").os.tag == .windows) {
                     _ = w32.VirtualFree(slice.ptr, 0, w32.MEM_RELEASE);
                 } else if (@import("builtin").os.tag == .linux) {
-                    std.os.munmap(slice);
+                    std.posix.munmap(slice);
                 }
             }
 
@@ -448,7 +448,7 @@ const Bof = struct {
         allocator: std.mem.Allocator,
         file_data: []align(obj_file_data_alignment) const u8,
     ) !void {
-        const os = std.os;
+        const posix = std.posix;
 
         var arena_state = std.heap.ArenaAllocator.init(allocator);
         defer arena_state.deinit();
@@ -476,10 +476,10 @@ const Bof = struct {
             }
         }
 
-        const all_sections_mem = try os.mmap(
+        const all_sections_mem = try posix.mmap(
             null,
             (1 + section_headers.items.len) * max_section_size,
-            os.PROT.READ | os.PROT.WRITE | os.PROT.EXEC,
+            posix.PROT.READ | posix.PROT.WRITE | posix.PROT.EXEC,
             .{ .TYPE = .PRIVATE, .ANONYMOUS = true },
             -1,
             0,
@@ -1201,13 +1201,13 @@ else
 }
 
 fn threadFuncCloneProcessLinux(bof: *Bof, arg_data: ?[]u8, context: *BofContext) void {
-    const pipe = std.os.pipe() catch @panic("pipe() failed");
+    const pipe = std.posix.pipe() catch @panic("pipe() failed");
     defer {
-        std.os.close(pipe[0]);
-        std.os.close(pipe[1]);
+        std.posix.close(pipe[0]);
+        std.posix.close(pipe[1]);
     }
 
-    const pid = std.os.fork() catch @panic("fork() failed");
+    const pid = std.posix.fork() catch @panic("fork() failed");
     if (pid == 0) {
         // child process
         bof.run(context, arg_data);
@@ -1224,11 +1224,11 @@ fn threadFuncCloneProcessLinux(bof: *Bof, arg_data: ?[]u8, context: *BofContext)
             file.writer().writeAll(buf[0..@intCast(output_len)]) catch @panic("OOM");
         }
 
-        std.os.exit(0);
+        std.posix.exit(0);
     }
 
     // parent process
-    const child_result = std.os.waitpid(pid, 0);
+    const child_result = std.posix.waitpid(pid, 0);
     if (child_result.status == 0) {
         const file = std.fs.File{ .handle = pipe[0] };
         const exit_code = file.reader().readByte() catch @panic("OOM");
@@ -1694,7 +1694,7 @@ export fn outputBofData(_: i32, data: [*]u8, len: i32, free_mem: i32) void {
 }
 
 export fn getEnviron() callconv(.C) [*:null]?[*:0]const u8 {
-    // TODO: Implement this properly (std.os.environ is not a good solution)
+    // TODO: Implement this properly
     const static = struct {
         var environ: [1:null]?[*:0]const u8 = .{"todo"};
     };
