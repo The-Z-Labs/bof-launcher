@@ -34,10 +34,14 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     while (iter != null) : (iter = iter.?.ifa_next) {
         family = iter.?.ifa_addr.?.family;
         _ = beacon.printf(0, "if name: %s ", iter.?.ifa_name);
-        if (family == std.os.linux.AF.PACKET) {
+        if (family == std.os.linux.AF.PACKET)
             _ = beacon.printf(0, "AF_PACKET");
-        }
+        if (family == std.os.linux.AF.INET)
+            _ = beacon.printf(0, "AF_INET");
+        if (family == std.os.linux.AF.INET6)
+            _ = beacon.printf(0, "AF_INET6");
 
+        _ = beacon.printf(0, "\n");
         //std.debug.print("{any}\n\n", .{iter.?.*});
     }
 
