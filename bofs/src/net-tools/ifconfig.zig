@@ -23,6 +23,8 @@ pub extern fn freeifaddrs(ifap: *ifaddrs) callconv(.C) void;
 pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     _ = .{ args, args_len };
 
+    const allocator = std.heap.page_allocator;
+
     var family: i32 = undefined;
     var list: *ifaddrs = undefined;
     if (getifaddrs(&list) == -1) {
@@ -31,18 +33,41 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     }
 
     var iter: ?*ifaddrs = list;
-    while (iter != null) : (iter = iter.?.ifa_next) {
-        family = iter.?.ifa_addr.?.family;
-        _ = beacon.printf(0, "if name: %s ", iter.?.ifa_name);
-        if (family == std.os.linux.AF.PACKET)
-            _ = beacon.printf(0, "AF_PACKET");
-        if (family == std.os.linux.AF.INET)
-            _ = beacon.printf(0, "AF_INET");
-        if (family == std.os.linux.AF.INET6)
-            _ = beacon.printf(0, "AF_INET6");
 
-        _ = beacon.printf(0, "\n");
-        //std.debug.print("{any}\n\n", .{iter.?.*});
+    // add all identified interfaces (distincted by name) to the interfaces collection
+    var interfaces = std.ArrayList([]const u8).init(allocator);
+    defer interfaces.deinit();
+    outer: while (iter != null) : (iter = iter.?.ifa_next) {
+        const cur_iface_name = std.mem.sliceTo(iter.?.ifa_name.?, 0);
+
+        // check if given interface was already added
+        for (interfaces.items) |iface| {
+            if(std.mem.eql(u8, iface, cur_iface_name))
+                continue :outer;
+        }
+        else interfaces.append(cur_iface_name) catch unreachable;
+    }
+
+    // iterate over each interface name and print its statistics
+    for (interfaces.items) |iface| {
+        _ = beacon.printf(0, "%s: flags=\n", iface.ptr);
+
+        iter = list;
+        while (iter != null) : (iter = iter.?.ifa_next) {
+	    family = iter.?.ifa_addr.?.family;
+            const cur_iface_name = std.mem.sliceTo(iter.?.ifa_name.?, 0);
+
+            if(std.mem.eql(u8, iface, cur_iface_name)) {
+	        if (family == std.os.linux.AF.PACKET)
+		    _ = beacon.printf(0, "ether AF_PACKET\n");
+		if (family == std.os.linux.AF.INET)
+		    _ = beacon.printf(0, "inet AF_INET\n");
+		if (family == std.os.linux.AF.INET6)
+		    _ = beacon.printf(0, "inet6 AF_INET6\n");
+            }
+
+	    //std.debug.print("{any}\n\n\n", .{iter.?.*});
+        }
     }
 
     freeifaddrs(list);
