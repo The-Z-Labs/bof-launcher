@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub const min_zig_version = std.SemanticVersion{ .major = 0, .minor = 12, .patch = 0, .pre = "dev.3596" };
+pub const min_zig_version = std.SemanticVersion{ .major = 0, .minor = 12, .patch = 0 };
 
 const Options = @import("bof-launcher/build.zig").Options;
 
@@ -13,7 +13,7 @@ pub fn build(b: *std.Build) void {
         .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu },
         .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
         .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .gnu },
-        .{ .cpu_arch = .arm, .os_tag = .linux, .abi = .gnueabihf },
+        .{ .cpu_arch = .arm, .os_tag = .linux, .abi = .gnueabihf, .cpu_model = .{ .explicit = &std.Target.arm.cpu.arm1136j_s } },
     };
 
     const std_target = b.standardTargetOptions(.{ .whitelist = supported_targets });
@@ -97,17 +97,16 @@ fn ensureZigVersion() !void {
     var installed_ver = @import("builtin").zig_version;
     installed_ver.build = null;
 
-    if (installed_ver.order(min_zig_version) == .lt) {
+    if (installed_ver.order(min_zig_version) != .eq) {
         std.log.err("\n" ++
             \\---------------------------------------------------------------------------
             \\
-            \\Installed Zig compiler version is too old.
+            \\Installed Zig compiler version is not supported.
             \\
-            \\Min. required version: {any}
+            \\Required version is: {any}
             \\Installed version: {any}
             \\
-            \\Please install newer version and try again.
-            \\Latest version can be found here: https://ziglang.org/download/
+            \\Please install supported version and try again.
             \\
             \\---------------------------------------------------------------------------
             \\
