@@ -54,7 +54,7 @@ pub fn build(b: *std.Build) void {
         //
         // Examples: baby stager
         //
-        if (false) {
+        if (true) {
             // TODO: Re-enable this
             @import("examples/baby-stager/build.zig").build(
                 b,

