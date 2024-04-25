@@ -1,10 +1,29 @@
+///name: "ifconfig"
+///description: "Displays the status of the currently active network interfaces; Manipulates current state of the device (euid = 0 or CAP_NET_ADMIN is required for state changing)."
+///author: "Z-Labs"
+///tags: ['host-recon']
+///OS: 'linux'
+///header: ['inline', 'z']
+///sources:
+///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/net-tools/ifconfig.zig'
+///usage: '
+/// ifconfig [str:interface]
+///'
+///examples: '
+/// ifconfig
+/// ifconfig eth0 down
+/// ifconfig eth0 promisc
+///'
+
 // TODO:
-// get MAC address
 // get MTU value
 const std = @import("std");
 const posix = @import("std").posix;
 const c = @import("std").c;
 const beacon = @import("bof_api").beacon;
+
+pub const SIOCGIFFLAGS = 0x8913;
+pub const SIOCSIFFLAGS = 0x8914;
 
 // https://github.com/ziglang/zig/blob/a2b834e8c7152f70d71c71107db40b9182909647/lib/libc/include/generic-glibc/netdb.h
 const NI_MAXHOST = 1025;
@@ -31,6 +50,7 @@ pub const IFF_LOWER_UP = 0x10000;
 pub const IFF_DORMANT = 0x20000;
 pub const IFF_ECHO = 0x40000;
 
+// https://man7.org/linux/man-pages/man3/getifaddrs.3.html
 pub const ifaddrs = extern struct {
     ifa_next: ?*ifaddrs,
     ifa_name: ?[*:0]u8,
@@ -43,8 +63,6 @@ pub const ifaddrs = extern struct {
     },
     ifa_data: ?*anyopaque,
 };
-
-// https://man7.org/linux/man-pages/man3/getifaddrs.3.html
 pub extern fn getifaddrs(ifap: **ifaddrs) callconv(.C) i32;
 pub extern fn freeifaddrs(ifap: *ifaddrs) callconv(.C) void;
 
@@ -57,6 +75,19 @@ pub extern fn getnameinfo(addr: *posix.sockaddr,
     servlen: c.socklen_t,
     flags: u32,
 ) callconv(.C) c.EAI;
+
+// https://github.com/ziglang/zig/blob/1b90888f576b4863f4a61213a9ca32b97aa57859/lib/libc/include/generic-glibc/netpacket/packet.h#L22
+// https://man7.org/linux/man-pages/man7/packet.7.html
+pub const sockaddr_ll = extern struct {
+    sll_family: u16,
+    sll_protocol: u16,
+    sll_ifindex: i32,
+    sll_hatype: i16,
+    sll_pkttype: u8,
+    sll_halen: u8,
+    sll_addr: [8]u8,
+};
+
 
 fn flagsDisplay(flags: u32) void {
     _ = beacon.printf(0, "flags=%u<", flags);
@@ -77,7 +108,6 @@ fn flagsDisplay(flags: u32) void {
 }
 
 pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
-    _ = .{ args, args_len };
 
     const allocator = std.heap.page_allocator;
 
@@ -141,6 +171,20 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
                     _ = beacon.printf(0, "%s: ", iface.ptr);
                     flagsDisplay(flags);
                     _ = beacon.printf(0, "\n");
+
+                    // display HW address
+                    if(!std.mem.eql(u8, iface, "lo")) {
+                        if(iter.?.ifa_addr) |addr| {
+                            const s = @as(*sockaddr_ll, @ptrCast(@alignCast(addr)));
+                            var i: u32 = 0;
+
+                            _ = beacon.printf(0, "\tether ");
+                            while (i < s.sll_halen) : (i+=1) {
+                                _ = beacon.printf(0, "%x", s.sll_addr[i]);
+                                if(i+1 != s.sll_halen)  { _  = beacon.printf(0, ":"); } else { _  = beacon.printf(0, "\n"); }
+                            }
+                        }
+                    }
 
 	            if(iter.?.ifa_data != null) {
                         const stats = @as(*std.os.linux.rtnl_link_stats, @ptrCast(@alignCast(iter.?.ifa_data)));

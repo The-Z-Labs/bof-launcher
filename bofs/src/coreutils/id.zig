@@ -3,7 +3,7 @@
 ///author: Z-Labs
 ///tags: ['host-recon']
 ///OS: linux
-///header: ['inline', '']
+///header: ['inline', 'z']
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/id.zig'
 ///usage: '
