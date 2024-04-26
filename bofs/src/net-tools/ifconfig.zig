@@ -7,20 +7,21 @@
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/net-tools/ifconfig.zig'
 ///usage: '
-/// ifconfig [str:interface]
+/// ifconfig [str:interface str:option]
 ///'
 ///examples: '
 /// ifconfig
 /// ifconfig eth0 down
 /// ifconfig eth0 promisc
+/// ifconfig eth0 -promisc
 ///'
 
 // TODO:
 // get MTU value
 const std = @import("std");
-const posix = @import("std").posix;
 const c = @import("std").c;
 const beacon = @import("bof_api").beacon;
+const posix = @import("bof_api").posix;
 
 pub const SIOCGIFFLAGS = 0x8913;
 pub const SIOCSIFFLAGS = 0x8914;
@@ -55,11 +56,11 @@ pub const ifaddrs = extern struct {
     ifa_next: ?*ifaddrs,
     ifa_name: ?[*:0]u8,
     ifa_flags: u32,
-    ifa_addr: ?*posix.sockaddr,
-    ifa_netmask: ?*posix.sockaddr,
+    ifa_addr: ?*std.posix.sockaddr,
+    ifa_netmask: ?*std.posix.sockaddr,
     ifa_ifu: extern union {
-        ifu_broadaddr: ?*posix.sockaddr,
-        ifu_dstaddr: ?*posix.sockaddr,
+        ifu_broadaddr: ?*std.posix.sockaddr,
+        ifu_dstaddr: ?*std.posix.sockaddr,
     },
     ifa_data: ?*anyopaque,
 };
@@ -67,7 +68,7 @@ pub extern fn getifaddrs(ifap: **ifaddrs) callconv(.C) i32;
 pub extern fn freeifaddrs(ifap: *ifaddrs) callconv(.C) void;
 
 // https://man7.org/linux/man-pages/man3/getnameinfo.3.html
-pub extern fn getnameinfo(addr: *posix.sockaddr,
+pub extern fn getnameinfo(addr: *std.posix.sockaddr,
     addrlen: c.socklen_t,
     noalias host: ?[*]u8,
     hostlen: c.socklen_t,
@@ -92,27 +93,92 @@ pub const sockaddr_ll = extern struct {
 fn flagsDisplay(flags: u32) void {
     _ = beacon.printf(0, "flags=%u<", flags);
 
-    if(flags & IFF_UP != 0)
+    if(flags & IFF_UP != 0) {
         _ = beacon.printf(0, "UP");
+    } else
+        _ = beacon.printf(0, "DOWN");
     if(flags & IFF_BROADCAST != 0)
         _ = beacon.printf(0, ",BROADCAST");
+    if(flags & IFF_DEBUG != 0)
+        _ = beacon.printf(0, ",DEBUG");
     if(flags & IFF_LOOPBACK != 0)
         _ = beacon.printf(0, ",LOOPBACK");
     if(flags & IFF_POINTOPOINT != 0)
         _ = beacon.printf(0, ",POINT-TO-POINT");
     if(flags & IFF_RUNNING != 0)
         _ = beacon.printf(0, ",RUNNING");
+    if(flags & IFF_NOARP != 0)
+        _ = beacon.printf(0, ",NOARP");
+    if(flags & IFF_PROMISC != 0)
+        _ = beacon.printf(0, ",PROMISC");
+    if(flags & IFF_NOTRAILERS != 0)
+        _ = beacon.printf(0, ",NOTRAILERS");
+    if(flags & IFF_ALLMULTI != 0)
+        _ = beacon.printf(0, ",ALLMULTI");
+    if(flags & IFF_MASTER != 0)
+        _ = beacon.printf(0, ",MASTER");
+    if(flags & IFF_SLAVE != 0)
+        _ = beacon.printf(0, ",SLAVE");
     if(flags & IFF_MULTICAST != 0)
         _ = beacon.printf(0, ",MULTICAST");
     _ = beacon.printf(0, ">");
+}
+
+fn flagsParseOption(flags: i16, opt: []u8) i16 {
+    var ret_flags: i16 = flags;
+
+    if(std.mem.eql(u8, opt, "up"))
+        ret_flags = flags | IFF_UP;
+    if(std.mem.eql(u8, opt, "down"))
+        ret_flags = flags & ~@as(i16, IFF_UP);
+    if(std.mem.eql(u8, opt, "promisc"))
+        ret_flags = flags | IFF_PROMISC;
+    if(std.mem.eql(u8, opt, "-promisc"))
+        ret_flags = flags & ~@as(i16, IFF_PROMISC);
+
+    return ret_flags;
 }
 
 pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
 
     const allocator = std.heap.page_allocator;
 
-    var list: *ifaddrs = undefined;
+    // argument was provided parse it
+    // https://man7.org/linux/man-pages/man7/netdevice.7.html
+    // TODO: check also for CAP_NET_ADMIN
+    if (args_len > 0 and posix.geteuid() == 0) {
+        _ = beacon.printf(0, "Jest.\n");
+        var parser = beacon.datap{};
+        beacon.dataParse(&parser, args, args_len);
+        var if_name_len: i32 = 0;
+        const if_name_ptr = beacon.dataExtract(&parser, &if_name_len);
+        const if_name = if_name_ptr.?[0..@intCast(if_name_len - 1)];
 
+        var opt_len: i32 = 0;
+        const opt_ptr = beacon.dataExtract(&parser, &opt_len);
+        const opt = opt_ptr.?[0..@intCast(opt_len - 1)];
+
+        const sockfd = std.posix.socket(std.posix.AF.INET,
+            std.posix.SOCK.DGRAM | std.posix.SOCK.CLOEXEC, 0
+        ) catch unreachable;
+        defer std.posix.close(sockfd);
+
+        var ifr: std.os.linux.ifreq = undefined;
+        @memcpy(ifr.ifrn.name[0..if_name.len], if_name);
+        ifr.ifrn.name[if_name.len] = 0;
+
+        // get current flag state
+        _ = std.os.linux.ioctl(sockfd, SIOCGIFFLAGS, @intFromPtr(&ifr));
+
+        ifr.ifru.flags = flagsParseOption(ifr.ifru.flags, opt);
+
+        // set new flag state
+        _ = std.os.linux.ioctl(sockfd, SIOCSIFFLAGS, @intFromPtr(&ifr));
+
+        return 0;
+    }
+
+    var list: *ifaddrs = undefined;
     if (getifaddrs(&list) == -1) {
         _ = beacon.printf(0, "getifaddrs failed. Aborted.\n");
         return 1;
