@@ -15,6 +15,8 @@ const c = std.c;
 const native_os = @import("builtin").os.tag;
 const windows = std.os.windows;
 
+const cast = std.math.cast;
+
 //
 // POSIX time types:
 // https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/time.h.html
@@ -135,4 +137,53 @@ pub fn recvfrom(
         }
     }
     return std.posix.recvfrom(sockfd, buf, flags, src_addr, addrlen);
+}
+
+// TODO: Remove this and use std.posix.getsockoptError() once fixed (current version requires libc on Windows!).
+pub fn getsockoptError(sockfd: std.posix.fd_t) std.posix.ConnectError!void {
+    if (native_os == .windows) {
+        var err_code: i32 = undefined;
+        var size: i32 = @sizeOf(i32);
+        const rc = windows.ws2_32.getsockopt(@ptrCast(sockfd), std.posix.SOL.SOCKET, std.posix.SO.ERROR, @ptrCast(&err_code), &size);
+        if(rc == windows.ws2_32.SOCKET_ERROR) {
+            switch (windows.ws2_32.WSAGetLastError()) {
+                .WSANOTINITIALISED => unreachable,
+                .WSAEFAULT => unreachable,
+                .WSAENETDOWN => return error.NetworkUnreachable,
+                .WSAEINVAL => return error.Unexpected,
+                .WSAEINPROGRESS => unreachable,
+                .WSAENOPROTOOPT => unreachable,
+                .WSAENOTSOCK => return error.SystemResources,
+                else => return error.Unexpected,
+            }
+        } else {
+                switch (@as(windows.ws2_32.WinsockError, @enumFromInt(err_code))) {
+                    windows.ws2_32.WinsockError.WSAECONNREFUSED => return error.ConnectionRefused,
+                    else => return error.Unexpected,
+                }
+        }
+    }
+    return std.posix.getsockoptError(sockfd);
+}
+
+// TODO: Remove this and use std.posix.poll() once fixed (current version requires libc on Windows!).
+pub fn poll(fds: []std.posix.pollfd, timeout: i32) std.posix.PollError!usize {
+    if (native_os == .windows) {
+        while (true) {
+            const fds_count = cast(std.posix.nfds_t, fds.len) orelse return error.SystemResources;
+            const rc = windows.poll(fds.ptr, fds_count, timeout);
+            if (rc == windows.ws2_32.SOCKET_ERROR) {
+                switch (windows.ws2_32.WSAGetLastError()) {
+                    .WSAENETDOWN => return error.NetworkSubsystemFailed,
+                    .WSAEFAULT => unreachable,
+                    .WSAEINVAL => unreachable,
+                    .WSAENOBUFS => unreachable,
+                    else => return error.Unexpected,
+                }
+            } else {
+                return @intCast(rc);
+            }
+        }
+    }
+    return std.posix.poll(fds, timeout);
 }
