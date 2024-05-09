@@ -148,10 +148,9 @@ Often during the developemnt/debugging, testing or just playing with a new piece
     cli4bofs.exe exec .\zig-out\bin\wWinver.coff.x64.o
     cli4bofs.exe exec .\zig-out\bin\udpScanner.coff.x64.o str:162.159.200.1-5:123,88
 
-To run it on foreign CPU architectures, you can use [QEMU](https://www.qemu.org/):
+To run tests on foreign CPU architectures, you can use [QEMU](https://www.qemu.org/):
 
-    qemu-aarch64 -L /usr/aarch64-linux-gnu ./zig-out/bin/cli4bofs exec zig-out/bin/test_obj0.elf.aarch64.o
-    qemu-arm -L /usr/arm-linux-gnueabihf ./zig-out/bin/cli4bofs exec zig-out/bin/test_obj0.elf.arm.o
+    zig build test -fqemu --glibc-runtimes /usr
 
 ## Example usage scenarios
 
