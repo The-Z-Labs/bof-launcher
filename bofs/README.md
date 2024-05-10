@@ -4,8 +4,8 @@
 
 | BOF name  | Description | Supported platforms | Example invocation
 | ------------- | ------------------------------ | ---------------------- | ------------------ |
-| [tcpScanner](src/tcpScanner.zig)  | TCP connect() port scanner  | `Windows x86/x86_64`;`Linux x86/x86_64/ARMv6+/AArch64` | `tcpScanner 4.3.2.1-255:22,80` |
-| [udpScanner](src/udpScanner.zig) | UDP port sweeper | `Windows x86/x86_64`;`Linux x86/x86_64/ARMv6+/AArch64` | `udpScanner 4.3.2.1-255:5000-5010` |
+| [tcpScanner](src/tcpScanner.zig)  | TCP connect() port scanner  | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `tcpScanner 4.3.2.1-255:22,80` |
+| [udpScanner](src/udpScanner.zig) | UDP port sweeper | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `udpScanner 4.3.2.1-255:5000-5010` |
 | [winver](src/wWinver.zig) | show the edition, version, and system type of Windows operating system | `Windows x86/x86_64` | `winver` |
 | [whoami](src/wWhoami.zig) | display the domain and user name of the person who is currently logged on to this computer | `Windows x86/x86_64` | `whoami` |
 
