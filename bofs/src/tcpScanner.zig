@@ -5,6 +5,8 @@ const fmt = std.fmt;
 const mem = std.mem;
 const net = std.net;
 
+const POLL_TIMEOUT = 300;
+
 pub const linger = extern struct {
     l_onoff: i32,
     l_linger: i32,
@@ -180,7 +182,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
             std.posix.setsockopt(sockfd, std.posix.SOL.SOCKET, std.posix.SO.LINGER, std.mem.asBytes(&lin)) catch unreachable;
 
             // use this on Windows: https://github.com/ziglang/zig/blob/956f53beb09c07925970453d4c178c6feb53ba70/lib/std/os/windows.zig#L1687
-            const nevents = posix.poll(&pfd, 10) catch 0;
+            const nevents = posix.poll(&pfd, POLL_TIMEOUT) catch 0;
             _ = beacon.printf(0, "nevents: %d\n", nevents);
 
             if ((pfd[0].revents & std.posix.POLL.OUT) != 0) {
