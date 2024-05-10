@@ -3,8 +3,8 @@
 ## BOFs written and maintained by [Z-Labs](https://z-labs.eu/)
 
 | BOF name  | Description | Supported platforms | Example invoation
-| ------------- | ------------- | -------------- | ------------------ |
-| [tcpScanner](src/tcpScanner.zig)  | TCP connect() port scanner  | `Windows x86/x86_64`;`Linux x86/x86_64/ARMv6+/AArch64` | 4.3.2.1-255:22,80,443,8080-8089 |
+| ------------- | ------------------------------ | ---------------------- | ------------------ |
+| [tcpScanner](src/tcpScanner.zig)  | TCP connect() port scanner  | `Windows x86/x86_64`;`Linux x86/x86_64/ARMv6+/AArch64` | `tcpScanner 4.3.2.1-255:22,80,443,8080-8089` |
 
 [tcpScanner](src/tcpScanner.zig) - TCP connect() port scanner
 
