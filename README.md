@@ -66,6 +66,10 @@ To build and run test BOFs do:
 
     zig build test
 
+To run tests on foreign CPU architectures, you can use [QEMU](https://www.qemu.org/) which is nicely integrated in Zig:
+
+    zig build test -fqemu --glibc-runtimes /usr
+
 To ease the whole process even more, the [zigupdate.sh](utils/zigupdate.sh) script can be used for getting Zig and building bof-launcher on Linux machines:
 
 ```
@@ -147,10 +151,6 @@ Often during the developemnt/debugging, testing or just playing with a new piece
 
     cli4bofs.exe exec .\zig-out\bin\wWinver.coff.x64.o
     cli4bofs.exe exec .\zig-out\bin\udpScanner.coff.x64.o str:162.159.200.1-5:123,88
-
-To run tests on foreign CPU architectures, you can use [QEMU](https://www.qemu.org/):
-
-    zig build test -fqemu --glibc-runtimes /usr
 
 ## Example usage scenarios
 
