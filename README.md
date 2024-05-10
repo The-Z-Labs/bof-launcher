@@ -80,7 +80,7 @@ The build system will figure out the file extension and will build it (for all s
 
 Below you can see one of our BOFs in two versions: one written in Zig and the second one written in C. When compiled, Zig version weights **only 574 bytes**, C version weights 923 bytes.
 
-For an example of larger and cross-platform BOF please refer to our [UDP port scanner](bofs/src/udpScanner.zig).
+For an example of larger and cross-platform BOF please refer to our [UDP port scanner](bofs/src/udpScanner.zig) or [TCP port scanner](bofs/src/tcpScanner.zig).
 
 ```zig
 const w32 = @import("bof_api").win32;
