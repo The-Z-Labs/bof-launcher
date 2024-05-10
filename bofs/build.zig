@@ -46,6 +46,15 @@ const Bof = struct {
     archs: []const BofArch,
 
     fn getTargetQuery(format: BofFormat, arch: BofArch) std.Target.Query {
+        if (arch == .arm) {
+            // We basically force ARMv6 here.
+            return .{
+                .cpu_arch = .arm,
+                .os_tag = .linux,
+                .abi = .gnueabihf,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.arm1176jz_s }, // ARMv6kz
+            };
+        }
         return .{
             .cpu_arch = switch (arch) {
                 .x64 => .x86_64,

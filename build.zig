@@ -17,7 +17,7 @@ pub fn build(b: *std.Build) void {
             .cpu_arch = .arm,
             .os_tag = .linux,
             .abi = .gnueabihf,
-            .cpu_model = .{ .explicit = &std.Target.arm.cpu.arm1176jz_s },
+            .cpu_model = .{ .explicit = &std.Target.arm.cpu.arm1176jz_s }, // ARMv6kz
         },
     };
 
