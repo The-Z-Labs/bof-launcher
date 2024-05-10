@@ -70,18 +70,6 @@ To run tests on foreign CPU architectures, you can use [QEMU](https://www.qemu.o
 
     zig build test -fqemu --glibc-runtimes /usr
 
-To ease the whole process even more, the [zigupdate.sh](utils/zigupdate.sh) script can be used for getting Zig and building bof-launcher on Linux machines:
-
-```
-wget https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/utils/zigupdate.sh
-chmod +x zigupdate.sh; ./zigupdate.sh
-<update PATH>
-git clone https://github.com/The-Z-Labs/bof-launcher
-cd bof-launcher
-zig build
-zig build test
-```
-
 ## Z-Labs BOFs collection
 
 In an addition to the bof-launcher library itself, we provide [a collection of BOFs](bofs/) that we have authored. We plan to gradually extend this collection. We focus on developing BOFs in Zig language but it is perfectly okay to implement it in C and add it to the collection. To do so, just drop your BOF to `bofs/src` directory and add an entry for it in [bofs/build.zig](https://github.com/The-Z-Labs/bof-launcher/blob/main/bofs/build.zig) file, like that:
