@@ -5,12 +5,8 @@
 | BOF name  | Description | Supported platforms | Example invoation
 | ------------- | ------------------------------ | ---------------------- | ------------------ |
 | [tcpScanner](src/tcpScanner.zig)  | TCP connect() port scanner  | `Windows x86/x86_64`;`Linux x86/x86_64/ARMv6+/AArch64` | `tcpScanner 4.3.2.1-255:22,80,443,8080-8089` |
-
-[tcpScanner](src/tcpScanner.zig) - TCP connect() port scanner
-
-[udpScanner](src/udpScanner.zig) - UDP port sweeper implemented as a cross-platform `BOF`. Example invocation: `udpScanner 4.3.2.1-255:161,427,5000-5010`. [cross-platform]
-
-[winver](src/wWinver.zig) - show the edition, version, and system type of Windows operating system. [windows-based]
+| [udpScanner](src/udpScanner.zig) | UDP port sweeper | `Windows x86/x86_64`;`Linux x86/x86_64/ARMv6+/AArch64` | `udpScanner 4.3.2.1-255:161,427,5000-5010` |
+| [winver](src/wWinver.zig) | show the edition, version, and system type of Windows operating system | `Windows x86/x86_64` | `winver` |
 
 [net-tools](src/net-tools/) - Implementation of chosen tools from [net-tools package](https://salsa.debian.org/debian/net-tools) as `BOFs`.
 
