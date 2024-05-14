@@ -14,6 +14,8 @@ const bofs_included_in_launcher = [_]Bof{
     .{ .name = "uptime", .dir = "coreutils/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "id", .dir = "coreutils/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "ifconfig", .dir = "net-tools/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+    .{ .name = "wSimpleChainStage0", .dir = "simple-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    .{ .name = "wSimpleChainStage1", .dir = "simple-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     //.{ .name = "adcs_enum_com2", .go = "entry", .dir = "adcs_enum_com2/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
 };
 

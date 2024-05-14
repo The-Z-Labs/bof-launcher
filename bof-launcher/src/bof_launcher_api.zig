@@ -15,7 +15,7 @@
 /// const args0 = try bof.Args.init();
 /// defer args0.release();
 /// args0.begin();
-/// args0.add("my str");
+/// try args0.add("my str");
 /// args0.end();
 ///
 /// // Run BOF with arguments `args0`
@@ -31,7 +31,7 @@
 /// const args1 = try bof.Args.init();
 /// defer args1.release();
 /// args1.begin();
-/// args1.add("my str 2");
+/// try args1.add("my str 2");
 /// args1.end();
 ///
 /// const context1 = try bof_handle.run(args1.getBuffer());

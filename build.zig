@@ -67,6 +67,16 @@ pub fn build(b: *std.Build) void {
         );
 
         //
+        // Examples: simple chain
+        //
+        @import("examples/simple-chain/build.zig").build(
+            b,
+            options,
+            bof_launcher_lib,
+            bof_launcher_api_module,
+        );
+
+        //
         // Examples: integration with c
         //
         @import("examples/integration-with-c/build.zig").build(b, options, bof_launcher_lib);

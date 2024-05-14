@@ -1,0 +1,17 @@
+const std = @import("std");
+const beacon = @import("bof_api").beacon;
+const SharedData = @import("wSimpleChainShared.zig").SharedData;
+
+pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
+    var parser = beacon.datap{};
+    beacon.dataParse(&parser, args, args_len);
+
+    var shared_data: *SharedData = blk: {
+        const mem = beacon.dataExtract(&parser, null).?[0..@sizeOf(usize)];
+        break :blk @ptrFromInt(std.mem.readInt(usize, mem, .little));
+    };
+
+    shared_data.number += 1;
+
+    return 0;
+}
