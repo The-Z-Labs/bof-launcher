@@ -1,3 +1,3 @@
-pub const SharedData = struct {
+pub const State = struct {
     number: u32,
 };

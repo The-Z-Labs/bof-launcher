@@ -1,7 +1,7 @@
 const std = @import("std");
 const assert = std.debug.assert;
 const bof = @import("bof_launcher_api");
-const SharedData = @import("shared").SharedData;
+const shared = @import("shared");
 
 pub const std_options = .{
     .log_level = .info,
@@ -15,10 +15,10 @@ pub fn main() !void {
     try bof.initLauncher();
     defer bof.releaseLauncher();
 
-    const data = try allocator.create(SharedData);
-    defer allocator.destroy(data);
+    const state = try allocator.create(shared.State);
+    defer allocator.destroy(state);
 
-    data.number = 0;
+    state.number = 0;
 
     const coff_stage0 = try loadBofFromFile(allocator, "wSimpleChainStage0");
     defer allocator.free(coff_stage0);
@@ -32,7 +32,7 @@ pub fn main() !void {
     const bof_stage1 = try bof.Object.initFromMemory(coff_stage1);
     defer bof_stage1.release();
 
-    const ptr_as_bytes = std.mem.asBytes(&@intFromPtr(data));
+    const ptr_as_bytes = std.mem.asBytes(&@intFromPtr(state));
 
     const args = try bof.Args.init();
     defer args.release();
@@ -43,12 +43,12 @@ pub fn main() !void {
     const ctx_stage0 = try bof_stage0.run(args.getBuffer());
     defer ctx_stage0.release();
 
-    std.debug.print("number is: {d}\n", .{data.number});
+    std.debug.print("number is: {d}\n", .{state.number});
 
     const ctx_stage1 = try bof_stage1.run(args.getBuffer());
     defer ctx_stage1.release();
 
-    std.debug.print("number is: {d}\n", .{data.number});
+    std.debug.print("number is: {d}\n", .{state.number});
 }
 
 fn loadBofFromFile(allocator: std.mem.Allocator, bof_name: [:0]const u8) ![]const u8 {
