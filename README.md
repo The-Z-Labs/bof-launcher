@@ -4,8 +4,8 @@
   <img src="https://github.com/The-Z-Labs/bof-launcher/assets/4785347/990ad1fb-c35b-48cf-a0db-aed3c825d149" width="192" height="192" />
 </p>
 
-[Z-labs blog post: Running BOFs with 'bof-launcher' library](https://blog.z-labs.eu/2024/02/08/bof-launcher.html)<br />
-[Z-labs blog post: Executing Cobalt Strike's BOFs on ARM-based Linux devices](https://blog.z-labs.eu/2024/05/10/bofs-on-arm-based-devices.html)
+Z-Labs blog post: [Running BOFs with 'bof-launcher' library](https://blog.z-labs.eu/2024/02/08/bof-launcher.html)<br />
+Z-Labs blog post: [Executing Cobalt Strike's BOFs on ARM-based Linux devices](https://blog.z-labs.eu/2024/05/10/bofs-on-arm-based-devices.html)
 
 ## Introduction
 
