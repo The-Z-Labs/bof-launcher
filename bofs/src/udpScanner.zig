@@ -202,7 +202,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     // parse 1st (mandatory) argument:
     beacon.dataParse(&parser, args, args_len);
     const targets_spec = beacon.dataExtract(&parser, &opt_len);
-    const sTargets_spec = targets_spec.?[0..@as(usize, @intCast(opt_len - 1))];
+    const sTargets_spec = targets_spec.?[0..@intCast(opt_len - 1)];
 
     debugPrint("args_len: {d}; opt_len: {d}\n", .{ args_len, opt_len });
 
@@ -211,9 +211,9 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
         const buf_len = beacon.dataInt(&parser);
 
         const buf_ptr = beacon.dataExtract(&parser, &opt_len);
-        const sBuf_ptr = buf_ptr.?[0..@as(usize, @intCast(opt_len - 1))];
+        const sBuf_ptr = buf_ptr.?[0..@intCast(opt_len - 1)];
 
-        payloads_buf = @as([*]u8, @ptrFromInt(mem.readInt(usize, sBuf_ptr[0..@sizeOf(usize)], .little)))[0..@as(usize, @intCast(buf_len))];
+        payloads_buf = @as([*]u8, @ptrFromInt(mem.readInt(usize, sBuf_ptr[0..@sizeOf(usize)], .little)))[0..@intCast(buf_len)];
     } else {
         payloads_buf = builtin_payloads;
     }
