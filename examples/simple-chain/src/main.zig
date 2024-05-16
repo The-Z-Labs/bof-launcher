@@ -16,30 +16,30 @@ pub fn main() !void {
     try bof.initLauncher();
     defer bof.releaseLauncher();
 
+    const bof_stage0 = blk: {
+        const coff_stage0 = try loadBofFromFile(allocator, "wSimpleChainStage0");
+        defer allocator.free(coff_stage0);
+        break :blk try bof.Object.initFromMemory(coff_stage0);
+    };
+    defer bof_stage0.release();
+
+    const bof_stage1 = blk: {
+        const coff_stage1 = try loadBofFromFile(allocator, "wSimpleChainStage1");
+        defer allocator.free(coff_stage1);
+        break :blk try bof.Object.initFromMemory(coff_stage1);
+    };
+    defer bof_stage1.release();
+
     const state = try allocator.create(shared.State);
     defer allocator.destroy(state);
 
     state.number = 0;
     state.handle = w32.GetCurrentProcess();
 
-    const coff_stage0 = try loadBofFromFile(allocator, "wSimpleChainStage0");
-    defer allocator.free(coff_stage0);
-
-    const coff_stage1 = try loadBofFromFile(allocator, "wSimpleChainStage1");
-    defer allocator.free(coff_stage1);
-
-    const bof_stage0 = try bof.Object.initFromMemory(coff_stage0);
-    defer bof_stage0.release();
-
-    const bof_stage1 = try bof.Object.initFromMemory(coff_stage1);
-    defer bof_stage1.release();
-
-    const ptr_as_bytes = std.mem.asBytes(&@intFromPtr(state));
-
     const args = try bof.Args.init();
     defer args.release();
     args.begin();
-    try args.add(ptr_as_bytes);
+    try args.add(std.mem.asBytes(&@intFromPtr(state)));
     args.end();
 
     const ctx_stage0 = try bof_stage0.run(args.getBuffer());
