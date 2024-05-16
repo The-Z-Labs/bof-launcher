@@ -43,7 +43,7 @@ pub fn build(b: *std.Build, options: Options) *std.Build.Step.Compile {
         .optimize = options.optimize,
 
         // TODO: Remove this
-        .link_libc = options.target.result.os.tag == .linux and options.target.result.cpu.arch == .arm,
+        .link_libc = options.target.result.os.tag == .linux,
     });
     if (options.target.query.os_tag == .windows) {
         static_lib.linkSystemLibrary2("ws2_32", .{});
@@ -65,7 +65,7 @@ pub fn build(b: *std.Build, options: Options) *std.Build.Step.Compile {
             .optimize = options.optimize,
 
             // TODO: Remove this
-            .link_libc = options.target.result.os.tag == .linux and options.target.result.cpu.arch == .arm,
+            .link_libc = options.target.result.os.tag == .linux,
         });
         if (options.target.query.os_tag == .windows) {
             shared_lib.linkSystemLibrary2("ws2_32", .{});
