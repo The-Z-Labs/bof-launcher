@@ -36,15 +36,8 @@ int main(int argc, char *argv[]) {
     printf("Running BOF from command line C application...\n");
  
     BofContext* bof_context = NULL;
-    if (bofObjectRunAsyncThread(
-            bof_handle,
-            NULL,
-            0,
-            NULL,
-            NULL,
-            &bof_context) < 0) return 1;
-    if (bof_context == NULL)
-        return 1;
+    if (bofObjectRunAsyncThread(bof_handle, NULL, 0, NULL, NULL, &bof_context) < 0) return 1;
+    if (bof_context == NULL) return 1;
 
     bofContextWait(bof_context);
 
