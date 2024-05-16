@@ -9,6 +9,7 @@ pub fn build(
     options: Options,
     bof_launcher_lib: *std.Build.Step.Compile,
     bof_launcher_api_module: *std.Build.Module,
+    bof_api_module: *std.Build.Module,
 ) void {
     if (options.target.query.os_tag != .windows) return;
 
@@ -27,14 +28,13 @@ pub fn build(
 
     exe.linkLibrary(bof_launcher_lib);
 
-    exe.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
+    const shared_module = b.addModule("shared", .{
+        .root_source_file = .{ .path = thisDir() ++ "/../../bofs/src/simple-chain/wSimpleChainShared.zig" },
+    });
+    shared_module.addImport("bof_api", bof_api_module);
 
-    exe.root_module.addImport(
-        "shared",
-        b.addModule("shared", .{
-            .root_source_file = .{ .path = thisDir() ++ "/../../bofs/src/simple-chain/wSimpleChainShared.zig" },
-        }),
-    );
+    exe.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
+    exe.root_module.addImport("shared", shared_module);
 
     b.installArtifact(exe);
 }

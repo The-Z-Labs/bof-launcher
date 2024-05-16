@@ -74,6 +74,7 @@ pub fn build(b: *std.Build) void {
             options,
             bof_launcher_lib,
             bof_launcher_api_module,
+            bof_api_module,
         );
 
         //
