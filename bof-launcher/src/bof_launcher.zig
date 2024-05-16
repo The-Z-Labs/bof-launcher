@@ -1720,6 +1720,7 @@ const gstate = struct {
     var func_lookup: std.StringHashMap(usize) = undefined;
 
     var libc: if (@import("builtin").os.tag == .linux) ?std.DynLib else void = null;
+    var libpthread: if (@import("builtin").os.tag == .linux) ?std.DynLib else void = null;
     var pthread_create: *const fn (
         noalias newthread: *pthread_t,
         noalias attr: ?*anyopaque,
@@ -1878,10 +1879,10 @@ fn initLauncher() !void {
     }
 
     if (@import("builtin").os.tag == .linux) {
-        gstate.libc = try std.DynLib.open("libc.so.6");
+        gstate.libpthread = try std.DynLib.open("libpthread.so.0");
 
-        gstate.pthread_create = gstate.libc.?.lookup(@TypeOf(gstate.pthread_create), "pthread_create").?;
-        gstate.pthread_detach = gstate.libc.?.lookup(@TypeOf(gstate.pthread_detach), "pthread_detach").?;
+        gstate.pthread_create = gstate.libpthread.?.lookup(@TypeOf(gstate.pthread_create), "pthread_create").?;
+        gstate.pthread_detach = gstate.libpthread.?.lookup(@TypeOf(gstate.pthread_detach), "pthread_detach").?;
     }
 
     gstate.is_valid = true;
@@ -1908,6 +1909,10 @@ export fn bofLauncherRelease() callconv(.C) void {
         if (gstate.libc != null) {
             gstate.libc.?.close();
             gstate.libc = null;
+        }
+        if (gstate.libpthread != null) {
+            gstate.libpthread.?.close();
+            gstate.libpthread = null;
         }
     }
 
