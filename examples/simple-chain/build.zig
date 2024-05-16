@@ -34,6 +34,7 @@ pub fn build(
     shared_module.addImport("bof_api", bof_api_module);
 
     exe.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
+    exe.root_module.addImport("bof_api", bof_api_module);
     exe.root_module.addImport("shared", shared_module);
 
     b.installArtifact(exe);

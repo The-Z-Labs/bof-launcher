@@ -1,6 +1,7 @@
 const std = @import("std");
 const assert = std.debug.assert;
 const bof = @import("bof_launcher_api");
+const w32 = @import("bof_api").win32;
 const shared = @import("shared");
 
 pub const std_options = .{
@@ -19,6 +20,7 @@ pub fn main() !void {
     defer allocator.destroy(state);
 
     state.number = 0;
+    state.handle = w32.GetCurrentProcess();
 
     const coff_stage0 = try loadBofFromFile(allocator, "wSimpleChainStage0");
     defer allocator.free(coff_stage0);
