@@ -21,7 +21,10 @@ pub const PVOID = windows.PVOID;
 pub const LPVOID = windows.LPVOID;
 pub const PSECURITY_DESCRIPTOR = PVOID;
 pub const NTSTATUS = windows.NTSTATUS;
-pub const CLIENT_ID = windows.CLIENT_ID;
+pub const CLIENT_ID = extern struct {
+    UniqueProcess: ?HANDLE,
+    UniqueThread: ?HANDLE,
+};
 pub const UNICODE_STRING = windows.UNICODE_STRING;
 pub const USHORT = windows.USHORT;
 pub const BOOLEAN = windows.BOOLEAN;
@@ -74,6 +77,9 @@ pub const STANDARD_RIGHTS_WRITE = READ_CONTROL;
 pub const STANDARD_RIGHTS_EXECUTE = READ_CONTROL;
 
 pub const PROCESS_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0xffff;
+pub const PROCESS_VM_OPERATION = 0x0008;
+pub const PROCESS_CREATE_THREAD = 0x0002;
+pub const PROCESS_VM_WRITE = 0x0020;
 
 pub const JOB_OBJECT_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0x3F;
 
@@ -213,7 +219,15 @@ pub const COINIT_APARTMENTTHREADED = 0x2;
 pub const COINIT_DISABLE_OLE1DDE = 0x4;
 pub const COINIT_SPEED_OVER_MEMORY = 0x8;
 
-pub const OBJECT_ATTRIBUTES = windows.OBJECT_ATTRIBUTES;
+pub const OBJECT_ATTRIBUTES = extern struct {
+    Length: ULONG,
+    RootDirectory: ?HANDLE,
+    ObjectName: ?*UNICODE_STRING,
+    Attributes: ULONG,
+    SecurityDescriptor: ?*anyopaque,
+    SecurityQualityOfService: ?*anyopaque,
+};
+
 pub const OBJ_INHERIT = windows.OBJ_INHERIT;
 pub const OBJ_PERMANENT = windows.OBJ_PERMANENT;
 pub const OBJ_EXCLUSIVE = windows.OBJ_EXCLUSIVE;
@@ -409,6 +423,13 @@ pub extern "ntdll" fn NtTerminateProcess(
     ExitStatus: NTSTATUS,
 ) callconv(WINAPI) NTSTATUS;
 
+pub extern "ntdll" fn NtOpenProcess(
+    ProcessHandle: *HANDLE,
+    DesiredAccess: ACCESS_MASK,
+    ObjectAttributes: *OBJECT_ATTRIBUTES,
+    ClientId: ?*CLIENT_ID,
+) callconv(WINAPI) NTSTATUS;
+
 pub extern "ntdll" fn NtResumeProcess(
     ProcessHandle: HANDLE,
 ) callconv(WINAPI) NTSTATUS;
@@ -451,6 +472,32 @@ pub extern "ntdll" fn NtClose(
 
 pub extern "ntdll" fn RtlWow64EnableFsRedirection(
     Wow64FsEnableRedirection: BOOLEAN,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtAllocateVirtualMemory(
+    ProcessHandle: HANDLE,
+    BaseAddress: *PVOID,
+    ZeroBits: ULONG_PTR,
+    RegionSize: *SIZE_T,
+    AllocationType: ULONG,
+    Protect: ULONG,
+) callconv(WINAPI) NTSTATUS;
+
+pub const NtWriteVirtualMemory = windows.ntdll.NtWriteVirtualMemory;
+pub const NtProtectVirtualMemory = windows.ntdll.NtProtectVirtualMemory;
+
+pub extern "ntdll" fn NtCreateThreadEx(
+    ThreadHandle: *HANDLE,
+    DesiredAccess: ACCESS_MASK,
+    ObjectAttributes: ?*OBJECT_ATTRIBUTES,
+    ProcessHandle: HANDLE,
+    StartRoutine: PVOID,
+    Argument: ?PVOID,
+    CreateFlags: ULONG,
+    ZeroBits: SIZE_T,
+    StackSize: SIZE_T,
+    MaximumStackSize: SIZE_T,
+    AttributeList: ?*anyopaque, // TODO: ?*PS_ATTRIBUTE_LIST,
 ) callconv(WINAPI) NTSTATUS;
 
 // advapi32
