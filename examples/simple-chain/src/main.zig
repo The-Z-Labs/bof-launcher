@@ -26,6 +26,13 @@ pub fn main() !void {
     try bof.initLauncher();
     defer bof.releaseLauncher();
 
+    const bof_clone_process = blk: {
+        const coff = try loadBofFromFile(allocator, "wCloneProcess");
+        defer allocator.free(coff);
+        break :blk try bof.Object.initFromMemory(coff);
+    };
+    defer bof_clone_process.release();
+
     const bof_stage0 = blk: {
         const coff = try loadBofFromFile(allocator, "wSimpleChainStage0");
         defer allocator.free(coff);
@@ -69,22 +76,23 @@ pub fn main() !void {
 
     const ctx_stage0 = try bof_stage0.run(args.getBuffer());
     defer ctx_stage0.release();
-
     std.debug.print("nt status: {d}\n", .{state.nt_status});
+
+    {
+        const ctx = try bof_clone_process.run(args.getBuffer());
+        defer ctx.release();
+    }
 
     const ctx_stage1 = try bof_stage1.run(args.getBuffer());
     defer ctx_stage1.release();
-
     std.debug.print("nt status: {d}\n", .{state.nt_status});
 
     const ctx_stage2 = try bof_stage2.run(args.getBuffer());
     defer ctx_stage2.release();
-
     std.debug.print("nt status: {d}\n", .{state.nt_status});
 
     const ctx_stage3 = try bof_stage3.run(args.getBuffer());
     defer ctx_stage3.release();
-
     std.debug.print("nt status: {d}\n", .{state.nt_status});
 
     var thread_handle: w32.HANDLE = undefined;
