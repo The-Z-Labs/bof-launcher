@@ -12,7 +12,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
         break :blk @ptrFromInt(std.mem.readInt(usize, mem, .little));
     };
 
-    var size: w32.SIZE_T = shared.shellcode.len;
+    var size: w32.SIZE_T = state.shellcode.len;
     var base_address: usize = 0;
     const base_address_ptr: *usize = &base_address;
 
