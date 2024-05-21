@@ -500,6 +500,85 @@ pub extern "ntdll" fn NtCreateThreadEx(
     AttributeList: ?*anyopaque, // TODO: ?*PS_ATTRIBUTE_LIST,
 ) callconv(WINAPI) NTSTATUS;
 
+pub const PS_CREATE_STATE = enum(u32) {
+    InitialState,
+    FailOnFileOpen,
+    FailOnSectionCreate,
+    FailExeFormat,
+    FailMachineMismatch,
+    FailExeName, // Debugger specified
+    Success,
+    MaximumStates,
+};
+
+pub const PS_CREATE_INFO = extern struct {
+    Size: SIZE_T,
+    State: PS_CREATE_STATE,
+    U: extern union {
+        InitialState: extern struct {
+            U: extern union {
+                InitFlags: ULONG,
+                S: packed struct(ULONG) {
+                    WriteOutputOnExit: u1,
+                    DetectManifest: u1,
+                    IFEOSkipDebugger: u1,
+                    IFEODoNotPropagateKeyState: u1,
+                    SpareBits1: u4,
+                    SpareBits2: u8,
+                    ProhibitedImageCharacteristics: u16,
+                },
+            },
+        },
+        FailSection: extern struct {
+            FileHandle: HANDLE,
+        },
+        ExeFormat: extern struct {
+            DllCharacteristics: USHORT,
+        },
+        ExeName: extern struct {
+            IFEOKey: HANDLE,
+        },
+        SuccessState: extern struct {
+            U: extern union {
+                OutputFlags: ULONG,
+                S: packed struct(ULONG) {
+                    ProtectedProcess: u1,
+                    AddressSpaceOverride: u1,
+                    DevOverrideEnabled: u1, // from Image File Execution Options
+                    ManifestDetected: u1,
+                    ProtectedProcessLight: u1,
+                    SpareBits1: u3,
+                    SpareBits2: u8,
+                    SpareBits3: u16,
+                },
+            },
+            FileHandle: HANDLE,
+            SectionHandle: HANDLE,
+            UserProcessParametersNative: ULONGLONG,
+            UserProcessParametersWow64: ULONG,
+            CurrentParameterFlags: ULONG,
+            PebAddressNative: ULONGLONG,
+            PebAddressWow64: ULONG,
+            ManifestAddress: ULONGLONG,
+            ManifestSize: ULONG,
+        },
+    },
+};
+
+pub extern "ntdll" fn NtCreateUserProcess(
+    ProcessHandle: *HANDLE,
+    ThreadHandle: *HANDLE,
+    ProcessDesiredAccess: ACCESS_MASK,
+    ThreadDesiredAccess: ACCESS_MASK,
+    ProcessObjectAttributes: ?*OBJECT_ATTRIBUTES,
+    ThreadObjectAttributes: ?*OBJECT_ATTRIBUTES,
+    ProcessFlags: ULONG,
+    ThreadFlags: ULONG,
+    ProcessParameters: ?PVOID,
+    CreateInfo: *PS_CREATE_INFO,
+    AttributeList: ?*anyopaque, // TODO: ?*PS_ATTRIBUTE_LIST,
+) callconv(WINAPI) NTSTATUS;
+
 // advapi32
 pub extern "advapi32" fn OpenProcessToken(
     ProcessHandle: HANDLE,
