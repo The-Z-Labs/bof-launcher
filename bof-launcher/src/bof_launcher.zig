@@ -1703,7 +1703,7 @@ export fn getEnviron() callconv(.C) [*:null]?[*:0]const u8 {
 
 const mem_alignment = 16;
 
-fn panic(_: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
+pub fn panic(_: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     while (true) {
         @breakpoint();
     }
