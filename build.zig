@@ -67,9 +67,9 @@ pub fn build(b: *std.Build) void {
         );
 
         //
-        // Examples: simple chain
+        // Examples: process injection chain
         //
-        @import("examples/simple-chain/build.zig").build(
+        @import("examples/process-injection-chain/build.zig").build(
             b,
             options,
             bof_launcher_lib,

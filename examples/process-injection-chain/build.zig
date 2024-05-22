@@ -15,7 +15,7 @@ pub fn build(
 
     const exe = b.addExecutable(.{
         .name = std.mem.join(b.allocator, "_", &.{
-            "simple_chain",
+            "process_injection_chain",
             options.osTagStr(),
             options.cpuArchStr(),
         }) catch @panic("OOM"),
@@ -29,7 +29,7 @@ pub fn build(
     exe.linkLibrary(bof_launcher_lib);
 
     const shared_module = b.addModule("shared", .{
-        .root_source_file = .{ .path = thisDir() ++ "/../../bofs/src/simple-chain/wSimpleChainShared.zig" },
+        .root_source_file = .{ .path = thisDir() ++ "/../../bofs/src/process-injection-chain/wInjectionChainShared.zig" },
     });
     shared_module.addImport("bof_api", bof_api_module);
 

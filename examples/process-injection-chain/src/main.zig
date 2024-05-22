@@ -34,28 +34,28 @@ pub fn main() !void {
     defer bof_clone_process.release();
 
     const bof_stage0 = blk: {
-        const coff = try loadBofFromFile(allocator, "wSimpleChainStage0");
+        const coff = try loadBofFromFile(allocator, "wInjectionChainStage0");
         defer allocator.free(coff);
         break :blk try bof.Object.initFromMemory(coff);
     };
     defer bof_stage0.release();
 
     const bof_stage1 = blk: {
-        const coff = try loadBofFromFile(allocator, "wSimpleChainStage1");
+        const coff = try loadBofFromFile(allocator, "wInjectionChainStage1");
         defer allocator.free(coff);
         break :blk try bof.Object.initFromMemory(coff);
     };
     defer bof_stage1.release();
 
     const bof_stage2 = blk: {
-        const coff = try loadBofFromFile(allocator, "wSimpleChainStage2");
+        const coff = try loadBofFromFile(allocator, "wInjectionChainStage2");
         defer allocator.free(coff);
         break :blk try bof.Object.initFromMemory(coff);
     };
     defer bof_stage2.release();
 
     const bof_stage3 = blk: {
-        const coff = try loadBofFromFile(allocator, "wSimpleChainStage3");
+        const coff = try loadBofFromFile(allocator, "wInjectionChainStage3");
         defer allocator.free(coff);
         break :blk try bof.Object.initFromMemory(coff);
     };
