@@ -16,8 +16,6 @@ pub fn build(
         .target = options.target,
         .optimize = options.optimize,
     });
-    if (options.optimize == .ReleaseSmall)
-        exe.root_module.strip = true;
 
     exe.addIncludePath(.{ .path = thisDir() ++ "/../../bof-launcher/src" });
     exe.addCSourceFile(.{

@@ -23,8 +23,6 @@ pub fn build(
         .target = options.target,
         .optimize = options.optimize,
     });
-    if (options.optimize == .ReleaseSmall)
-        exe.root_module.strip = true;
 
     exe.linkLibrary(bof_launcher_lib);
 

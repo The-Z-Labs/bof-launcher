@@ -49,7 +49,7 @@ pub fn build(b: *std.Build, options: Options) *std.Build.Step.Compile {
         static_lib.linkSystemLibrary2("ws2_32", .{});
         static_lib.linkSystemLibrary2("ole32", .{});
     }
-    buildLib(static_lib);
+    buildLib(static_lib, options);
     b.installArtifact(static_lib);
 
     if (options.target.result.cpu.arch != .x86) { // TODO: Shared library fails to build on x86.
@@ -71,15 +71,18 @@ pub fn build(b: *std.Build, options: Options) *std.Build.Step.Compile {
             shared_lib.linkSystemLibrary2("ws2_32", .{});
             shared_lib.linkSystemLibrary2("ole32", .{});
         }
-        buildLib(shared_lib);
+        buildLib(shared_lib, options);
         b.installArtifact(shared_lib);
     }
 
     return static_lib;
 }
 
-fn buildLib(lib: *std.Build.Step.Compile) void {
+fn buildLib(lib: *std.Build.Step.Compile, options: Options) void {
     lib.root_module.pic = true;
+    if (options.optimize == .ReleaseSmall) {
+        lib.root_module.unwind_tables = false;
+    }
     lib.addCSourceFile(.{
         .file = .{ .path = thisDir() ++ "/src/beacon/beacon_impl.c" },
         .flags = &.{"-std=c99"},
