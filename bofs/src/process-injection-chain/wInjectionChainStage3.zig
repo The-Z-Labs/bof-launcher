@@ -13,7 +13,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     };
 
     const base_address: *?w32.PVOID = @ptrCast(&state.base_address);
-    var bytes_to_protect: w32.SIZE_T = state.shellcode.len;
+    var bytes_to_protect: w32.SIZE_T = state.shellcode_len;
     var old_protection: w32.ULONG = 0;
     state.nt_status = w32.NtProtectVirtualMemory(
         state.process_handle,

