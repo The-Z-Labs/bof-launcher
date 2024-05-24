@@ -47,6 +47,7 @@ nt_allocate_virtual_memory:
     ; [rax+284] ULONG OSMinorVersion
     ; [rax+288] USHORT OSBuildNumber
 
+    ; r10d = 10 * OSMajorVersion + OSMinorVersion
     imul r10d, [rax+280], 10
     add r10d, [rax+284]
 
