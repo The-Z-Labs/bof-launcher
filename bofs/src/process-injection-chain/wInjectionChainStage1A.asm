@@ -33,7 +33,7 @@ go:
     call nt_allocate_virtual_memory
 
     mov rcx, [rbp-40] ; State*
-    mov [rcx+4], eax ; nt_status
+    mov [rcx+4], eax ; state.nt_status
 
     mov rsp, rbp
     pop rbp
