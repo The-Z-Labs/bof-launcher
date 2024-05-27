@@ -48,7 +48,7 @@ pub fn main() !void {
     defer bof_stage1.release();
 
     const bof_stage2 = blk: {
-        const coff = try loadBofFromFile(allocator, "wInjectionChainStage2");
+        const coff = try loadBofFromFile(allocator, "wInjectionChainStage2C");
         defer allocator.free(coff);
         break :blk try bof.Object.initFromMemory(coff);
     };
@@ -133,9 +133,10 @@ pub fn main() !void {
         0,
         null,
     );
-    _ = w32.NtClose(thread_handle);
 
     std.debug.print("nt status: {d}\n", .{state.nt_status});
+
+    _ = w32.NtClose(thread_handle);
 }
 
 fn loadBofFromFile(allocator: std.mem.Allocator, bof_name: [:0]const u8) ![]const u8 {
