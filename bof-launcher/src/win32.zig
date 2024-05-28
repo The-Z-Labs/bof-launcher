@@ -19,6 +19,7 @@ pub const OSVERSIONINFOW = windows.OSVERSIONINFOW;
 pub const RTL_OSVERSIONINFOW = windows.RTL_OSVERSIONINFOW;
 pub const PVOID = windows.PVOID;
 pub const LPVOID = windows.LPVOID;
+pub const LPCVOID = windows.LPCVOID;
 pub const PSECURITY_DESCRIPTOR = PVOID;
 pub const NTSTATUS = windows.NTSTATUS;
 pub const CLIENT_ID = windows.CLIENT_ID;
@@ -367,6 +368,19 @@ pub extern "kernel32" fn ResumeThread(
     hThread: HANDLE,
 ) callconv(WINAPI) DWORD;
 
+pub extern "kernel32" fn VirtualProtect(
+    lpAddress: LPVOID,
+    dwSize: SIZE_T,
+    flNewProtect: DWORD,
+    lpflOldProtect: *DWORD,
+) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn FlushInstructionCache(
+    hProcess: HANDLE,
+    lpBaseAddress: ?LPCVOID,
+    dwSize: SIZE_T,
+) callconv(WINAPI) BOOL;
+
 // ntdll
 pub const RtlGetVersion = windows.ntdll.RtlGetVersion;
 pub const NtQueryInformationProcess = windows.ntdll.NtQueryInformationProcess;
@@ -380,6 +394,8 @@ pub fn NtCurrentThread() HANDLE {
 pub fn NtCurrentSession() HANDLE {
     return @ptrFromInt(@as(usize, @bitCast(@as(isize, -3))));
 }
+
+pub const NtProtectVirtualMemory = windows.ntdll.NtProtectVirtualMemory;
 
 pub extern "ntdll" fn RtlCloneUserProcess(
     ProcessFlags: ULONG,

@@ -132,7 +132,7 @@ const Bof = struct {
                 null,
                 size,
                 w32.MEM_COMMIT | w32.MEM_RESERVE | w32.MEM_TOP_DOWN,
-                w32.PAGE_EXECUTE_READWRITE,
+                w32.PAGE_READWRITE,
             );
             break :blk @as([*]align(page_size) u8, @ptrCast(@alignCast(addr)))[0..size];
         };
@@ -425,10 +425,33 @@ const Bof = struct {
             {
                 const section_index = @intFromEnum(sym.symbol.section_number) - 1;
                 std.log.debug("go() section index: {d}", .{section_index});
+
+                const section = section_mappings.items[section_index];
                 go = @as(
                     @TypeOf(go),
-                    @ptrFromInt(@intFromPtr(section_mappings.items[section_index].ptr) + sym.symbol.value),
+                    @ptrFromInt(@intFromPtr(section.ptr) + sym.symbol.value),
                 );
+
+                var old_protection: w32.DWORD = 0;
+                if (w32.VirtualProtect(
+                    section.ptr,
+                    section.len,
+                    w32.PAGE_EXECUTE_READ,
+                    &old_protection,
+                ) == w32.FALSE) return error.VirtualProtectFailed;
+
+                const got_section = all_sections_mem[0 .. thunk_trampoline.len * func_addr_to_got_entry.count()];
+
+                if (w32.VirtualProtect(
+                    got_section.ptr,
+                    got_section.len,
+                    w32.PAGE_EXECUTE_READ,
+                    &old_protection,
+                ) == w32.FALSE) return error.VirtualProtectFailed;
+
+                _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), section.ptr, section.len);
+                _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), got_section.ptr, got_section.len);
+
                 break;
             }
         }
