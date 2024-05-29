@@ -502,7 +502,7 @@ const Bof = struct {
         const all_sections_mem = try posix.mmap(
             null,
             (1 + section_headers.items.len) * max_section_size,
-            posix.PROT.READ | posix.PROT.WRITE | posix.PROT.EXEC,
+            posix.PROT.READ | posix.PROT.WRITE,
             .{ .TYPE = .PRIVATE, .ANONYMOUS = true },
             -1,
             0,
@@ -887,9 +887,14 @@ const Bof = struct {
                     .{ name, @intFromPtr(section_mappings.items[sym.st_shndx].ptr) + sym.st_value },
                 );
                 if (name[0] == 'g' and name[1] == 'o' and name[2] == 0) {
-                    go = @as(
-                        @TypeOf(go),
-                        @ptrFromInt(@intFromPtr(section_mappings.items[sym.st_shndx].ptr) + sym.st_value),
+                    const section = section_mappings.items[sym.st_shndx];
+
+                    go = @as(@TypeOf(go), @ptrFromInt(@intFromPtr(section.ptr) + sym.st_value));
+
+                    try posix.mprotect(section, posix.PROT.READ | posix.PROT.EXEC);
+                    try posix.mprotect(
+                        got.ptr[0 .. func_addr_to_got_entry.count() * thunk_trampoline.len],
+                        posix.PROT.READ | posix.PROT.EXEC,
                     );
                 }
             }
