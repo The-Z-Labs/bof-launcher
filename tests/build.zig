@@ -12,15 +12,15 @@ pub fn runTests(
 ) *std.Build.Step.Run {
     const tests = b.addTest(.{
         .name = "bof-launcher-tests",
-        .root_source_file = .{ .path = thisDir() ++ "/src/tests.zig" },
+        .root_source_file = .{ .cwd_relative = thisDir() ++ "/src/tests.zig" },
         .target = options.target,
         .optimize = options.optimize,
         //.filter = "udpScanner",
     });
-    tests.addIncludePath(.{ .path = thisDir() ++ "/../bof-launcher/src" });
+    tests.addIncludePath(.{ .cwd_relative = thisDir() ++ "/../bof-launcher/src" });
     tests.linkLibrary(bof_launcher_lib);
     tests.addCSourceFile(.{
-        .file = .{ .path = thisDir() ++ "/src/tests.c" },
+        .file = .{ .cwd_relative = thisDir() ++ "/src/tests.c" },
         .flags = &.{"-std=c99"},
     });
     tests.linkLibC();
@@ -48,7 +48,7 @@ pub fn buildTestBofs(
     }) |name| {
         const obj = b.addObject(.{
             .name = name,
-            .root_source_file = .{ .path = thisDir() ++ "/src/" ++ name ++ ".zig" },
+            .root_source_file = .{ .cwd_relative = thisDir() ++ "/src/" ++ name ++ ".zig" },
             .target = options.target,
             .optimize = .ReleaseSmall,
         });
@@ -78,13 +78,13 @@ pub fn buildTestBofs(
         const obj = b.addObject(.{
             .name = name,
             // TODO: Zig bug. Remove below line once fixed.
-            .root_source_file = .{ .path = thisDir() ++ "/src/dummy.zig" },
+            .root_source_file = .{ .cwd_relative = thisDir() ++ "/src/dummy.zig" },
             .target = options.target,
             .optimize = .ReleaseSmall,
         });
-        obj.addIncludePath(.{ .path = thisDir() ++ "/../include" });
+        obj.addIncludePath(b.path("include"));
         obj.addCSourceFile(.{
-            .file = .{ .path = thisDir() ++ "/src/" ++ name ++ ".c" },
+            .file = .{ .cwd_relative = thisDir() ++ "/src/" ++ name ++ ".c" },
             .flags = &.{"-std=c99"},
         });
         obj.root_module.pic = true;

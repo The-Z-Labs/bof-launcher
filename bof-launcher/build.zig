@@ -38,7 +38,7 @@ pub fn build(b: *std.Build, options: Options) *std.Build.Step.Compile {
             options.osTagStr(),
             options.cpuArchStr(),
         }) catch @panic("OOM"),
-        .root_source_file = .{ .path = thisDir() ++ "/src/bof_launcher.zig" },
+        .root_source_file = .{ .cwd_relative = thisDir() ++ "/src/bof_launcher.zig" },
         .target = options.target,
         .optimize = options.optimize,
 
@@ -60,7 +60,7 @@ pub fn build(b: *std.Build, options: Options) *std.Build.Step.Compile {
                 options.cpuArchStr(),
                 "shared",
             }) catch @panic("OOM"),
-            .root_source_file = .{ .path = thisDir() ++ "/src/bof_launcher.zig" },
+            .root_source_file = .{ .cwd_relative = thisDir() ++ "/src/bof_launcher.zig" },
             .target = options.target,
             .optimize = options.optimize,
 
@@ -84,11 +84,11 @@ fn buildLib(lib: *std.Build.Step.Compile, options: Options) void {
         lib.root_module.unwind_tables = false;
     }
     lib.addCSourceFile(.{
-        .file = .{ .path = thisDir() ++ "/src/beacon/beacon_impl.c" },
+        .file = .{ .cwd_relative = thisDir() ++ "/src/beacon/beacon_impl.c" },
         .flags = &.{"-std=c99"},
     });
     lib.addCSourceFile(.{
-        .file = .{ .path = thisDir() ++ "/src/beacon/stb_sprintf.c" },
+        .file = .{ .cwd_relative = thisDir() ++ "/src/beacon/stb_sprintf.c" },
         .flags = &.{ "-std=c99", "-fno-sanitize=undefined" },
     });
 }

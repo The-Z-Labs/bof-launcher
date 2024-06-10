@@ -119,7 +119,7 @@ pub fn build(b: *std.Build, bof_api_module: *std.Build.Module) !void {
                     const run_fasm = b.addSystemCommand(&.{
                         thisDir() ++ "/../bin/fasm" ++ if (@import("builtin").os.tag == .windows) ".exe" else "",
                     });
-                    run_fasm.addFileArg(.{ .path = source_file_path });
+                    run_fasm.addFileArg(.{ .cwd_relative = source_file_path });
                     const output_path = run_fasm.addOutputFileArg(full_bof_name);
 
                     b.getInstallStep().dependOn(&b.addInstallFile(output_path, bin_full_bof_name).step);
@@ -132,7 +132,7 @@ pub fn build(b: *std.Build, bof_api_module: *std.Build.Module) !void {
                     .@"asm" => unreachable,
                     .zig => b.addObject(.{
                         .name = bof.name,
-                        .root_source_file = .{ .path = source_file_path },
+                        .root_source_file = .{ .cwd_relative = source_file_path },
                         .target = target,
                         .optimize = .ReleaseSmall,
                     }),
@@ -140,16 +140,16 @@ pub fn build(b: *std.Build, bof_api_module: *std.Build.Module) !void {
                         const obj = b.addObject(.{
                             .name = bof.name,
                             // TODO: Zig bug. Remove below line once fixed.
-                            .root_source_file = .{ .path = thisDir() ++ "/../tests/src/dummy.zig" },
+                            .root_source_file = b.path("tests/src/dummy.zig"),
                             .target = target,
                             .optimize = .ReleaseSmall,
                         });
                         obj.addCSourceFile(.{
-                            .file = .{ .path = source_file_path },
+                            .file = .{ .cwd_relative = source_file_path },
                             .flags = &.{ "-DBOF", "-D_GNU_SOURCE" },
                         });
                         if (format == .coff) {
-                            obj.addIncludePath(.{ .path = windows_include_dir });
+                            obj.addIncludePath(.{ .cwd_relative = windows_include_dir });
                         } else if (format == .elf) {
                             const linux_include_dir = try std.mem.join(
                                 b.allocator,
@@ -162,14 +162,14 @@ pub fn build(b: *std.Build, bof_api_module: *std.Build.Module) !void {
                                     @tagName(target.result.abi),
                                 },
                             );
-                            obj.addIncludePath(.{ .path = linux_include_dir });
-                            obj.addIncludePath(.{ .path = linux_libc_include_dir });
-                            obj.addIncludePath(.{ .path = linux_any_include_dir });
+                            obj.addIncludePath(.{ .cwd_relative = linux_include_dir });
+                            obj.addIncludePath(.{ .cwd_relative = linux_libc_include_dir });
+                            obj.addIncludePath(.{ .cwd_relative = linux_any_include_dir });
                         }
                         break :blk obj;
                     },
                 };
-                obj.addIncludePath(.{ .path = thisDir() ++ "/../include" });
+                obj.addIncludePath(b.path("include"));
                 obj.root_module.addImport("bof_api", bof_api_module);
                 obj.root_module.pic = true;
                 obj.root_module.single_threaded = true;

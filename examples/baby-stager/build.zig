@@ -16,7 +16,7 @@ pub fn build(
             options.osTagStr(),
             options.cpuArchStr(),
         }) catch @panic("OOM"),
-        .root_source_file = .{ .path = thisDir() ++ "/src/main.zig" },
+        .root_source_file = .{ .cwd_relative = thisDir() ++ "/src/main.zig" },
         .target = options.target,
         .optimize = options.optimize,
     });

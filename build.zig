@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub const min_zig_version = std.SemanticVersion{ .major = 0, .minor = 12, .patch = 0 };
+pub const min_zig_version = std.SemanticVersion{ .major = 0, .minor = 13, .patch = 0 };
 
 const Options = @import("bof-launcher/build.zig").Options;
 
@@ -29,10 +29,10 @@ pub fn build(b: *std.Build) void {
     ) orelse .ReleaseSmall;
 
     const bof_api_module = b.addModule("bof_api", .{
-        .root_source_file = .{ .path = thisDir() ++ "/include/bof_api.zig" },
+        .root_source_file = b.path("include/bof_api.zig"),
     });
     const bof_launcher_api_module = b.addModule("bof_launcher_api", .{
-        .root_source_file = .{ .path = thisDir() ++ "/bof-launcher/src/bof_launcher_api.zig" },
+        .root_source_file = b.path("bof-launcher/src/bof_launcher_api.zig"),
     });
 
     const targets_to_build: []const std.Target.Query = if (b.user_input_options.contains("target"))

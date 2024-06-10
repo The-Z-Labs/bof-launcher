@@ -19,7 +19,7 @@ pub fn build(
             options.osTagStr(),
             options.cpuArchStr(),
         }) catch @panic("OOM"),
-        .root_source_file = .{ .path = thisDir() ++ "/src/main.zig" },
+        .root_source_file = .{ .cwd_relative = thisDir() ++ "/src/main.zig" },
         .target = options.target,
         .optimize = options.optimize,
     });
@@ -27,7 +27,7 @@ pub fn build(
     exe.linkLibrary(bof_launcher_lib);
 
     const shared_module = b.addModule("shared", .{
-        .root_source_file = .{ .path = thisDir() ++ "/../../bofs/src/process-injection-chain/wInjectionChainShared.zig" },
+        .root_source_file = .{ .cwd_relative = thisDir() ++ "/../../bofs/src/process-injection-chain/wInjectionChainShared.zig" },
     });
     shared_module.addImport("bof_api", bof_api_module);
 

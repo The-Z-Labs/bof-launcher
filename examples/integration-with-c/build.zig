@@ -17,9 +17,9 @@ pub fn build(
         .optimize = options.optimize,
     });
 
-    exe.addIncludePath(.{ .path = thisDir() ++ "/../../bof-launcher/src" });
+    exe.addIncludePath(.{ .cwd_relative = thisDir() ++ "/../../bof-launcher/src" });
     exe.addCSourceFile(.{
-        .file = .{ .path = thisDir() ++ "/main.c" },
+        .file = .{ .cwd_relative = thisDir() ++ "/main.c" },
         .flags = &.{"-std=c99"},
     });
 

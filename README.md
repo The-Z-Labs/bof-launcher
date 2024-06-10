@@ -55,9 +55,9 @@ if (output) {
 bofContextRelease(context);
 ```
 
-## Building project with Zig 0.12.0
+## Building project with Zig 0.13.0
 
-Being a zero-dependency, drop-in C/C++ compiler that supports cross-compilation out-of-the-box, [Zig](https://ziglang.org/) can be used to build this project. To do so [Zig's tarball (0.12.0)](https://ziglang.org/download/#release-0.12.0) needs to be downloaded and dropped in the directory of choice. After adding that directory to the `PATH` environment variable, buliding the whole project is as easy as running:
+Being a zero-dependency, drop-in C/C++ compiler that supports cross-compilation out-of-the-box, [Zig](https://ziglang.org/) can be used to build this project. To do so [Zig's tarball (0.13.0)](https://ziglang.org/download/#release-0.13.0) needs to be downloaded and dropped in the directory of choice. After adding that directory to the `PATH` environment variable, buliding the whole project is as easy as running:
 
     zig build
 

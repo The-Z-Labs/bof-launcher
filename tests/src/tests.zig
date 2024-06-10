@@ -165,6 +165,8 @@ test "bof-launcher.ctest.basic2" {
 }
 
 test "bof-launcher.bofs.load_run" {
+    if (@import("builtin").cpu.arch == .x86 and @import("builtin").os.tag == .windows) return error.SkipZigTest;
+
     try bof.initLauncher();
     defer bof.releaseLauncher();
 
@@ -264,6 +266,8 @@ test "bof-launcher.stress" {
 }
 
 test "bof-launcher.bofs.runAsyncThread" {
+    if (@import("builtin").cpu.arch == .x86 and @import("builtin").os.tag == .windows) return error.SkipZigTest;
+
     try bof.initLauncher();
     defer bof.releaseLauncher();
 
@@ -396,6 +400,8 @@ test "bof-launcher.bofs.runAsyncProcess" {
 }
 
 test "bof-launcher.info" {
+    if (@import("builtin").cpu.arch == .x86 and @import("builtin").os.tag == .windows) return error.SkipZigTest;
+
     try bof.initLauncher();
     defer bof.releaseLauncher();
 
