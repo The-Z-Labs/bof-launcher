@@ -8,7 +8,7 @@ pub fn build(b: *std.Build, options: Options) void {
 
     const shellcode = b.addExecutable(.{
         .name = std.mem.join(b.allocator, "_", &.{
-            "shellcode-in-zig",
+            "shellcode_in_zig",
             options.osTagStr(),
             options.cpuArchStr(),
         }) catch @panic("OOM"),
