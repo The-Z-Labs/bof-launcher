@@ -78,6 +78,11 @@ pub fn build(b: *std.Build) void {
         );
 
         //
+        // Examples: shellcode in zig
+        //
+        @import("examples/shellcode-in-zig/build.zig").build(b, options);
+
+        //
         // Examples: integration with c
         //
         @import("examples/integration-with-c/build.zig").build(b, options, bof_launcher_lib);
