@@ -35,6 +35,7 @@ pub const ACCESS_MASK = windows.ACCESS_MASK;
 pub const LARGE_INTEGER = windows.LARGE_INTEGER;
 pub const ULONG_PTR = windows.ULONG_PTR;
 pub const ULONGLONG = windows.ULONGLONG;
+pub const LPCVOID = windows.LPCVOID;
 
 pub const INFINITE = windows.INFINITE;
 pub const WAIT_FAILED = windows.WAIT_FAILED;
@@ -329,6 +330,14 @@ pub const JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000;
 
 // kernel32
 pub const VirtualAlloc = windows.kernel32.VirtualAlloc;
+
+pub extern "kernel32" fn VirtualProtect(
+    lpAddress: LPVOID,
+    dwSize: SIZE_T,
+    flNewProtect: DWORD,
+    lpflOldProtect: *DWORD,
+) callconv(WINAPI) BOOL;
+
 pub const VirtualFree = windows.kernel32.VirtualFree;
 pub const GetLastError = windows.kernel32.GetLastError;
 pub const Sleep = windows.kernel32.Sleep;
@@ -343,6 +352,12 @@ pub const GetCurrentThreadId = windows.kernel32.GetCurrentThreadId;
 pub const GetCurrentThread = windows.kernel32.GetCurrentThread;
 pub const FreeLibrary = windows.kernel32.FreeLibrary;
 pub const CreateThread = windows.kernel32.CreateThread;
+
+pub extern "kernel32" fn FlushInstructionCache(
+    hProcess: HANDLE,
+    lpBaseAddress: ?LPCVOID,
+    dwSize: SIZE_T,
+) callconv(WINAPI) BOOL;
 
 pub extern "kernel32" fn FreeConsole() callconv(WINAPI) BOOL;
 

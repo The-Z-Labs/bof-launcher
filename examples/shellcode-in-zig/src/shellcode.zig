@@ -33,7 +33,7 @@ pub fn wWinMainCRTStartup() callconv(.C) void {
 
     _ = MessageBoxA(null, null, null, 0);
 
-    if (true) {
+    if (false) {
         const exit_status: u32 = 0; //djb2(u8, "ExitProcess");
         asm volatile (
             \\ movq $-1, %%r10
@@ -42,7 +42,7 @@ pub fn wWinMainCRTStartup() callconv(.C) void {
             :
             : [exit_status] "{edx}" (exit_status),
         );
-        unreachable;
+        //unreachable;
     }
 }
 

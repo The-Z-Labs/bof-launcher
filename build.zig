@@ -80,7 +80,11 @@ pub fn build(b: *std.Build) void {
         //
         // Examples: shellcode in zig
         //
-        @import("examples/shellcode-in-zig/build.zig").build(b, options);
+        @import("examples/shellcode-in-zig/build.zig").build(
+            b,
+            options,
+            bof_api_module,
+        );
 
         //
         // Examples: integration with c
