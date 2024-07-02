@@ -29,20 +29,18 @@ pub fn build(
     shellcode_exe.subsystem = .Windows;
     shellcode_exe.entry = .{ .symbol_name = "wWinMainCRTStartup" };
 
-    b.installArtifact(shellcode_exe);
-
-    const shellcode_runner_exe = b.addExecutable(.{
+    const shellcode_launcher_exe = b.addExecutable(.{
         .name = std.mem.join(b.allocator, "_", &.{
-            "shellcode_runner",
+            "shellcode_launcher",
             options.osTagStr(),
             options.cpuArchStr(),
         }) catch @panic("OOM"),
-        .root_source_file = b.path("examples/shellcode-in-zig/src/shellcode_runner.zig"),
+        .root_source_file = b.path("examples/shellcode-in-zig/src/shellcode_launcher.zig"),
         .target = options.target,
         .optimize = options.optimize,
     });
-    b.installArtifact(shellcode_runner_exe);
+    shellcode_launcher_exe.root_module.addImport("bof_api", bof_api_module);
 
-    shellcode_runner_exe.root_module.addImport("bof_api", bof_api_module);
-    shellcode_runner_exe.step.dependOn(&shellcode_exe.step);
+    b.installArtifact(shellcode_exe);
+    b.installArtifact(shellcode_launcher_exe);
 }
