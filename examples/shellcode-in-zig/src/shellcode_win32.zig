@@ -1,16 +1,10 @@
 const std = @import("std");
 const PVOID = std.os.windows.PVOID;
 const ULONG = std.os.windows.ULONG;
-const BYTE = std.os.windows.BYTE;
 const USHORT = std.os.windows.USHORT;
 const DWORD = std.os.windows.DWORD;
-const UINT = std.os.windows.UINT;
 const UNICODE_STRING = std.os.windows.UNICODE_STRING;
 const LIST_ENTRY = std.os.windows.LIST_ENTRY;
-const WINAPI = std.os.windows.WINAPI;
-const HMODULE = std.os.windows.HMODULE;
-const HWND = std.os.windows.HWND;
-const LPCSTR = std.os.windows.LPCSTR;
 
 pub const hash_kernel32 = 0x7040ee75;
 pub const hash_LoadLibraryA = 0x5fbff0fb;
