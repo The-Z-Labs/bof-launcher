@@ -82,21 +82,31 @@ pub fn build(b: *std.Build, bof_api_module: *std.Build.Module) !void {
     var bofs_to_build = std.ArrayList(Bof).init(b.allocator);
     defer bofs_to_build.deinit();
 
+    const ZigEnv = struct {
+        lib_dir: []const u8,
+    };
+    const zig_env_args: [2][]const u8 = .{ b.graph.zig_exe, "env" };
+    var out_code: u8 = undefined;
+    const zig_env = try b.runAllowFail(&zig_env_args, &out_code, .Ignore);
+    const parsed_str = try std.json.parseFromSlice(ZigEnv, b.allocator, zig_env, .{ .ignore_unknown_fields = true });
+    defer parsed_str.deinit();
+    const lib_dir = parsed_str.value.lib_dir;
+
     try addBofsToBuild(&bofs_to_build);
 
     try generateBofCollectionYaml(b.allocator, bofs_to_build);
 
     const windows_include_dir = try std.fs.path.join(
         b.allocator,
-        &.{ std.fs.path.dirname(b.graph.zig_exe).?, "/lib/libc/include/any-windows-any" },
+        &.{ lib_dir, "/libc/include/any-windows-any" },
     );
     const linux_libc_include_dir = try std.fs.path.join(
         b.allocator,
-        &.{ std.fs.path.dirname(b.graph.zig_exe).?, "/lib/libc/include/generic-glibc" },
+        &.{ lib_dir, "/libc/include/generic-glibc" },
     );
     const linux_any_include_dir = try std.fs.path.join(
         b.allocator,
-        &.{ std.fs.path.dirname(b.graph.zig_exe).?, "/lib/libc/include/any-linux-any" },
+        &.{ lib_dir, "/libc/include/any-linux-any" },
     );
 
     for (bofs_to_build.items) |bof| {
@@ -155,8 +165,8 @@ pub fn build(b: *std.Build, bof_api_module: *std.Build.Module) !void {
                                 b.allocator,
                                 "",
                                 &.{
-                                    std.fs.path.dirname(b.graph.zig_exe).?,
-                                    "/lib/libc/include/",
+                                    lib_dir,
+                                    "/libc/include/",
                                     @tagName(target.result.cpu.arch),
                                     "-linux-",
                                     @tagName(target.result.abi),
