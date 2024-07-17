@@ -9,6 +9,8 @@ const LIST_ENTRY = std.os.windows.LIST_ENTRY;
 pub const hash_kernel32 = 0x7040ee75;
 pub const hash_LoadLibraryA = 0x5fbff0fb;
 pub const hash_ExitProcess = 0xb769339e;
+pub const hash_VirtualAlloc = 0x382c0f97;
+pub const hash_VirtualFree = 0x668fcf2e;
 
 pub const hash_user32 = 0x5a6bd3f3;
 pub const hash_MessageBoxA = 0x384f14b4;
@@ -24,8 +26,8 @@ pub fn getDllBase(dll_hash: u32) usize {
             @intFromPtr(current) - @offsetOf(LDR_DATA_TABLE_ENTRY, "InMemoryOrderLinks"),
         );
 
-        if (table_entry.BaseDllName.Buffer != null) {
-            const name: [*:0]u16 = @ptrCast(table_entry.BaseDllName.Buffer.?);
+        if (table_entry.BaseDllName.Buffer) |buffer| {
+            const name: [*:0]u16 = @ptrCast(buffer);
             if (djb2(u16, toLower(name)) == dll_hash) {
                 return @intFromPtr(table_entry.DllBase);
             }

@@ -36,6 +36,8 @@ pub const LARGE_INTEGER = windows.LARGE_INTEGER;
 pub const ULONG_PTR = windows.ULONG_PTR;
 pub const ULONGLONG = windows.ULONGLONG;
 pub const LPCVOID = windows.LPCVOID;
+pub const HWND = windows.HWND;
+pub const UINT = windows.UINT;
 
 pub const INFINITE = windows.INFINITE;
 pub const WAIT_FAILED = windows.WAIT_FAILED;
@@ -613,7 +615,7 @@ pub extern "advapi32" fn GetTokenInformation(
 ) callconv(WINAPI) BOOL;
 
 // user32
-pub const MessageBoxA = windows.user32.MessageBoxA;
+pub extern "user32" fn MessageBoxA(?HWND, ?LPCSTR, ?LPCSTR, UINT) callconv(WINAPI) c_int;
 
 // ole32
 pub extern "ole32" fn CoInitializeEx(pvReserved: ?LPVOID, dwCoInit: DWORD) callconv(WINAPI) HRESULT;

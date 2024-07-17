@@ -476,9 +476,6 @@ pub extern "advapi32" fn OpenProcessToken(
     TokenHandle: *HANDLE,
 ) callconv(WINAPI) BOOL;
 
-// user32
-pub const MessageBoxA = windows.user32.MessageBoxA;
-
 // ole32
 pub extern "ole32" fn CoInitializeEx(pvReserved: ?LPVOID, dwCoInit: DWORD) callconv(WINAPI) HRESULT;
 pub extern "ole32" fn CoUninitialize() callconv(WINAPI) void;
