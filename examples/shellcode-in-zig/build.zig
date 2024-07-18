@@ -28,6 +28,7 @@ pub fn build(
     shellcode_exe.pie = true;
     shellcode_exe.subsystem = .Windows;
     shellcode_exe.entry = .{ .symbol_name = "wWinMainCRTStartup" };
+    shellcode_exe.bundle_compiler_rt = false;
 
     const shellcode_launcher_exe = b.addExecutable(.{
         .name = std.mem.join(b.allocator, "_", &.{
