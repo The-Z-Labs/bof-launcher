@@ -21,8 +21,8 @@ We at [Z-Labs](https://z-labs.eu) saw a big potential in BOFs and decided to ext
 - Distributed as a fully standalone library with zero dependency (it does not even use `libc`).
 - Fully integrable with programs written in C/C++ and/or [Zig](https://ziglang.org/) progamming languages.
 - Adds capability to write BOFs in [Zig programming language](https://ziglang.org/) - which is a low-level langauge with a goal of being a "better C". All the features of the language and rich standard library can be used in BOFs (hash maps and other data structures, cross-platform OS layer, http, networking, threading, crypto and more).
-- Asynchronous BOF execution - capability to launch more time-consuming BOFs in a separate thread.
-- BOF process injection - capability to launch more risky BOFs (i.e. privilege escalation exploits) by injecting it to a new process.
+- Capability to run asynchronous or long-running BOFs in a separate thread.
+- Pattern for launching more risky BOFs (i.e. privilege escalation exploits) inside of a sacrificial process.
 - Seamless support for either Windows COFF and UNIX/Linux ELF formats.
 - ARM and AARCH64 support on Linux.
 - Used in our [cli4bofs tool](https://github.com/The-Z-Labs/cli4bofs) that allows for running BOF files directly from a filesystem.
