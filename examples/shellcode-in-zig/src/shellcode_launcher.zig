@@ -1,27 +1,7 @@
-const std = @import("std");
 const w32 = @import("bof_api").win32;
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
-
-    var cmd_args_iter = try std.process.argsWithAllocator(allocator);
-    defer cmd_args_iter.deinit();
-
-    _ = cmd_args_iter.next() orelse unreachable;
-    const filename_exe = cmd_args_iter.next() orelse unreachable;
-
-    const file_exe = try std.fs.cwd().openFile(filename_exe, .{});
-    defer file_exe.close();
-
-    const file_exe_data = try file_exe.reader().readAllAlloc(allocator, 16 * 1024 * 1024);
-    defer allocator.free(file_exe_data);
-
-    const parser = try std.coff.Coff.init(file_exe_data, false);
-
-    const text_header = parser.getSectionByName(".text") orelse unreachable;
-    const text_data = parser.getSectionData(text_header);
+    const text_data = @embedFile("shellcode_in_zig_win_x64.bin");
 
     const addr = w32.VirtualAlloc(
         null,
@@ -45,5 +25,6 @@ pub fn main() !void {
 
     _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), section.ptr, section.len);
 
+    // Call our shellcode
     @as(*const fn () callconv(.C) void, @ptrCast(section.ptr))();
 }
