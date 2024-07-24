@@ -94,8 +94,8 @@ const DumpTextSection = struct {
             const file_bin = try std.fs.cwd().createFile(
                 try std.mem.join(
                     b.allocator,
-                    ".",
-                    &.{ b.getInstallPath(.bin, std.fs.path.stem(full_src_path)), "bin" },
+                    "",
+                    &.{ b.getInstallPath(.bin, std.fs.path.stem(full_src_path)), ".bin" },
                 ),
                 .{},
             );
@@ -104,7 +104,7 @@ const DumpTextSection = struct {
             try file_bin.writer().writeAll(text_data);
         }
         {
-            // Write file to source directory
+            // Write file to src/ directory
             const file_bin = try std.fs.cwd().createFile(
                 try std.mem.join(
                     b.allocator,
