@@ -26,16 +26,14 @@ const bofs_included_in_launcher = [_]Bof{
 
 // Additional/3rdparty BOFs for building should be added below
 
-const bofs_my_custom = [_]Bof{
-    .{ .name = "cat", .dir = "trustedsec/", .formats = &.{ .elf }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    .{ .name = "tasklist", .dir = "trustedsec/", .formats = &.{ .elf }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    .{ .name = "pwd", .dir = "trustedsec/", .formats = &.{ .elf }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-};
+//const bofs_my_custom = [_]Bof{
+//    .{ .name = "bof", .dir = "dirname/", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+//};
 
 fn addBofsToBuild(bofs_to_build: *std.ArrayList(Bof)) !void {
     try bofs_to_build.appendSlice(bofs_included_in_launcher[0..]);
 
-    try bofs_to_build.appendSlice(bofs_my_custom[0..]);
+    //try bofs_to_build.appendSlice(bofs_my_custom[0..]);
 }
 
 const std = @import("std");
