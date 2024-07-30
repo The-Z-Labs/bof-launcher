@@ -31,6 +31,6 @@
 
 ## Documentation for selected 3rd party BOFs
 
-| BOF name  | Description | Supported platforms | Syntax | Author |
+| BOF name  | Description | Supported platforms | Example | Manual | Author |
 | ------------- | ---------------------------------------------------- | --------------------------- | ------------------ | ----------- |
-| [cat](https://raw.githubusercontent.com/trustedsec/ELFLoader/main/SA/src/cat.c) | Concatenate file to stdout | `Linux x86/x86_64/ARMv6+/AArch64` | `cat /etc/passwd` | [Trustedsec](https://github.com/trustedsec/ELFLoader)
+| [cat](https://raw.githubusercontent.com/trustedsec/ELFLoader/main/SA/src/cat.c) | Concatenate file to stdout | `Linux x86/x86_64/ARMv6+/AArch64` | `cat /etc/passwd` | [metadata](https://github.com/The-Z-Labs/bof-launcher/blob/main/BOFs-3rdparty-doc.yaml#L1) | [Trustedsec](https://github.com/trustedsec/ELFLoader)
