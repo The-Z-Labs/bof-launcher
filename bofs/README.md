@@ -29,4 +29,8 @@
 | ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
 | [ifconfig](src/net-tools/ifconfig.zig) | Display the status of the currently active network interfaces. Manipulate current state of the device | `Linux x86/x86_64/ARMv6+/AArch64` | `ifconfig eth0 promisc` |
 
-## YAML documentation for chosen 3rd party BOFs
+## Documentation for selected 3rd party BOFs
+
+| BOF name  | Description | Supported platforms | Syntax | Author |
+| ------------- | ---------------------------------------------------- | --------------------------- | ------------------ | ----------- |
+| [cat](https://raw.githubusercontent.com/trustedsec/ELFLoader/main/SA/src/cat.c) | Concatenate file to stdout | `Linux x86/x86_64/ARMv6+/AArch64` | `cat /etc/passwd` | [Trustedsec](https://github.com/trustedsec/ELFLoader)

@@ -1,0 +1,14 @@
+name: cat
+description: "Concatenate FILE to stdout"
+author: Trustedsec
+tags: ['host-recon']
+OS: linux
+header: ['inline', 'z']
+sources:
+    - 'https://raw.githubusercontent.com/trustedsec/ELFLoader/main/SA/src/cat.c'
+usage: '
+ cat [str:FILE]
+'
+examples: '
+ cat /etc/passwd 
+'

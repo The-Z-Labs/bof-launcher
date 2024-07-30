@@ -17,6 +17,7 @@
 !*.ini
 !*.txt
 !*.md
+!*.yaml
 
 !bin/fasm.exe
 !bin/fasm
