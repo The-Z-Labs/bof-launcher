@@ -29,6 +29,7 @@ const bofs_included_in_launcher = [_]Bof{
 const bofs_my_custom = [_]Bof{
     .{ .name = "cat", .dir = "trustedsec/", .formats = &.{ .elf }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "tasklist", .dir = "trustedsec/", .formats = &.{ .elf }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+    .{ .name = "pwd", .dir = "trustedsec/", .formats = &.{ .elf }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
 };
 
 fn addBofsToBuild(bofs_to_build: *std.ArrayList(Bof)) !void {

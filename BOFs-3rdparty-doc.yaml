@@ -29,3 +29,19 @@ usage: '
 examples: '
  tasklist
 '
+
+---
+name: pwd
+description: "Print name of current/working directory"
+author: Trustedsec
+tags: ['host-recon']
+OS: linux
+header: ['inline', '']
+sources:
+    - 'https://raw.githubusercontent.com/trustedsec/ELFLoader/main/SA/src/pwd.c'
+usage: '
+ pwd
+'
+examples: '
+ pwd
+'
