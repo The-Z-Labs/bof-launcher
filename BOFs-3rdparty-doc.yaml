@@ -1,3 +1,4 @@
+---
 name: cat
 description: "Concatenate FILE to stdout"
 author: Trustedsec
@@ -11,4 +12,20 @@ usage: '
 '
 examples: '
  cat /etc/passwd 
+'
+
+---
+name: tasklist
+description: "Report a snapshot of the current processes"
+author: Trustedsec
+tags: ['host-recon']
+OS: linux
+header: ['inline', '']
+sources:
+    - 'https://raw.githubusercontent.com/trustedsec/ELFLoader/main/SA/src/tasklist.c'
+usage: '
+ tasklist
+'
+examples: '
+ tasklist
 '

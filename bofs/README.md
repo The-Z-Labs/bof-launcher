@@ -33,4 +33,5 @@
 
 | BOF name  | Description | Supported platforms | Example | BOF usage | Author |
 | ------------- | ---------------------------------------------------- | --------------------------- | ------------------- | ------------ | ----------- |
-| [cat](https://raw.githubusercontent.com/trustedsec/ELFLoader/main/SA/src/cat.c) | Concatenate file to stdout | `Linux x86/x86_64/ARMv6+/AArch64` | `cat /etc/passwd` | [metadata](https://github.com/The-Z-Labs/bof-launcher/blob/main/BOFs-3rdparty-doc.yaml#L1) | [Trustedsec](https://github.com/trustedsec/ELFLoader)
+| [cat](https://raw.githubusercontent.com/trustedsec/ELFLoader/main/SA/src/cat.c) | Concatenate file to stdout | `Linux x86/x86_64/ARMv6+/AArch64` | `cat /etc/passwd` | [metadata](https://github.com/The-Z-Labs/bof-launcher/blob/main/BOFs-3rdparty-doc.yaml#L2) | [Trustedsec](https://github.com/trustedsec/ELFLoader)
+| [tasklist](https://raw.githubusercontent.com/trustedsec/ELFLoader/main/SA/src/tasklist.c) | Report a snapshot of the current processes | `Linux x86/x86_64/ARMv6+/AArch64` | `tasklist` | [metadata](https://github.com/The-Z-Labs/bof-launcher/blob/main/BOFs-3rdparty-doc.yaml#L18) | [Trustedsec](https://github.com/trustedsec/ELFLoader)
