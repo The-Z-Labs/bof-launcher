@@ -28,6 +28,8 @@ if __name__ == "__main__":
     args = parse_args()
     yamlFile = Path(args.yamlPath)
     bofsSrcDir = Path(args.bofsSrcDir)
+
+    buildEntries = []
     
     if args.version:
         print("Version: " + SCRIPT_VERSION)
@@ -48,17 +50,23 @@ if __name__ == "__main__":
                 formats = ".coff, .elf"
                 arch = ".x64, .x86, .aarch64, .arm"
 
-            # craft entry for BOFs table in build.zig
-            print(".{ .name = \"" + name + "\", .dir = \"" + author + "/\", .formats = &.{ " + formats + " }, .archs = &.{ " + arch + " } },")
-
-            # create directory (based on the BOF's author) where source files will reside
-            destDir = bofsSrcDir / Path(bofMetadata['author'])
+            # create directory (based on the BOF's author + BOF name) where source files will reside
+            destDir = bofsSrcDir / Path(author)
+            destDir /= Path(name)
             if not destDir.is_dir():
-                destDir.mkdir()
+                destDir.mkdir(parents=True)
 
             # get BOF sources as defined in metadata:
+            print("Fetching sources for " + author + "'s '" + name + "' BOF:")
             for src in bofMetadata['sources']:
                 with urllib.request.urlopen(src) as f:
                     with open(destDir / Path(src).name, 'wb') as output:
+                        print("  URL: " + src)
                         output.write(f.read())
 
+            # craft entry for BOFs table for build.zig
+            buildEntries.append(".{ .name = \"" + name + "\", .dir = \"" + author + "/" + name + "/\", .formats = &.{ " + formats + " }, .archs = &.{ " + arch + " } },")
+            print("")
+
+    for entry in buildEntries:
+        print(entry)
