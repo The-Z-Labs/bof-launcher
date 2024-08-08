@@ -20,7 +20,7 @@ pub fn build(
         }) catch @panic("OOM"),
         .root_source_file = b.path(home_path ++ "src/shellcode.zig"),
         .target = options.target,
-        .optimize = options.optimize,
+        .optimize = .ReleaseSmall,
         .single_threaded = true,
         .unwind_tables = false,
         .strip = true,
