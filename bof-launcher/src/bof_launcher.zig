@@ -23,6 +23,8 @@ const Bof = struct {
 
     entry_point: ?*const fn (arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 = null,
 
+    user_externals: std.StringHashMap(usize) = undefined,
+
     fn init() Bof {
         return .{};
     }
@@ -70,6 +72,8 @@ const Bof = struct {
             bof.is_allocated = false;
         }
 
+        bof.user_externals = std.StringHashMap(usize).init(allocator);
+
         bof.is_loaded = true;
 
         const aligned_file_data = try allocator.alignedAlloc(u8, obj_file_data_alignment, file_data.len);
@@ -95,6 +99,14 @@ const Bof = struct {
                     std.posix.munmap(slice);
                 }
             }
+
+            {
+                var it = bof.user_externals.iterator();
+                while (it.next()) |kv| {
+                    bof.user_externals.allocator.free(kv.key_ptr.*);
+                }
+            }
+            bof.user_externals.deinit();
 
             bof.entry_point = null;
             bof.is_loaded = false;
@@ -451,8 +463,16 @@ const Bof = struct {
 
                 _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), section.ptr, section.len);
                 _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), got_section.ptr, got_section.len);
+            }
 
-                break;
+            if (@intFromEnum(sym.symbol.section_number) != 0 and sym.symbol.storage_class == .EXTERNAL) {
+                const section_index = @intFromEnum(sym.symbol.section_number) - 1;
+                const section = section_mappings.items[section_index];
+                const addr = @intFromPtr(section.ptr) + sym.symbol.value;
+
+                const key = try allocator.dupe(u8, if (@import("builtin").cpu.arch == .x86) sym_name[1..] else sym_name);
+
+                try bof.user_externals.put(key, addr);
             }
         }
 
@@ -1155,6 +1175,18 @@ export fn bofObjectIsValid(bof_handle: BofHandle) callconv(.C) c_int {
     if (!gstate.is_valid) return 0;
 
     return @intFromBool(gstate.bof_pool.isBofValid(bof_handle));
+}
+
+export fn bofObjectGetProcAddress(bof_handle: BofHandle, name: ?[*:0]const u8) callconv(.C) ?*anyopaque {
+    if (!gstate.is_valid) return null;
+    if (name == null) return null;
+
+    if (gstate.bof_pool.getBofPtrIfValid(bof_handle)) |bof| {
+        if (bof.user_externals.get(std.mem.span(name.?))) |addr| return @ptrFromInt(addr);
+        return null;
+    }
+
+    return null;
 }
 
 fn run(

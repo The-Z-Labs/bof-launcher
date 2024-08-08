@@ -144,6 +144,9 @@ bofObjectRelease(BofObjectHandle bof_handle);
 int
 bofObjectIsValid(BofObjectHandle bof_handle);
 
+void*
+bofObjectGetProcAddress(BofObjectHandle bof_handle, const char* name);
+
 /// `bofObjectRun()` executes loaded object file identified by `bof_handle` in a
 /// synchronous mode.
 /// `bofObjectRun()` will return when BOF finishes its execution.

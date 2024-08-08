@@ -104,6 +104,10 @@ pub const Object = extern struct {
         return bofObjectIsValid(bof_handle) != 0;
     }
 
+    pub fn getProcAddress(bof_handle: Object, name: [:0]const u8) ?*anyopaque {
+        return bofObjectGetProcAddress(bof_handle, name);
+    }
+
     /// `run()` executes loaded object file identified by `bof_handle` in a
     /// synchronous mode.
     /// `run()` will return when BOF finishes its execution.
@@ -304,6 +308,8 @@ extern fn bofObjectInitFromMemory(
 extern fn bofObjectRelease(bof_handle: Object) callconv(.C) void;
 
 extern fn bofObjectIsValid(bof_handle: Object) callconv(.C) c_int;
+
+extern fn bofObjectGetProcAddress(bof_handle: Object, name: ?[*:0]const u8) callconv(.C) ?*anyopaque;
 
 extern fn bofObjectRun(
     bof_handle: Object,
