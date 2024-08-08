@@ -61,12 +61,16 @@ if __name__ == "__main__":
             for src in bofMetadata['sources']:
                 with urllib.request.urlopen(src) as f:
                     with open(destDir / Path(src).name, 'wb') as output:
-                        print("  URL: " + src)
+                        print("  URL: " + src + " -> " + args.bofsSrcDir + author + "/" + name + "/")
                         output.write(f.read())
 
             # craft entry for BOFs table for build.zig
-            buildEntries.append(".{ .name = \"" + name + "\", .dir = \"" + author + "/" + name + "/\", .formats = &.{ " + formats + " }, .archs = &.{ " + arch + " } },")
+            buildEntries.append("    .{ .name = \"" + name + "\", .dir = \"" + author + "/" + name + "/\", .formats = &.{ " + formats + " }, .archs = &.{ " + arch + " } },")
             print("")
+
+    print("const bofs_my_custom = [_]Bof{")
 
     for entry in buildEntries:
         print(entry)
+
+    print("};")
