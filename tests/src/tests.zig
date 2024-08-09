@@ -578,9 +578,9 @@ test "bof-launcher.getProcAddress" {
     try expect(object.getProcAddress("func") != null);
     try expect(object.getProcAddress("func123") != null);
 
-    const func: *const fn ([*:0]const u8) callconv(.C) u8 = @ptrCast(object.getProcAddress("func"));
+    const func: *const fn ([*:0]const u8) callconv(.C) u8 = @ptrCast(@alignCast(object.getProcAddress("func")));
 
-    const func123: *const fn ([*:0]const u8) callconv(.C) u8 = @ptrCast(object.getProcAddress("func123"));
+    const func123: *const fn ([*:0]const u8) callconv(.C) u8 = @ptrCast(@alignCast(object.getProcAddress("func123")));
 
     try expect(func("aaa") == 0);
     try expect(func123("bbb") == 123);
