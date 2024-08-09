@@ -918,6 +918,22 @@ const Bof = struct {
                     );
                 }
             }
+
+            if (sym.st_shndx != 0 and sym.st_shndx < section_headers.items.len) {
+                const OK_TYPES = (1 << std.elf.STT_NOTYPE | 1 << std.elf.STT_OBJECT | 1 << std.elf.STT_FUNC | 1 << std.elf.STT_COMMON);
+                const OK_BINDS = (1 << std.elf.STB_GLOBAL | 1 << std.elf.STB_WEAK | 1 << std.elf.STB_GNU_UNIQUE);
+
+                if (0 == (@as(u32, 1) << @as(u5, @intCast(sym.st_info & 0xf)) & OK_TYPES)) continue;
+                if (0 == (@as(u32, 1) << @as(u5, @intCast(sym.st_info >> 4)) & OK_BINDS)) continue;
+
+                const section = section_mappings.items[sym.st_shndx];
+                const addr = @intFromPtr(section.ptr) + sym.st_value;
+
+                const sym_name = @as([*:0]const u8, @ptrCast(&string_table[sym.st_name]));
+                const key = try allocator.dupe(u8, std.mem.span(sym_name));
+
+                try bof.user_externals.put(key, addr);
+            }
         }
         if (go) |_| {
             std.log.debug("go() FOUND.", .{});

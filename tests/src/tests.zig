@@ -252,6 +252,8 @@ test "bof-launcher.stress" {
 
     for (0..64) |i| {
         var object = try bof.Object.initFromMemory(bof_data);
+        try expect(object.getProcAddress("func") != null);
+
         (try object.run(null)).release();
         if (i == 63) {
             try expect(object.isValid());
