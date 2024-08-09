@@ -562,3 +562,26 @@ test "bof-launcher.lAsmTest" {
     try expect(context.getOutput() != null);
     try std.testing.expectEqualStrings("Hello from asm BOF on Linux! eax is 12345", context.getOutput().?[0..41]);
 }
+
+test "bof-launcher.getProcAddress" {
+    const allocator = std.testing.allocator;
+
+    const bof_data = try loadBofFromFile(allocator, "zig-out/bin/test_obj0");
+    defer allocator.free(bof_data);
+
+    try bof.initLauncher();
+    defer bof.releaseLauncher();
+
+    var object = try bof.Object.initFromMemory(bof_data);
+    defer object.release();
+
+    try expect(object.getProcAddress("func") != null);
+    try expect(object.getProcAddress("func123") != null);
+
+    const func: *const fn ([*:0]const u8) callconv(.C) u8 = @ptrCast(object.getProcAddress("func"));
+
+    const func123: *const fn ([*:0]const u8) callconv(.C) u8 = @ptrCast(object.getProcAddress("func123"));
+
+    try expect(func("aaa") == 0);
+    try expect(func123("bbb") == 123);
+}

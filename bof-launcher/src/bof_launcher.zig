@@ -1750,10 +1750,19 @@ fn getCurrentThreadId() u32 {
 }
 
 export fn outputBofData(_: i32, data: [*]u8, len: i32, free_mem: i32) void {
+    defer if (free_mem != 0) freeMemory(data);
+
     var context = context: {
         gstate.mutex.lock();
         defer gstate.mutex.unlock();
-        break :context gstate.bof_contexts.get(getCurrentThreadId()).?.?;
+
+        const maybe_context = gstate.bof_contexts.get(getCurrentThreadId());
+
+        // TODO: BeaconPrintf and friends called outside of bofObjectRun*() will print nothing.
+        if (maybe_context == null) return;
+        if (maybe_context.? == null) return;
+
+        break :context maybe_context.?.?;
     };
 
     context.output_mutex.lock();
@@ -1763,10 +1772,6 @@ export fn outputBofData(_: i32, data: [*]u8, len: i32, free_mem: i32) void {
 
     context.output_ring.writeSliceAssumeCapacity(slice);
     context.output_ring_num_written_bytes += slice.len;
-
-    if (free_mem != 0) {
-        freeMemory(data);
-    }
 }
 
 export fn getEnviron() callconv(.C) [*:null]?[*:0]const u8 {

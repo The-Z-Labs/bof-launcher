@@ -7,6 +7,11 @@ pub export fn func(msg: [*:0]const u8) callconv(.C) u8 {
     return 0;
 }
 
+export fn func123(msg: [*:0]const u8) callconv(.C) u8 {
+    _ = beacon.printf(0, "func123() %s\n", msg);
+    return 123;
+}
+
 pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     _ = arg_data;
     _ = arg_len;

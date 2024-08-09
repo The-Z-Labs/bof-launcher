@@ -15,7 +15,7 @@ pub fn runTests(
         .root_source_file = .{ .cwd_relative = thisDir() ++ "/src/tests.zig" },
         .target = options.target,
         .optimize = options.optimize,
-        //.filter = "udpScanner",
+        //.filter = "getProcAddress",
     });
     tests.addIncludePath(.{ .cwd_relative = thisDir() ++ "/../bof-launcher/src" });
     tests.linkLibrary(bof_launcher_lib);
