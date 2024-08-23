@@ -165,4 +165,4 @@ Often during the developemnt/debugging, testing or just playing with a new piece
 
 *Implementing custom, cross-platform C2 solutions capable of running BOFs*
 
-[baby-stager](examples/baby-stager) - example of simple, cross-platform C2 implant that uses BOFs as its post-exploitation modules and communicates over HTTP with the C2 server.
+[BOF-stager](examples/BOF-stager) - example of simple, cross-platform C2 implant that uses BOFs as its post-exploitation modules and communicates over HTTP with the C2 server.

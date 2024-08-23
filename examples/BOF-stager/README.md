@@ -1,4 +1,4 @@
-# baby-stager
+# BOF-stager
 
 ## Description
 
@@ -27,7 +27,7 @@ python serve_bofs.py
 Configuring and runnig the client:
 
 ```
-$ head examples/baby-stager/src/main.zig 
+$ head examples/BOF-stager/src/main.zig 
 const std = @import("std");
 const assert = std.debug.assert;
 const bof = @import("bof_launcher_api");
@@ -40,7 +40,7 @@ const stdout = std.io.getStdOut();
 
 $ zig build
 
-$ ./zig-out/bin/baby-stager_lin_x64
+$ ./zig-out/bin/bof-stager_lin_x64
 ```
 
 Tasking client to run `uname.elf.x64.o` BOF:
