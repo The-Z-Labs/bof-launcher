@@ -12,7 +12,7 @@ pub fn build(
 ) void {
     const exe = b.addExecutable(.{
         .name = std.mem.join(b.allocator, "_", &.{
-            "baby_stager",
+            "bof_stager",
             options.osTagStr(),
             options.cpuArchStr(),
         }) catch @panic("OOM"),

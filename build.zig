@@ -57,9 +57,9 @@ pub fn build(b: *std.Build) void {
         const bof_launcher_lib = @import("bof-launcher/build.zig").build(b, options);
 
         //
-        // Examples: baby stager
+        // Examples: BOF stager
         //
-        @import("examples/baby-stager/build.zig").build(
+        @import("examples/BOF-stager/build.zig").build(
             b,
             options,
             bof_launcher_lib,
