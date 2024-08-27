@@ -28,6 +28,12 @@ cmdData1 = {
 	"buffer" : "file:udpPayloads.txt",
 };
 
+Structure of tasks (running BOF ):
+cmdData0 = {
+	"header" : "callback:",
+	"name" : "bof:kernelModLoader",
+};
+
 Structure of tasks (running OS commands):
 cmdData2 = {
 	"header" : "inline:z",
