@@ -473,6 +473,28 @@ const Bof = struct {
                 const key = try allocator.dupe(u8, if (@import("builtin").cpu.arch == .x86) sym_name[1..] else sym_name);
 
                 try bof.user_externals.put(key, addr);
+
+                if (sym.symbol.type.complex_type == .FUNCTION) {
+                    var old_protection: w32.DWORD = 0;
+                    if (w32.VirtualProtect(
+                        section.ptr,
+                        section.len,
+                        w32.PAGE_EXECUTE_READ,
+                        &old_protection,
+                    ) == w32.FALSE) return error.VirtualProtectFailed;
+
+                    const got_section = all_sections_mem[0 .. thunk_trampoline.len * func_addr_to_got_entry.count()];
+
+                    if (w32.VirtualProtect(
+                        got_section.ptr,
+                        got_section.len,
+                        w32.PAGE_EXECUTE_READ,
+                        &old_protection,
+                    ) == w32.FALSE) return error.VirtualProtectFailed;
+
+                    _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), section.ptr, section.len);
+                    _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), got_section.ptr, got_section.len);
+                }
             }
         }
 
@@ -932,6 +954,14 @@ const Bof = struct {
                 const key = try allocator.dupe(u8, std.mem.span(sym_name));
 
                 try bof.user_externals.put(key, addr);
+
+                if (@as(u5, @intCast(sym.st_info & 0xf)) & std.elf.STT_FUNC != 0) {
+                    try posix.mprotect(section, posix.PROT.READ | posix.PROT.EXEC);
+                    try posix.mprotect(
+                        got.ptr[0 .. func_addr_to_got_entry.count() * thunk_trampoline.len],
+                        posix.PROT.READ | posix.PROT.EXEC,
+                    );
+                }
             }
         }
         if (go) |_| {
