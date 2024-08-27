@@ -480,7 +480,6 @@ const Bof = struct {
             std.log.debug("go() FOUND.", .{});
         } else {
             std.log.err("go() NOT FOUND.", .{});
-            return error.GoFuncNotFound;
         }
 
         bof.entry_point = go;
@@ -939,7 +938,6 @@ const Bof = struct {
             std.log.debug("go() FOUND.", .{});
         } else {
             std.log.err("go() NOT FOUND.", .{});
-            return error.GoFuncNotFound;
         }
 
         bof.entry_point = go;
