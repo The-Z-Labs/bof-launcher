@@ -466,6 +466,9 @@ const Bof = struct {
             }
 
             if (@intFromEnum(sym.symbol.section_number) != 0 and sym.symbol.storage_class == .EXTERNAL) {
+                // TODO: We support only functions for now
+                if (sym.symbol.type.complex_type != .FUNCTION) continue;
+
                 const section_index = @intFromEnum(sym.symbol.section_number) - 1;
                 const section = section_mappings.items[section_index];
                 const addr = @intFromPtr(section.ptr) + sym.symbol.value;
@@ -474,27 +477,25 @@ const Bof = struct {
 
                 try bof.user_externals.put(key, addr);
 
-                if (sym.symbol.type.complex_type == .FUNCTION) {
-                    var old_protection: w32.DWORD = 0;
-                    if (w32.VirtualProtect(
-                        section.ptr,
-                        section.len,
-                        w32.PAGE_EXECUTE_READ,
-                        &old_protection,
-                    ) == w32.FALSE) return error.VirtualProtectFailed;
+                var old_protection: w32.DWORD = 0;
+                if (w32.VirtualProtect(
+                    section.ptr,
+                    section.len,
+                    w32.PAGE_EXECUTE_READ,
+                    &old_protection,
+                ) == w32.FALSE) return error.VirtualProtectFailed;
 
-                    const got_section = all_sections_mem[0 .. thunk_trampoline.len * func_addr_to_got_entry.count()];
+                const got_section = all_sections_mem[0 .. thunk_trampoline.len * func_addr_to_got_entry.count()];
 
-                    if (w32.VirtualProtect(
-                        got_section.ptr,
-                        got_section.len,
-                        w32.PAGE_EXECUTE_READ,
-                        &old_protection,
-                    ) == w32.FALSE) return error.VirtualProtectFailed;
+                if (w32.VirtualProtect(
+                    got_section.ptr,
+                    got_section.len,
+                    w32.PAGE_EXECUTE_READ,
+                    &old_protection,
+                ) == w32.FALSE) return error.VirtualProtectFailed;
 
-                    _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), section.ptr, section.len);
-                    _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), got_section.ptr, got_section.len);
-                }
+                _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), section.ptr, section.len);
+                _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), got_section.ptr, got_section.len);
             }
         }
 
@@ -941,7 +942,10 @@ const Bof = struct {
             }
 
             if (sym.st_shndx != 0 and sym.st_shndx < section_headers.items.len) {
-                const OK_TYPES = (1 << std.elf.STT_NOTYPE | 1 << std.elf.STT_OBJECT | 1 << std.elf.STT_FUNC | 1 << std.elf.STT_COMMON);
+                // TODO: We support only functions for now
+                //const OK_TYPES = (1 << std.elf.STT_NOTYPE | 1 << std.elf.STT_OBJECT | 1 << std.elf.STT_FUNC | 1 << std.elf.STT_COMMON);
+
+                const OK_TYPES = (1 << std.elf.STT_FUNC);
                 const OK_BINDS = (1 << std.elf.STB_GLOBAL | 1 << std.elf.STB_WEAK | 1 << std.elf.STB_GNU_UNIQUE);
 
                 if (0 == (@as(u32, 1) << @as(u5, @intCast(sym.st_info & 0xf)) & OK_TYPES)) continue;
@@ -955,13 +959,11 @@ const Bof = struct {
 
                 try bof.user_externals.put(key, addr);
 
-                if (@as(u5, @intCast(sym.st_info & 0xf)) & std.elf.STT_FUNC != 0) {
-                    try posix.mprotect(section, posix.PROT.READ | posix.PROT.EXEC);
-                    try posix.mprotect(
-                        got.ptr[0 .. func_addr_to_got_entry.count() * thunk_trampoline.len],
-                        posix.PROT.READ | posix.PROT.EXEC,
-                    );
-                }
+                try posix.mprotect(section, posix.PROT.READ | posix.PROT.EXEC);
+                try posix.mprotect(
+                    got.ptr[0 .. func_addr_to_got_entry.count() * thunk_trampoline.len],
+                    posix.PROT.READ | posix.PROT.EXEC,
+                );
             }
         }
         if (go) |_| {
