@@ -149,6 +149,10 @@ def heartbeat():
         "name": cmdData['name'],
     }
 
+    # we're dealing with BOF-stager's internal command execution here:
+    if 'cmd:' in cmdData['name']:
+        return Instruction
+
     # we're dealing with BOF execution task, so let's:
     # 1. prepare path/URI for the BOF in case when downloading it will be needed
     # 2. calculate requested BOF's hash

