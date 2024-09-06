@@ -162,6 +162,10 @@ def heartbeat():
         Instruction['path'] = kmodHttpPath
         return Instruction
 
+    # we're dealing with kernel module unloading here:
+    if 'kmodrm:' in cmdData['name']:
+        return Instruction
+
     # we're dealing with BOF execution task, so let's:
     # 1. prepare path/URI for the BOF in case when downloading it will be needed
     # 2. calculate requested BOF's hash
@@ -254,6 +258,12 @@ def heartbeat():
 @app.route(bofsRootDir + '<path:path>')
 def send_report(path):
     return send_from_directory('bofs', path, mimetype='application/octet-stream')
+
+@app.route(kmodsRootDir + '<path:path>')
+def send_kmod(path):
+    return send_from_directory('kmods', path, mimetype='application/octet-stream')
+
+
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1',port=8000,debug=True)
