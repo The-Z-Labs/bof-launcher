@@ -396,7 +396,9 @@ const Bof = struct {
 
                             @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
                         },
-                        else => {},
+                        else => {
+                            std.log.err("Failed to handle x86_64 COFF relocation ({d})", .{reloc.type});
+                        },
                     }
                 } else if (@import("builtin").cpu.arch == .x86) {
                     switch (reloc.type) {
@@ -412,7 +414,9 @@ const Bof = struct {
 
                             @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
                         },
-                        else => {},
+                        else => {
+                            std.log.err("Failed to handle x86 COFF relocation ({d})", .{reloc.type});
+                        },
                     }
                 }
                 std.log.debug("", .{});
@@ -502,7 +506,7 @@ const Bof = struct {
         if (go) |_| {
             std.log.debug("go() FOUND.", .{});
         } else {
-            std.log.err("go() NOT FOUND.", .{});
+            std.log.debug("go() NOT FOUND.", .{});
         }
 
         bof.entry_point = go;
@@ -831,7 +835,9 @@ const Bof = struct {
                                 encoding = encoding | imm;
                                 @as(*align(1) u32, @ptrFromInt(addr_p)).* = encoding;
                             },
-                            else => {},
+                            else => {
+                                std.log.err("Failed to handle AARCH64 ELF relocation ({d})", .{reloc.r_type()});
+                            },
                         }
                     } else if ((section.sh_flags & std.elf.SHF_INFO_LINK) != 0 and
                         @import("builtin").cpu.arch == .arm)
@@ -865,7 +871,9 @@ const Bof = struct {
                                     @as(u32, @bitCast((relative_offset & 0x03fffffe) >> 2));
                             },
                             R_ARM_PREL31 => {},
-                            else => unreachable,
+                            else => {
+                                std.log.err("Failed to handle ARM ELF relocation ({d})", .{reloc.r_type()});
+                            },
                         }
                     } else if ((section.sh_flags & std.elf.SHF_INFO_LINK) != 0 and
                         @import("builtin").cpu.arch == .x86_64)
@@ -888,7 +896,9 @@ const Bof = struct {
 
                                 @as(*align(1) i32, @ptrFromInt(addr_p)).* = relative_offset;
                             },
-                            else => {},
+                            else => {
+                                std.log.err("Failed to handle x86_64 ELF relocation ({d})", .{reloc.r_type()});
+                            },
                         }
                     } else if ((section.sh_flags & std.elf.SHF_INFO_LINK) != 0 and
                         @import("builtin").cpu.arch == .x86)
@@ -910,7 +920,9 @@ const Bof = struct {
 
                                 @as(*align(1) i32, @ptrFromInt(addr_p)).* = relative_offset;
                             },
-                            else => {},
+                            else => {
+                                std.log.err("Failed to handle x86 ELF relocation ({d})", .{reloc.r_type()});
+                            },
                         }
                     }
                     std.log.debug("\t\t-------------------------------------------------", .{});
@@ -969,7 +981,7 @@ const Bof = struct {
         if (go) |_| {
             std.log.debug("go() FOUND.", .{});
         } else {
-            std.log.err("go() NOT FOUND.", .{});
+            std.log.debug("go() NOT FOUND.", .{});
         }
 
         bof.entry_point = go;

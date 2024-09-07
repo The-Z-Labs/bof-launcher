@@ -126,6 +126,10 @@ pub fn build(b: *std.Build, bof_api_module: *std.Build.Module) !void {
                 const bin_full_bof_name = try std.mem.join(b.allocator, "/", &.{ "bin", full_bof_name });
 
                 if (lang == .@"asm") {
+                    // We provide fasm binaries only for x86.
+                    if (@import("builtin").cpu.arch != .x86_64 and @import("builtin").cpu.arch != .x86)
+                        continue;
+
                     const run_fasm = b.addSystemCommand(&.{
                         thisDir() ++ "/../bin/fasm" ++ if (@import("builtin").os.tag == .windows) ".exe" else "",
                     });
