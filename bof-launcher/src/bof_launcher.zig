@@ -397,7 +397,7 @@ const Bof = struct {
                             @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
                         },
                         else => {
-                            std.log.err("Failed to handle x86_64 COFF relocation ({d})", .{reloc.type});
+                            std.log.debug("Unhandled x86_64 COFF relocation ({d})", .{reloc.type});
                         },
                     }
                 } else if (@import("builtin").cpu.arch == .x86) {
@@ -415,7 +415,7 @@ const Bof = struct {
                             @as(*align(1) i32, @ptrFromInt(addr_p)).* = addr;
                         },
                         else => {
-                            std.log.err("Failed to handle x86 COFF relocation ({d})", .{reloc.type});
+                            std.log.debug("Unhandled x86 COFF relocation ({d})", .{reloc.type});
                         },
                     }
                 }
@@ -836,7 +836,7 @@ const Bof = struct {
                                 @as(*align(1) u32, @ptrFromInt(addr_p)).* = encoding;
                             },
                             else => {
-                                std.log.err("Failed to handle AARCH64 ELF relocation ({d})", .{reloc.r_type()});
+                                std.log.debug("Unhandled AARCH64 ELF relocation ({d})", .{reloc.r_type()});
                             },
                         }
                     } else if ((section.sh_flags & std.elf.SHF_INFO_LINK) != 0 and
@@ -872,7 +872,7 @@ const Bof = struct {
                             },
                             R_ARM_PREL31 => {},
                             else => {
-                                std.log.err("Failed to handle ARM ELF relocation ({d})", .{reloc.r_type()});
+                                std.log.debug("Unhandled ARM ELF relocation ({d})", .{reloc.r_type()});
                             },
                         }
                     } else if ((section.sh_flags & std.elf.SHF_INFO_LINK) != 0 and
@@ -897,7 +897,7 @@ const Bof = struct {
                                 @as(*align(1) i32, @ptrFromInt(addr_p)).* = relative_offset;
                             },
                             else => {
-                                std.log.err("Failed to handle x86_64 ELF relocation ({d})", .{reloc.r_type()});
+                                std.log.debug("Unhandled x86_64 ELF relocation ({d})", .{reloc.r_type()});
                             },
                         }
                     } else if ((section.sh_flags & std.elf.SHF_INFO_LINK) != 0 and
@@ -921,7 +921,7 @@ const Bof = struct {
                                 @as(*align(1) i32, @ptrFromInt(addr_p)).* = relative_offset;
                             },
                             else => {
-                                std.log.err("Failed to handle x86 ELF relocation ({d})", .{reloc.r_type()});
+                                std.log.debug("Unhandled x86 ELF relocation ({d})", .{reloc.r_type()});
                             },
                         }
                     }
