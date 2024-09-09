@@ -940,7 +940,7 @@ const Bof = struct {
                     "\tName: {s: <50} Address(real): 0x{x}",
                     .{ name, @intFromPtr(section_mappings.items[sym.st_shndx].ptr) + sym.st_value },
                 );
-                if (name[0] == 'g' and name[1] == 'o' and name[2] == 0) {
+                if (std.mem.len(name) == 2 and name[0] == 'g' and name[1] == 'o' and name[2] == 0) {
                     const section = section_mappings.items[sym.st_shndx];
 
                     go = @as(@TypeOf(go), @ptrFromInt(@intFromPtr(section.ptr) + sym.st_value));
