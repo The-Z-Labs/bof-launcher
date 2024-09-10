@@ -1,17 +1,16 @@
 CC=zig cc
-CFLAGS=-I../../include -I../../bof-launcher/src -std=c99 -fno-sanitize=undefined -c
+CFLAGS=-std=c99 -fno-sanitize=undefined -c -I../../bof-launcher/src
+ARCH := $(shell uname -m)
 
-bof_launcher: main.o bof_launcher.o beacon_impl.o stb_sprintf.o
-	$(CC) -o bof_launcher main.o bof_launcher.o beacon_impl.o stb_sprintf.o
+bof_launcher: main.o
+        ifeq ($(ARCH),x86_64)
+	$(CC) -o bof_launcher main.o ../../zig-out/lib/libbof_launcher_lin_x64.a
+        else
+	$(CC) -o bof_launcher main.o ../../zig-out/lib/libbof_launcher_lin_x86.a
+        endif
 
 main.o: main.c
 	$(CC) $(CFLAGS) main.c
 
-beacon_impl.o: ../../bof-launcher/src/beacon/beacon_impl.c
-	$(CC) $(CFLAGS) ../../bof-launcher/src/beacon/beacon_impl.c
-
-stb_sprintf.o: ../../bof-launcher/src/beacon/stb_sprintf.c
-	$(CC) $(CFLAGS) ../../bof-launcher/src/beacon/stb_sprintf.c
-
-bof_launcher.o:
-	zig build-obj -O ReleaseSmall -fstrip ../../bof-launcher/src/bof_launcher.zig
+clean:
+	-rm *.o bof_launcher
