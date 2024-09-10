@@ -780,8 +780,18 @@ const Bof = struct {
                                 encoding = encoding | imm;
                                 @as(*align(1) u32, @ptrFromInt(addr_p)).* = encoding;
                             },
-                            R_AARCH64_CALL26 => unreachable,
-                            R_AARCH64_JUMP26 => unreachable,
+                            R_AARCH64_CALL26, R_AARCH64_JUMP26 => {
+                                const relative_offset = (@as(
+                                    i32,
+                                    @intCast(@as(i64, @intCast(addr_s)) + addend - @as(i64, @intCast(addr_p))),
+                                ) & 0x0fff_ffff) >> 2;
+
+                                // 0x94000000 BL (branch linked)
+                                // 0x14000000 B (branch)
+                                @as(*align(1) u32, @ptrFromInt(addr_p)).* =
+                                    @as(u32, if (reloc.r_type() == R_AARCH64_CALL26) 0x94000000 else 0x14000000) |
+                                    @as(u32, @bitCast(relative_offset));
+                            },
                             R_AARCH64_ABS64 => {
                                 const relative_offset = @as(i64, @intCast(addr_s)) + addend;
 
