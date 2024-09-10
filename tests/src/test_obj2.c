@@ -6,6 +6,11 @@ int test1(void) {
     return 1;
 }
 
+__attribute__((noinline))
+int getNumShort(datap* parser) {
+    return BeaconDataInt(&parser);
+}
+
 int test2(void) {
     global_number += 2;
     return 3;
@@ -24,7 +29,7 @@ unsigned char go(char* arg_data, int arg_len) {
     const char* permissions = BeaconDataExtract(&parser, 0);
     const char* path = BeaconDataExtract(&parser, 0);
     int num = BeaconDataInt(&parser);
-    int num_short = BeaconDataInt(&parser);
+    int num_short = getNumShort(&parser);
 
     if (arg_len > 0) {
         BeaconPrintf(0, "arg_len (from go): %d\n", arg_len);
