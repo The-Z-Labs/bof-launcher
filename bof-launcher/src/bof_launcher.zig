@@ -797,6 +797,11 @@ const Bof = struct {
 
                                 @as(*align(1) i64, @ptrFromInt(addr_p)).* = relative_offset;
                             },
+                            R_AARCH64_ABS32 => {
+                                const relative_offset = @as(i32, @intCast(addr_s)) + addend;
+
+                                @as(*align(1) i32, @ptrFromInt(addr_p)).* = relative_offset;
+                            },
                             R_AARCH64_PREL32 => {
                                 const relative_offset = @as(
                                     i32,
@@ -1737,6 +1742,7 @@ const R_AARCH64_LDST32_ABS_LO12_NC = 285;
 const R_AARCH64_LDST64_ABS_LO12_NC = 286;
 const R_AARCH64_LDST128_ABS_LO12_NC = 299;
 const R_AARCH64_ABS64 = 257;
+const R_AARCH64_ABS32 = 258;
 const R_AARCH64_PREL32 = 261;
 
 const R_ARM_ABS32 = 2;
