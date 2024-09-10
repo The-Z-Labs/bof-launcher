@@ -798,7 +798,7 @@ const Bof = struct {
                                 @as(*align(1) i64, @ptrFromInt(addr_p)).* = relative_offset;
                             },
                             R_AARCH64_ABS32 => {
-                                const relative_offset = @as(i32, @intCast(addr_s)) + addend;
+                                const relative_offset = @as(i32, @intCast(addr_s)) + @as(i32, @intCast(addend));
 
                                 @as(*align(1) i32, @ptrFromInt(addr_p)).* = relative_offset;
                             },
