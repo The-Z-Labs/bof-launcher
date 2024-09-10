@@ -28,5 +28,5 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
 
     _ = beacon.printf(0, "%s", &buf);
 
-    return func("it");
+    return @call(.never_inline, func, .{"it"});
 }
