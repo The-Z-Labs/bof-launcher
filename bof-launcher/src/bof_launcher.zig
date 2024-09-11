@@ -1959,6 +1959,7 @@ fn initLauncher() !void {
     try gstate.func_lookup.put(if (is32w) "_memset" else "memset", @intFromPtr(&memset));
     try gstate.func_lookup.put(if (is32w) "_memcpy" else "memcpy", @intFromPtr(&memcpy));
     try gstate.func_lookup.put(if (is32w) "_calloc" else "calloc", @intFromPtr(&allocateAndZeroMemory));
+    try gstate.func_lookup.put(if (is32w) "_malloc" else "malloc", @intFromPtr(&allocateMemory));
     try gstate.func_lookup.put(if (is32w) "_free" else "free", @intFromPtr(&freeMemory));
     try gstate.func_lookup.put(if (is32w) "___ashlti3" else "__ashlti3", @intFromPtr(&__ashlti3));
     if (@import("builtin").cpu.arch != .arm) {
