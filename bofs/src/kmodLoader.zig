@@ -1,9 +1,57 @@
+///name: kmodLoader
+///description: "Loads and unloads Linux kernel modules images directly from memory"
+///author: Z-Labs
+///tags: ['post-exploitation']
+///OS: linux
+///execution-hint: callback
+///entrypoints:
+///  - kmodLoad
+///  - kmodRemove
+///sources:
+///  - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/kmodLoader.zig'
+///usage: '
+/// kmodLoad string:ImgMemoryAddress int:ImgLen string:ModuleParams
+/// kmodRemove string:ModuleName int:Flags
+///'
+///examples: '
+/// See BOF-stager for an example of using this BOF.
+///'
+///arguments:
+///  - name: ImgMemoryAddress
+///    desc: "memory address of kernel image module"
+///    type: string
+///    required: true
+///    entrypoint: kmodLoad
+///  - name: ImgLen
+///    desc: "size of kernel module image"
+///    type: integer
+///    required: true
+///    entrypoint: kmodLoad
+///  - name: ModuleParams
+///    desc: "kernel module parameters in a form of: name[=value[,value...]] for each parameter"
+///    type: string
+///    required: true
+///    entrypoint: kmodLoad
+///  - name: ModuleName
+///    desc: "kernel module name to remove"
+///    type: string
+///    required: true
+///    entrypoint: kmodRemove
+///  - name: Flags
+///    desc: "special flags"
+///    type: integer
+///    required: true
+///    entrypoint: kmodRemove
+///errors:
+///- name: NoRootPermissions
+///  code: 0x1
+///  message: "Root privileges are required to load kernel module"
 const std = @import("std");
 const beacon = @import("bof_api").beacon;
 
 // BOF-specific error codes
 const kmodErrors = enum(u8) {
-    NoRootPermissions = 1,
+    NoRootPermissions = 0x1,
     BadModuleSignature,
     ModuleAlreadyExists,
     NoSuchModule,
