@@ -13,7 +13,11 @@
 /// id
 /// id root
 ///'
-///
+///arguments:
+///- name: User
+///  desc: "Prints user and group information for this user"
+///  type: string
+///  required: false
 const std = @import("std");
 const os = std.posix;
 const c = std.c;

@@ -9,12 +9,6 @@
 ///usage: '
 ///    udpScanner str:IPSpec[:portSpec] [int:BUF_LEN str:BUF_MEMORY_ADDR]
 ///
-///Arguments:
-///
-/// str:IPSpec[:portSpec]    ex: 192.168.0.1; 10.0.0-255.1-254; 192.168.0.1:161,427,10-15
-/// [int:BUF_LEN]            length of UDP probes buffer
-/// [str:BUF_MEMORY_ADDR]    pointer to the buffer containing one or more UDP probe(s). One probe per line is allowed.
-///
 ///UDP probe syntax (with example):
 ///
 ///<portSpec> <probeName> <hexadecimal encoded probe data>\n
@@ -38,6 +32,19 @@
 /// Example of running udpScanner using cli4bofs tool and with UDP probes provided from the file:
 ///
 ///   cli4bofs exec udpScanner 102.168.1.1-4:161,427 file:/tmp/udpPayloads'
+///arguments:
+///  - name: IPSpec
+///    desc: "IP addresses specification, ex: 192.168.0.1; 10.0.0-255.1-254; 192.168.0.1:161,427,10-15"
+///    type: string
+///    required: true
+///  - name: BufLen
+///    desc: "length of UDP probes buffer"
+///    type: integer
+///    required: false
+///  - name: BufMemoryAddress
+///    desc: "memory address of UDP probes buffer"
+///    type: string
+///    required: false
 const std = @import("std");
 const beacon = @import("bof_api").beacon;
 const posix = @import("bof_api").posix;
