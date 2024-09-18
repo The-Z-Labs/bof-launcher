@@ -894,18 +894,17 @@ const Bof = struct {
                         @import("builtin").cpu.arch == .x86_64)
                     {
                         // RELOCATIONS FOR X86_64
+                        // https://intezer.com/blog/malware-analysis/executable-and-linkable-format-101-part-3-relocations
 
                         switch (reloc.r_type()) {
                             0x1 => {
-                                // R_X86_64_64 (0x1)
-
+                                // R_X86_64_64, S + A
                                 @as(*align(1) usize, @ptrFromInt(addr_p)).* =
                                     @as(usize, @intCast(@as(u64, @bitCast(@as(i64, @intCast(addr_s)) + addend))));
                             },
                             0x2, 0x4 => {
-                                // R_X86_64_PC32 (0x2)
-                                // R_X86_64_PLT32 (0x4)
-
+                                // R_X86_64_PC32 (0x2), S + A - P
+                                // R_X86_64_PLT32 (0x4), L + A - P
                                 const relative_offset: i32 =
                                     @intCast(@as(i64, @intCast(addr_s)) + addend - @as(i64, @intCast(addr_p)));
 
@@ -919,13 +918,21 @@ const Bof = struct {
                         @import("builtin").cpu.arch == .x86)
                     {
                         // RELOCATIONS FOR X86
+                        // https://intezer.com/blog/malware-analysis/executable-and-linkable-format-101-part-3-relocations
 
                         switch (reloc.r_type()) {
                             0x1 => {
-                                // R_X86_64_64 (0x1)
-
+                                // R_386_32, S + A
                                 @as(*align(1) usize, @ptrFromInt(addr_p)).* =
                                     @as(usize, @intCast(@as(u64, @bitCast(@as(i64, @intCast(addr_s)) + addend))));
+                            },
+                            0x2, 0x4 => {
+                                // R_386_PC32 (0x2), S + A - P
+                                // R_386_PLT32 (0x4), L + A - P
+                                const relative_offset: i32 =
+                                    @intCast(@as(i64, @intCast(addr_s)) + addend - @as(i64, @intCast(addr_p)));
+
+                                @as(*align(1) i32, @ptrFromInt(addr_p)).* = relative_offset;
                             },
                             0x9 => {
                                 // S + A - GOT
@@ -1744,6 +1751,8 @@ const R_AARCH64_LDST128_ABS_LO12_NC = 299;
 const R_AARCH64_ABS64 = 257;
 const R_AARCH64_ABS32 = 258;
 const R_AARCH64_PREL32 = 261;
+const R_AARCH64_ADR_GOT_PAGE = 311;
+const R_AARCH64_LD64_GOT_LO12_NC = 312;
 
 const R_ARM_ABS32 = 2;
 const R_ARM_REL32 = 3;
