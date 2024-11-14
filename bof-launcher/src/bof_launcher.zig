@@ -42,11 +42,14 @@ const Bof = struct {
 
         const tid = getCurrentThreadId();
 
+        std.log.debug("Thread id = {d}", .{tid});
+
         {
             gstate.mutex.lock();
             defer gstate.mutex.unlock();
             gstate.bof_contexts.put(tid, context) catch @panic("OOM");
         }
+        std.log.debug("Entering go()...", .{});
         const exit_code = bof.entry_point.?(
             if (arg_data) |ad| ad.ptr else null,
             if (arg_data) |ad| @as(i32, @intCast(ad.len)) else 0,
@@ -376,11 +379,11 @@ const Bof = struct {
                 } else if (@import("builtin").cpu.arch == .x86_64) {
                     switch (reloc.type) {
                         coff.IMAGE_REL_AMD64_ADDR64 => {
-                            const a = @as(*align(1) u64, @ptrFromInt(addr_p)).* + sym.symbol.value;
+                            const a = @as(*align(1) i64, @ptrFromInt(addr_p)).* + sym.symbol.value;
 
-                            const addr = addr_s + a;
+                            const addr = @as(i64, @intCast(addr_s)) + a;
 
-                            @as(*align(1) u64, @ptrFromInt(addr_p)).* = addr;
+                            @as(*align(1) u64, @ptrFromInt(addr_p)).* = @bitCast(addr);
                         },
                         coff.IMAGE_REL_AMD64_REL32 => {
                             const addr: i32 = @intCast(
@@ -1773,6 +1776,9 @@ extern fn __aeabi_uldivmod() callconv(.Naked) void;
 extern fn __aeabi_ldivmod() callconv(.Naked) void;
 extern fn memset(dest: ?[*]u8, c: u8, len: usize) callconv(.C) ?[*]u8;
 extern fn memcpy(noalias dest: ?[*]u8, noalias src: ?[*]const u8, len: usize) callconv(.C) ?[*]u8;
+extern fn ___chkstk_ms() callconv(.Naked) void;
+extern fn __zig_probe_stack() callconv(.Naked) void;
+extern fn _alloca() callconv(.Naked) void;
 
 export fn allocateMemory(size: usize) callconv(.C) ?*anyopaque {
     gstate.mutex.lock();
@@ -1982,6 +1988,8 @@ fn initLauncher() !void {
     if (@import("builtin").os.tag == .windows) {
         switch (@import("builtin").cpu.arch) {
             .x86_64 => {
+                //try gstate.func_lookup.put("___chkstk_ms", @intFromPtr(&___chkstk_ms));
+                try gstate.func_lookup.put("___chkstk_ms", @intFromPtr(&__zig_probe_stack));
                 try gstate.func_lookup.put("WriteFile", @intFromPtr(&w32.WriteFile));
                 try gstate.func_lookup.put("GetLastError", @intFromPtr(&w32.GetLastError));
                 try gstate.func_lookup.put("ExitProcess", @intFromPtr(&w32.ExitProcess));
@@ -1992,6 +2000,7 @@ fn initLauncher() !void {
                 try gstate.func_lookup.put("GetProcAddress", @intFromPtr(&w32.GetProcAddress));
             },
             .x86 => {
+                try gstate.func_lookup.put("__alloca", @intFromPtr(&_alloca));
                 try gstate.func_lookup.put("_WriteFile@20", @intFromPtr(&w32.WriteFile));
                 try gstate.func_lookup.put("_GetLastError@0", @intFromPtr(&w32.GetLastError));
                 try gstate.func_lookup.put("_ExitProcess@4", @intFromPtr(&w32.ExitProcess));
