@@ -43,6 +43,8 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run all tests");
     test_step.dependOn(b.getInstallStep());
 
+    var bof_launcher_lib_map = std.StringHashMap(*std.Build.Step.Compile).init(b.allocator);
+
     for (targets_to_build) |target_query| {
         const options = Options{ .target = b.resolveTargetQuery(target_query), .optimize = optimize };
 
@@ -55,6 +57,11 @@ pub fn build(b: *std.Build) void {
         // Bof-launcher library
         //
         const bof_launcher_lib = @import("bof-launcher/build.zig").build(b, options);
+
+        bof_launcher_lib_map.put(
+            options.target.result.linuxTriple(b.allocator) catch unreachable,
+            bof_launcher_lib,
+        ) catch unreachable;
 
         //
         // Examples: BOF stager
@@ -108,7 +115,7 @@ pub fn build(b: *std.Build) void {
     //
     // BOFs
     //
-    @import("bofs/build.zig").build(b, bof_api_module) catch unreachable;
+    @import("bofs/build.zig").build(b, optimize, bof_launcher_api_module, bof_api_module, bof_launcher_lib_map) catch unreachable;
 }
 
 inline fn thisDir() []const u8 {

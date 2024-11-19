@@ -336,6 +336,13 @@ extern fn bofObjectRunAsyncProcess(
     out_context: **Context,
 ) callconv(.C) c_int;
 
+pub extern fn bofDebugRun(
+    go_func: *const fn (?[*]u8, i32) callconv(.C) u8,
+    arg_data_ptr: ?[*]u8,
+    arg_data_len: c_int,
+    out_context: **Context,
+) callconv(.C) c_int;
+
 extern fn bofContextRelease(context: *Context) callconv(.C) void;
 extern fn bofContextIsRunning(context: *Context) callconv(.C) c_int;
 extern fn bofContextWait(context: *Context) callconv(.C) void;

@@ -85,7 +85,6 @@ pub export fn kmodLoad(module_image: [*]const u8, len: usize, param_values: [*:0
 }
 
 pub export fn kmodRemove(name: [*:0]const u8, flags: u32) callconv(.C) u8 {
-
     const rc = std.os.linux.syscall2(syscalls.delete_module, @intFromPtr(name), flags);
     switch (std.os.linux.E.init(rc)) {
         .SUCCESS => {},
@@ -95,6 +94,10 @@ pub export fn kmodRemove(name: [*:0]const u8, flags: u32) callconv(.C) u8 {
         else => |errno| debugPrint("delete_module failure: {s}", .{@tagName(errno)}),
     }
 
+    return 0;
+}
+
+pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
     return 0;
 }
 

@@ -1,5 +1,5 @@
 const bofs_included_in_launcher = [_]Bof{
-    .{ .name = "helloBof", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+    .{ .name = "helloBof", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "misc", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "udpScanner", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "tcpScanner", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
@@ -79,7 +79,13 @@ const Bof = struct {
     }
 };
 
-pub fn build(b: *std.Build, bof_api_module: *std.Build.Module) !void {
+pub fn build(
+    b: *std.Build,
+    bof_optimize: std.builtin.Mode,
+    bof_launcher_api_module: *std.Build.Module,
+    bof_api_module: *std.Build.Module,
+    bof_launcher_lib_map: std.StringHashMap(*std.Build.Step.Compile),
+) !void {
     var bofs_to_build = std.ArrayList(Bof).init(b.allocator);
     defer bofs_to_build.deinit();
 
@@ -123,7 +129,6 @@ pub fn build(b: *std.Build, bof_api_module: *std.Build.Module) !void {
                     ".",
                     &.{ bof.name, @tagName(format), @tagName(arch), "o" },
                 );
-
                 const bin_full_bof_name = try std.mem.join(b.allocator, "/", &.{ "bin", full_bof_name });
 
                 if (lang == .@"asm") {
@@ -149,7 +154,7 @@ pub fn build(b: *std.Build, bof_api_module: *std.Build.Module) !void {
                         .name = bof.name,
                         .root_source_file = .{ .cwd_relative = source_file_path },
                         .target = target,
-                        .optimize = .ReleaseSmall,
+                        .optimize = bof_optimize,
                     }),
                     .c => blk: {
                         const obj = b.addObject(.{
@@ -157,7 +162,7 @@ pub fn build(b: *std.Build, bof_api_module: *std.Build.Module) !void {
                             // TODO: Zig bug. Remove below line once fixed.
                             .root_source_file = b.path("tests/src/dummy.zig"),
                             .target = target,
-                            .optimize = .ReleaseSmall,
+                            .optimize = bof_optimize,
                         });
                         obj.addCSourceFile(.{
                             .file = .{ .cwd_relative = source_file_path },
@@ -188,8 +193,32 @@ pub fn build(b: *std.Build, bof_api_module: *std.Build.Module) !void {
                 obj.root_module.addImport("bof_api", bof_api_module);
                 obj.root_module.pic = true;
                 obj.root_module.single_threaded = true;
-                obj.root_module.strip = true;
+                obj.root_module.strip = if (bof_optimize == .Debug) false else true;
                 obj.root_module.unwind_tables = false;
+
+                if (bof_optimize == .Debug) {
+                    const full_debug_exe_name = try std.mem.join(
+                        b.allocator,
+                        ".",
+                        &.{ bof.name, @tagName(format), @tagName(arch) },
+                    );
+                    const debug_exe = b.addExecutable(.{
+                        .root_source_file = .{ .cwd_relative = thisDir() ++ "/src/_debug_entry.zig" },
+                        .name = full_debug_exe_name,
+                        .target = target,
+                        .optimize = bof_optimize,
+                    });
+                    debug_exe.linkLibrary(bof_launcher_lib_map.get(target.result.linuxTriple(b.allocator) catch unreachable).?);
+                    debug_exe.linkLibC();
+                    debug_exe.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
+                    if (target.query.os_tag == .windows) {
+                        debug_exe.linkSystemLibrary2("ws2_32", .{});
+                        debug_exe.linkSystemLibrary2("ole32", .{});
+                        debug_exe.linkSystemLibrary2("kernel32", .{});
+                    }
+                    debug_exe.addObject(obj);
+                    b.installArtifact(debug_exe);
+                }
 
                 b.getInstallStep().dependOn(&b.addInstallFile(obj.getEmittedBin(), bin_full_bof_name).step);
             }

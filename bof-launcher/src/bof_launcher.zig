@@ -1295,6 +1295,31 @@ fn run(
     } else unreachable;
 }
 
+fn runDebug(
+    go_func: *const fn (?[*]u8, i32) callconv(.C) u8,
+    arg_data_ptr: ?[*]u8,
+    arg_data_len: c_int,
+    out_context: **pubapi.Context,
+) !void {
+    const context = try gstate.allocator.?.create(BofContext);
+    context.* = BofContext.init(gstate.allocator.?, .{});
+    errdefer {
+        context.deinit();
+        gstate.allocator.?.destroy(context);
+    }
+    var bof = Bof{
+        .is_allocated = true,
+        .is_loaded = true,
+        .entry_point = go_func,
+    };
+    bof.run(
+        context,
+        if (arg_data_ptr) |ptr| ptr[0..@as(usize, @intCast(arg_data_len))] else null,
+    );
+    out_context.* = @ptrCast(context);
+    context.done_event.set();
+}
+
 export fn bofObjectRun(
     bof_handle: BofHandle,
     arg_data_ptr: ?[*]u8,
@@ -1304,6 +1329,18 @@ export fn bofObjectRun(
     if (!gstate.is_valid) return -1;
     if (!gstate.bof_pool.isBofValid(bof_handle)) return 0; // ignore (no error)
     run(bof_handle, arg_data_ptr, arg_data_len, out_context) catch return -1;
+    return 0; // success
+}
+
+export fn bofDebugRun(
+    go_func: *const fn (?[*]u8, i32) callconv(.C) u8,
+    arg_data_ptr: ?[*]u8,
+    arg_data_len: c_int,
+    out_context: **pubapi.Context,
+) callconv(.C) c_int {
+    const res = bofLauncherInit();
+    if (res < 0) return res;
+    runDebug(go_func, arg_data_ptr, arg_data_len, out_context) catch return -1;
     return 0; // success
 }
 
