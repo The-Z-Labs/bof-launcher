@@ -7,6 +7,8 @@ const Options = @import("bof-launcher/build.zig").Options;
 pub fn build(b: *std.Build) void {
     ensureZigVersion() catch return;
 
+    std.fs.cwd().deleteTree("zig-out") catch {};
+
     const supported_targets: []const std.Target.Query = &.{
         .{ .cpu_arch = .x86, .os_tag = .windows, .abi = .gnu },
         .{ .cpu_arch = .x86, .os_tag = .linux, .abi = .gnu },

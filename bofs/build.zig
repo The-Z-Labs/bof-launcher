@@ -89,10 +89,6 @@ pub fn build(
     var bofs_to_build = std.ArrayList(Bof).init(b.allocator);
     defer bofs_to_build.deinit();
 
-    if (bof_optimize == .Debug) {
-        std.fs.cwd().deleteTree("zig-out") catch {};
-    }
-
     const ZigEnv = struct {
         lib_dir: []const u8,
     };
