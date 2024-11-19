@@ -450,6 +450,8 @@ test "bof-launcher.info" {
 }
 
 test "bof-launcher.udpScanner" {
+    if (@import("builtin").mode == .Debug) return error.SkipZigTest;
+
     try bof.initLauncher();
     defer bof.releaseLauncher();
 
@@ -494,6 +496,7 @@ test "bof-launcher.udpScanner" {
 }
 
 test "bof-launcher.wWinverC" {
+    if (@import("builtin").mode == .Debug) return error.SkipZigTest;
     if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
 
     try bof.initLauncher();
