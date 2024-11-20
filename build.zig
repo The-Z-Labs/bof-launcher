@@ -103,15 +103,13 @@ pub fn build(b: *std.Build) void {
         //
         // Run test BOFs (`zig build test`)
         //
-        if (options.target.result.os.tag == @import("builtin").os.tag) {
-            test_step.dependOn(&@import("tests/build.zig").runTests(
-                b,
-                options,
-                bof_launcher_lib,
-                bof_launcher_api_module,
-                bof_api_module,
-            ).step);
-        }
+        test_step.dependOn(&@import("tests/build.zig").runTests(
+            b,
+            options,
+            bof_launcher_lib,
+            bof_launcher_api_module,
+            bof_api_module,
+        ).step);
     }
 
     //
