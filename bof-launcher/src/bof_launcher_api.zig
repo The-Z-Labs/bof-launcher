@@ -355,6 +355,6 @@ extern fn bofArgsRelease(args: *Args) callconv(.C) void;
 extern fn bofArgsAdd(args: *Args, arg: [*]const u8, arg_len: c_int) callconv(.C) c_int;
 extern fn bofArgsBegin(args: *Args) callconv(.C) void;
 extern fn bofArgsEnd(args: *Args) callconv(.C) void;
-extern fn bofArgsGetBuffer(args: *Args) callconv(.C) ?[*]u8;
-extern fn bofArgsGetBufferSize(args: *Args) callconv(.C) c_int;
+pub extern fn bofArgsGetBuffer(args: *Args) callconv(.C) ?[*]u8;
+pub extern fn bofArgsGetBufferSize(args: *Args) callconv(.C) c_int;
 //------------------------------------------------------------------------------
