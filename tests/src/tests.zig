@@ -165,8 +165,6 @@ test "bof-launcher.ctest.basic2" {
 }
 
 test "bof-launcher.bofs.load_run" {
-    if (@import("builtin").cpu.arch == .x86 and @import("builtin").os.tag == .windows) return error.SkipZigTest;
-
     try bof.initLauncher();
     defer bof.releaseLauncher();
 
@@ -186,7 +184,6 @@ test "bof-launcher.bofs.load_run" {
 
     try expect(object0.isValid());
     try expect(object1.isValid());
-
     const hex_stream = "1900000004000000373737000d0000002f746d702f746573742e736800030000000500";
     var bytes: [hex_stream.len / 2]u8 = undefined;
     _ = try std.fmt.hexToBytes(&bytes, hex_stream);
@@ -196,7 +193,6 @@ test "bof-launcher.bofs.load_run" {
     try expect(6 == context0.getExitCode());
     try std.testing.expectEqualStrings("--- test_obj1.zig ---", context0.getOutput().?[0..21]);
     try expect(context0.getObject().handle == object0.handle);
-
     const context1 = try object1.run(&bytes);
     defer context1.release();
     try expect(15 == context1.getExitCode());
@@ -268,8 +264,6 @@ test "bof-launcher.stress" {
 }
 
 test "bof-launcher.bofs.runAsyncThread" {
-    if (@import("builtin").cpu.arch == .x86 and @import("builtin").os.tag == .windows) return error.SkipZigTest;
-
     try bof.initLauncher();
     defer bof.releaseLauncher();
 
@@ -402,8 +396,6 @@ test "bof-launcher.bofs.runAsyncProcess" {
 }
 
 test "bof-launcher.info" {
-    if (@import("builtin").cpu.arch == .x86 and @import("builtin").os.tag == .windows) return error.SkipZigTest;
-
     try bof.initLauncher();
     defer bof.releaseLauncher();
 

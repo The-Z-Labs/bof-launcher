@@ -254,7 +254,9 @@ pub const Context = opaque {
 
     /// Helper function for checking which object file is associtated with a given
     /// `context`.
-    pub const getObject = bofContextGetObjectHandle;
+    pub fn getObject(context: *Context) Object {
+        return .{ .handle = bofContextGetObjectHandle(context) };
+    }
 };
 //------------------------------------------------------------------------------
 //
@@ -347,7 +349,7 @@ extern fn bofContextRelease(context: *Context) callconv(.C) void;
 extern fn bofContextIsRunning(context: *Context) callconv(.C) c_int;
 extern fn bofContextWait(context: *Context) callconv(.C) void;
 extern fn bofContextGetExitCode(context: *Context) callconv(.C) u8;
-extern fn bofContextGetObjectHandle(context: *Context) callconv(.C) Object;
+extern fn bofContextGetObjectHandle(context: *Context) callconv(.C) u32;
 extern fn bofContextGetOutput(context: *Context, out_output_len: ?*c_int) callconv(.C) ?[*:0]const u8;
 
 extern fn bofArgsInit(out_args: **Args) callconv(.C) c_int;

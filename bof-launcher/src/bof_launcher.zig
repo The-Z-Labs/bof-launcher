@@ -13,6 +13,7 @@ const BofHandle = packed struct(u32) {
 };
 comptime {
     assert(@sizeOf(BofHandle) == @sizeOf(pubapi.Object));
+    assert(@alignOf(BofHandle) == @alignOf(pubapi.Object));
 }
 
 const Bof = struct {
@@ -1678,10 +1679,10 @@ export fn bofContextIsRunning(context: *pubapi.Context) c_int {
     return @intFromBool(ctx.done_event.isSet() == false);
 }
 
-export fn bofContextGetObjectHandle(context: *pubapi.Context) BofHandle {
-    if (!gstate.is_valid) return .{};
+export fn bofContextGetObjectHandle(context: *pubapi.Context) u32 {
+    if (!gstate.is_valid) return 0;
     const ctx = @as(*BofContext, @ptrCast(@alignCast(context)));
-    return ctx.handle;
+    return @bitCast(ctx.handle);
 }
 
 export fn bofContextGetExitCode(context: *pubapi.Context) u8 {
