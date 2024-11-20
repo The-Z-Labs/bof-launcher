@@ -197,6 +197,9 @@ pub fn build(
                 obj.root_module.unwind_tables = false;
 
                 if (bof_optimize == .Debug) {
+                    const linux_triple = target.result.linuxTriple(b.allocator) catch unreachable;
+                    if (bof_launcher_lib_map.get(linux_triple) == null) continue;
+
                     const full_debug_exe_name = try std.mem.join(
                         b.allocator,
                         ".",
@@ -208,7 +211,7 @@ pub fn build(
                         .target = target,
                         .optimize = bof_optimize,
                     });
-                    debug_exe.linkLibrary(bof_launcher_lib_map.get(target.result.linuxTriple(b.allocator) catch unreachable).?);
+                    debug_exe.linkLibrary(bof_launcher_lib_map.get(linux_triple).?);
                     debug_exe.linkLibC();
                     debug_exe.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
                     if (target.query.os_tag == .windows) {
