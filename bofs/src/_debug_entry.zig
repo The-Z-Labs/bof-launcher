@@ -59,6 +59,12 @@ pub fn main() !void {
     }
     defer context.release();
 
+    if (context.getOutput()) |output| {
+        std.debug.print("==========================================\n", .{});
+        std.debug.print("{s}", .{output});
+        std.debug.print("==========================================\n", .{});
+    }
+
     std.debug.print("BOF exit code: {d}\n", .{context.getExitCode()});
 }
 
