@@ -61,7 +61,7 @@ pub fn main() !void {
 
     if (context.getOutput()) |output| {
         std.debug.print("==========================================\n", .{});
-        std.debug.print("{s}", .{output});
+        std.debug.print("{s}\n", .{output});
         std.debug.print("==========================================\n", .{});
     }
 
