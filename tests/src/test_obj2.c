@@ -8,7 +8,7 @@ int test1(void) {
 
 __attribute__((noinline))
 int getNumShort(datap* parser) {
-    return BeaconDataInt(&parser);
+    return BeaconDataInt(parser);
 }
 
 int test2(void) {
