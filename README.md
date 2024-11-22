@@ -61,6 +61,11 @@ Being a zero-dependency, drop-in C/C++ compiler that supports cross-compilation 
 
     zig build
 
+Above command will build all included BOFs, example programs and bof-launcher library for all supported platforms.
+To build BOFs as a debuggable, standalone executables run:
+
+    zig build -Doptimize=Debug
+
 Build artifacts will show up in `zig-out/bin` and `zig-out/lib` folders.
 
 To build and run test BOFs do:
