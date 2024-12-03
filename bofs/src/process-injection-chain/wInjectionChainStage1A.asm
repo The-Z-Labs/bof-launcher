@@ -10,7 +10,7 @@ align 8
 go:
     push rbp
     mov rbp, rsp
-    sub	rsp, 256
+    sub rsp, 256
 
     mov r8d, edx ; int size
     mov rdx, rcx ; char* buffer
