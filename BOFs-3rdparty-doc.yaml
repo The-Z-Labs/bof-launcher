@@ -5,6 +5,7 @@ author: Trustedsec
 tags: ['host-recon']
 OS: linux
 header: ['inline', 'z']
+entrypoint: "go"
 sources:
     - 'https://raw.githubusercontent.com/trustedsec/ELFLoader/main/SA/src/cat.c'
 usage: '
@@ -13,6 +14,11 @@ usage: '
 examples: '
  cat /etc/passwd 
 '
+arguments:
+  - name: filename
+    desc: "Filename to display"
+    type: string
+    required: true
 
 ---
 name: tasklist
@@ -21,6 +27,7 @@ author: Trustedsec
 tags: ['host-recon']
 OS: linux
 header: ['inline', '']
+entrypoint: "go"
 sources:
     - 'https://raw.githubusercontent.com/trustedsec/ELFLoader/main/SA/src/tasklist.c'
 usage: '
@@ -37,6 +44,7 @@ author: Trustedsec
 tags: ['host-recon']
 OS: linux
 header: ['inline', '']
+entrypoint: "go"
 sources:
     - 'https://raw.githubusercontent.com/trustedsec/ELFLoader/main/SA/src/pwd.c'
 usage: '
