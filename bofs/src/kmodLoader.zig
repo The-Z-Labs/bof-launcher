@@ -4,9 +4,9 @@
 ///tags: ['post-exploitation']
 ///OS: linux
 ///execution-hint: callback
-///entrypoints:
-///  - kmodLoad
-///  - kmodRemove
+///api:
+///  - 'kmodLoad(module_image: [*]const u8, len: usize, param_values: [*:0]const u8) callconv(.C) u8'
+///  - 'kmodRemove(module_name: [*:0]const u8, flags: u32) callconv(.C) u8'
 ///sources:
 ///  - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/kmodLoader.zig'
 ///usage: '
@@ -17,31 +17,31 @@
 /// See BOF-stager for an example of using this BOF.
 ///'
 ///arguments:
-///  - name: ImgMemoryAddress
+///  - name: module_image
 ///    desc: "memory address of kernel image module"
 ///    type: string
 ///    required: true
-///    entrypoint: kmodLoad
-///  - name: ImgLen
+///    api: kmodLoad
+///  - name: len
 ///    desc: "size of kernel module image"
 ///    type: integer
 ///    required: true
-///    entrypoint: kmodLoad
-///  - name: ModuleParams
+///    api: kmodLoad
+///  - name: param_values
 ///    desc: "kernel module parameters in a form of: name[=value[,value...]] for each parameter"
 ///    type: string
 ///    required: true
-///    entrypoint: kmodLoad
-///  - name: ModuleName
+///    api: kmodLoad
+///  - name: module_name
 ///    desc: "kernel module name to remove"
 ///    type: string
 ///    required: true
-///    entrypoint: kmodRemove
-///  - name: Flags
+///    api: kmodRemove
+///  - name: flags
 ///    desc: "special flags"
 ///    type: integer
 ///    required: true
-///    entrypoint: kmodRemove
+///    api: kmodRemove
 ///errors:
 ///- name: NoRootPermissions
 ///  code: 0x1

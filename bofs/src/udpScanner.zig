@@ -4,6 +4,7 @@
 ///tags: ['net-recon']
 ///OS: "cross"
 ///header: ['thread', 'zib']
+///entrypoint: "go"
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/udpScanner.zig'
 ///usage: '
