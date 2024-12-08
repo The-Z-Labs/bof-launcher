@@ -3,16 +3,11 @@
 ///author: Z-Labs
 ///tags: ['post-exploitation']
 ///OS: linux
-///execution-hint: callback
 ///api:
 ///  - 'kmodLoad(module_image: [*]const u8, len: usize, param_values: [*:0]const u8) callconv(.C) u8'
 ///  - 'kmodRemove(module_name: [*:0]const u8, flags: u32) callconv(.C) u8'
 ///sources:
 ///  - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/kmodLoader.zig'
-///usage: '
-/// kmodLoad string:ImgMemoryAddress int:ImgLen string:ModuleParams
-/// kmodRemove string:ModuleName int:Flags
-///'
 ///examples: '
 /// See BOF-stager for an example of using this BOF.
 ///'

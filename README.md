@@ -148,6 +148,30 @@ Often during the developemnt/debugging, testing or just playing with a new piece
     cli4bofs.exe exec .\zig-out\bin\wWinver.coff.x64.o
     cli4bofs.exe exec .\zig-out\bin\udpScanner.coff.x64.o str:162.159.200.1-5:123,88
 
+## Documenting your BOFs
+
+We have also introduced a way for documenting BOFs with a simple yaml syntax within BOF's source code file. To document a BOF one can prefix each line containing the documentation with `///` at the top of BOF's source code file. By defualt during building the library with `zig build`, documentation from each BOF file will be concatenated to one common file `BOF-collection.yaml`. This file is ready to be used by our [cli4bofs tool](https://github.com/The-Z-Labs/cli4bofs). The syntax for BOF documenting is shown below and an example of a BOF with complete documnetation can be seen [here](https://github.com/The-Z-Labs/bof-launcher/blob/main/bofs/src/udpScanner.zig).
+
+```
+name: BOFname
+description: string:"short description of a BOF"
+author: BOFauthor 
+tags: list of tags 
+OS: string:linux|windows|cross
+sources: list of URLs
+examples: string:"usage examples of a BOF"
+- arguments:
+  - name: string:argName
+    desc: string:"short description of an argument"
+    type: string:"short|integer|string|stringW"
+    required: bool
+    api: optional:string:"api function name"
+- errors:
+  - name: errorName
+    code: int
+    message: string:"short description of the error"
+```
+
 ## Example usage scenarios
 
 ### Minimal Windows-based C application that uses bof-launcher

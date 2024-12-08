@@ -3,18 +3,9 @@
 ///author: "Z-Labs"
 ///tags: ['net-recon']
 ///OS: "cross"
-///header: ['thread', 'zib']
 ///entrypoint: "go"
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/udpScanner.zig'
-///usage: '
-///    udpScanner str:IPSpec[:portSpec] [int:BUF_LEN str:BUF_MEMORY_ADDR]
-///
-///UDP probe syntax (with example):
-///
-///<portSpec> <probeName> <hexadecimal encoded probe data>\n
-///53,69,135,1761 dnsReq 000010000000000000000000'
-///
 ///examples: '
 /// Scanning provided IP range on most common UDP ports with builtin UDP probes:
 ///
@@ -30,9 +21,15 @@
 ///
 ///   udpScanner str:192.168.0.1-32 int:BUF_LEN str:BUF_MEMORY_ADDRESS
 ///
+/// UDP probe syntax (with example):
+///
+///   <portSpec> <probeName> <hexadecimal encoded probe data>\n
+///   53,69,135,1761 dnsReq 000010000000000000000000
+///
 /// Example of running udpScanner using cli4bofs tool and with UDP probes provided from the file:
 ///
-///   cli4bofs exec udpScanner 102.168.1.1-4:161,427 file:/tmp/udpPayloads'
+///   cli4bofs exec udpScanner 102.168.1.1-4:161,427 file:/tmp/udpPayloads
+///'
 ///arguments:
 ///  - name: IPSpec
 ///    desc: "IP addresses specification, ex: 192.168.0.1; 10.0.0-255.1-254; 192.168.0.1:161,427,10-15"
