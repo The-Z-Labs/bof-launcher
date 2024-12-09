@@ -150,7 +150,7 @@ Often during the developemnt/debugging, testing or just playing with a new piece
 
 ## Documenting your BOFs
 
-We have also introduced a way for documenting BOFs with a simple yaml syntax within BOF's source code file. To document a BOF one can prefix each line containing the documentation with `///` at the top of BOF's source code file. By defualt during building the library with `zig build`, documentation from each BOF file will be concatenated to one common file `BOF-collection.yaml`. This file is ready to be used by our [cli4bofs tool](https://github.com/The-Z-Labs/cli4bofs). The yaml syntax for BOF documenting is shown below and an example of a BOF with complete documentation can be seen [here](https://github.com/The-Z-Labs/bof-launcher/blob/main/bofs/src/udpScanner.zig).
+We have also introduced a way for documenting BOFs with a simple yaml syntax within BOF's source code file. To document a BOF one can prefix each line containing the documentation with `///` at the top of BOF's source code file. By defualt during building the library with `zig build`, documentation from each BOF file will be concatenated to one common file `BOF-collection.yaml`. This file is ready to be used by our [cli4bofs tool](https://github.com/The-Z-Labs/cli4bofs). The yaml syntax for BOF documenting is shown below. An example of a BOF with complete documentation can be seen [here](https://github.com/The-Z-Labs/bof-launcher/blob/main/bofs/src/udpScanner.zig) and [here](https://github.com/The-Z-Labs/bof-launcher/blob/main/bofs/src/kmodLoader.zig) (for an example of BOF that exports API).
 
 ```
 name: BOFname
@@ -159,6 +159,8 @@ author: BOFauthor
 tags: list of tags 
 OS: string:linux|windows|cross
 sources: list of URLs
+entrypoint: optional:"go" 
+api: optional:list of signatures of exported functions
 examples: string:"usage examples of a BOF"
 - arguments:
   - name: string:argName
