@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "bof_launcher_api.h"
 
 int main(int argc, char *argv[]) {
@@ -11,6 +12,7 @@ int main(int argc, char *argv[]) {
     BofObjectHandle bof_handle = {0};
     BofContext* bof_context = NULL;
     const char* bof_output = NULL;
+    BofArgs* bof_args = NULL;
 
     if (argc < 2) {
         printf("Usage: %s <bof-filename>\n", argv[0]);
@@ -43,14 +45,25 @@ int main(int argc, char *argv[]) {
         goto cleanup;
     }
 
-    if (bofObjectInitFromMemory(file_data, file_len, &bof_handle) < 0) {
+    if (bofObjectInitFromMemory(file_data, file_len, &bof_handle) != 0) {
         ret_code = 1;
         goto cleanup;
     }
 
     printf("Running BOF from command line C application...\n");
+
+    if (bofArgsInit(&bof_args) != 0) {
+        ret_code = 1;
+        goto cleanup;
+    }
+    bofArgsBegin(bof_args);
+    for (int i = 2; i < argc; ++i) {
+        bofArgsAdd(bof_args, (unsigned char*)argv[i], strlen(argv[i]));
+    }
+    bofArgsEnd(bof_args);
  
-    if (bofObjectRun(bof_handle, NULL, 0, &bof_context) < 0) {
+    if (bofObjectRun(bof_handle,bofArgsGetBuffer(bof_args),
+        bofArgsGetBufferSize(bof_args), &bof_context) != 0) {
         ret_code = 1;
         goto cleanup;
     }
@@ -65,6 +78,7 @@ int main(int argc, char *argv[]) {
 
 cleanup:
     bofObjectRelease(bof_handle);
+    if (bof_args) bofArgsRelease(bof_args);
     if (bof_context) bofContextRelease(bof_context);
     if (file_data) free(file_data);
     if (file) fclose(file);
