@@ -23,8 +23,7 @@ int main(int argc, char *argv[]) {
     file = fopen(file_name, "rb");
     if (file == NULL) {
         printf("File not found. Please run 'zig build' in the root of the project.\n");
-        ret_code = 1;
-        goto cleanup;
+        goto error;
     }
 
     fseek(file, 0, SEEK_END);
@@ -35,26 +34,22 @@ int main(int argc, char *argv[]) {
 
     file_data = malloc(file_len);
     if (file_data == NULL) {
-        ret_code = 1;
-        goto cleanup;
+        goto error;
     }
 
     if (fread(file_data, 1, file_len, file) != file_len) {
         printf("Failed to read the file.\n");
-        ret_code = 1;
-        goto cleanup;
+        goto error;
     }
 
     if (bofObjectInitFromMemory(file_data, file_len, &bof_handle) != 0) {
-        ret_code = 1;
-        goto cleanup;
+        goto error;
     }
 
     printf("Running BOF from command line C application...\n");
 
     if (bofArgsInit(&bof_args) != 0) {
-        ret_code = 1;
-        goto cleanup;
+        goto error;
     }
     bofArgsBegin(bof_args);
     for (int i = 2; i < argc; ++i) {
@@ -64,12 +59,10 @@ int main(int argc, char *argv[]) {
  
     if (bofObjectRun(bof_handle,bofArgsGetBuffer(bof_args),
         bofArgsGetBufferSize(bof_args), &bof_context) != 0) {
-        ret_code = 1;
-        goto cleanup;
+        goto error;
     }
     if (bof_context == NULL) {
-        ret_code = 1;
-        goto cleanup;
+        goto error;
     }
 
     bof_output = bofContextGetOutput(bof_context, NULL);
@@ -83,4 +76,7 @@ cleanup:
     if (file_data) free(file_data);
     if (file) fclose(file);
     return ret_code;
+error:
+    ret_code = 1;
+    goto cleanup;
 }
