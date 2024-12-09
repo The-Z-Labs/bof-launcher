@@ -3,52 +3,70 @@
 #include "bof_launcher_api.h"
 
 int main(int argc, char *argv[]) {
+    int ret_code = 0;
+    FILE* file = NULL;
+    long file_len = 0;
+    const char* file_name = argv[1];
+    unsigned char* file_data = NULL;
+    BofObjectHandle bof_handle = {0};
+    BofContext* bof_context = NULL;
+    const char* bof_output = NULL;
+
     if (argc < 2) {
         printf("Usage: %s <bof-filename>\n", argv[0]);
         return 0;
     }
-    const char* filename = argv[1];
-    printf("<bof-filename>: %s\n", filename);
+    printf("<bof-filename>: %s\n", file_name);
 
-    FILE* fp = fopen(filename, "rb");
-    if (fp == NULL) {
+    file = fopen(file_name, "rb");
+    if (file == NULL) {
         printf("File not found. Please run 'zig build' in the root of the project.\n");
-        return 1;
+        ret_code = 1;
+        goto cleanup;
     }
 
-    fseek(fp, 0, SEEK_END);
-    long len = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
+    fseek(file, 0, SEEK_END);
+    file_len = ftell(file);
+    fseek(file, 0, SEEK_SET);
 
-    printf("File size is: %ld\n", len);
+    printf("File size is: %ld\n", file_len);
 
-    void* buf = malloc(len);
-    if (buf == NULL) return 1;
+    file_data = malloc(file_len);
+    if (file_data == NULL) {
+        ret_code = 1;
+        goto cleanup;
+    }
 
-    if (fread(buf, 1, len, fp) != len) {
+    if (fread(file_data, 1, file_len, file) != file_len) {
         printf("Failed to read the file.\n");
-        return 1;
+        ret_code = 1;
+        goto cleanup;
     }
 
-    BofObjectHandle bof_handle;
-    if (bofObjectInitFromMemory((unsigned char*)buf, len, &bof_handle) < 0) return 1;
+    if (bofObjectInitFromMemory(file_data, file_len, &bof_handle) < 0) {
+        ret_code = 1;
+        goto cleanup;
+    }
 
     printf("Running BOF from command line C application...\n");
  
-    BofContext* bof_context = NULL;
-    if (bofObjectRunAsyncThread(bof_handle, NULL, 0, NULL, NULL, &bof_context) < 0) return 1;
-    if (bof_context == NULL) return 1;
+    if (bofObjectRun(bof_handle, NULL, 0, &bof_context) < 0) {
+        ret_code = 1;
+        goto cleanup;
+    }
+    if (bof_context == NULL) {
+        ret_code = 1;
+        goto cleanup;
+    }
 
-    bofContextWait(bof_context);
+    bof_output = bofContextGetOutput(bof_context, NULL);
+    if (bof_output)
+        printf("\n%s\n", bof_output);
 
-    const char* output = bofContextGetOutput(bof_context, NULL);
-    if (output)
-        printf("\n%s\n", output);
-
+cleanup:
     bofObjectRelease(bof_handle);
-    bofContextRelease(bof_context);
-    free(buf);
-    fclose(fp);
-
-    return 0;
+    if (bof_context) bofContextRelease(bof_context);
+    if (file_data) free(file_data);
+    if (file) fclose(file);
+    return ret_code;
 }
