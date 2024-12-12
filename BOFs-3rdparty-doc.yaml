@@ -2,7 +2,7 @@
 name: cat
 description: "Concatenate FILE to stdout"
 author: Trustedsec
-tags: ['host-recon']
+tags: ['linux', 'host-recon', 'trustedsec']
 OS: linux
 entrypoint: "go"
 sources:
@@ -20,7 +20,7 @@ arguments:
 name: tasklist
 description: "Report a snapshot of the current processes"
 author: Trustedsec
-tags: ['host-recon']
+tags: ['linux', 'host-recon', 'trustedsec']
 OS: linux
 entrypoint: "go"
 sources:
@@ -33,7 +33,7 @@ examples: '
 name: pwd
 description: "Print name of current/working directory"
 author: Trustedsec
-tags: ['host-recon']
+tags: ['linux', 'host-recon', 'trustedsec']
 OS: linux
 entrypoint: "go"
 sources:
@@ -41,3 +41,21 @@ sources:
 examples: '
  pwd
 '
+
+---
+name: listmods
+description: "List process modules (DLL). Target current process if PID is empty"
+author: Trustedsec
+tags: ['windows', 'host-recon', 'trustedsec']
+OS: windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/listmods/entry.c'
+examples: '
+ listmods 3461
+'
+arguments:
+  - name: pid
+    desc: "Process PID"
+    type: integer
+    required: false
