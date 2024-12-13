@@ -260,15 +260,6 @@ fn generateBofCollectionYaml(
             }
         }
     }
-
-    const bof_yaml_3p = std.fs.cwd().openFile("BOFs-3rdparty-doc.yaml", .{}) catch return;
-    defer bof_yaml_3p.close();
-
-    const bof_yaml_3p_content = try bof_yaml_3p.reader().readAllAlloc(allocator, std.math.maxInt(u32));
-    defer allocator.free(bof_yaml_3p_content);
-
-    try doc_file.writeAll("\n");
-    try doc_file.writeAll(bof_yaml_3p_content);
 }
 
 fn getBofSourcePathAndLang(
