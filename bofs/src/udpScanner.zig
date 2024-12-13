@@ -1,7 +1,7 @@
 ///name: "udpScanner"
 ///description: "Universal UDP port sweeper."
 ///author: "Z-Labs"
-///tags: ['net-recon']
+///tags: ['windows', 'linux','net-recon','z-labs']
 ///OS: "cross"
 ///entrypoint: "go"
 ///sources:

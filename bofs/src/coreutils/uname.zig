@@ -1,13 +1,13 @@
 ///name: uname
-///description: "Print certain system information. With no FLAGS, same as -s"
+///description: "Print system information. With no flag, same as -s"
 ///author: Z-Labs
-///tags: ['host-recon']
+///tags: ['linux','host-recon','z-labs']
 ///OS: linux
-///header: ['inline', '']
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/uname.zig'
-///usage: '
-/// uname [str:FLAGS]
+///examples: '
+/// uname
+/// uname -a
 ///
 /// Flags:
 /// -a    print all information
@@ -17,11 +17,11 @@
 /// -v    print the kernel version
 /// -m    print the machine hardware name
 ///'
-///examples: '
-/// uname
-/// uname -a
-///'
-///
+///arguments:
+///- name: option
+///  desc: "Print only chosen system information. Supported options: -asnrvm"
+///  type: string
+///  required: false
 const std = @import("std");
 const beacon = @import("bof_api").beacon;
 

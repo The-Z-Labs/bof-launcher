@@ -1,7 +1,7 @@
 ///name: kmodLoader
 ///description: "Loads and unloads Linux kernel modules images directly from memory"
 ///author: Z-Labs
-///tags: ['post-exploitation']
+///tags: ['linux','post-exploitation','z-labs']
 ///OS: linux
 ///api:
 ///  - 'kmodLoad(module_image: [*]const u8, len: usize, param_values: [*:0]const u8) callconv(.C) u8'

@@ -1,20 +1,16 @@
 ///name: id
 ///description: "Print user and group information for each specified USER, or (when USER omitted) for the current process"
 ///author: Z-Labs
-///tags: ['host-recon']
+///tags: ['linux','host-recon','z-labs']
 ///OS: linux
-///header: ['inline', 'z']
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/id.zig'
-///usage: '
-/// id [str:USER]
-///'
 ///examples: '
 /// id
 /// id root
 ///'
 ///arguments:
-///- name: User
+///- name: user
 ///  desc: "Prints user and group information for this user"
 ///  type: string
 ///  required: false

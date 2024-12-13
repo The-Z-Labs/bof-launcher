@@ -1,18 +1,13 @@
 ///name: hostid
 ///description: "Print the numeric identifier for the current host"
 ///author: Z-Labs
-///tags: ['host-recon']
+///tags: ['linux','host-recon','z-labs']
 ///OS: linux
-///header: ['inline', '']
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/hostid.zig'
-///usage: '
-/// hostid
-///'
 ///examples: '
 /// hostid
 ///'
-///
 const std = @import("std");
 const beacon = @import("bof_api").beacon;
 const posix = @import("bof_api").posix;
