@@ -23,7 +23,7 @@ const bofs_included_in_launcher = [_]Bof{
     .{ .name = "wInjectionChainStage1A", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{.x64} },
     .{ .name = "wInjectionChainStage2C", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "kmodLoader", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    //.{ .name = "adcs_enum_com2", .go = "entry", .dir = "adcs_enum_com2/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    //.{ .name = "adcs_enum_com2", .srcfile = "entry", .dir = "adcs_enum_com2/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
 };
 
 // Additional/3rdparty BOFs for building should be added below
@@ -47,8 +47,8 @@ const BofArch = enum { x64, x86, aarch64, arm };
 
 const Bof = struct {
     dir: ?[]const u8 = null,
-    // source file name with go() function if in other file than .name
-    go: ?[]const u8 = null,
+    // source Filename with contains go(). Only set if go() is in other file than .name
+    srcfile: ?[]const u8 = null,
     name: []const u8,
     formats: []const BofFormat,
     archs: []const BofArch,
@@ -282,7 +282,7 @@ fn getBofSourcePathAndLang(
             thisDir(),
             "/src/",
             if (bof.dir) |dir| dir else "",
-            if (bof.go) |go| go else bof.name,
+            if (bof.srcfile) |srcfile| srcfile else bof.name,
         },
     );
 
