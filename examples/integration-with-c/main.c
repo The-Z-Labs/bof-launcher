@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
     }
     bofArgsEnd(bof_args);
  
-    if (bofObjectRun(bof_handle,bofArgsGetBuffer(bof_args),
+    if (bofObjectRun(bof_handle, bofArgsGetBuffer(bof_args),
         bofArgsGetBufferSize(bof_args), &bof_context) != 0) {
         goto error;
     }

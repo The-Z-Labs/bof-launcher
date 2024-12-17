@@ -166,10 +166,14 @@ pub fn build(
                         });
                         obj.addCSourceFile(.{
                             .file = .{ .cwd_relative = source_file_path },
-                            .flags = &.{ "-DBOF", "-D_GNU_SOURCE",
-                                if (arch == .x86 or arch == .x64) "-include" ++ thisDir() ++ "/src/force_intel_asm.h" else "",
-                                if (arch == .x86) "-DWOW64" else ""
-                             },
+                            .flags = &.{
+                                "-DBOF", "-D_GNU_SOURCE",
+                                if (arch == .x86 or arch == .x64)
+                                    "-include" ++ thisDir() ++ "/src/force_intel_asm.h"
+                                else
+                                    "",
+                                if (arch == .x86) "-DWOW64" else "",
+                            },
                         });
                         if (format == .coff) {
                             obj.addIncludePath(.{ .cwd_relative = windows_include_dir });
@@ -295,7 +299,17 @@ fn getBofSourcePathAndLang(
         break :blk .zig;
     };
 
-    const source_file_path = try std.mem.join(allocator, ".", &.{ bof_src_path, @tagName(lang) });
+    const extension = blk: {
+        std.fs.accessAbsolute(
+            try std.mem.join(allocator, ".", &.{ bof_src_path, "cpp" }),
+            .{},
+        ) catch {
+            break :blk @tagName(lang);
+        };
+        break :blk "cpp";
+    };
+
+    const source_file_path = try std.mem.join(allocator, ".", &.{ bof_src_path, extension });
 
     return .{ source_file_path, lang };
 }
