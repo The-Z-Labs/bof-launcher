@@ -166,7 +166,10 @@ pub fn build(
                         });
                         obj.addCSourceFile(.{
                             .file = .{ .cwd_relative = source_file_path },
-                            .flags = &.{ "-DBOF", "-D_GNU_SOURCE" },
+                            .flags = &.{ "-DBOF", "-D_GNU_SOURCE",
+                                if (arch == .x86 or arch == .x64) "-include" ++ thisDir() ++ "/src/force_intel_asm.h" else "",
+                                if (arch == .x86) "-DWOW64" else ""
+                             },
                         });
                         if (format == .coff) {
                             obj.addIncludePath(.{ .cwd_relative = windows_include_dir });
