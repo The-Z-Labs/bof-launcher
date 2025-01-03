@@ -88,7 +88,7 @@ The build system will figure out the file extension and will build it (for all s
 
 Below you can see one of our BOFs in two versions: one written in Zig and the second one written in C. When compiled, Zig version weights **only 574 bytes**, C version weights 923 bytes.
 
-For an example of larger and cross-platform BOF please refer to our [UDP port scanner](bofs/src/udpScanner.zig) or [TCP port scanner](bofs/src/tcpScanner.zig).
+For an example of larger and cross-platform BOF please refer to our [UDP port sweeper](bofs/src/udpScanner.zig) or [TCP port scanner](bofs/src/tcpScanner.zig).
 
 ```zig
 const w32 = @import("bof_api").win32;
@@ -184,9 +184,9 @@ examples: string:"usage examples of a BOF"
 
 ### Running BOFs from disk
 
-*Rapid launching, testing and debugging BOFs*
+*Rapid launching, prototyping and testing BOFs*
 
-[cli4bofs](https://github.com/The-Z-Labs/cli4bofs) - standalone command line program for running BOFs directly from a filesystem. Handy also during testing/verifying 3rd BOFs or during developing/debugging BOFs. Does not require [Cobalt Strike's Beacon](https://www.cobaltstrike.com/) and its aggresor scripts to run.
+[cli4bofs](https://github.com/The-Z-Labs/cli4bofs) - standalone command line program for running BOFs directly from a filesystem. Handy also during testing/verifying 3rd BOFs or during developing BOFs. Does not require [Cobalt Strike's Beacon](https://www.cobaltstrike.com/) and its aggresor scripts to run.
 
 ### Examples of using bof-launcher in C
 
