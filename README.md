@@ -5,6 +5,7 @@
 </p>
 
 Z-Labs blog:
+* [Write, debug and execute BOFs with bof-launcher (part 2)](https://blog.z-labs.eu/2025/01/15/write-debug-and-execute-bofs-part2.html)
 * [Write, debug and execute BOFs with bof-launcher (part 1)](https://blog.z-labs.eu/2024/12/02/write-debug-and-execute-bofs-part1.html)
 * [Running BOFs with 'bof-launcher' library](https://blog.z-labs.eu/2024/02/08/bof-launcher.html)
 * [Executing Cobalt Strike's BOFs on ARM-based Linux devices](https://blog.z-labs.eu/2024/05/10/bofs-on-arm-based-devices.html)
