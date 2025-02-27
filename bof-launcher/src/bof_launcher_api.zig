@@ -70,9 +70,9 @@ pub fn initLauncher() Error!void {
 pub const releaseLauncher = bofLauncherRelease;
 
 pub fn run(bof_bytes: []const u8) Error!u8 {
-    const res = bofRun(bof_bytes.ptr, bof_bytes.len);
+    const res = bofRun(bof_bytes.ptr, @intCast(bof_bytes.len));
     if (res < 0) return error.Unknown;
-    return res;
+    return @intCast(res);
 }
 //------------------------------------------------------------------------------
 //
