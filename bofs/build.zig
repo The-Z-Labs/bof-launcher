@@ -199,6 +199,7 @@ pub fn build(
                 };
                 obj.addIncludePath(b.path("include"));
                 obj.root_module.addImport("bof_api", bof_api_module);
+                obj.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
                 obj.root_module.pic = true;
                 obj.root_module.single_threaded = true;
                 obj.root_module.strip = if (bof_optimize == .Debug) false else true;
