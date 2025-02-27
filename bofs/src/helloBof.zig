@@ -27,5 +27,6 @@ pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
 
     // calling BeaconPrintf function from Beacon's internal API:
     _ = beacon.printf(0, "hello, bof!\n");
-    return 0;
+
+    return 123; // BOF exit code (usually 0 if no error occurs)
 }

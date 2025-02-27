@@ -68,6 +68,8 @@ pub fn initLauncher() Error!void {
 /// `releaseLauncher()` releases all the resources (it will release all unreleased BOF objects
 /// but not contexts).
 pub const releaseLauncher = bofLauncherRelease;
+
+pub const run = bofRun;
 //------------------------------------------------------------------------------
 //
 // Object
@@ -312,6 +314,11 @@ extern fn bofObjectRelease(bof_handle: Object) callconv(.C) void;
 extern fn bofObjectIsValid(bof_handle: Object) callconv(.C) c_int;
 
 extern fn bofObjectGetProcAddress(bof_handle: Object, name: ?[*:0]const u8) callconv(.C) ?*anyopaque;
+
+extern fn bofRun(
+    file_data_ptr: [*]const u8,
+    file_data_len: c_int,
+) callconv(.C) c_int;
 
 extern fn bofObjectRun(
     bof_handle: Object,

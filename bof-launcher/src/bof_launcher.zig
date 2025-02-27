@@ -45,9 +45,14 @@ const Bof = struct {
 
         std.log.debug("Thread id = {d}", .{tid});
 
+        var maybe_prev_context: ?*BofContext = null;
+
         {
             gstate.mutex.lock();
             defer gstate.mutex.unlock();
+
+            maybe_prev_context = if (gstate.bof_contexts.get(getCurrentThreadId())) |ctx| ctx else null;
+
             gstate.bof_contexts.put(tid, context) catch @panic("OOM");
         }
         std.log.debug("Entering go()...", .{});
@@ -59,7 +64,7 @@ const Bof = struct {
         {
             gstate.mutex.lock();
             defer gstate.mutex.unlock();
-            gstate.bof_contexts.put(tid, null) catch @panic("OOM");
+            gstate.bof_contexts.put(tid, maybe_prev_context) catch @panic("OOM");
         }
 
         std.log.debug("Returned '{d}' from go().", .{exit_code});
@@ -1249,6 +1254,44 @@ export fn bofObjectInitFromMemory(
     return 0;
 }
 
+export fn bofRun(
+    file_data_ptr: [*]const u8,
+    file_data_len: c_int,
+) callconv(.C) c_int {
+    var bof_handle: BofHandle = undefined;
+    const init_res = bofObjectInitFromMemory(file_data_ptr, file_data_len, &bof_handle);
+    if (init_res < 0) return init_res;
+
+    var bof_context: *pubapi.Context = undefined;
+    const run_res = bofObjectRun(bof_handle, null, 0, &bof_context);
+    if (run_res < 0) {
+        bofObjectRelease(bof_handle);
+        return run_res;
+    }
+
+    // TODO: For testing.
+    if (false) {
+        if (@import("builtin").os.tag == .windows) {
+            if (init_res == 0 and run_res == 0) {
+                const ctx = @as(*BofContext, @ptrCast(@alignCast(bof_context)));
+
+                const user32_dll = w32.LoadLibraryA("user32.dll").?;
+                const messageBox: *const fn (?*anyopaque, ?[*:0]const u8, ?[*:0]const u8, u32) callconv(w32.WINAPI) c_int =
+                    @ptrCast(w32.GetProcAddress(user32_dll, "MessageBoxA"));
+
+                _ = messageBox(null, bofContextGetOutput(ctx, null), "bbbbbbbbbbbb", 0);
+            }
+        }
+    }
+
+    const bof_exit_code = bofContextGetExitCode(bof_context);
+
+    bofContextRelease(bof_context);
+    bofObjectRelease(bof_handle);
+
+    return bof_exit_code;
+}
+
 export fn bofObjectRelease(bof_handle: BofHandle) callconv(.C) void {
     if (!gstate.is_valid) return;
 
@@ -2022,6 +2065,49 @@ fn initLauncher() !void {
     try gstate.func_lookup.put(if (is32w) "___divti3" else "__divti3", @intFromPtr(&__divti3));
     try gstate.func_lookup.put(if (is32w) "___divdi3" else "__divdi3", @intFromPtr(&__divdi3));
     try gstate.func_lookup.put(if (is32w) "___modti3" else "__modti3", @intFromPtr(&__modti3));
+
+    try gstate.func_lookup.put(if (is32w) "_bofRun" else "bofRun", @intFromPtr(&bofRun));
+    try gstate.func_lookup.put(
+        if (is32w) "_bofObjectInitFromMemory" else "bofObjectInitFromMemory",
+        @intFromPtr(&bofObjectInitFromMemory),
+    );
+    try gstate.func_lookup.put(if (is32w) "_bofObjectRun" else "bofObjectRun", @intFromPtr(&bofObjectRun));
+    try gstate.func_lookup.put(if (is32w) "_bofObjectRelease" else "bofObjectRelease", @intFromPtr(&bofObjectRelease));
+    try gstate.func_lookup.put(if (is32w) "_bofObjectIsValid" else "bofObjectIsValid", @intFromPtr(&bofObjectIsValid));
+    try gstate.func_lookup.put(
+        if (is32w) "_bofObjectGetProcAddress" else "bofObjectGetProcAddress",
+        @intFromPtr(&bofObjectGetProcAddress),
+    );
+    try gstate.func_lookup.put(
+        if (is32w) "_bofObjectRunAsyncThread" else "bofObjectRunAsyncThread",
+        @intFromPtr(&bofObjectRunAsyncThread),
+    );
+    try gstate.func_lookup.put(
+        if (is32w) "_bofObjectRunAsyncProcess" else "bofObjectRunAsyncProcess",
+        @intFromPtr(&bofObjectRunAsyncProcess),
+    );
+    try gstate.func_lookup.put(if (is32w) "_bofContextGetOutput" else "bofContextGetOutput", @intFromPtr(&bofContextGetOutput));
+    try gstate.func_lookup.put(if (is32w) "_bofContextRelease" else "bofContextRelease", @intFromPtr(&bofContextRelease));
+    try gstate.func_lookup.put(if (is32w) "_bofContextIsRunning" else "bofContextIsRunning", @intFromPtr(&bofContextIsRunning));
+    try gstate.func_lookup.put(if (is32w) "_bofContextWait" else "bofContextWait", @intFromPtr(&bofContextWait));
+    try gstate.func_lookup.put(
+        if (is32w) "_bofContextGetExitCode" else "bofContextGetExitCode",
+        @intFromPtr(&bofContextGetExitCode),
+    );
+    try gstate.func_lookup.put(
+        if (is32w) "_bofContextGetObjectHandle" else "bofContextGetObjectHandle",
+        @intFromPtr(&bofContextGetObjectHandle),
+    );
+    try gstate.func_lookup.put(if (is32w) "_bofArgsInit" else "bofArgsInit", @intFromPtr(&bofArgsInit));
+    try gstate.func_lookup.put(if (is32w) "_bofArgsRelease" else "bofArgsRelease", @intFromPtr(&bofArgsRelease));
+    try gstate.func_lookup.put(if (is32w) "_bofArgsAdd" else "bofArgsAdd", @intFromPtr(&bofArgsAdd));
+    try gstate.func_lookup.put(if (is32w) "_bofArgsBegin" else "bofArgsBegin", @intFromPtr(&bofArgsBegin));
+    try gstate.func_lookup.put(if (is32w) "_bofArgsEnd" else "bofArgsEnd", @intFromPtr(&bofArgsEnd));
+    try gstate.func_lookup.put(if (is32w) "_bofArgsGetBuffer" else "bofArgsGetBuffer", @intFromPtr(&bofArgsGetBuffer));
+    try gstate.func_lookup.put(
+        if (is32w) "_bofArgsGetBufferSize" else "bofArgsGetBufferSize",
+        @intFromPtr(&bofArgsGetBufferSize),
+    );
 
     if (@import("builtin").os.tag == .windows) {
         switch (@import("builtin").cpu.arch) {

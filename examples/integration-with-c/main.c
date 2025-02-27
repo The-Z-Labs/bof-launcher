@@ -69,6 +69,8 @@ int main(int argc, char *argv[]) {
     if (bof_output)
         printf("\n%s\n", bof_output);
 
+		printf("\nBOF exit code: %d\n", bofContextGetExitCode(bof_context));
+
 cleanup:
     bofObjectRelease(bof_handle);
     if (bof_args) bofArgsRelease(bof_args);

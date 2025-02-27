@@ -10,4 +10,5 @@
 * text eol=lf
 
 *.exe binary
+*.o binary
 bin/fasm binary

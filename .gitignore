@@ -13,6 +13,7 @@
 !*.py
 !Makefile
 !LICENSE*
+!bofs/src/helloBof.coff.x64.o
 
 !*.ini
 !*.txt

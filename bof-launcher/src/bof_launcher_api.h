@@ -116,6 +116,11 @@ bofLauncherInit(void);
 /// unreleased BOF objects but not contexts).
 void
 bofLauncherRelease(void);
+
+/// Runs BOF. Returns BOF exit code ([0;255]) or error code (value less than zero).
+int
+bofRun(const unsigned char* file_data_ptr,
+       int file_data_len); // in bytes
 //------------------------------------------------------------------------------
 //
 // Object functions
