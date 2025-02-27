@@ -18,7 +18,8 @@ fn runBof(bof_bytes: []const u8) !void {
 pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
     const bof_bytes = @embedFile("helloBof.coff.x64.o");
 
-    _ = beacon.printf(0, "[1] Child BOF exit code: %d\n", bof_launcher.run(bof_bytes.ptr, bof_bytes.len));
+    const bof_exit_code = bof_launcher.run(bof_bytes) catch -1;
+    _ = beacon.printf(0, "[1] Child BOF exit code: %d\n", bof_exit_code);
 
     runBof(bof_bytes) catch return 1;
 

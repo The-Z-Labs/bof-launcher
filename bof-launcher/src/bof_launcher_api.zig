@@ -69,7 +69,11 @@ pub fn initLauncher() Error!void {
 /// but not contexts).
 pub const releaseLauncher = bofLauncherRelease;
 
-pub const run = bofRun;
+pub fn run(bof_bytes: []const u8) Error!u8 {
+    const res = bofRun(bof_bytes.ptr, bof_bytes.len);
+    if (res < 0) return error.Unknown;
+    return res;
+}
 //------------------------------------------------------------------------------
 //
 // Object
