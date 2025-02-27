@@ -21,7 +21,10 @@ fn runBof2(bof_bytes: []const u8) !void {
 }
 
 pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
-    const bof_bytes = @embedFile("helloBof.coff.x64.o");
+    const bof_bytes = if (@import("builtin").cpu.arch == .x86)
+        @embedFile("helloBof.coff.x86.o")
+    else
+        @embedFile("helloBof.coff.x64.o");
 
     runBof1(bof_bytes) catch return 1;
     runBof2(bof_bytes) catch return 2;
