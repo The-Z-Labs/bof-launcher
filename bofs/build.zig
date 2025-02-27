@@ -199,11 +199,15 @@ pub fn build(
                 };
                 obj.addIncludePath(b.path("include"));
                 obj.root_module.addImport("bof_api", bof_api_module);
-                obj.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
                 obj.root_module.pic = true;
                 obj.root_module.single_threaded = true;
                 obj.root_module.strip = if (bof_optimize == .Debug) false else true;
                 obj.root_module.unwind_tables = false;
+
+                // Needed for BOFs that launch other BOFs
+                obj.root_module.addAnonymousImport("bof_launcher_api", .{
+                    .root_source_file = .{ .cwd_relative = thisDir() ++ "/../bof-launcher/src/bof_launcher_api.zig" },
+                });
 
                 if (bof_optimize == .Debug) {
                     const linux_triple = target.result.linuxTriple(b.allocator) catch unreachable;
