@@ -16,11 +16,20 @@ comptime {
     assert(@alignOf(BofHandle) == @alignOf(pubapi.Object));
 }
 
+const BofSection = struct {
+    mem: []u8,
+    is_code: bool,
+};
+
 const Bof = struct {
+    const max_num_sections = 16;
+
     is_allocated: bool = false,
     is_loaded: bool = false,
 
-    all_sections_mem: ?[]align(page_size) u8 = null,
+    sections_mem: ?[]align(page_size) u8 = null,
+    sections: [max_num_sections]BofSection = undefined,
+    sections_num: u32 = 0,
 
     entry_point: ?*const fn (arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 = null,
 
@@ -101,7 +110,7 @@ const Bof = struct {
         if (bof.is_loaded) {
             assert(bof.is_allocated == true);
 
-            if (bof.all_sections_mem) |slice| {
+            if (bof.sections_mem) |slice| {
                 if (@import("builtin").os.tag == .windows) {
                     _ = w32.VirtualFree(slice.ptr, 0, w32.MEM_RELEASE);
                 } else if (@import("builtin").os.tag == .linux) {
@@ -117,6 +126,7 @@ const Bof = struct {
             }
             bof.user_externals.deinit();
 
+            bof.sections_mem = null;
             bof.entry_point = null;
             bof.is_loaded = false;
         }
@@ -157,12 +167,17 @@ const Bof = struct {
             );
             break :blk @as([*]align(page_size) u8, @ptrCast(@alignCast(addr)))[0..size];
         };
-        bof.all_sections_mem = all_sections_mem;
+        bof.sections_mem = all_sections_mem;
 
         const got_base_addr = @intFromPtr(all_sections_mem.ptr);
 
         var func_addr_to_got_entry = std.AutoHashMap(usize, u32).init(arena);
         defer func_addr_to_got_entry.deinit();
+
+        assert((section_headers.len + 1) <= max_num_sections);
+
+        // Start from 1 because 0 is reserved for GOT section.
+        bof.sections_num = 1;
 
         var section_offset: usize = max_section_size;
         for (section_headers) |section_header| {
@@ -182,6 +197,12 @@ const Bof = struct {
                 try section_mappings.append(@alignCast(section_data));
 
                 section_offset += max_section_size;
+
+                bof.sections[bof.sections_num] = .{
+                    .mem = section_data,
+                    .is_code = section_header.isCode(),
+                };
+                bof.sections_num += 1;
             } else {
                 try section_mappings.append(@as([*]u8, undefined)[0..0]);
             }
@@ -432,9 +453,28 @@ const Bof = struct {
             }
         }
 
+        // Section 0 is always GOT.
+        bof.sections[0] = .{
+            .mem = all_sections_mem[0 .. thunk_trampoline.len * func_addr_to_got_entry.count()],
+            .is_code = true,
+        };
+
+        for (bof.sections[0..bof.sections_num]) |section| {
+            if (section.is_code) {
+                var old_protection: w32.DWORD = 0;
+                if (w32.VirtualProtect(
+                    section.mem.ptr,
+                    section.mem.len,
+                    w32.PAGE_EXECUTE_READ,
+                    &old_protection,
+                ) == w32.FALSE) return error.VirtualProtectFailed;
+
+                _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), section.mem.ptr, section.mem.len);
+            }
+        }
+
         var go: ?*const fn (arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 = null;
-        var symbol_index: u32 = 0;
-        while (symbol_index < header.number_of_symbols) : (symbol_index += 1) {
+        for (0..header.number_of_symbols) |symbol_index| {
             const sym = symtab.at(symbol_index, .symbol);
             const sym_name = sym_name: {
                 if (sym.symbol.getName()) |sym_name| {
@@ -456,26 +496,6 @@ const Bof = struct {
                     @TypeOf(go),
                     @ptrFromInt(@intFromPtr(section.ptr) + sym.symbol.value),
                 );
-
-                var old_protection: w32.DWORD = 0;
-                if (w32.VirtualProtect(
-                    section.ptr,
-                    section.len,
-                    w32.PAGE_EXECUTE_READ,
-                    &old_protection,
-                ) == w32.FALSE) return error.VirtualProtectFailed;
-
-                const got_section = all_sections_mem[0 .. thunk_trampoline.len * func_addr_to_got_entry.count()];
-
-                if (w32.VirtualProtect(
-                    got_section.ptr,
-                    got_section.len,
-                    w32.PAGE_EXECUTE_READ,
-                    &old_protection,
-                ) == w32.FALSE) return error.VirtualProtectFailed;
-
-                _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), section.ptr, section.len);
-                _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), got_section.ptr, got_section.len);
             }
 
             if (@intFromEnum(sym.symbol.section_number) != 0 and sym.symbol.storage_class == .EXTERNAL) {
@@ -489,26 +509,6 @@ const Bof = struct {
                 const key = try allocator.dupe(u8, if (@import("builtin").cpu.arch == .x86) sym_name[1..] else sym_name);
 
                 try bof.user_externals.put(key, addr);
-
-                var old_protection: w32.DWORD = 0;
-                if (w32.VirtualProtect(
-                    section.ptr,
-                    section.len,
-                    w32.PAGE_EXECUTE_READ,
-                    &old_protection,
-                ) == w32.FALSE) return error.VirtualProtectFailed;
-
-                const got_section = all_sections_mem[0 .. thunk_trampoline.len * func_addr_to_got_entry.count()];
-
-                if (w32.VirtualProtect(
-                    got_section.ptr,
-                    got_section.len,
-                    w32.PAGE_EXECUTE_READ,
-                    &old_protection,
-                ) == w32.FALSE) return error.VirtualProtectFailed;
-
-                _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), section.ptr, section.len);
-                _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), got_section.ptr, got_section.len);
             }
         }
 
@@ -562,12 +562,17 @@ const Bof = struct {
             -1,
             0,
         );
-        bof.all_sections_mem = all_sections_mem;
+        bof.sections_mem = all_sections_mem;
 
         const got = all_sections_mem[0 .. max_num_external_functions * thunk_trampoline.len];
 
         var func_addr_to_got_entry = std.AutoHashMap(usize, u32).init(arena);
         defer func_addr_to_got_entry.deinit();
+
+        assert((section_headers.items.len + 1) <= max_num_sections);
+
+        // Start from 1 because 0 is reserved for GOT section.
+        bof.sections_num = 1;
 
         var map_offset: usize = max_section_size;
         for (section_headers.items, 0..) |section, section_index| {
@@ -596,6 +601,12 @@ const Bof = struct {
                 @memcpy(img, file_data[section_offset..][0..section_size]);
 
                 map_offset += max_section_size;
+
+                bof.sections[bof.sections_num] = .{
+                    .mem = img,
+                    .is_code = if ((section.sh_flags & std.elf.SHF_EXECINSTR) != 0) true else false,
+                };
+                bof.sections_num += 1;
             } else {
                 try section_mappings.append(@as([*]u8, undefined)[0..0]);
             }
@@ -961,6 +972,21 @@ const Bof = struct {
             }
         }
 
+        // Section 0 is always GOT.
+        bof.sections[0] = .{
+            .mem = all_sections_mem[0 .. thunk_trampoline.len * func_addr_to_got_entry.count()],
+            .is_code = true,
+        };
+
+        for (bof.sections[0..bof.sections_num]) |section| {
+            if (section.is_code) {
+                try posix.mprotect(
+                    @ptrCast(@alignCast(section.mem.ptr[0..max_section_size])),
+                    posix.PROT.READ | posix.PROT.EXEC,
+                );
+            }
+        }
+
         // Print all symbols; get pointer to `go()`.
         std.log.debug("SYMBOLS", .{});
         var go: ?*const fn (arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 = null;
@@ -975,12 +1001,6 @@ const Bof = struct {
                     const section = section_mappings.items[sym.st_shndx].ptr[0..max_section_size];
 
                     go = @as(@TypeOf(go), @ptrFromInt(@intFromPtr(section.ptr) + sym.st_value));
-
-                    try posix.mprotect(section, posix.PROT.READ | posix.PROT.EXEC);
-                    try posix.mprotect(
-                        got.ptr[0..max_section_size],
-                        posix.PROT.READ | posix.PROT.EXEC,
-                    );
                 }
             }
 
@@ -988,11 +1008,11 @@ const Bof = struct {
                 // TODO: We support only functions for now
                 //const OK_TYPES = (1 << std.elf.STT_NOTYPE | 1 << std.elf.STT_OBJECT | 1 << std.elf.STT_FUNC | 1 << std.elf.STT_COMMON);
 
-                const OK_TYPES = (1 << std.elf.STT_FUNC);
-                const OK_BINDS = (1 << std.elf.STB_GLOBAL | 1 << std.elf.STB_WEAK | 1 << std.elf.STB_GNU_UNIQUE);
+                const ok_types = (1 << std.elf.STT_FUNC);
+                const ok_binds = (1 << std.elf.STB_GLOBAL | 1 << std.elf.STB_WEAK | 1 << std.elf.STB_GNU_UNIQUE);
 
-                if (0 == (@as(u32, 1) << @as(u5, @intCast(sym.st_info & 0xf)) & OK_TYPES)) continue;
-                if (0 == (@as(u32, 1) << @as(u5, @intCast(sym.st_info >> 4)) & OK_BINDS)) continue;
+                if (0 == (@as(u32, 1) << @as(u5, @intCast(sym.st_info & 0xf)) & ok_types)) continue;
+                if (0 == (@as(u32, 1) << @as(u5, @intCast(sym.st_info >> 4)) & ok_binds)) continue;
 
                 const section = section_mappings.items[sym.st_shndx].ptr[0..max_section_size];
                 const addr = @intFromPtr(section.ptr) + sym.st_value;
@@ -1001,12 +1021,6 @@ const Bof = struct {
                 const key = try allocator.dupe(u8, std.mem.span(sym_name));
 
                 try bof.user_externals.put(key, addr);
-
-                try posix.mprotect(section, posix.PROT.READ | posix.PROT.EXEC);
-                try posix.mprotect(
-                    got.ptr[0..max_section_size],
-                    posix.PROT.READ | posix.PROT.EXEC,
-                );
             }
         }
         if (go) |_| {
