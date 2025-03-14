@@ -14,6 +14,8 @@ pub fn main() !void {
     var cmd_args_iter = try std.process.argsWithAllocator(allocator);
     defer cmd_args_iter.deinit();
 
+    _ = cmd_args_iter.skip(); // skip program name
+
     const bof_args = try bof_launcher.Args.init();
     defer bof_args.release();
 
