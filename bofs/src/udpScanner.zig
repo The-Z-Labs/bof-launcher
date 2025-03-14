@@ -228,7 +228,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     // spliting IP:port specification argument to IPs and ports parts
     var iter = mem.split(u8, sTargets_spec, ":");
     const sIP_spec = iter.next() orelse unreachable;
-    const sPort_spec = iter.next() orelse unreachable;
+    const sPort_spec = iter.next() orelse "";
 
     // IPs to scan
     const sIPs = extractIPs(allocator, sIP_spec) catch return 1;

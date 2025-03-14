@@ -137,7 +137,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     // spliting IP:port specification argument to IPs and ports parts
     var iter = mem.split(u8, sTargets_spec, ":");
     const sIP_spec = iter.next() orelse unreachable;
-    const sPort_spec = iter.next() orelse unreachable;
+    const sPort_spec = iter.next() orelse "";
 
     // IPs to scan
     const sIPs = extractIPs(allocator, sIP_spec) catch return 2; // err 2: invalid IPs provided
@@ -157,7 +157,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     @memset(@as([*]u8, @ptrCast(&sa))[0..@sizeOf(net.Address)], 0);
     sa.any.family = family;
 
-    const lin = linger {
+    const lin = linger{
         .l_onoff = 1,
         .l_linger = 0,
     };
@@ -171,7 +171,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
         for (sPorts) |port| {
             _ = beacon.printf(0, "port: %d\n", port);
             // creating socket
-	    const sockfd = std.posix.socket(
+            const sockfd = std.posix.socket(
                 std.posix.AF.INET,
                 std.posix.SOCK.STREAM | std.posix.SOCK.NONBLOCK,
                 0,
@@ -185,7 +185,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
                 .events = std.posix.POLL.OUT,
                 .revents = 0,
             }};
-            
+
             //EINPROGRESS
             //  The socket is nonblocking and the connection cannot be
             //  completed immediately.  (UNIX domain sockets failed with
@@ -208,15 +208,12 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
             if ((pfd[0].revents & std.posix.POLL.OUT) != 0) {
                 // use this on Windows: https://ziglang.org/documentation/master/std/#std.os.windows.ws2_32.getsockopt
                 const rc = posix.getsockoptError(sockfd);
-                if(rc == error.ConnectionRefused) {
+                if (rc == error.ConnectionRefused) {
                     _ = beacon.printf(0, "Port %d closed on host %s\n", port, IP.ptr);
-                }
-                else
-                    _ = beacon.printf(0, "Port %d opened on host %s\n", port, IP.ptr);
+                } else _ = beacon.printf(0, "Port %d opened on host %s\n", port, IP.ptr);
             } else {
                 _ = beacon.printf(0, "Port %d filtered on host %s\n", port, IP.ptr);
             }
-            
         }
         _ = beacon.printf(0, "\n");
     }
