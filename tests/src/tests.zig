@@ -434,6 +434,8 @@ test "bof-launcher.info" {
     const context = try object.run(written);
     defer context.release();
 
+    try expect(context.getExitCode() == 0);
+
     //std.debug.print("{s}", .{context.getOutput().?});
 
     try expect(data[0] == 2);

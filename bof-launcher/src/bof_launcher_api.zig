@@ -69,6 +69,16 @@ pub fn initLauncher() Error!void {
 /// but not contexts).
 pub const releaseLauncher = bofLauncherRelease;
 
+pub fn memoryMaskKey(key: []const u8) Error!void {
+    const res = bofMemoryMaskKey(key.ptr, @intCast(key.len));
+    if (res < 0) return error.Unknown;
+}
+
+pub fn memoryMaskWin32ApiCall(win32_api_name: [:0]const u8, masking_enabled: bool) Error!void {
+    const res = bofMemoryMaskWin32ApiCall(win32_api_name, @intFromBool(masking_enabled));
+    if (res < 0) return error.Unknown;
+}
+
 pub fn run(bof_bytes: []const u8) Error!u8 {
     const res = bofRun(bof_bytes.ptr, @intCast(bof_bytes.len));
     if (res < 0) return error.Unknown;
@@ -355,6 +365,9 @@ pub extern fn bofDebugRun(
     arg_data_len: c_int,
     out_context: **Context,
 ) callconv(.C) c_int;
+
+extern fn bofMemoryMaskKey(key: [*]const u8, key_len: c_int) callconv(.C) c_int;
+extern fn bofMemoryMaskWin32ApiCall(win32_api_name: [*:0]const u8, masking_enabled: c_int) callconv(.C) c_int;
 
 extern fn bofContextRelease(context: *Context) callconv(.C) void;
 extern fn bofContextIsRunning(context: *Context) callconv(.C) c_int;

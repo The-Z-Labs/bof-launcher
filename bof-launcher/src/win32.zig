@@ -312,8 +312,6 @@ pub const JOB_OBJECT_LIMIT_BREAKAWAY_OK = 0x00000800;
 pub const JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000;
 
 // kernel32
-pub const VirtualAlloc = windows.kernel32.VirtualAlloc;
-pub const VirtualFree = windows.kernel32.VirtualFree;
 pub const GetLastError = windows.kernel32.GetLastError;
 pub const Sleep = windows.kernel32.Sleep;
 pub const ExitProcess = windows.kernel32.ExitProcess;
@@ -322,11 +320,50 @@ pub const WaitForSingleObject = windows.kernel32.WaitForSingleObject;
 pub const ReadFile = windows.kernel32.ReadFile;
 pub const WriteFile = windows.kernel32.WriteFile;
 pub const CloseHandle = windows.kernel32.CloseHandle;
+pub const DuplicateHandle = windows.kernel32.DuplicateHandle;
 pub const GetCurrentProcessId = windows.kernel32.GetCurrentProcessId;
 pub const GetCurrentThreadId = windows.kernel32.GetCurrentThreadId;
 pub const GetCurrentThread = windows.kernel32.GetCurrentThread;
 pub const FreeLibrary = windows.kernel32.FreeLibrary;
 pub const CreateThread = windows.kernel32.CreateThread;
+
+pub const PMEMORY_BASIC_INFORMATION = windows.PMEMORY_BASIC_INFORMATION;
+
+pub const VirtualAlloc = windows.kernel32.VirtualAlloc;
+pub const VirtualFree = windows.kernel32.VirtualFree;
+pub const VirtualQuery = windows.kernel32.VirtualQuery;
+
+pub extern "kernel32" fn VirtualAllocEx(
+    hProcess: HANDLE,
+    lpAddress: ?LPVOID,
+    dwSize: SIZE_T,
+    flAllocationType: DWORD,
+    flProtect: DWORD,
+) callconv(WINAPI) ?LPVOID;
+
+pub extern "kernel32" fn VirtualProtect(
+    lpAddress: LPVOID,
+    dwSize: SIZE_T,
+    flNewProtect: DWORD,
+    lpflOldProtect: *DWORD,
+) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn VirtualProtectEx(
+    hProcess: HANDLE,
+    lpAddress: LPVOID,
+    dwSize: SIZE_T,
+    flNewProtect: DWORD,
+    lpflOldProtect: *DWORD,
+) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn CreateFileMappingA(
+    hFile: HANDLE,
+    lpFileMappingAttributes: ?*SECURITY_ATTRIBUTES,
+    flProtect: DWORD,
+    dwMaximumSizeHigh: DWORD,
+    dwMaximumSizeLow: DWORD,
+    lpName: ?LPCSTR,
+) callconv(WINAPI) ?HANDLE;
 
 pub extern "kernel32" fn FreeConsole() callconv(WINAPI) BOOL;
 
@@ -360,20 +397,13 @@ pub extern "kernel32" fn GetProcAddress(
 pub extern "kernel32" fn CreatePipe(
     hReadPipe: *HANDLE,
     hWritePipe: *HANDLE,
-    lpPipeAttributes: ?*const SECURITY_ATTRIBUTES,
+    lpPipeAttributes: ?*SECURITY_ATTRIBUTES,
     nSize: DWORD,
 ) callconv(WINAPI) BOOL;
 
 pub extern "kernel32" fn ResumeThread(
     hThread: HANDLE,
 ) callconv(WINAPI) DWORD;
-
-pub extern "kernel32" fn VirtualProtect(
-    lpAddress: LPVOID,
-    dwSize: SIZE_T,
-    flNewProtect: DWORD,
-    lpflOldProtect: *DWORD,
-) callconv(WINAPI) BOOL;
 
 pub extern "kernel32" fn FlushInstructionCache(
     hProcess: HANDLE,

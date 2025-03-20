@@ -117,6 +117,12 @@ bofLauncherInit(void);
 void
 bofLauncherRelease(void);
 
+int
+bofMemoryMaskKey(const unsigned char* key, int key_len);
+
+int
+bofMemoryMaskWin32ApiCall(const char* win32_api_name, int masking_enabled);
+
 /// Runs BOF. Returns BOF exit code ([0;255]) or error code (value less than zero).
 int
 bofRun(const unsigned char* file_data_ptr,
