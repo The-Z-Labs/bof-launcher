@@ -1,4 +1,4 @@
-/// bof-launcher 1.0.0 (Beta)
+/// bof-launcher 1.0.1 (Beta)
 ///
 /// Basic usage:
 ///
@@ -117,9 +117,57 @@ bofLauncherInit(void);
 void
 bofLauncherRelease(void);
 
+/// Sets a key which is used for memory masking. Max. length is 32 bytes.
+/// This function copies input key to the internal storage.
 int
 bofMemoryMaskKey(const unsigned char* key, int key_len);
 
+/// Enables/disables memory masking for a given Win32 API call. Currently,
+/// following APIs are supported:
+///
+/// CreateRemoteThread
+/// CreateThread
+/// ResumeThread
+/// GetThreadContext
+/// SetThreadContext
+/// CreateFileMappingA
+/// MapViewOfFile
+/// OpenProcess
+/// OpenThread
+/// ReadProcessMemory
+/// WriteProcessMemory
+/// UnmapViewOfFile
+/// VirtualAlloc
+/// VirtualAllocEx
+/// VirtualFree
+/// VirtualProtect
+/// VirtualProtectEx
+/// VirtualQuery
+/// CloseHandle
+/// DuplicateHandle
+///
+/// To enable/disable masking for all supported functions special name 'all' can be used:
+///
+/// bofMemoryMaskWin32ApiCall("all", 1); // enables masking for all supported functions
+/// bofMemoryMaskWin32ApiCall("ResumeThread", 0); // disables masking for a particular API
+///
+/// Returns 0 on success.
+/// Returns value less than zero on error (if not supported API name is passed or if
+/// bofLauncherInit() hasn't been called).
+///
+/// If memory masking is enabled for a given Win32 function all calls to it made from
+/// any BOF will be redirected to a special wrapper function which masks memory before
+/// the actual Win32 API call and unmasks it right after the call.
+///
+/// For example, if memory masking for "VirtualAlloc" is enabled, all VirtualAlloc() calls made
+/// from any BOF will go through below pseudo code:
+///
+/// zgateVirtualAlloc(...) {
+///     maskMemory();
+///     ret = VirtualAlloc(...);
+///     unmaskMemory();
+///     return ret;
+/// }
 int
 bofMemoryMaskWin32ApiCall(const char* win32_api_name, int masking_enabled);
 

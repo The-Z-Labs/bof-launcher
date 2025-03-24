@@ -1,4 +1,4 @@
-/// bof-launcher 1.0.0 (Beta)
+/// bof-launcher 1.0.1 (Beta)
 ///
 /// Basic usage:
 ///
@@ -69,16 +69,63 @@ pub fn initLauncher() Error!void {
 /// but not contexts).
 pub const releaseLauncher = bofLauncherRelease;
 
+/// Sets a key which is used for memory masking. Max. length is 32 bytes.
+/// This function copies input key to the internal storage.
 pub fn memoryMaskKey(key: []const u8) Error!void {
     const res = bofMemoryMaskKey(key.ptr, @intCast(key.len));
     if (res < 0) return error.Unknown;
 }
 
+/// Enables/disables memory masking for a given Win32 API call. Currently,
+/// following APIs are supported:
+///
+/// CreateRemoteThread
+/// CreateThread
+/// ResumeThread
+/// GetThreadContext
+/// SetThreadContext
+/// CreateFileMappingA
+/// MapViewOfFile
+/// OpenProcess
+/// OpenThread
+/// ReadProcessMemory
+/// WriteProcessMemory
+/// UnmapViewOfFile
+/// VirtualAlloc
+/// VirtualAllocEx
+/// VirtualFree
+/// VirtualProtect
+/// VirtualProtectEx
+/// VirtualQuery
+/// CloseHandle
+/// DuplicateHandle
+///
+/// To enable/disable masking for all supported functions special name 'all' can be used:
+///
+/// try bof.memoryMaskWin32ApiCall("all", true); // enables masking for all supported functions
+/// try bof.memoryMaskWin32ApiCall("ResumeThread", false); // disables masking for a particular API
+///
+/// Returns error if not supported API name is passed or if bof.initLauncher() hasn't been called.
+///
+/// If memory masking is enabled for a given Win32 function all calls to it made from
+/// any BOF will be redirected to a special wrapper function which masks memory before
+/// the actual Win32 API call and unmasks it right after the call.
+///
+/// For example, if memory masking for "VirtualAlloc" is enabled, all VirtualAlloc() calls made
+/// from any BOF will go through below pseudo code:
+///
+/// zgateVirtualAlloc(...) {
+///     maskMemory();
+///     ret = VirtualAlloc(...);
+///     unmaskMemory();
+///     return ret;
+/// }
 pub fn memoryMaskWin32ApiCall(win32_api_name: [:0]const u8, masking_enabled: bool) Error!void {
     const res = bofMemoryMaskWin32ApiCall(win32_api_name, @intFromBool(masking_enabled));
     if (res < 0) return error.Unknown;
 }
 
+/// Runs BOF. Returns BOF exit code ([0;255]).
 pub fn run(bof_bytes: []const u8) Error!u8 {
     const res = bofRun(bof_bytes.ptr, @intCast(bof_bytes.len));
     if (res < 0) return error.Unknown;
