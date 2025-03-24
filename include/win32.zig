@@ -40,6 +40,7 @@ pub const HWND = windows.HWND;
 pub const UINT = windows.UINT;
 pub const CONTEXT = windows.CONTEXT;
 pub const LPTHREAD_START_ROUTINE = windows.LPTHREAD_START_ROUTINE;
+pub const PMEMORY_BASIC_INFORMATION = windows.PMEMORY_BASIC_INFORMATION;
 
 pub const INFINITE = windows.INFINITE;
 pub const WAIT_FAILED = windows.WAIT_FAILED;
@@ -227,6 +228,8 @@ pub const COINIT_APARTMENTTHREADED = 0x2;
 pub const COINIT_DISABLE_OLE1DDE = 0x4;
 pub const COINIT_SPEED_OVER_MEMORY = 0x8;
 
+pub const CREATE_SUSPENDED = 0x4;
+
 pub const OBJECT_ATTRIBUTES = extern struct {
     Length: ULONG,
     RootDirectory: ?HANDLE,
@@ -334,6 +337,7 @@ pub const JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000;
 
 // kernel32
 pub const VirtualAlloc = windows.kernel32.VirtualAlloc;
+pub const VirtualQuery = windows.kernel32.VirtualQuery;
 
 pub extern "kernel32" fn VirtualProtect(
     lpAddress: LPVOID,
@@ -351,6 +355,7 @@ pub const WaitForSingleObject = windows.kernel32.WaitForSingleObject;
 pub const ReadFile = windows.kernel32.ReadFile;
 pub const WriteFile = windows.kernel32.WriteFile;
 pub const CloseHandle = windows.kernel32.CloseHandle;
+pub const DuplicateHandle = windows.kernel32.DuplicateHandle;
 pub const GetCurrentProcessId = windows.kernel32.GetCurrentProcessId;
 pub const GetCurrentThreadId = windows.kernel32.GetCurrentThreadId;
 pub const GetCurrentThread = windows.kernel32.GetCurrentThread;
@@ -395,7 +400,7 @@ pub extern "kernel32" fn GetProcAddress(
 pub extern "kernel32" fn CreatePipe(
     hReadPipe: *HANDLE,
     hWritePipe: *HANDLE,
-    lpPipeAttributes: ?*const SECURITY_ATTRIBUTES,
+    lpPipeAttributes: ?*SECURITY_ATTRIBUTES,
     nSize: DWORD,
 ) callconv(WINAPI) BOOL;
 

@@ -19,10 +19,12 @@ pub const OSVERSIONINFOW = windows.OSVERSIONINFOW;
 pub const RTL_OSVERSIONINFOW = windows.RTL_OSVERSIONINFOW;
 pub const PVOID = windows.PVOID;
 pub const LPVOID = windows.LPVOID;
-pub const LPCVOID = windows.LPCVOID;
 pub const PSECURITY_DESCRIPTOR = PVOID;
 pub const NTSTATUS = windows.NTSTATUS;
-pub const CLIENT_ID = windows.CLIENT_ID;
+pub const CLIENT_ID = extern struct {
+    UniqueProcess: ?HANDLE,
+    UniqueThread: ?HANDLE,
+};
 pub const UNICODE_STRING = windows.UNICODE_STRING;
 pub const USHORT = windows.USHORT;
 pub const BOOLEAN = windows.BOOLEAN;
@@ -33,8 +35,12 @@ pub const ACCESS_MASK = windows.ACCESS_MASK;
 pub const LARGE_INTEGER = windows.LARGE_INTEGER;
 pub const ULONG_PTR = windows.ULONG_PTR;
 pub const ULONGLONG = windows.ULONGLONG;
+pub const LPCVOID = windows.LPCVOID;
+pub const HWND = windows.HWND;
+pub const UINT = windows.UINT;
 pub const CONTEXT = windows.CONTEXT;
 pub const LPTHREAD_START_ROUTINE = windows.LPTHREAD_START_ROUTINE;
+pub const PMEMORY_BASIC_INFORMATION = windows.PMEMORY_BASIC_INFORMATION;
 
 pub const INFINITE = windows.INFINITE;
 pub const WAIT_FAILED = windows.WAIT_FAILED;
@@ -77,12 +83,18 @@ pub const STANDARD_RIGHTS_WRITE = READ_CONTROL;
 pub const STANDARD_RIGHTS_EXECUTE = READ_CONTROL;
 
 pub const PROCESS_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0xffff;
+pub const PROCESS_VM_OPERATION = 0x0008;
+pub const PROCESS_CREATE_THREAD = 0x0002;
+pub const PROCESS_VM_WRITE = 0x0020;
 
 pub const JOB_OBJECT_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0x3F;
 
 pub const STANDARD_RIGHTS_ALL = 0x001F0000;
 
 pub const SPECIFIC_RIGHTS_ALL = 0x0000FFFF;
+
+pub const PROCESS_CREATE_FLAGS_INHERIT_HANDLES = 0x00000004;
+pub const PROCESS_CREATE_FLAGS_INHERIT_FROM_PARENT = 0x00000100;
 
 pub const TOKEN_ASSIGN_PRIMARY = 0x0001;
 pub const TOKEN_DUPLICATE = 0x0002;
@@ -96,7 +108,7 @@ pub const TOKEN_ADJUST_SESSIONID = 0x0100;
 
 pub const TOKEN_READ = STANDARD_RIGHTS_READ | TOKEN_QUERY;
 
-pub const TOKEN_INFORMATION_CLASS = enum(u32) {
+pub const TOKEN_INFORMATION_CLASS = enum(c_int) {
     TokenUser = 1,
     TokenGroups,
     TokenPrivileges,
@@ -216,7 +228,17 @@ pub const COINIT_APARTMENTTHREADED = 0x2;
 pub const COINIT_DISABLE_OLE1DDE = 0x4;
 pub const COINIT_SPEED_OVER_MEMORY = 0x8;
 
-pub const OBJECT_ATTRIBUTES = windows.OBJECT_ATTRIBUTES;
+pub const CREATE_SUSPENDED = 0x4;
+
+pub const OBJECT_ATTRIBUTES = extern struct {
+    Length: ULONG,
+    RootDirectory: ?HANDLE,
+    ObjectName: ?*UNICODE_STRING,
+    Attributes: ULONG,
+    SecurityDescriptor: ?*anyopaque,
+    SecurityQualityOfService: ?*anyopaque,
+};
+
 pub const OBJ_INHERIT = windows.OBJ_INHERIT;
 pub const OBJ_PERMANENT = windows.OBJ_PERMANENT;
 pub const OBJ_EXCLUSIVE = windows.OBJ_EXCLUSIVE;
@@ -314,6 +336,17 @@ pub const JOB_OBJECT_LIMIT_BREAKAWAY_OK = 0x00000800;
 pub const JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000;
 
 // kernel32
+pub const VirtualAlloc = windows.kernel32.VirtualAlloc;
+pub const VirtualQuery = windows.kernel32.VirtualQuery;
+
+pub extern "kernel32" fn VirtualProtect(
+    lpAddress: LPVOID,
+    dwSize: SIZE_T,
+    flNewProtect: DWORD,
+    lpflOldProtect: *DWORD,
+) callconv(WINAPI) BOOL;
+
+pub const VirtualFree = windows.kernel32.VirtualFree;
 pub const GetLastError = windows.kernel32.GetLastError;
 pub const Sleep = windows.kernel32.Sleep;
 pub const ExitProcess = windows.kernel32.ExitProcess;
@@ -329,45 +362,11 @@ pub const GetCurrentThread = windows.kernel32.GetCurrentThread;
 pub const FreeLibrary = windows.kernel32.FreeLibrary;
 pub const CreateThread = windows.kernel32.CreateThread;
 
-pub const CREATE_SUSPENDED = 0x4;
-
-pub const PMEMORY_BASIC_INFORMATION = windows.PMEMORY_BASIC_INFORMATION;
-
-pub const VirtualAlloc = windows.kernel32.VirtualAlloc;
-pub const VirtualFree = windows.kernel32.VirtualFree;
-pub const VirtualQuery = windows.kernel32.VirtualQuery;
-
-pub extern "kernel32" fn VirtualAllocEx(
+pub extern "kernel32" fn FlushInstructionCache(
     hProcess: HANDLE,
-    lpAddress: ?LPVOID,
+    lpBaseAddress: ?LPCVOID,
     dwSize: SIZE_T,
-    flAllocationType: DWORD,
-    flProtect: DWORD,
-) callconv(WINAPI) ?LPVOID;
-
-pub extern "kernel32" fn VirtualProtect(
-    lpAddress: LPVOID,
-    dwSize: SIZE_T,
-    flNewProtect: DWORD,
-    lpflOldProtect: *DWORD,
 ) callconv(WINAPI) BOOL;
-
-pub extern "kernel32" fn VirtualProtectEx(
-    hProcess: HANDLE,
-    lpAddress: LPVOID,
-    dwSize: SIZE_T,
-    flNewProtect: DWORD,
-    lpflOldProtect: *DWORD,
-) callconv(WINAPI) BOOL;
-
-pub extern "kernel32" fn CreateFileMappingA(
-    hFile: HANDLE,
-    lpFileMappingAttributes: ?*SECURITY_ATTRIBUTES,
-    flProtect: DWORD,
-    dwMaximumSizeHigh: DWORD,
-    dwMaximumSizeLow: DWORD,
-    lpName: ?LPCSTR,
-) callconv(WINAPI) ?HANDLE;
 
 pub extern "kernel32" fn FreeConsole() callconv(WINAPI) BOOL;
 
@@ -409,6 +408,31 @@ pub extern "kernel32" fn ResumeThread(
     hThread: HANDLE,
 ) callconv(WINAPI) DWORD;
 
+pub extern "kernel32" fn VirtualAllocEx(
+    hProcess: HANDLE,
+    lpAddress: ?LPVOID,
+    dwSize: SIZE_T,
+    flAllocationType: DWORD,
+    flProtect: DWORD,
+) callconv(WINAPI) ?LPVOID;
+
+pub extern "kernel32" fn VirtualProtectEx(
+    hProcess: HANDLE,
+    lpAddress: LPVOID,
+    dwSize: SIZE_T,
+    flNewProtect: DWORD,
+    lpflOldProtect: *DWORD,
+) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn CreateFileMappingA(
+    hFile: HANDLE,
+    lpFileMappingAttributes: ?*SECURITY_ATTRIBUTES,
+    flProtect: DWORD,
+    dwMaximumSizeHigh: DWORD,
+    dwMaximumSizeLow: DWORD,
+    lpName: ?LPCSTR,
+) callconv(WINAPI) ?HANDLE;
+
 pub extern "kernel32" fn GetThreadContext(
     hThread: HANDLE,
     lpContext: *CONTEXT,
@@ -417,12 +441,6 @@ pub extern "kernel32" fn GetThreadContext(
 pub extern "kernel32" fn SetThreadContext(
     hThread: HANDLE,
     lpContext: *const CONTEXT,
-) callconv(WINAPI) BOOL;
-
-pub extern "kernel32" fn FlushInstructionCache(
-    hProcess: HANDLE,
-    lpBaseAddress: ?LPCVOID,
-    dwSize: SIZE_T,
 ) callconv(WINAPI) BOOL;
 
 pub extern "kernel32" fn MapViewOfFile(
@@ -487,8 +505,6 @@ pub fn NtCurrentSession() HANDLE {
     return @ptrFromInt(@as(usize, @bitCast(@as(isize, -3))));
 }
 
-pub const NtProtectVirtualMemory = windows.ntdll.NtProtectVirtualMemory;
-
 pub extern "ntdll" fn RtlCloneUserProcess(
     ProcessFlags: ULONG,
     ProcessSecurityDescriptor: ?PSECURITY_DESCRIPTOR,
@@ -515,6 +531,13 @@ pub extern "ntdll" fn NtTerminateThread(
 pub extern "ntdll" fn NtTerminateProcess(
     ProcessHandle: ?HANDLE,
     ExitStatus: NTSTATUS,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtOpenProcess(
+    ProcessHandle: *HANDLE,
+    DesiredAccess: ACCESS_MASK,
+    ObjectAttributes: *OBJECT_ATTRIBUTES,
+    ClientId: ?*CLIENT_ID,
 ) callconv(WINAPI) NTSTATUS;
 
 pub extern "ntdll" fn NtResumeProcess(
@@ -561,12 +584,128 @@ pub extern "ntdll" fn RtlWow64EnableFsRedirection(
     Wow64FsEnableRedirection: BOOLEAN,
 ) callconv(WINAPI) NTSTATUS;
 
+pub extern "ntdll" fn NtAllocateVirtualMemory(
+    ProcessHandle: HANDLE,
+    BaseAddress: *PVOID,
+    ZeroBits: ULONG_PTR,
+    RegionSize: *SIZE_T,
+    AllocationType: ULONG,
+    Protect: ULONG,
+) callconv(WINAPI) NTSTATUS;
+
+pub const NtWriteVirtualMemory = windows.ntdll.NtWriteVirtualMemory;
+pub const NtProtectVirtualMemory = windows.ntdll.NtProtectVirtualMemory;
+
+pub extern "ntdll" fn NtCreateThreadEx(
+    ThreadHandle: *HANDLE,
+    DesiredAccess: ACCESS_MASK,
+    ObjectAttributes: ?*OBJECT_ATTRIBUTES,
+    ProcessHandle: HANDLE,
+    StartRoutine: PVOID,
+    Argument: ?PVOID,
+    CreateFlags: ULONG,
+    ZeroBits: SIZE_T,
+    StackSize: SIZE_T,
+    MaximumStackSize: SIZE_T,
+    AttributeList: ?*anyopaque, // TODO: ?*PS_ATTRIBUTE_LIST,
+) callconv(WINAPI) NTSTATUS;
+
+pub const PS_CREATE_STATE = enum(u32) {
+    InitialState,
+    FailOnFileOpen,
+    FailOnSectionCreate,
+    FailExeFormat,
+    FailMachineMismatch,
+    FailExeName, // Debugger specified
+    Success,
+    MaximumStates,
+};
+
+pub const PS_CREATE_INFO = extern struct {
+    Size: SIZE_T,
+    State: PS_CREATE_STATE,
+    U: extern union {
+        InitialState: extern struct {
+            U: extern union {
+                InitFlags: ULONG,
+                S: packed struct(ULONG) {
+                    WriteOutputOnExit: u1,
+                    DetectManifest: u1,
+                    IFEOSkipDebugger: u1,
+                    IFEODoNotPropagateKeyState: u1,
+                    SpareBits1: u4,
+                    SpareBits2: u8,
+                    ProhibitedImageCharacteristics: u16,
+                },
+            },
+        },
+        FailSection: extern struct {
+            FileHandle: HANDLE,
+        },
+        ExeFormat: extern struct {
+            DllCharacteristics: USHORT,
+        },
+        ExeName: extern struct {
+            IFEOKey: HANDLE,
+        },
+        SuccessState: extern struct {
+            U: extern union {
+                OutputFlags: ULONG,
+                S: packed struct(ULONG) {
+                    ProtectedProcess: u1,
+                    AddressSpaceOverride: u1,
+                    DevOverrideEnabled: u1, // from Image File Execution Options
+                    ManifestDetected: u1,
+                    ProtectedProcessLight: u1,
+                    SpareBits1: u3,
+                    SpareBits2: u8,
+                    SpareBits3: u16,
+                },
+            },
+            FileHandle: HANDLE,
+            SectionHandle: HANDLE,
+            UserProcessParametersNative: ULONGLONG,
+            UserProcessParametersWow64: ULONG,
+            CurrentParameterFlags: ULONG,
+            PebAddressNative: ULONGLONG,
+            PebAddressWow64: ULONG,
+            ManifestAddress: ULONGLONG,
+            ManifestSize: ULONG,
+        },
+    },
+};
+
+pub extern "ntdll" fn NtCreateUserProcess(
+    ProcessHandle: *HANDLE,
+    ThreadHandle: *HANDLE,
+    ProcessDesiredAccess: ACCESS_MASK,
+    ThreadDesiredAccess: ACCESS_MASK,
+    ProcessObjectAttributes: ?*OBJECT_ATTRIBUTES,
+    ThreadObjectAttributes: ?*OBJECT_ATTRIBUTES,
+    ProcessFlags: ULONG,
+    ThreadFlags: ULONG,
+    ProcessParameters: ?PVOID,
+    CreateInfo: *PS_CREATE_INFO,
+    AttributeList: ?*anyopaque, // TODO: ?*PS_ATTRIBUTE_LIST,
+) callconv(WINAPI) NTSTATUS;
+
 // advapi32
 pub extern "advapi32" fn OpenProcessToken(
     ProcessHandle: HANDLE,
     DesiredAccess: DWORD,
     TokenHandle: *HANDLE,
 ) callconv(WINAPI) BOOL;
+
+pub extern "advapi32" fn GetTokenInformation(
+    TokenHandle: HANDLE,
+    TokenInformationClass: TOKEN_INFORMATION_CLASS,
+    TokenInformation: ?*anyopaque,
+    TokenInformationLength: DWORD,
+    ReturnLength: *DWORD,
+) callconv(WINAPI) BOOL;
+
+// user32
+pub extern "user32" fn MessageBoxA(?HWND, ?LPCSTR, ?LPCSTR, UINT) callconv(WINAPI) c_int;
 
 // ole32
 pub extern "ole32" fn CoInitializeEx(pvReserved: ?LPVOID, dwCoInit: DWORD) callconv(WINAPI) HRESULT;
