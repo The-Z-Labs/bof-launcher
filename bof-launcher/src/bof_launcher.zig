@@ -1757,13 +1757,20 @@ export fn bofMemoryMaskKey(key: [*]const u8, key_len: c_int) callconv(.C) c_int 
 
 export fn bofMemoryMaskWin32ApiCall(win32_api_name: [*:0]const u8, masking_enabled: c_int) callconv(.C) c_int {
     if (!gstate.is_valid) return -1;
-    inline for (@typeInfo(ZGateWin32ApiCall).Enum.fields, 0..) |field, i| {
-        if (std.mem.eql(u8, std.mem.span(win32_api_name), field.name)) {
+    if (std.mem.eql(u8, std.mem.span(win32_api_name), "all")) {
+        inline for (@typeInfo(ZGateWin32ApiCall).Enum.fields, 0..) |_, i| {
             gstate.mask_win32_api[i] = if (masking_enabled == 0) false else true;
-            return 0;
         }
+    } else {
+        inline for (@typeInfo(ZGateWin32ApiCall).Enum.fields, 0..) |field, i| {
+            if (std.mem.eql(u8, std.mem.span(win32_api_name), field.name)) {
+                gstate.mask_win32_api[i] = if (masking_enabled == 0) false else true;
+                return 0;
+            }
+        }
+        return -1;
     }
-    return -1;
+    return 0;
 }
 
 export fn bofContextRelease(context: *pubapi.Context) callconv(.C) void {
@@ -2254,6 +2261,9 @@ fn initLauncher() !void {
     gstate.main_thread_id = getCurrentThreadId();
 
     gstate.is_valid = true;
+
+    try pubapi.memoryMaskWin32ApiCall("all", true);
+    try pubapi.memoryMaskWin32ApiCall("ResumeThread", false);
 }
 
 export fn bofLauncherInit() callconv(.C) c_int {
