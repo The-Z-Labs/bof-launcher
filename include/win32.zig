@@ -38,6 +38,8 @@ pub const ULONGLONG = windows.ULONGLONG;
 pub const LPCVOID = windows.LPCVOID;
 pub const HWND = windows.HWND;
 pub const UINT = windows.UINT;
+pub const CONTEXT = windows.CONTEXT;
+pub const LPTHREAD_START_ROUTINE = windows.LPTHREAD_START_ROUTINE;
 
 pub const INFINITE = windows.INFINITE;
 pub const WAIT_FAILED = windows.WAIT_FAILED;
@@ -400,6 +402,89 @@ pub extern "kernel32" fn CreatePipe(
 pub extern "kernel32" fn ResumeThread(
     hThread: HANDLE,
 ) callconv(WINAPI) DWORD;
+
+pub extern "kernel32" fn VirtualAllocEx(
+    hProcess: HANDLE,
+    lpAddress: ?LPVOID,
+    dwSize: SIZE_T,
+    flAllocationType: DWORD,
+    flProtect: DWORD,
+) callconv(WINAPI) ?LPVOID;
+
+pub extern "kernel32" fn VirtualProtectEx(
+    hProcess: HANDLE,
+    lpAddress: LPVOID,
+    dwSize: SIZE_T,
+    flNewProtect: DWORD,
+    lpflOldProtect: *DWORD,
+) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn CreateFileMappingA(
+    hFile: HANDLE,
+    lpFileMappingAttributes: ?*SECURITY_ATTRIBUTES,
+    flProtect: DWORD,
+    dwMaximumSizeHigh: DWORD,
+    dwMaximumSizeLow: DWORD,
+    lpName: ?LPCSTR,
+) callconv(WINAPI) ?HANDLE;
+
+pub extern "kernel32" fn GetThreadContext(
+    hThread: HANDLE,
+    lpContext: *CONTEXT,
+) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn SetThreadContext(
+    hThread: HANDLE,
+    lpContext: *const CONTEXT,
+) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn MapViewOfFile(
+    hFileMappingObject: HANDLE,
+    dwDesiredAccess: DWORD,
+    dwFileOffsetHigh: DWORD,
+    dwFileOffsetLow: DWORD,
+    dwNumberOfBytesToMap: SIZE_T,
+) callconv(WINAPI) LPVOID;
+
+pub extern "kernel32" fn UnmapViewOfFile(lpBaseAddress: LPCVOID) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn OpenProcess(
+    dwDesiredAccess: DWORD,
+    bInheritHandle: BOOL,
+    dwProcessId: DWORD,
+) callconv(WINAPI) HANDLE;
+
+pub extern "kernel32" fn OpenThread(
+    dwDesiredAccess: DWORD,
+    bInheritHandle: BOOL,
+    dwThreadId: DWORD,
+) callconv(WINAPI) HANDLE;
+
+pub extern "kernel32" fn WriteProcessMemory(
+    hProcess: HANDLE,
+    lpBaseAddress: LPVOID,
+    lpBuffer: LPCVOID,
+    nSize: SIZE_T,
+    lpNumberOfBytesWritten: ?*SIZE_T,
+) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn ReadProcessMemory(
+    hProcess: HANDLE,
+    lpBaseAddress: LPCVOID,
+    lpBuffer: LPVOID,
+    nSize: SIZE_T,
+    lpNumberOfBytesRead: ?*SIZE_T,
+) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn CreateRemoteThread(
+    hProcess: HANDLE,
+    lpThreadAttributes: ?*SECURITY_ATTRIBUTES,
+    dwStackSize: SIZE_T,
+    lpStartAddress: LPTHREAD_START_ROUTINE,
+    lpParameter: ?LPVOID,
+    dwCreationFlags: DWORD,
+    lpThreadId: ?*DWORD,
+) callconv(WINAPI) ?HANDLE;
 
 // ntdll
 pub const RtlGetVersion = windows.ntdll.RtlGetVersion;

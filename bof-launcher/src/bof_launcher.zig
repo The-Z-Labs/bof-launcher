@@ -2196,6 +2196,17 @@ fn initLauncher() !void {
         try gstate.func_lookup.put("CreateFileMappingA", @intFromPtr(&zgateCreateFileMappingA));
         try gstate.func_lookup.put("CloseHandle", @intFromPtr(&zgateCloseHandle));
         try gstate.func_lookup.put("DuplicateHandle", @intFromPtr(&zgateDuplicateHandle));
+        try gstate.func_lookup.put("GetThreadContext", @intFromPtr(&zgateGetThreadContext));
+        try gstate.func_lookup.put("SetThreadContext", @intFromPtr(&zgateSetThreadContext));
+        try gstate.func_lookup.put("MapViewOfFile", @intFromPtr(&zgateMapViewOfFile));
+        try gstate.func_lookup.put("UnmapViewOfFile", @intFromPtr(&zgateUnmapViewOfFile));
+        try gstate.func_lookup.put("OpenProcess", @intFromPtr(&zgateOpenProcess));
+        try gstate.func_lookup.put("OpenThread", @intFromPtr(&zgateOpenThread));
+        try gstate.func_lookup.put("WriteProcessMemory", @intFromPtr(&zgateWriteProcessMemory));
+        try gstate.func_lookup.put("ReadProcessMemory", @intFromPtr(&zgateReadProcessMemory));
+        try gstate.func_lookup.put("ResumeThread", @intFromPtr(&zgateResumeThread));
+        try gstate.func_lookup.put("CreateThread", @intFromPtr(&zgateCreateThread));
+        try gstate.func_lookup.put("CreateRemoteThread", @intFromPtr(&zgateCreateRemoteThread));
 
         try gstate.func_lookup.put("WriteFile", @intFromPtr(&w32.WriteFile));
         try gstate.func_lookup.put("GetLastError", @intFromPtr(&w32.GetLastError));
@@ -2300,7 +2311,7 @@ const ZGateWin32ApiCall = enum(u32) {
     ReadProcessMemory,
     ResumeThread,
     SetThreadContext,
-    UnMapViewOfFile,
+    UnmapViewOfFile,
     WriteProcessMemory,
     VirtualAlloc,
     VirtualAllocEx,
@@ -2312,18 +2323,6 @@ const ZGateWin32ApiCall = enum(u32) {
     CloseHandle,
     DuplicateHandle,
 };
-
-// CreateRemoteThread
-// CreateThread
-// GetThreadContext
-// MapViewOfFile
-// OpenProcess
-// OpenThread
-// ReadProcessMemory
-// ResumeThread
-// SetThreadContext
-// UnMapViewOfFile
-// WriteProcessMemory
 
 fn zgateMaskAllBofs() linksection(".zgate") void {
     for (gstate.bof_pool.bofs) |*bof| {
@@ -2515,6 +2514,158 @@ fn zgateDuplicateHandle(
         dwDesiredAccess,
         bInheritHandle,
         dwOptions,
+    );
+    if (do_mask) zgateEnd();
+    return ret;
+}
+
+fn zgateGetThreadContext(
+    hThread: w32.HANDLE,
+    lpContext: *w32.CONTEXT,
+) linksection(".zgate") callconv(w32.WINAPI) w32.BOOL {
+    const do_mask = zgateBegin(.GetThreadContext);
+    const ret = w32.GetThreadContext(hThread, lpContext);
+    if (do_mask) zgateEnd();
+    return ret;
+}
+
+fn zgateSetThreadContext(
+    hThread: w32.HANDLE,
+    lpContext: *const w32.CONTEXT,
+) linksection(".zgate") callconv(w32.WINAPI) w32.BOOL {
+    const do_mask = zgateBegin(.SetThreadContext);
+    const ret = w32.SetThreadContext(hThread, lpContext);
+    if (do_mask) zgateEnd();
+    return ret;
+}
+
+fn zgateMapViewOfFile(
+    hFileMappingObject: w32.HANDLE,
+    dwDesiredAccess: w32.DWORD,
+    dwFileOffsetHigh: w32.DWORD,
+    dwFileOffsetLow: w32.DWORD,
+    dwNumberOfBytesToMap: w32.SIZE_T,
+) linksection(".zgate") callconv(w32.WINAPI) w32.LPVOID {
+    const do_mask = zgateBegin(.MapViewOfFile);
+    const ret = w32.MapViewOfFile(
+        hFileMappingObject,
+        dwDesiredAccess,
+        dwFileOffsetHigh,
+        dwFileOffsetLow,
+        dwNumberOfBytesToMap,
+    );
+    if (do_mask) zgateEnd();
+    return ret;
+}
+
+fn zgateUnmapViewOfFile(lpBaseAddress: w32.LPCVOID) linksection(".zgate") callconv(w32.WINAPI) w32.BOOL {
+    const do_mask = zgateBegin(.UnmapViewOfFile);
+    const ret = w32.UnmapViewOfFile(lpBaseAddress);
+    if (do_mask) zgateEnd();
+    return ret;
+}
+
+fn zgateOpenProcess(
+    dwDesiredAccess: w32.DWORD,
+    bInheritHandle: w32.BOOL,
+    dwProcessId: w32.DWORD,
+) linksection(".zgate") callconv(w32.WINAPI) w32.HANDLE {
+    const do_mask = zgateBegin(.OpenProcess);
+    const ret = w32.OpenProcess(dwDesiredAccess, bInheritHandle, dwProcessId);
+    if (do_mask) zgateEnd();
+    return ret;
+}
+
+fn zgateOpenThread(
+    dwDesiredAccess: w32.DWORD,
+    bInheritHandle: w32.BOOL,
+    dwThreadId: w32.DWORD,
+) linksection(".zgate") callconv(w32.WINAPI) w32.HANDLE {
+    const do_mask = zgateBegin(.OpenProcess);
+    const ret = w32.OpenThread(dwDesiredAccess, bInheritHandle, dwThreadId);
+    if (do_mask) zgateEnd();
+    return ret;
+}
+
+fn zgateWriteProcessMemory(
+    hProcess: w32.HANDLE,
+    lpBaseAddress: w32.LPVOID,
+    lpBuffer: w32.LPCVOID,
+    nSize: w32.SIZE_T,
+    lpNumberOfBytesWritten: ?*w32.SIZE_T,
+) linksection(".zgate") callconv(w32.WINAPI) w32.BOOL {
+    const do_mask = zgateBegin(.WriteProcessMemory);
+    const ret = w32.WriteProcessMemory(hProcess, lpBaseAddress, lpBuffer, nSize, lpNumberOfBytesWritten);
+    if (do_mask) zgateEnd();
+    return ret;
+}
+
+fn zgateReadProcessMemory(
+    hProcess: w32.HANDLE,
+    lpBaseAddress: w32.LPCVOID,
+    lpBuffer: w32.LPVOID,
+    nSize: w32.SIZE_T,
+    lpNumberOfBytesRead: ?*w32.SIZE_T,
+) linksection(".zgate") callconv(w32.WINAPI) w32.BOOL {
+    const do_mask = zgateBegin(.ReadProcessMemory);
+    const ret = w32.ReadProcessMemory(hProcess, lpBaseAddress, lpBuffer, nSize, lpNumberOfBytesRead);
+    if (do_mask) zgateEnd();
+    return ret;
+}
+
+fn zgateResumeThread(hThread: w32.HANDLE) linksection(".zgate") callconv(w32.WINAPI) w32.DWORD {
+    const do_mask = zgateBegin(.ResumeThread);
+    const ret = w32.ResumeThread(hThread);
+    if (do_mask) zgateEnd();
+    return ret;
+}
+
+fn zgateCreateThread(
+    lpThreadAttributes: ?*w32.SECURITY_ATTRIBUTES,
+    dwStackSize: w32.SIZE_T,
+    lpStartAddress: w32.LPTHREAD_START_ROUTINE,
+    lpParameter: ?w32.LPVOID,
+    dwCreationFlags: w32.DWORD,
+    lpThreadId: ?*w32.DWORD,
+) linksection(".zgate") callconv(w32.WINAPI) ?w32.HANDLE {
+    const do_mask = zgateBegin(.CreateThread);
+    var ret: ?w32.HANDLE = null;
+    if (!do_mask or (dwCreationFlags & w32.CREATE_SUSPENDED) != 0) {
+        ret = w32.CreateThread(lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags, lpThreadId);
+        if (do_mask) zgateEnd();
+    } else {
+        ret = w32.CreateThread(
+            lpThreadAttributes,
+            dwStackSize,
+            lpStartAddress,
+            lpParameter,
+            dwCreationFlags | w32.CREATE_SUSPENDED,
+            lpThreadId,
+        );
+        if (do_mask) zgateEnd();
+        if (ret) |h| _ = w32.ResumeThread(h);
+    }
+    return ret;
+}
+
+fn zgateCreateRemoteThread(
+    hProcess: w32.HANDLE,
+    lpThreadAttributes: ?*w32.SECURITY_ATTRIBUTES,
+    dwStackSize: w32.SIZE_T,
+    lpStartAddress: w32.LPTHREAD_START_ROUTINE,
+    lpParameter: ?w32.LPVOID,
+    dwCreationFlags: w32.DWORD,
+    lpThreadId: ?*w32.DWORD,
+) linksection(".zgate") callconv(w32.WINAPI) ?w32.HANDLE {
+    const do_mask = zgateBegin(.CreateRemoteThread);
+    const ret = w32.CreateRemoteThread(
+        hProcess,
+        lpThreadAttributes,
+        dwStackSize,
+        lpStartAddress,
+        lpParameter,
+        dwCreationFlags,
+        lpThreadId,
     );
     if (do_mask) zgateEnd();
     return ret;
