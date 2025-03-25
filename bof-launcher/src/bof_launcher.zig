@@ -117,7 +117,7 @@ const Bof = struct {
                 if (@import("builtin").os.tag == .windows) {
                     _ = w32.VirtualFree(slice.ptr, 0, w32.MEM_RELEASE);
                 } else if (@import("builtin").os.tag == .linux) {
-                    std.posix.munmap(@ptrCast(@alignCast(slice)));
+                    _ = linux.munmap(slice.ptr, slice.len);
                 }
             }
 
@@ -162,6 +162,8 @@ const Bof = struct {
 
         const section_headers = parser.getSectionHeaders();
 
+        const max_section_size = gstate.page_size * 8;
+
         const all_sections_mem = blk: {
             const size = (section_headers.len + 1) * max_section_size;
             const addr = w32.VirtualAlloc(
@@ -170,6 +172,7 @@ const Bof = struct {
                 w32.MEM_COMMIT | w32.MEM_RESERVE | w32.MEM_TOP_DOWN,
                 w32.PAGE_READWRITE,
             );
+            if (addr == null) return error.VirtualAllocFailed;
             break :blk @as([*]u8, @ptrCast(addr))[0..size];
         };
         bof.sections_mem = all_sections_mem;
@@ -546,8 +549,6 @@ const Bof = struct {
         allocator: std.mem.Allocator,
         file_data: []align(obj_file_data_alignment) const u8,
     ) !void {
-        const posix = std.posix;
-
         var arena_state = std.heap.ArenaAllocator.init(allocator);
         defer arena_state.deinit();
         const arena = arena_state.allocator();
@@ -574,14 +575,21 @@ const Bof = struct {
             }
         }
 
-        const all_sections_mem = try posix.mmap(
-            null,
-            (1 + section_headers.items.len) * max_section_size,
-            posix.PROT.READ | posix.PROT.WRITE,
-            .{ .TYPE = .PRIVATE, .ANONYMOUS = true },
-            -1,
-            0,
-        );
+        const max_section_size = gstate.page_size * 8;
+
+        const all_sections_mem = blk: {
+            const size = (section_headers.items.len + 1) * max_section_size;
+            const addr = linux.mmap(
+                null,
+                size,
+                linux.PROT.READ | linux.PROT.WRITE,
+                .{ .TYPE = .PRIVATE, .ANONYMOUS = true },
+                -1,
+                0,
+            );
+            if (addr == std.math.maxInt(usize)) return error.MMapFailed;
+            break :blk @as([*]u8, @ptrFromInt(addr))[0..size];
+        };
         bof.sections_mem = all_sections_mem;
 
         const got = all_sections_mem[0 .. max_num_external_functions * thunk_trampoline.len];
@@ -1000,9 +1008,10 @@ const Bof = struct {
 
         for (bof.sections[0..bof.sections_num]) |section| {
             if (section.is_code) {
-                try posix.mprotect(
-                    @ptrCast(@alignCast(section.mem.ptr[0..max_section_size])),
-                    posix.PROT.READ | posix.PROT.EXEC,
+                _ = linux.mprotect(
+                    section.mem.ptr,
+                    section.mem.len,
+                    linux.PROT.READ | linux.PROT.EXEC,
                 );
             }
         }
@@ -1826,10 +1835,10 @@ export fn bofContextGetOutput(context: *BofContext, len: ?*c_int) callconv(.C) ?
     return @ptrCast(context.output.items.ptr);
 }
 
-const max_section_size = 8 * 4096;
 const max_num_external_functions = 256;
 
 const w32 = @import("win32.zig");
+const linux = std.os.linux;
 
 const thunk_offset = switch (@import("builtin").cpu.arch) {
     .x86_64 => 2,
@@ -1963,14 +1972,14 @@ fn getCurrentThreadId() u32 {
     if (@import("builtin").os.tag == .windows) {
         return @intCast(w32.GetCurrentThreadId());
     }
-    return @intCast(std.os.linux.gettid());
+    return @intCast(linux.gettid());
 }
 
 fn getCurrentProcessId() u32 {
     if (@import("builtin").os.tag == .windows) {
         return @intCast(w32.GetCurrentProcessId());
     }
-    return @intCast(std.os.linux.getpid());
+    return @intCast(linux.getpid());
 }
 
 fn queryPageSize() u32 {
@@ -1979,7 +1988,7 @@ fn queryPageSize() u32 {
         w32.GetSystemInfo(&info);
         return @intCast(info.dwPageSize);
     } else {
-        return @intCast(std.os.linux.getauxval(std.elf.AT_PAGESZ));
+        return @intCast(linux.getauxval(std.elf.AT_PAGESZ));
     }
 }
 
