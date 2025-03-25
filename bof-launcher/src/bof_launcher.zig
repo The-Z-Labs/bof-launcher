@@ -1988,7 +1988,8 @@ fn queryPageSize() u32 {
         w32.GetSystemInfo(&info);
         return @intCast(info.dwPageSize);
     } else {
-        return @intCast(linux.getauxval(std.elf.AT_PAGESZ));
+        // TODO: Fix this.
+        return 4096; //@intCast(linux.getauxval(std.elf.AT_PAGESZ));
     }
 }
 
