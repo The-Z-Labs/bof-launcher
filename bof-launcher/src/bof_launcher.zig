@@ -1008,11 +1008,12 @@ const Bof = struct {
 
         for (bof.sections[0..bof.sections_num]) |section| {
             if (section.is_code) {
-                _ = linux.mprotect(
+                const ret = linux.mprotect(
                     section.mem.ptr,
                     section.mem.len,
                     linux.PROT.READ | linux.PROT.EXEC,
                 );
+                if (ret == std.math.maxInt(usize)) return error.MProtectFailed;
             }
         }
 
