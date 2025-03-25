@@ -27,7 +27,7 @@ const Bof = struct {
     is_allocated: bool = false,
     is_loaded: bool = false,
 
-    sections_mem: ?[]align(page_size) u8 = null,
+    sections_mem: ?[]u8 = null,
     sections: [max_num_sections]BofSection = undefined,
     sections_num: u32 = 0,
 
@@ -117,7 +117,7 @@ const Bof = struct {
                 if (@import("builtin").os.tag == .windows) {
                     _ = w32.VirtualFree(slice.ptr, 0, w32.MEM_RELEASE);
                 } else if (@import("builtin").os.tag == .linux) {
-                    std.posix.munmap(slice);
+                    std.posix.munmap(@ptrCast(@alignCast(slice)));
                 }
             }
 
@@ -157,7 +157,7 @@ const Bof = struct {
         std.log.debug("COFF HEADER:", .{});
         std.log.debug("{any}\n\n", .{header});
 
-        var section_mappings = std.ArrayList([]align(page_size) u8).init(arena);
+        var section_mappings = std.ArrayList([]u8).init(arena);
         defer section_mappings.deinit();
 
         const section_headers = parser.getSectionHeaders();
@@ -170,7 +170,7 @@ const Bof = struct {
                 w32.MEM_COMMIT | w32.MEM_RESERVE | w32.MEM_TOP_DOWN,
                 w32.PAGE_READWRITE,
             );
-            break :blk @as([*]align(page_size) u8, @ptrCast(@alignCast(addr)))[0..size];
+            break :blk @as([*]u8, @ptrCast(addr))[0..size];
         };
         bof.sections_mem = all_sections_mem;
 
@@ -555,7 +555,7 @@ const Bof = struct {
         var section_headers = std.ArrayList(std.elf.Elf64_Shdr).init(arena);
         defer section_headers.deinit();
 
-        var section_mappings = std.ArrayList([]align(page_size) u8).init(arena);
+        var section_mappings = std.ArrayList([]u8).init(arena);
         defer section_mappings.deinit();
 
         var symbol_table: []const std.elf.Sym = undefined;
@@ -1826,8 +1826,7 @@ export fn bofContextGetOutput(context: *BofContext, len: ?*c_int) callconv(.C) ?
     return @ptrCast(context.output.items.ptr);
 }
 
-const page_size = 4096;
-const max_section_size = 8 * page_size;
+const max_section_size = 8 * 4096;
 const max_num_external_functions = 256;
 
 const w32 = @import("win32.zig");
