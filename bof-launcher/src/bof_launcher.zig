@@ -1988,10 +1988,10 @@ fn queryPageSize() u32 {
         var info: w32.SYSTEM_INFO = undefined;
         w32.GetSystemInfo(&info);
         return @intCast(info.dwPageSize);
-    } else {
-        // TODO: Fix this.
-        return 4096; //@intCast(linux.getauxval(std.elf.AT_PAGESZ));
     }
+    // TODO: Is it correct?
+    const page_size: u32 = @intCast(linux.getauxval(std.elf.AT_PAGESZ));
+    return if (page_size != 0) page_size else 4096;
 }
 
 export fn outputBofData(_: i32, data: [*]u8, len: i32, free_mem: i32) void {
