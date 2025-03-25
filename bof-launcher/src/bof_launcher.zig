@@ -1975,7 +1975,7 @@ fn getCurrentProcessId() u32 {
 
 fn queryPageSize() u32 {
     if (@import("builtin").os.tag == .windows) {
-        var info: std.os.windows.SYSTEM_INFO = undefined;
+        var info: w32.SYSTEM_INFO = undefined;
         w32.GetSystemInfo(&info);
         return @intCast(info.dwPageSize);
     } else {

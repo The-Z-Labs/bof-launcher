@@ -41,6 +41,7 @@ pub const UINT = windows.UINT;
 pub const CONTEXT = windows.CONTEXT;
 pub const LPTHREAD_START_ROUTINE = windows.LPTHREAD_START_ROUTINE;
 pub const PMEMORY_BASIC_INFORMATION = windows.PMEMORY_BASIC_INFORMATION;
+pub const SYSTEM_INFO = windows.SYSTEM_INFO;
 
 pub const INFINITE = windows.INFINITE;
 pub const WAIT_FAILED = windows.WAIT_FAILED;
