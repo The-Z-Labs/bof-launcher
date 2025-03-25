@@ -1973,6 +1973,16 @@ fn getCurrentProcessId() u32 {
     return @intCast(std.os.linux.getpid());
 }
 
+fn queryPageSize() u32 {
+    if (@import("builtin").os.tag == .windows) {
+        var info: std.os.windows.SYSTEM_INFO = undefined;
+        w32.GetSystemInfo(&info);
+        return @intCast(info.dwPageSize);
+    } else {
+        return @intCast(std.os.linux.getauxval(std.elf.AT_PAGESZ));
+    }
+}
+
 export fn outputBofData(_: i32, data: [*]u8, len: i32, free_mem: i32) void {
     defer if (free_mem != 0) freeMemory(data);
 
@@ -2043,6 +2053,8 @@ const gstate = struct {
 
     var process_id: u32 = 0;
     var main_thread_id: u32 = 0;
+
+    var page_size: u32 = 0;
 };
 
 fn initLauncher() !void {
@@ -2258,6 +2270,8 @@ fn initLauncher() !void {
 
     gstate.process_id = getCurrentProcessId();
     gstate.main_thread_id = getCurrentThreadId();
+
+    gstate.page_size = queryPageSize();
 
     gstate.is_valid = true;
 

@@ -361,6 +361,7 @@ pub const GetCurrentThreadId = windows.kernel32.GetCurrentThreadId;
 pub const GetCurrentThread = windows.kernel32.GetCurrentThread;
 pub const FreeLibrary = windows.kernel32.FreeLibrary;
 pub const CreateThread = windows.kernel32.CreateThread;
+pub const GetSystemInfo = windows.kernel32.GetSystemInfo;
 
 pub extern "kernel32" fn FlushInstructionCache(
     hProcess: HANDLE,
