@@ -163,10 +163,10 @@ const Bof = struct {
         const section_headers = parser.getSectionHeaders();
 
         const got_section_size = 2 * gstate.page_size;
-        var total_size: u32 = got_section_size;
+        var total_size: usize = got_section_size;
         for (section_headers) |section_header| {
             if (section_header.size_of_raw_data > 0) {
-                total_size += std.mem.alignForward(u32, section_header.size_of_raw_data, gstate.page_size);
+                total_size += std.mem.alignForward(usize, section_header.size_of_raw_data, gstate.page_size);
             }
         }
 
@@ -208,7 +208,7 @@ const Bof = struct {
 
                 try section_mappings.append(section_data);
 
-                section_offset += std.mem.alignForward(u32, section_header.size_of_raw_data, gstate.page_size);
+                section_offset += std.mem.alignForward(usize, section_header.size_of_raw_data, gstate.page_size);
 
                 bof.sections[bof.sections_num] = .{
                     .mem = section_data,
@@ -571,32 +571,34 @@ const Bof = struct {
         const elf_hdr = try std.elf.Header.read(&file_data_stream);
         std.log.debug("Number of Sections: {d}", .{elf_hdr.shnum});
 
-        // Load all section headers.
+        const got_section_size = 2 * gstate.page_size;
+        var total_size: usize = got_section_size;
         {
             var section_headers_iter = elf_hdr.section_header_iterator(&file_data_stream);
             while (try section_headers_iter.next()) |section| {
                 try section_headers.append(section);
+
+                if (section.sh_size > 0) {
+                    total_size += std.mem.alignForward(usize, @intCast(section.sh_size), gstate.page_size);
+                }
             }
         }
 
-        const max_section_size = gstate.page_size * 8;
-
         const all_sections_mem = blk: {
-            const size = (section_headers.items.len + 1) * max_section_size;
             const addr = linux.mmap(
                 null,
-                size,
+                total_size,
                 linux.PROT.READ | linux.PROT.WRITE,
                 .{ .TYPE = .PRIVATE, .ANONYMOUS = true },
                 -1,
                 0,
             );
             if (addr == std.math.maxInt(usize)) return error.MMapFailed;
-            break :blk @as([*]u8, @ptrFromInt(addr))[0..size];
+            break :blk @as([*]u8, @ptrFromInt(addr))[0..total_size];
         };
         bof.sections_mem = all_sections_mem;
 
-        const got = all_sections_mem[0 .. max_num_external_functions * thunk_trampoline.len];
+        const got = all_sections_mem[0..got_section_size];
 
         var func_addr_to_got_entry = std.AutoHashMap(usize, u32).init(arena);
         defer func_addr_to_got_entry.deinit();
@@ -606,7 +608,7 @@ const Bof = struct {
         // Start from 1 because 0 is reserved for GOT section.
         bof.sections_num = 1;
 
-        var map_offset: usize = max_section_size;
+        var map_offset: usize = got_section_size;
         for (section_headers.items, 0..) |section, section_index| {
             std.log.debug("Section Index: {d}", .{section_index});
             std.log.debug("\tName is {d}", .{section.sh_name});
@@ -626,16 +628,16 @@ const Bof = struct {
                 section.sh_type == std.elf.SHT_NOBITS or
                 section.sh_type == (std.elf.SHT_PROGBITS | std.elf.SHT_LOPROC)) and section.sh_size > 0)
             {
-                const img = all_sections_mem[map_offset .. map_offset + section_size];
+                const section_data = all_sections_mem[map_offset..][0..section_size];
 
-                try section_mappings.append(@alignCast(img));
+                @memcpy(section_data, file_data[section_offset..][0..section_size]);
 
-                @memcpy(img, file_data[section_offset..][0..section_size]);
+                try section_mappings.append(section_data);
 
-                map_offset += max_section_size;
+                map_offset += std.mem.alignForward(usize, section_size, gstate.page_size);
 
                 bof.sections[bof.sections_num] = .{
-                    .mem = img,
+                    .mem = section_data,
                     .is_code = if ((section.sh_flags & std.elf.SHF_EXECINSTR) != 0) true else false,
                 };
                 bof.sections_num += 1;
@@ -1032,9 +1034,9 @@ const Bof = struct {
                     .{ name, @intFromPtr(section_mappings.items[sym.st_shndx].ptr) + sym.st_value },
                 );
                 if (std.mem.len(name) == 2 and name[0] == 'g' and name[1] == 'o' and name[2] == 0) {
-                    const section = section_mappings.items[sym.st_shndx].ptr[0..max_section_size];
+                    const section_ptr = section_mappings.items[sym.st_shndx].ptr;
 
-                    go = @as(@TypeOf(go), @ptrFromInt(@intFromPtr(section.ptr) + sym.st_value));
+                    go = @as(@TypeOf(go), @ptrFromInt(@intFromPtr(section_ptr) + sym.st_value));
                 }
             }
 
@@ -1048,8 +1050,8 @@ const Bof = struct {
                 if (0 == (@as(u32, 1) << @as(u5, @intCast(sym.st_info & 0xf)) & ok_types)) continue;
                 if (0 == (@as(u32, 1) << @as(u5, @intCast(sym.st_info >> 4)) & ok_binds)) continue;
 
-                const section = section_mappings.items[sym.st_shndx].ptr[0..max_section_size];
-                const addr = @intFromPtr(section.ptr) + sym.st_value;
+                const section_ptr = section_mappings.items[sym.st_shndx].ptr;
+                const addr = @intFromPtr(section_ptr) + sym.st_value;
 
                 const sym_name = @as([*:0]const u8, @ptrCast(&string_table[sym.st_name]));
                 const key = try allocator.dupe(u8, std.mem.span(sym_name));
