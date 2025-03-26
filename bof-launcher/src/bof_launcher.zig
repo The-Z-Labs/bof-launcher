@@ -162,8 +162,7 @@ const Bof = struct {
 
         const section_headers = parser.getSectionHeaders();
 
-        const got_section_size = 2 * gstate.page_size;
-        var total_size: usize = got_section_size;
+        var total_size: usize = max_got_section_size;
         for (section_headers) |section_header| {
             if (section_header.size_of_raw_data > 0) {
                 total_size += std.mem.alignForward(usize, section_header.size_of_raw_data, gstate.page_size);
@@ -192,7 +191,7 @@ const Bof = struct {
         // Start from 1 because 0 is reserved for GOT section.
         bof.sections_num = 1;
 
-        var section_offset: usize = got_section_size;
+        var section_offset: usize = max_got_section_size;
         for (section_headers) |section_header| {
             const section_name = parser.getSectionName(&section_header);
             std.log.debug("SECTION NAME: {!s}", .{section_name});
@@ -571,8 +570,7 @@ const Bof = struct {
         const elf_hdr = try std.elf.Header.read(&file_data_stream);
         std.log.debug("Number of Sections: {d}", .{elf_hdr.shnum});
 
-        const got_section_size = 2 * gstate.page_size;
-        var total_size: usize = got_section_size;
+        var total_size: usize = max_got_section_size;
         {
             var section_headers_iter = elf_hdr.section_header_iterator(&file_data_stream);
             while (try section_headers_iter.next()) |section| {
@@ -598,7 +596,7 @@ const Bof = struct {
         };
         bof.sections_mem = all_sections_mem;
 
-        const got = all_sections_mem[0..got_section_size];
+        const got = all_sections_mem[0..max_got_section_size];
 
         var func_addr_to_got_entry = std.AutoHashMap(usize, u32).init(arena);
         defer func_addr_to_got_entry.deinit();
@@ -608,7 +606,7 @@ const Bof = struct {
         // Start from 1 because 0 is reserved for GOT section.
         bof.sections_num = 1;
 
-        var map_offset: usize = got_section_size;
+        var map_offset: usize = max_got_section_size;
         for (section_headers.items, 0..) |section, section_index| {
             std.log.debug("Section Index: {d}", .{section_index});
             std.log.debug("\tName is {d}", .{section.sh_name});
@@ -1842,7 +1840,8 @@ export fn bofContextGetOutput(context: *BofContext, len: ?*c_int) callconv(.C) ?
     return @ptrCast(context.output.items.ptr);
 }
 
-const max_num_external_functions = 256;
+const max_got_section_size = 2 * 4096;
+const max_num_external_functions = @divExact(max_got_section_size, 16);
 
 const w32 = @import("win32.zig");
 const linux = std.os.linux;
