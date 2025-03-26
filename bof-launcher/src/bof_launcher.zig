@@ -2242,6 +2242,12 @@ fn initLauncher() !void {
         try gstate.func_lookup.put("CreateThread", @intFromPtr(&zgateCreateThread));
         try gstate.func_lookup.put("CreateRemoteThread", @intFromPtr(&zgateCreateRemoteThread));
 
+        if (@import("builtin").cpu.arch == .x86_64) {
+            try gstate.func_lookup.put("___chkstk_ms", @intFromPtr(&__zig_probe_stack));
+        } else {
+            try gstate.func_lookup.put("__alloca", @intFromPtr(&_alloca));
+        }
+
         try gstate.func_lookup.put("WriteFile", @intFromPtr(&w32.WriteFile));
         try gstate.func_lookup.put("GetLastError", @intFromPtr(&w32.GetLastError));
         try gstate.func_lookup.put("ExitProcess", @intFromPtr(&w32.ExitProcess));
