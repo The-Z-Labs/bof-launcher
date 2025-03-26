@@ -162,18 +162,23 @@ const Bof = struct {
 
         const section_headers = parser.getSectionHeaders();
 
-        const max_section_size = gstate.page_size * 8;
+        const got_section_size = 2 * gstate.page_size;
+        var total_size: u32 = got_section_size;
+        for (section_headers) |section_header| {
+            if (section_header.size_of_raw_data > 0) {
+                total_size += std.mem.alignForward(u32, section_header.size_of_raw_data, gstate.page_size);
+            }
+        }
 
         const all_sections_mem = blk: {
-            const size = (section_headers.len + 1) * max_section_size;
             const addr = w32.VirtualAlloc(
                 null,
-                size,
+                total_size,
                 w32.MEM_COMMIT | w32.MEM_RESERVE | w32.MEM_TOP_DOWN,
                 w32.PAGE_READWRITE,
             );
             if (addr == null) return error.VirtualAllocFailed;
-            break :blk @as([*]u8, @ptrCast(addr))[0..size];
+            break :blk @as([*]u8, @ptrCast(addr))[0..total_size];
         };
         bof.sections_mem = all_sections_mem;
 
@@ -187,24 +192,23 @@ const Bof = struct {
         // Start from 1 because 0 is reserved for GOT section.
         bof.sections_num = 1;
 
-        var section_offset: usize = max_section_size;
+        var section_offset: usize = got_section_size;
         for (section_headers) |section_header| {
             const section_name = parser.getSectionName(&section_header);
             std.log.debug("SECTION NAME: {!s}", .{section_name});
             std.log.debug("{any}\n\n", .{section_header});
 
             if (section_header.size_of_raw_data > 0) {
-                const section_data = all_sections_mem[section_offset .. section_offset +
-                    section_header.size_of_raw_data];
+                const section_data = all_sections_mem[section_offset..][0..section_header.size_of_raw_data];
 
                 @memcpy(
                     section_data,
                     file_data[section_header.pointer_to_raw_data..][0..section_header.size_of_raw_data],
                 );
 
-                try section_mappings.append(@alignCast(section_data));
+                try section_mappings.append(section_data);
 
-                section_offset += max_section_size;
+                section_offset += std.mem.alignForward(u32, section_header.size_of_raw_data, gstate.page_size);
 
                 bof.sections[bof.sections_num] = .{
                     .mem = section_data,
