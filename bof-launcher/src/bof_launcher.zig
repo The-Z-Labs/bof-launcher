@@ -1844,7 +1844,7 @@ const w32 = @import("win32.zig");
 const linux = std.os.linux;
 
 const thunk_offset = switch (@import("builtin").cpu.arch) {
-    .x86_64 => 2,
+    .x86_64 => 6,
     .x86 => 1,
     .aarch64 => 8,
     .arm => 8,
@@ -1853,16 +1853,15 @@ const thunk_offset = switch (@import("builtin").cpu.arch) {
 // zig fmt: off
 const thunk_trampoline = switch (@import("builtin").cpu.arch) {
     .x86_64 => [_]u8{
-        0x48, 0xb8, // mov rax, imm64
+        0xff, 0x25, 0x00, 0x00, 0x00, 0x00, // jmp [rip]
         undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined,
-        0xff, 0xe0, // jmp rax
-        0, 0, 0, 0, // padding to 16 bytes
+        0, 0, // padding to 16 bytes
     },
     .x86 => [_]u8{
-        0xb8, // mov eax, imm32
+        0x68, // push addr
         undefined, undefined, undefined, undefined,
-        0xff, 0xe0, // jmp eax
-        0, // padding to 8
+        0xc3, // ret
+        0, 0, // padding to 8
     },
     .aarch64 => [_]u8{
         0x50, 0x00, 0x00, 0x58, // ldr x16, #8
