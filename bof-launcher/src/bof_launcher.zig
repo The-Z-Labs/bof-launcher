@@ -1943,9 +1943,12 @@ export fn allocateMemory(size: usize) callconv(.C) ?*anyopaque {
         u8,
         mem_alignment,
         size,
-    ) catch @panic("out of memory");
+    ) catch return null;
 
-    gstate.allocations.?.put(@intFromPtr(mem.ptr), size) catch @panic("out of memory");
+    gstate.allocations.?.put(@intFromPtr(mem.ptr), size) catch {
+        gstate.allocator.?.free(mem);
+        return null;
+    };
 
     return mem.ptr;
 }
@@ -1955,9 +1958,11 @@ export fn freeMemory(maybe_ptr: ?*anyopaque) callconv(.C) void {
         gstate.mutex.lock();
         defer gstate.mutex.unlock();
 
-        const size = gstate.allocations.?.fetchRemove(@intFromPtr(ptr)).?.value;
-        const mem = @as([*]align(mem_alignment) u8, @ptrCast(@alignCast(ptr)))[0..size];
-        gstate.allocator.?.free(mem);
+        if (gstate.allocations.?.fetchRemove(@intFromPtr(ptr))) |kv| {
+            const size = kv.value;
+            const mem = @as([*]align(mem_alignment) u8, @ptrCast(@alignCast(ptr)))[0..size];
+            gstate.allocator.?.free(mem);
+        }
     }
 }
 
