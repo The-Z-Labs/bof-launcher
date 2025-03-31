@@ -1,5 +1,6 @@
-const beacon = @import("bof_api").beacon;
-const w32 = @import("bof_api").win32;
+const bof_api = @import("bof_api");
+const beacon = bof_api.beacon;
+const w32 = bof_api.win32;
 
 extern fn @"kernel32$VirtualFree"(
     lpAddress: ?w32.LPVOID,
@@ -21,37 +22,66 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
         _ = beacon.printf(0, "GetCurrentThreadId() returned: %d\n", w32.GetCurrentThreadId());
         _ = beacon.printf(0, "GetCurrentThread() returned: 0x%x\n", @intFromPtr(w32.GetCurrentThread()));
 
-        const mem: ?[*]u8 = @ptrCast(malloc(100));
-        if (mem == null) return 253;
+        for (0..2) |_| {
+            const allocator = bof_api.bof_allocator;
 
-        _ = beacon.printf(0, "malloc() returned: 0x%x\n", @intFromPtr(mem));
+            const mem = allocator.alloc(u8, 123) catch return 123;
+            defer allocator.free(mem);
 
-        mem.?[10] = 1;
-        mem.?[20] = 2;
-        mem.?[30] = 3;
-        mem.?[90] = 7;
+            _ = beacon.printf(0, "bof_api.bof_allocator.alloc() returned: 0x%x\n", @intFromPtr(mem.ptr));
 
-        const addr = w32.VirtualAlloc(
-            null,
-            1024,
-            w32.MEM_COMMIT | w32.MEM_RESERVE,
-            w32.PAGE_READWRITE,
-        );
-        if (addr == null) return 255;
+            mem[100] = 123;
 
-        if (mem.?[10] != 1) return 254;
-        if (mem.?[20] != 2) return 254;
-        if (mem.?[30] != 3) return 254;
-        if (mem.?[90] != 7) return 254;
+            const addr = w32.VirtualAlloc(
+                null,
+                1024,
+                w32.MEM_COMMIT | w32.MEM_RESERVE,
+                w32.PAGE_READWRITE,
+            );
+            if (addr == null) return 255;
 
-        _ = @"kernel32$VirtualFree"(addr, 0, w32.MEM_RELEASE);
+            if (mem[100] != 123) return 154;
 
-        if (mem.?[10] != 1) return 252;
-        if (mem.?[20] != 2) return 252;
-        if (mem.?[30] != 3) return 252;
-        if (mem.?[90] != 7) return 252;
+            mem[100] += 10;
 
-        free(mem);
+            _ = @"kernel32$VirtualFree"(addr, 0, w32.MEM_RELEASE);
+
+            if (mem[100] != 133) return 155;
+        }
+
+        for (0..2) |_| {
+            const mem: ?[*]u8 = @ptrCast(malloc(100));
+            if (mem == null) return 253;
+
+            _ = beacon.printf(0, "malloc() returned: 0x%x\n", @intFromPtr(mem));
+
+            mem.?[10] = 1;
+            mem.?[20] = 2;
+            mem.?[30] = 3;
+            mem.?[90] = 7;
+
+            const addr = w32.VirtualAlloc(
+                null,
+                1024,
+                w32.MEM_COMMIT | w32.MEM_RESERVE,
+                w32.PAGE_READWRITE,
+            );
+            if (addr == null) return 255;
+
+            if (mem.?[10] != 1) return 254;
+            if (mem.?[20] != 2) return 254;
+            if (mem.?[30] != 3) return 254;
+            if (mem.?[90] != 7) return 254;
+
+            _ = @"kernel32$VirtualFree"(addr, 0, w32.MEM_RELEASE);
+
+            if (mem.?[10] != 1) return 252;
+            if (mem.?[20] != 2) return 252;
+            if (mem.?[30] != 3) return 252;
+            if (mem.?[90] != 7) return 252;
+
+            free(mem);
+        }
 
         var tid: w32.DWORD = 123;
         _ = w32.CoGetCallerTID(&tid);

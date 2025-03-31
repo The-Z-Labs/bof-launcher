@@ -1942,7 +1942,7 @@ const AllocInfo = packed struct(usize) {
     is_main_thread: bool,
 };
 
-export fn allocateMemory(size: usize) callconv(.C) ?*anyopaque {
+export fn bofLauncherAllocateMemory(size: usize) callconv(.C) ?*anyopaque {
     if (size > std.math.maxInt(AllocInfo.SizeType)) return null;
 
     gstate.allocator_mutex.lock();
@@ -1966,7 +1966,7 @@ export fn allocateMemory(size: usize) callconv(.C) ?*anyopaque {
     return mem.ptr;
 }
 
-export fn freeMemory(maybe_ptr: ?*anyopaque) callconv(.C) void {
+export fn bofLauncherFreeMemory(maybe_ptr: ?*anyopaque) callconv(.C) void {
     if (maybe_ptr) |ptr| {
         gstate.allocator_mutex.lock();
         defer gstate.allocator_mutex.unlock();
@@ -1979,8 +1979,8 @@ export fn freeMemory(maybe_ptr: ?*anyopaque) callconv(.C) void {
     }
 }
 
-export fn allocateAndZeroMemory(num: usize, size: usize) callconv(.C) ?*anyopaque {
-    const ptr = allocateMemory(num * size);
+export fn bofLauncherAllocateAndZeroMemory(num: usize, size: usize) callconv(.C) ?*anyopaque {
+    const ptr = bofLauncherAllocateMemory(num * size);
     if (ptr != null) {
         @memset(@as([*]u8, @ptrCast(ptr))[0 .. num * size], 0);
         return ptr;
@@ -2014,7 +2014,7 @@ fn queryPageSize() u32 {
 }
 
 export fn outputBofData(_: i32, data: [*]u8, len: i32, free_mem: i32) void {
-    defer if (free_mem != 0) freeMemory(data);
+    defer if (free_mem != 0) bofLauncherFreeMemory(data);
 
     var context = context: {
         gstate.bof_contexts_mutex.lock();
@@ -2176,9 +2176,17 @@ fn initLauncher() !void {
     try gstate.func_lookup.put(if (is32w) "_getEnviron" else "getEnviron", @intFromPtr(&impl.getEnviron));
     try gstate.func_lookup.put(if (is32w) "_memset" else "memset", @intFromPtr(&memset));
     try gstate.func_lookup.put(if (is32w) "_memcpy" else "memcpy", @intFromPtr(&memcpy));
-    try gstate.func_lookup.put(if (is32w) "_calloc" else "calloc", @intFromPtr(&allocateAndZeroMemory));
-    try gstate.func_lookup.put(if (is32w) "_malloc" else "malloc", @intFromPtr(&allocateMemory));
-    try gstate.func_lookup.put(if (is32w) "_free" else "free", @intFromPtr(&freeMemory));
+    try gstate.func_lookup.put(if (is32w) "_calloc" else "calloc", @intFromPtr(&bofLauncherAllocateAndZeroMemory));
+    try gstate.func_lookup.put(if (is32w) "_malloc" else "malloc", @intFromPtr(&bofLauncherAllocateMemory));
+    try gstate.func_lookup.put(if (is32w) "_free" else "free", @intFromPtr(&bofLauncherFreeMemory));
+    try gstate.func_lookup.put(
+        if (is32w) "_bofLauncherAllocateMemory" else "bofLauncherAllocateMemory",
+        @intFromPtr(&bofLauncherAllocateMemory),
+    );
+    try gstate.func_lookup.put(
+        if (is32w) "_bofLauncherFreeMemory" else "bofLauncherFreeMemory",
+        @intFromPtr(&bofLauncherFreeMemory),
+    );
     try gstate.func_lookup.put(if (is32w) "___ashlti3" else "__ashlti3", @intFromPtr(&__ashlti3));
     if (@import("builtin").cpu.arch != .arm) {
         try gstate.func_lookup.put(if (is32w) "___ashldi3" else "__ashldi3", @intFromPtr(&__ashldi3));

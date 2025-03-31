@@ -2,7 +2,7 @@
 #include "stb_sprintf.h"
 
 // Defined in Zig code.
-void* allocateMemory(unsigned long size);
+void* bofLauncherAllocateMemory(size_t size);
 void outputBofData(int type, char* data, int len, int free_mem);
 
 void BeaconPrintf(int type, char* fmt, ...) {
@@ -34,7 +34,7 @@ void BeaconPrintf(int type, char* fmt, ...) {
         }
         len += 1;
 
-        char* buffer = allocateMemory(len);
+        char* buffer = bofLauncherAllocateMemory(len);
         if (buffer == NULL) {
             return;
         }
@@ -73,7 +73,7 @@ void BeaconPrintf(int type, char* fmt, ...) {
         int len = stbsp_vsnprintf(NULL, 0, fmt, args) + 1;
         va_end(args);
 
-        char* data = allocateMemory(len);
+        char* data = bofLauncherAllocateMemory(len);
         if (data == NULL) {
             return;
         }

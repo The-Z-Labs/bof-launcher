@@ -1,8 +1,8 @@
 const std = @import("std");
 const mem = std.mem;
 
-extern fn allocateAndZeroMemory(num: usize, size: usize) callconv(.C) ?*anyopaque;
-extern fn freeMemory(ptr: ?*anyopaque) callconv(.C) void;
+extern fn bofLauncherAllocateAndZeroMemory(num: usize, size: usize) callconv(.C) ?*anyopaque;
+extern fn bofLauncherFreeMemory(ptr: ?*anyopaque) callconv(.C) void;
 
 pub const datap = extern struct {
     original: [*]u8,
@@ -115,7 +115,7 @@ pub export fn BeaconFormatAlloc(format: ?*formatp, maxsz: i32) callconv(.C) void
     if (format == null)
         return;
 
-    format.?.original = @as([*]u8, @ptrCast(allocateAndZeroMemory(@as(usize, @intCast(maxsz)), 1)));
+    format.?.original = @as([*]u8, @ptrCast(bofLauncherAllocateAndZeroMemory(@as(usize, @intCast(maxsz)), 1)));
     format.?.buffer = format.?.original;
     format.?.length = 0;
     format.?.size = maxsz;
@@ -132,7 +132,7 @@ pub export fn BeaconFormatFree(format: ?*formatp) callconv(.C) void {
         return;
     }
     if (format.?.original != null) {
-        freeMemory(format.?.original.?);
+        bofLauncherFreeMemory(format.?.original.?);
         format.?.original = null;
     }
     format.?.buffer = null;
