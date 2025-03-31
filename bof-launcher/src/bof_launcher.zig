@@ -1935,9 +1935,22 @@ extern fn ___chkstk_ms() callconv(.Naked) void;
 extern fn __zig_probe_stack() callconv(.Naked) void;
 extern fn _alloca() callconv(.Naked) void;
 
+const AllocInfo = packed struct(usize) {
+    const SizeType = if (@sizeOf(usize) == 8) u63 else u31;
+
+    size: SizeType,
+    is_main_thread: bool,
+};
+
 export fn allocateMemory(size: usize) callconv(.C) ?*anyopaque {
-    gstate.mutex.lock();
-    defer gstate.mutex.unlock();
+    if (size > std.math.maxInt(AllocInfo.SizeType)) return null;
+
+    gstate.allocator_mutex.lock();
+    defer gstate.allocator_mutex.unlock();
+
+    var info: AllocInfo = @bitCast(size);
+    info.is_main_thread = if (gstate.process_id == getCurrentProcessId() and
+        gstate.main_thread_id != getCurrentThreadId()) false else true;
 
     const mem = gstate.allocator.?.alignedAlloc(
         u8,
@@ -1945,7 +1958,7 @@ export fn allocateMemory(size: usize) callconv(.C) ?*anyopaque {
         size,
     ) catch return null;
 
-    gstate.allocations.?.put(@intFromPtr(mem.ptr), size) catch {
+    gstate.allocations.?.put(@intFromPtr(mem.ptr), info) catch {
         gstate.allocator.?.free(mem);
         return null;
     };
@@ -1955,11 +1968,11 @@ export fn allocateMemory(size: usize) callconv(.C) ?*anyopaque {
 
 export fn freeMemory(maybe_ptr: ?*anyopaque) callconv(.C) void {
     if (maybe_ptr) |ptr| {
-        gstate.mutex.lock();
-        defer gstate.mutex.unlock();
+        gstate.allocator_mutex.lock();
+        defer gstate.allocator_mutex.unlock();
 
         if (gstate.allocations.?.fetchRemove(@intFromPtr(ptr))) |kv| {
-            const size = kv.value;
+            const size = kv.value.size;
             const mem = @as([*]align(mem_alignment) u8, @ptrCast(@alignCast(ptr)))[0..size];
             gstate.allocator.?.free(mem);
         }
@@ -2045,9 +2058,12 @@ const pthread_t = *opaque {};
 
 const gstate = struct {
     var is_valid: bool = false;
+
     var gpa: ?std.heap.GeneralPurposeAllocator(.{ .stack_trace_frames = 0 }) = null;
     var allocator: ?std.mem.Allocator = null;
-    var allocations: ?std.AutoHashMap(usize, usize) = null;
+    var allocator_mutex: std.Thread.Mutex = .{};
+    var allocations: ?std.AutoHashMap(usize, AllocInfo) = null;
+
     var mutex: std.Thread.Mutex = .{};
     var func_lookup: std.StringHashMap(usize) = undefined;
 
@@ -2093,7 +2109,7 @@ fn initLauncher() !void {
     gstate.allocator = gstate.gpa.?.allocator();
     errdefer gstate.allocator = null;
 
-    gstate.allocations = std.AutoHashMap(usize, usize).init(gstate.allocator.?);
+    gstate.allocations = std.AutoHashMap(usize, AllocInfo).init(gstate.allocator.?);
     errdefer {
         gstate.allocations.?.deinit();
         gstate.allocations = null;
