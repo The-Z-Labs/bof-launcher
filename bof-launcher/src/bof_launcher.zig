@@ -60,8 +60,8 @@ const Bof = struct {
         var maybe_prev_context: ?*BofContext = null;
 
         {
-            gstate.mutex.lock();
-            defer gstate.mutex.unlock();
+            gstate.bof_contexts_mutex.lock();
+            defer gstate.bof_contexts_mutex.unlock();
 
             maybe_prev_context = if (gstate.bof_contexts.get(getCurrentThreadId())) |ctx| ctx else null;
 
@@ -74,8 +74,8 @@ const Bof = struct {
         );
         _ = context.exit_code.swap(exit_code, .seq_cst);
         {
-            gstate.mutex.lock();
-            defer gstate.mutex.unlock();
+            gstate.bof_contexts_mutex.lock();
+            defer gstate.bof_contexts_mutex.unlock();
             gstate.bof_contexts.put(tid, maybe_prev_context) catch @panic("OOM");
         }
 
@@ -2017,8 +2017,8 @@ export fn outputBofData(_: i32, data: [*]u8, len: i32, free_mem: i32) void {
     defer if (free_mem != 0) freeMemory(data);
 
     var context = context: {
-        gstate.mutex.lock();
-        defer gstate.mutex.unlock();
+        gstate.bof_contexts_mutex.lock();
+        defer gstate.bof_contexts_mutex.unlock();
 
         const maybe_context = gstate.bof_contexts.get(getCurrentThreadId());
 
@@ -2064,8 +2064,8 @@ const gstate = struct {
     var allocator_mutex: std.Thread.Mutex = .{};
     var allocations: ?std.AutoHashMap(usize, AllocInfo) = null;
 
-    var mutex: std.Thread.Mutex = .{};
     var func_lookup: std.StringHashMap(usize) = undefined;
+    var bof_pool: BofPool = undefined;
 
     var libc: if (@import("builtin").os.tag == .linux) ?std.DynLib else void = null;
     var libpthread: if (@import("builtin").os.tag == .linux) ?std.DynLib else void = null;
@@ -2078,7 +2078,7 @@ const gstate = struct {
     var pthread_detach: *const fn (pthread_t) callconv(.C) c_int = undefined;
 
     var bof_contexts: std.AutoHashMap(u32, ?*BofContext) = undefined;
-    var bof_pool: BofPool = undefined;
+    var bof_contexts_mutex: std.Thread.Mutex = .{};
 
     var mask_key_data: [32]u8 = undefined;
     var mask_key: []const u8 = mask_key_data[0..13];
@@ -2094,9 +2094,6 @@ const gstate = struct {
 };
 
 fn initLauncher() !void {
-    gstate.mutex.lock();
-    defer gstate.mutex.unlock();
-
     if (gstate.is_valid)
         return; // Already initialized
 
@@ -2329,9 +2326,6 @@ export fn bofLauncherInit() callconv(.C) c_int {
 }
 
 export fn bofLauncherRelease() callconv(.C) void {
-    gstate.mutex.lock();
-    defer gstate.mutex.unlock();
-
     if (!gstate.is_valid) return;
 
     gstate.is_valid = false;
@@ -2391,6 +2385,12 @@ const ZGateWin32ApiCall = enum(u32) {
     DuplicateHandle,
 };
 
+fn zgateXorBytes(bytes: []u8) linksection(".zgate") void {
+    for (bytes, 0..) |*byte, i| {
+        byte.* ^= gstate.mask_key[i % gstate.mask_key.len];
+    }
+}
+
 fn zgateMaskAllBofs() linksection(".zgate") void {
     for (gstate.bof_pool.bofs) |*bof| {
         if (bof.is_allocated and bof.is_loaded and !bof.is_masked and bof.masking_enabled) {
@@ -2411,9 +2411,7 @@ fn zgateMaskAllBofs() linksection(".zgate") void {
             }
 
             for (bof.sections[0..bof.sections_num]) |section| {
-                for (section.mem, 0..) |*byte, i| {
-                    byte.* ^= gstate.mask_key[i % gstate.mask_key.len];
-                }
+                zgateXorBytes(section.mem);
             }
 
             bof.is_masked = true;
@@ -2425,9 +2423,7 @@ fn zgateUnmaskAllBofs() linksection(".zgate") void {
     for (gstate.bof_pool.bofs) |*bof| {
         if (bof.is_allocated and bof.is_loaded and bof.is_masked and bof.masking_enabled) {
             for (bof.sections[0..bof.sections_num]) |section| {
-                for (section.mem, 0..) |*byte, i| {
-                    byte.* ^= gstate.mask_key[i % gstate.mask_key.len];
-                }
+                zgateXorBytes(section.mem);
             }
 
             for (bof.sections[0..bof.sections_num]) |section| {
@@ -2454,12 +2450,45 @@ fn zgateUnmaskAllBofs() linksection(".zgate") void {
 fn zgateBegin(func: ZGateWin32ApiCall) linksection(".zgate") bool {
     if (getCurrentProcessId() == gstate.process_id and getCurrentThreadId() != gstate.main_thread_id) return false;
     if (!gstate.mask_win32_api[@intFromEnum(func)]) return false;
+
     zgateMaskAllBofs();
-    if (false) std.debug.print("Mask: {s}\n", .{@tagName(func)});
+    {
+        gstate.allocator_mutex.lock();
+        defer gstate.allocator_mutex.unlock();
+
+        var it = gstate.allocations.?.iterator();
+        while (it.next()) |kv| {
+            const addr = kv.key_ptr.*;
+            const info = kv.value_ptr.*;
+            const bytes = @as([*]u8, @ptrFromInt(addr))[0..info.size];
+
+            if (info.is_main_thread) {
+                zgateXorBytes(bytes);
+                if (false) std.debug.print("Alloc mask: 0x{x} {d}\n", .{ addr, bytes.len });
+            }
+        }
+    }
+
+    if (false) std.debug.print("API mask: {s}\n", .{@tagName(func)});
     return true;
 }
 
 fn zgateEnd() linksection(".zgate") void {
+    {
+        gstate.allocator_mutex.lock();
+        defer gstate.allocator_mutex.unlock();
+
+        var it = gstate.allocations.?.iterator();
+        while (it.next()) |kv| {
+            const addr = kv.key_ptr.*;
+            const info = kv.value_ptr.*;
+            const bytes = @as([*]u8, @ptrFromInt(addr))[0..info.size];
+
+            if (info.is_main_thread) {
+                zgateXorBytes(bytes);
+            }
+        }
+    }
     zgateUnmaskAllBofs();
 }
 
