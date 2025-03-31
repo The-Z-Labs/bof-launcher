@@ -28,6 +28,8 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
             const mem = allocator.alloc(u8, 123) catch return 123;
             defer allocator.free(mem);
 
+            @memset(mem, 0);
+
             _ = beacon.printf(0, "bof_api.bof_allocator.alloc() returned: 0x%x\n", @intFromPtr(mem.ptr));
 
             mem[100] = 123;
@@ -52,6 +54,8 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
         for (0..2) |_| {
             const mem: ?[*]u8 = @ptrCast(malloc(100));
             if (mem == null) return 253;
+
+            @memset(mem.?[0..100], 0);
 
             _ = beacon.printf(0, "malloc() returned: 0x%x\n", @intFromPtr(mem));
 
