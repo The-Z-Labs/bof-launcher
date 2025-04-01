@@ -2455,48 +2455,36 @@ fn zgateUnmaskAllBofs() linksection(".zgate") void {
     }
 }
 
+fn zgateXorAllocations() linksection(".zgate") void {
+    gstate.allocator_mutex.lock();
+    defer gstate.allocator_mutex.unlock();
+
+    var it = gstate.allocations.?.iterator();
+    while (it.next()) |kv| {
+        const addr = kv.key_ptr.*;
+        const info = kv.value_ptr.*;
+        const bytes = @as([*]u8, @ptrFromInt(addr))[0..info.size];
+
+        if (info.is_main_thread) {
+            zgateXorBytes(bytes);
+            if (false) std.debug.print("Alloc mask: 0x{x} {d}\n", .{ addr, bytes.len });
+        }
+    }
+}
+
 fn zgateBegin(func: ZGateWin32ApiCall) linksection(".zgate") bool {
     if (getCurrentProcessId() == gstate.process_id and getCurrentThreadId() != gstate.main_thread_id) return false;
     if (!gstate.mask_win32_api[@intFromEnum(func)]) return false;
 
     zgateMaskAllBofs();
-    {
-        gstate.allocator_mutex.lock();
-        defer gstate.allocator_mutex.unlock();
-
-        var it = gstate.allocations.?.iterator();
-        while (it.next()) |kv| {
-            const addr = kv.key_ptr.*;
-            const info = kv.value_ptr.*;
-            const bytes = @as([*]u8, @ptrFromInt(addr))[0..info.size];
-
-            if (info.is_main_thread) {
-                zgateXorBytes(bytes);
-                if (false) std.debug.print("Alloc mask: 0x{x} {d}\n", .{ addr, bytes.len });
-            }
-        }
-    }
+    zgateXorAllocations();
 
     if (false) std.debug.print("API mask: {s}\n", .{@tagName(func)});
     return true;
 }
 
 fn zgateEnd() linksection(".zgate") void {
-    {
-        gstate.allocator_mutex.lock();
-        defer gstate.allocator_mutex.unlock();
-
-        var it = gstate.allocations.?.iterator();
-        while (it.next()) |kv| {
-            const addr = kv.key_ptr.*;
-            const info = kv.value_ptr.*;
-            const bytes = @as([*]u8, @ptrFromInt(addr))[0..info.size];
-
-            if (info.is_main_thread) {
-                zgateXorBytes(bytes);
-            }
-        }
-    }
+    zgateXorAllocations();
     zgateUnmaskAllBofs();
 }
 
