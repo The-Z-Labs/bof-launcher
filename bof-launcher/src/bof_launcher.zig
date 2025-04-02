@@ -2373,8 +2373,7 @@ fn initLauncher() !void {
 
     gstate.is_valid = true;
 
-    try pubapi.memoryMaskWin32ApiCall("all", true);
-    try pubapi.memoryMaskWin32ApiCall("ResumeThread", false);
+    try pubapi.memoryMaskWin32ApiCall("all", false);
 }
 
 export fn bofLauncherInit() callconv(.C) c_int {
