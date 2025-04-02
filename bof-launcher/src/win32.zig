@@ -9,6 +9,7 @@ pub const WCHAR = windows.WCHAR;
 pub const LPCSTR = windows.LPCSTR;
 pub const WINAPI = windows.WINAPI;
 pub const HMODULE = windows.HMODULE;
+pub const HINSTANCE = windows.HINSTANCE;
 pub const FARPROC = windows.FARPROC;
 pub const HANDLE = windows.HANDLE;
 pub const DWORD = windows.DWORD;
@@ -228,6 +229,9 @@ pub const COINIT_MULTITHREADED = 0x0;
 pub const COINIT_APARTMENTTHREADED = 0x2;
 pub const COINIT_DISABLE_OLE1DDE = 0x4;
 pub const COINIT_SPEED_OVER_MEMORY = 0x8;
+
+pub const DLL_PROCESS_ATTACH = 1;
+pub const DLL_PROCESS_DETACH = 0;
 
 pub const CREATE_SUSPENDED = 0x4;
 
@@ -723,3 +727,163 @@ pub const WSACleanup = windows.ws2_32.WSACleanup;
 pub const WSASocketW = windows.ws2_32.WSASocketW;
 pub const WSAGetLastError = windows.ws2_32.WSAGetLastError;
 pub const closesocket = windows.ws2_32.closesocket;
+
+pub const IMAGE_DOS_HEADER = extern struct {
+    e_magic: u16,
+    e_cblp: u16,
+    e_cp: u16,
+    e_crlc: u16,
+    e_cparhdr: u16,
+    e_minalloc: u16,
+    e_maxalloc: u16,
+    e_ss: u16,
+    e_sp: u16,
+    e_csum: u16,
+    e_ip: u16,
+    e_cs: u16,
+    e_lfarlc: u16,
+    e_ovno: u16,
+    e_res: [4]u16,
+    e_oemid: u16,
+    e_oeminfo: u16,
+    e_res2: [10]u16,
+    e_lfanew: i32,
+};
+
+pub const IMAGE_DATA_DIRECTORY = extern struct {
+    VirtualAddress: u32,
+    Size: u32,
+};
+
+pub const IMAGE_FILE_HEADER = extern struct {
+    Machine: u16,
+    NumberOfSections: u16,
+    TimeDateStamp: u32,
+    PointerToSymbolTable: u32,
+    NumberOfSymbols: u32,
+    SizeOfOptionalHeader: u16,
+    Characteristics: u16,
+};
+
+pub const IMAGE_OPTIONAL_HEADER32 = extern struct {
+    Magic: u16,
+    MajorLinkerVersion: u8,
+    MinorLinkerVersion: u8,
+    SizeOfCode: u32,
+    SizeOfInitializedData: u32,
+    SizeOfUninitializedData: u32,
+    AddressOfEntryPoint: u32,
+    BaseOfCode: u32,
+    BaseOfData: u32,
+    ImageBase: u32,
+    SectionAlignment: u32,
+    FileAlignment: u32,
+    MajorOperatingSystemVersion: u16,
+    MinorOperatingSystemVersion: u16,
+    MajorImageVersion: u16,
+    MinorImageVersion: u16,
+    MajorSubsystemVersion: u16,
+    MinorSubsystemVersion: u16,
+    Win32VersionValue: u32,
+    SizeOfImage: u32,
+    SizeOfHeaders: u32,
+    CheckSum: u32,
+    Subsystem: u16,
+    DllCharacteristics: u16,
+    SizeOfStackReserve: u32,
+    SizeOfStackCommit: u32,
+    SizeOfHeapReserve: u32,
+    SizeOfHeapCommit: u32,
+    LoaderFlags: u32,
+    NumberOfRvaAndSizes: u32,
+    DataDirectory: [16]IMAGE_DATA_DIRECTORY,
+};
+
+pub const IMAGE_OPTIONAL_HEADER64 = extern struct {
+    Magic: u16,
+    MajorLinkerVersion: u8,
+    MinorLinkerVersion: u8,
+    SizeOfCode: u32,
+    SizeOfInitializedData: u32,
+    SizeOfUninitializedData: u32,
+    AddressOfEntryPoint: u32,
+    BaseOfCode: u32,
+    ImageBase: u64,
+    SectionAlignment: u32,
+    FileAlignment: u32,
+    MajorOperatingSystemVersion: u16,
+    MinorOperatingSystemVersion: u16,
+    MajorImageVersion: u16,
+    MinorImageVersion: u16,
+    MajorSubsystemVersion: u16,
+    MinorSubsystemVersion: u16,
+    Win32VersionValue: u32,
+    SizeOfImage: u32,
+    SizeOfHeaders: u32,
+    CheckSum: u32,
+    Subsystem: u16,
+    DllCharacteristics: u16,
+    SizeOfStackReserve: u64,
+    SizeOfStackCommit: u64,
+    SizeOfHeapReserve: u64,
+    SizeOfHeapCommit: u64,
+    LoaderFlags: u32,
+    NumberOfRvaAndSizes: u32,
+    DataDirectory: [16]IMAGE_DATA_DIRECTORY,
+};
+
+pub const IMAGE_NT_HEADERS32 = extern struct {
+    Signature: DWORD,
+    FileHeader: IMAGE_FILE_HEADER,
+    OptionalHeader: IMAGE_OPTIONAL_HEADER32,
+};
+
+pub const IMAGE_NT_HEADERS64 = extern struct {
+    Signature: DWORD,
+    FileHeader: IMAGE_FILE_HEADER,
+    OptionalHeader: IMAGE_OPTIONAL_HEADER64,
+};
+
+pub const IMAGE_NT_HEADERS = if (@sizeOf(usize) == 8) IMAGE_NT_HEADERS64 else IMAGE_NT_HEADERS32;
+
+pub const IMAGE_EXPORT_DIRECTORY = extern struct {
+    Characteristics: u32,
+    TimeDateStamp: u32,
+    MajorVersion: u16,
+    MinorVersion: u16,
+    Name: u32,
+    Base: u32,
+    NumberOfFunctions: u32,
+    NumberOfNames: u32,
+    AddressOfFunctions: u32,
+    AddressOfNames: u32,
+    AddressOfNameOrdinals: u32,
+};
+
+pub const IMAGE_SECTION_HEADER = extern struct {
+    Name: [8]u8,
+    Misc: extern union {
+        PhysicalAddress: u32,
+        VirtualSize: u32,
+    },
+    VirtualAddress: u32,
+    SizeOfRawData: u32,
+    PointerToRawData: u32,
+    PointerToRelocations: u32,
+    PointerToLinenumbers: u32,
+    NumberOfRelocations: u16,
+    NumberOfLinenumbers: u16,
+    Characteristics: u32,
+};
+
+comptime {
+    std.debug.assert(@offsetOf(IMAGE_DOS_HEADER, "e_lfanew") == 60);
+    std.debug.assert(@offsetOf(IMAGE_NT_HEADERS, "OptionalHeader") == 24);
+    std.debug.assert(@offsetOf(IMAGE_EXPORT_DIRECTORY, "NumberOfFunctions") == 20);
+    std.debug.assert(@offsetOf(IMAGE_SECTION_HEADER, "Misc") == 8);
+    std.debug.assert(@offsetOf(IMAGE_SECTION_HEADER, "SizeOfRawData") == 16);
+    std.debug.assert(@offsetOf(IMAGE_SECTION_HEADER, "PointerToLinenumbers") == 28);
+    std.debug.assert(@offsetOf(IMAGE_SECTION_HEADER, "Characteristics") == 36);
+}
+
+pub const IMAGE_DIRECTORY_ENTRY_EXPORT = 0;

@@ -1988,14 +1988,14 @@ export fn bofLauncherAllocateAndZeroMemory(num: usize, size: usize) callconv(.C)
     return null;
 }
 
-fn getCurrentThreadId() u32 {
+fn getCurrentThreadId() linksection(".zgate") u32 {
     if (@import("builtin").os.tag == .windows) {
         return @intCast(w32.GetCurrentThreadId());
     }
     return @intCast(linux.gettid());
 }
 
-fn getCurrentProcessId() u32 {
+fn getCurrentProcessId() linksection(".zgate") u32 {
     if (@import("builtin").os.tag == .windows) {
         return @intCast(w32.GetCurrentProcessId());
     }
@@ -2091,6 +2091,11 @@ const gstate = struct {
 
     var max_got_section_size: u32 = 0;
     var max_num_external_functions: u32 = 0;
+
+    var dll: struct {
+        base_address: usize = 0,
+        text_section: []u8 = undefined,
+    } = .{};
 };
 
 fn initLauncher() !void {
@@ -2267,6 +2272,32 @@ fn initLauncher() !void {
         try gstate.func_lookup.put("CreateThread", @intFromPtr(&zgateCreateThread));
         try gstate.func_lookup.put("CreateRemoteThread", @intFromPtr(&zgateCreateRemoteThread));
 
+        {
+            const dll = w32.LoadLibraryA("kernel32.dll").?;
+
+            zgateVirtualAllocPtr = @ptrCast(w32.GetProcAddress(dll, "VirtualAlloc").?);
+            zgateVirtualAllocExPtr = @ptrCast(w32.GetProcAddress(dll, "VirtualAllocEx").?);
+            zgateVirtualFreePtr = @ptrCast(w32.GetProcAddress(dll, "VirtualFree").?);
+            zgateVirtualQueryPtr = @ptrCast(w32.GetProcAddress(dll, "VirtualQuery").?);
+            zgateVirtualProtectPtr = @ptrCast(w32.GetProcAddress(dll, "VirtualProtect").?);
+            zgateVirtualProtectExPtr = @ptrCast(w32.GetProcAddress(dll, "VirtualProtectEx").?);
+            zgateCreateFileMappingAPtr = @ptrCast(w32.GetProcAddress(dll, "CreateFileMappingA").?);
+            zgateCloseHandlePtr = @ptrCast(w32.GetProcAddress(dll, "CloseHandle").?);
+            zgateDuplicateHandlePtr = @ptrCast(w32.GetProcAddress(dll, "DuplicateHandle").?);
+            zgateGetThreadContextPtr = @ptrCast(w32.GetProcAddress(dll, "GetThreadContext").?);
+            zgateSetThreadContextPtr = @ptrCast(w32.GetProcAddress(dll, "SetThreadContext").?);
+            zgateMapViewOfFilePtr = @ptrCast(w32.GetProcAddress(dll, "MapViewOfFile").?);
+            zgateUnmapViewOfFilePtr = @ptrCast(w32.GetProcAddress(dll, "UnmapViewOfFile").?);
+            zgateOpenProcessPtr = @ptrCast(w32.GetProcAddress(dll, "OpenProcess").?);
+            zgateOpenThreadPtr = @ptrCast(w32.GetProcAddress(dll, "OpenThread").?);
+            zgateWriteProcessMemoryPtr = @ptrCast(w32.GetProcAddress(dll, "WriteProcessMemory").?);
+            zgateReadProcessMemoryPtr = @ptrCast(w32.GetProcAddress(dll, "ReadProcessMemory").?);
+            zgateResumeThreadPtr = @ptrCast(w32.GetProcAddress(dll, "ResumeThread").?);
+            zgateCreateThreadPtr = @ptrCast(w32.GetProcAddress(dll, "CreateThread").?);
+            zgateCreateRemoteThreadPtr = @ptrCast(w32.GetProcAddress(dll, "CreateRemoteThread").?);
+            zgateFlushInstructionCachePtr = @ptrCast(w32.GetProcAddress(dll, "FlushInstructionCache").?);
+        }
+
         if (@import("builtin").cpu.arch == .x86_64) {
             try gstate.func_lookup.put("___chkstk_ms", @intFromPtr(&__zig_probe_stack));
         } else {
@@ -2322,6 +2353,24 @@ fn initLauncher() !void {
     gstate.max_got_section_size = if (gstate.page_size == 4096) 2 * gstate.page_size else gstate.page_size;
     gstate.max_num_external_functions = @divExact(gstate.max_got_section_size, 16);
 
+    if (gstate.dll.base_address != 0) {
+        const dll_base = gstate.dll.base_address;
+        const nt_headers_offset: u32 = @intCast(@as(*const w32.IMAGE_DOS_HEADER, @ptrFromInt(dll_base)).e_lfanew);
+        const nt_headers = @as(*const w32.IMAGE_NT_HEADERS, @ptrFromInt(dll_base + nt_headers_offset)).*;
+
+        const section_headers: [*]const w32.IMAGE_SECTION_HEADER = @ptrFromInt(dll_base + nt_headers_offset +
+            @offsetOf(w32.IMAGE_NT_HEADERS, "OptionalHeader") + nt_headers.FileHeader.SizeOfOptionalHeader);
+
+        for (0..nt_headers.FileHeader.NumberOfSections) |i| {
+            if (std.mem.eql(u8, section_headers[i].Name[0..5], ".text")) {
+                gstate.dll.text_section = @as(
+                    [*]u8,
+                    @ptrFromInt(dll_base + section_headers[i].VirtualAddress),
+                )[0..section_headers[i].SizeOfRawData];
+            }
+        }
+    }
+
     gstate.is_valid = true;
 
     try pubapi.memoryMaskWin32ApiCall("all", true);
@@ -2370,6 +2419,18 @@ export fn bofLauncherRelease() callconv(.C) void {
     gstate.gpa = null;
 }
 
+pub fn DllMain(
+    hinstDLL: w32.HINSTANCE,
+    fdwReason: w32.DWORD,
+    lpvReserved: w32.LPVOID,
+) callconv(w32.WINAPI) w32.BOOL {
+    _ = lpvReserved;
+    if (fdwReason == w32.DLL_PROCESS_ATTACH) {
+        gstate.dll.base_address = @intFromPtr(hinstDLL);
+    }
+    return w32.TRUE;
+}
+
 const ZGateWin32ApiCall = enum(u32) {
     CreateRemoteThread = 0,
     CreateThread,
@@ -2406,14 +2467,14 @@ fn zgateMaskAllBofs() linksection(".zgate") void {
                 if (section.is_code) {
                     if (@import("builtin").os.tag == .windows) {
                         var old_protection: w32.DWORD = 0;
-                        if (w32.VirtualProtect(
+                        if (zgateVirtualProtectPtr(
                             section.mem.ptr,
                             section.mem.len,
                             w32.PAGE_READWRITE,
                             &old_protection,
                         ) == w32.FALSE) return; // TODO: Handle error
 
-                        _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), section.mem.ptr, section.mem.len);
+                        _ = zgateFlushInstructionCachePtr(@ptrFromInt(~@as(usize, 0)), section.mem.ptr, section.mem.len);
                     }
                 }
             }
@@ -2438,14 +2499,14 @@ fn zgateUnmaskAllBofs() linksection(".zgate") void {
                 if (section.is_code) {
                     if (@import("builtin").os.tag == .windows) {
                         var old_protection: w32.DWORD = 0;
-                        if (w32.VirtualProtect(
+                        if (zgateVirtualProtectPtr(
                             section.mem.ptr,
                             section.mem.len,
                             w32.PAGE_EXECUTE_READ,
                             &old_protection,
                         ) == w32.FALSE) return; // TODO: Handle error
 
-                        _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), section.mem.ptr, section.mem.len);
+                        _ = zgateFlushInstructionCachePtr(@ptrFromInt(~@as(usize, 0)), section.mem.ptr, section.mem.len);
                     }
                 }
             }
@@ -2476,17 +2537,63 @@ fn zgateBegin(func: ZGateWin32ApiCall) linksection(".zgate") bool {
     if (getCurrentProcessId() == gstate.process_id and getCurrentThreadId() != gstate.main_thread_id) return false;
     if (!gstate.mask_win32_api[@intFromEnum(func)]) return false;
 
-    zgateMaskAllBofs();
     zgateXorAllocations();
+    zgateMaskAllBofs();
+
+    if (gstate.dll.base_address != 0) {
+        if (@import("builtin").os.tag == .windows) {
+            const section = gstate.dll.text_section;
+            var old_protection: w32.DWORD = 0;
+            if (zgateVirtualProtectPtr(
+                section.ptr,
+                section.len,
+                w32.PAGE_READWRITE,
+                &old_protection,
+            ) == w32.FALSE) return false; // TODO: Handle error
+
+            _ = zgateFlushInstructionCachePtr(@ptrFromInt(~@as(usize, 0)), section.ptr, section.len);
+        }
+        zgateXorBytes(gstate.dll.text_section);
+    }
 
     if (false) std.debug.print("API mask: {s}\n", .{@tagName(func)});
     return true;
 }
 
 fn zgateEnd() linksection(".zgate") void {
+    if (gstate.dll.base_address != 0) {
+        zgateXorBytes(gstate.dll.text_section);
+
+        if (@import("builtin").os.tag == .windows) {
+            const section = gstate.dll.text_section;
+            var old_protection: w32.DWORD = 0;
+            if (zgateVirtualProtectPtr(
+                section.ptr,
+                section.len,
+                w32.PAGE_EXECUTE_READ,
+                &old_protection,
+            ) == w32.FALSE) return; // TODO: Handle error
+
+            _ = zgateFlushInstructionCachePtr(@ptrFromInt(~@as(usize, 0)), section.ptr, section.len);
+        }
+    }
+
     zgateXorAllocations();
     zgateUnmaskAllBofs();
 }
+
+var zgateFlushInstructionCachePtr: *const fn (
+    w32.HANDLE,
+    ?w32.LPCVOID,
+    w32.SIZE_T,
+) callconv(w32.WINAPI) w32.BOOL = undefined;
+
+var zgateVirtualAllocPtr: *const fn (
+    ?w32.LPVOID,
+    w32.SIZE_T,
+    w32.DWORD,
+    w32.DWORD,
+) callconv(w32.WINAPI) ?w32.LPVOID = undefined;
 
 fn zgateVirtualAlloc(
     lpAddress: ?w32.LPVOID,
@@ -2495,10 +2602,18 @@ fn zgateVirtualAlloc(
     flProtect: w32.DWORD,
 ) linksection(".zgate") callconv(w32.WINAPI) ?w32.LPVOID {
     const do_mask = zgateBegin(.VirtualAlloc);
-    const ret = w32.VirtualAlloc(lpAddress, dwSize, flAllocationType, flProtect);
+    const ret = zgateVirtualAllocPtr(lpAddress, dwSize, flAllocationType, flProtect);
     if (do_mask) zgateEnd();
     return ret;
 }
+
+var zgateVirtualAllocExPtr: *const fn (
+    w32.HANDLE,
+    ?w32.LPVOID,
+    w32.SIZE_T,
+    w32.DWORD,
+    w32.DWORD,
+) callconv(w32.WINAPI) ?w32.LPVOID = undefined;
 
 fn zgateVirtualAllocEx(
     hProcess: w32.HANDLE,
@@ -2508,10 +2623,12 @@ fn zgateVirtualAllocEx(
     flProtect: w32.DWORD,
 ) linksection(".zgate") callconv(w32.WINAPI) ?w32.LPVOID {
     const do_mask = zgateBegin(.VirtualAllocEx);
-    const ret = w32.VirtualAllocEx(hProcess, lpAddress, dwSize, flAllocationType, flProtect);
+    const ret = zgateVirtualAllocExPtr(hProcess, lpAddress, dwSize, flAllocationType, flProtect);
     if (do_mask) zgateEnd();
     return ret;
 }
+
+var zgateVirtualFreePtr: *const fn (?w32.LPVOID, w32.SIZE_T, w32.DWORD) callconv(w32.WINAPI) w32.BOOL = undefined;
 
 fn zgateVirtualFree(
     lpAddress: ?w32.LPVOID,
@@ -2519,10 +2636,16 @@ fn zgateVirtualFree(
     dwFreeType: w32.DWORD,
 ) linksection(".zgate") callconv(w32.WINAPI) w32.BOOL {
     const do_mask = zgateBegin(.VirtualFree);
-    const ret = w32.VirtualFree(lpAddress, dwSize, dwFreeType);
+    const ret = zgateVirtualFreePtr(lpAddress, dwSize, dwFreeType);
     if (do_mask) zgateEnd();
     return ret;
 }
+
+var zgateVirtualQueryPtr: *const fn (
+    ?w32.LPVOID,
+    w32.PMEMORY_BASIC_INFORMATION,
+    w32.SIZE_T,
+) callconv(w32.WINAPI) w32.SIZE_T = undefined;
 
 fn zgateVirtualQuery(
     lpAddress: ?w32.LPVOID,
@@ -2530,10 +2653,17 @@ fn zgateVirtualQuery(
     dwLength: w32.SIZE_T,
 ) linksection(".zgate") callconv(w32.WINAPI) w32.SIZE_T {
     const do_mask = zgateBegin(.VirtualQuery);
-    const ret = w32.VirtualQuery(lpAddress, lpBuffer, dwLength);
+    const ret = zgateVirtualQueryPtr(lpAddress, lpBuffer, dwLength);
     if (do_mask) zgateEnd();
     return ret;
 }
+
+var zgateVirtualProtectPtr: *const fn (
+    w32.LPVOID,
+    w32.SIZE_T,
+    w32.DWORD,
+    *w32.DWORD,
+) callconv(w32.WINAPI) w32.BOOL = undefined;
 
 fn zgateVirtualProtect(
     lpAddress: w32.LPVOID,
@@ -2542,10 +2672,18 @@ fn zgateVirtualProtect(
     lpflOldProtect: *w32.DWORD,
 ) linksection(".zgate") callconv(w32.WINAPI) w32.BOOL {
     const do_mask = zgateBegin(.VirtualProtect);
-    const ret = w32.VirtualProtect(lpAddress, dwSize, flNewProtect, lpflOldProtect);
+    const ret = zgateVirtualProtectPtr(lpAddress, dwSize, flNewProtect, lpflOldProtect);
     if (do_mask) zgateEnd();
     return ret;
 }
+
+var zgateVirtualProtectExPtr: *const fn (
+    w32.HANDLE,
+    w32.LPVOID,
+    w32.SIZE_T,
+    w32.DWORD,
+    *w32.DWORD,
+) callconv(w32.WINAPI) w32.BOOL = undefined;
 
 fn zgateVirtualProtectEx(
     hProcess: w32.HANDLE,
@@ -2555,10 +2693,19 @@ fn zgateVirtualProtectEx(
     lpflOldProtect: *w32.DWORD,
 ) linksection(".zgate") callconv(w32.WINAPI) w32.BOOL {
     const do_mask = zgateBegin(.VirtualProtectEx);
-    const ret = w32.VirtualProtectEx(hProcess, lpAddress, dwSize, flNewProtect, lpflOldProtect);
+    const ret = zgateVirtualProtectExPtr(hProcess, lpAddress, dwSize, flNewProtect, lpflOldProtect);
     if (do_mask) zgateEnd();
     return ret;
 }
+
+var zgateCreateFileMappingAPtr: *const fn (
+    w32.HANDLE,
+    ?*w32.SECURITY_ATTRIBUTES,
+    w32.DWORD,
+    w32.DWORD,
+    w32.DWORD,
+    ?w32.LPCSTR,
+) callconv(w32.WINAPI) ?w32.HANDLE = undefined;
 
 fn zgateCreateFileMappingA(
     hFile: w32.HANDLE,
@@ -2569,7 +2716,7 @@ fn zgateCreateFileMappingA(
     lpName: ?w32.LPCSTR,
 ) linksection(".zgate") callconv(w32.WINAPI) ?w32.HANDLE {
     const do_mask = zgateBegin(.CreateFileMappingA);
-    const ret = w32.CreateFileMappingA(
+    const ret = zgateCreateFileMappingAPtr(
         hFile,
         lpFileMappingAttributes,
         flProtect,
@@ -2581,12 +2728,24 @@ fn zgateCreateFileMappingA(
     return ret;
 }
 
+var zgateCloseHandlePtr: *const fn (w32.HANDLE) callconv(w32.WINAPI) w32.BOOL = undefined;
+
 fn zgateCloseHandle(hObject: w32.HANDLE) linksection(".zgate") callconv(w32.WINAPI) w32.BOOL {
     const do_mask = zgateBegin(.CloseHandle);
-    const ret = w32.CloseHandle(hObject);
+    const ret = zgateCloseHandlePtr(hObject);
     if (do_mask) zgateEnd();
     return ret;
 }
+
+var zgateDuplicateHandlePtr: *const fn (
+    w32.HANDLE,
+    w32.HANDLE,
+    w32.HANDLE,
+    *w32.HANDLE,
+    w32.DWORD,
+    w32.BOOL,
+    w32.DWORD,
+) callconv(w32.WINAPI) w32.BOOL = undefined;
 
 fn zgateDuplicateHandle(
     hSourceProcessHandle: w32.HANDLE,
@@ -2598,7 +2757,7 @@ fn zgateDuplicateHandle(
     dwOptions: w32.DWORD,
 ) linksection(".zgate") callconv(w32.WINAPI) w32.BOOL {
     const do_mask = zgateBegin(.DuplicateHandle);
-    const ret = w32.DuplicateHandle(
+    const ret = zgateDuplicateHandlePtr(
         hSourceProcessHandle,
         hSourceHandle,
         hTargetProcessHandle,
@@ -2611,25 +2770,37 @@ fn zgateDuplicateHandle(
     return ret;
 }
 
+var zgateGetThreadContextPtr: *const fn (w32.HANDLE, *w32.CONTEXT) callconv(w32.WINAPI) w32.BOOL = undefined;
+
 fn zgateGetThreadContext(
     hThread: w32.HANDLE,
     lpContext: *w32.CONTEXT,
 ) linksection(".zgate") callconv(w32.WINAPI) w32.BOOL {
     const do_mask = zgateBegin(.GetThreadContext);
-    const ret = w32.GetThreadContext(hThread, lpContext);
+    const ret = zgateGetThreadContextPtr(hThread, lpContext);
     if (do_mask) zgateEnd();
     return ret;
 }
+
+var zgateSetThreadContextPtr: *const fn (w32.HANDLE, *const w32.CONTEXT) callconv(w32.WINAPI) w32.BOOL = undefined;
 
 fn zgateSetThreadContext(
     hThread: w32.HANDLE,
     lpContext: *const w32.CONTEXT,
 ) linksection(".zgate") callconv(w32.WINAPI) w32.BOOL {
     const do_mask = zgateBegin(.SetThreadContext);
-    const ret = w32.SetThreadContext(hThread, lpContext);
+    const ret = zgateSetThreadContextPtr(hThread, lpContext);
     if (do_mask) zgateEnd();
     return ret;
 }
+
+var zgateMapViewOfFilePtr: *const fn (
+    w32.HANDLE,
+    w32.DWORD,
+    w32.DWORD,
+    w32.DWORD,
+    w32.SIZE_T,
+) callconv(w32.WINAPI) w32.LPVOID = undefined;
 
 fn zgateMapViewOfFile(
     hFileMappingObject: w32.HANDLE,
@@ -2639,7 +2810,7 @@ fn zgateMapViewOfFile(
     dwNumberOfBytesToMap: w32.SIZE_T,
 ) linksection(".zgate") callconv(w32.WINAPI) w32.LPVOID {
     const do_mask = zgateBegin(.MapViewOfFile);
-    const ret = w32.MapViewOfFile(
+    const ret = zgateMapViewOfFilePtr(
         hFileMappingObject,
         dwDesiredAccess,
         dwFileOffsetHigh,
@@ -2650,12 +2821,16 @@ fn zgateMapViewOfFile(
     return ret;
 }
 
+var zgateUnmapViewOfFilePtr: *const fn (w32.LPCVOID) callconv(w32.WINAPI) w32.BOOL = undefined;
+
 fn zgateUnmapViewOfFile(lpBaseAddress: w32.LPCVOID) linksection(".zgate") callconv(w32.WINAPI) w32.BOOL {
     const do_mask = zgateBegin(.UnmapViewOfFile);
-    const ret = w32.UnmapViewOfFile(lpBaseAddress);
+    const ret = zgateUnmapViewOfFilePtr(lpBaseAddress);
     if (do_mask) zgateEnd();
     return ret;
 }
+
+var zgateOpenProcessPtr: *const fn (w32.DWORD, w32.BOOL, w32.DWORD) callconv(w32.WINAPI) w32.HANDLE = undefined;
 
 fn zgateOpenProcess(
     dwDesiredAccess: w32.DWORD,
@@ -2663,10 +2838,12 @@ fn zgateOpenProcess(
     dwProcessId: w32.DWORD,
 ) linksection(".zgate") callconv(w32.WINAPI) w32.HANDLE {
     const do_mask = zgateBegin(.OpenProcess);
-    const ret = w32.OpenProcess(dwDesiredAccess, bInheritHandle, dwProcessId);
+    const ret = zgateOpenProcessPtr(dwDesiredAccess, bInheritHandle, dwProcessId);
     if (do_mask) zgateEnd();
     return ret;
 }
+
+var zgateOpenThreadPtr: *const fn (w32.DWORD, w32.BOOL, w32.DWORD) callconv(w32.WINAPI) w32.HANDLE = undefined;
 
 fn zgateOpenThread(
     dwDesiredAccess: w32.DWORD,
@@ -2674,10 +2851,18 @@ fn zgateOpenThread(
     dwThreadId: w32.DWORD,
 ) linksection(".zgate") callconv(w32.WINAPI) w32.HANDLE {
     const do_mask = zgateBegin(.OpenProcess);
-    const ret = w32.OpenThread(dwDesiredAccess, bInheritHandle, dwThreadId);
+    const ret = zgateOpenThreadPtr(dwDesiredAccess, bInheritHandle, dwThreadId);
     if (do_mask) zgateEnd();
     return ret;
 }
+
+var zgateWriteProcessMemoryPtr: *const fn (
+    w32.HANDLE,
+    w32.LPVOID,
+    w32.LPCVOID,
+    w32.SIZE_T,
+    ?*w32.SIZE_T,
+) callconv(w32.WINAPI) w32.BOOL = undefined;
 
 fn zgateWriteProcessMemory(
     hProcess: w32.HANDLE,
@@ -2687,10 +2872,18 @@ fn zgateWriteProcessMemory(
     lpNumberOfBytesWritten: ?*w32.SIZE_T,
 ) linksection(".zgate") callconv(w32.WINAPI) w32.BOOL {
     const do_mask = zgateBegin(.WriteProcessMemory);
-    const ret = w32.WriteProcessMemory(hProcess, lpBaseAddress, lpBuffer, nSize, lpNumberOfBytesWritten);
+    const ret = zgateWriteProcessMemoryPtr(hProcess, lpBaseAddress, lpBuffer, nSize, lpNumberOfBytesWritten);
     if (do_mask) zgateEnd();
     return ret;
 }
+
+var zgateReadProcessMemoryPtr: *const fn (
+    w32.HANDLE,
+    w32.LPCVOID,
+    w32.LPVOID,
+    w32.SIZE_T,
+    ?*w32.SIZE_T,
+) callconv(w32.WINAPI) w32.BOOL = undefined;
 
 fn zgateReadProcessMemory(
     hProcess: w32.HANDLE,
@@ -2700,17 +2893,28 @@ fn zgateReadProcessMemory(
     lpNumberOfBytesRead: ?*w32.SIZE_T,
 ) linksection(".zgate") callconv(w32.WINAPI) w32.BOOL {
     const do_mask = zgateBegin(.ReadProcessMemory);
-    const ret = w32.ReadProcessMemory(hProcess, lpBaseAddress, lpBuffer, nSize, lpNumberOfBytesRead);
+    const ret = zgateReadProcessMemoryPtr(hProcess, lpBaseAddress, lpBuffer, nSize, lpNumberOfBytesRead);
     if (do_mask) zgateEnd();
     return ret;
 }
 
+var zgateResumeThreadPtr: *const fn (w32.HANDLE) callconv(w32.WINAPI) w32.DWORD = undefined;
+
 fn zgateResumeThread(hThread: w32.HANDLE) linksection(".zgate") callconv(w32.WINAPI) w32.DWORD {
     const do_mask = zgateBegin(.ResumeThread);
-    const ret = w32.ResumeThread(hThread);
+    const ret = zgateResumeThreadPtr(hThread);
     if (do_mask) zgateEnd();
     return ret;
 }
+
+var zgateCreateThreadPtr: *const fn (
+    ?*w32.SECURITY_ATTRIBUTES,
+    w32.SIZE_T,
+    w32.LPTHREAD_START_ROUTINE,
+    ?w32.LPVOID,
+    w32.DWORD,
+    ?*w32.DWORD,
+) callconv(w32.WINAPI) ?w32.HANDLE = undefined;
 
 fn zgateCreateThread(
     lpThreadAttributes: ?*w32.SECURITY_ATTRIBUTES,
@@ -2723,10 +2927,17 @@ fn zgateCreateThread(
     const do_mask = zgateBegin(.CreateThread);
     var ret: ?w32.HANDLE = null;
     if (!do_mask or (dwCreationFlags & w32.CREATE_SUSPENDED) != 0) {
-        ret = w32.CreateThread(lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags, lpThreadId);
+        ret = zgateCreateThreadPtr(
+            lpThreadAttributes,
+            dwStackSize,
+            lpStartAddress,
+            lpParameter,
+            dwCreationFlags,
+            lpThreadId,
+        );
         if (do_mask) zgateEnd();
     } else {
-        ret = w32.CreateThread(
+        ret = zgateCreateThreadPtr(
             lpThreadAttributes,
             dwStackSize,
             lpStartAddress,
@@ -2735,10 +2946,20 @@ fn zgateCreateThread(
             lpThreadId,
         );
         if (do_mask) zgateEnd();
-        if (ret) |h| _ = w32.ResumeThread(h);
+        if (ret) |h| _ = zgateResumeThreadPtr(h);
     }
     return ret;
 }
+
+var zgateCreateRemoteThreadPtr: *const fn (
+    w32.HANDLE,
+    ?*w32.SECURITY_ATTRIBUTES,
+    w32.SIZE_T,
+    w32.LPTHREAD_START_ROUTINE,
+    ?w32.LPVOID,
+    w32.DWORD,
+    ?*w32.DWORD,
+) callconv(w32.WINAPI) ?w32.HANDLE = undefined;
 
 fn zgateCreateRemoteThread(
     hProcess: w32.HANDLE,
@@ -2750,7 +2971,7 @@ fn zgateCreateRemoteThread(
     lpThreadId: ?*w32.DWORD,
 ) linksection(".zgate") callconv(w32.WINAPI) ?w32.HANDLE {
     const do_mask = zgateBegin(.CreateRemoteThread);
-    const ret = w32.CreateRemoteThread(
+    const ret = zgateCreateRemoteThreadPtr(
         hProcess,
         lpThreadAttributes,
         dwStackSize,
