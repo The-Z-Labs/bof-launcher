@@ -15,7 +15,7 @@ pub fn runTests(
         .root_source_file = .{ .cwd_relative = thisDir() ++ "/src/tests.zig" },
         .target = options.target,
         .optimize = options.optimize,
-        //.filter = "load_run",
+        //.filter = "masking",
     });
     tests.addIncludePath(.{ .cwd_relative = thisDir() ++ "/../bof-launcher/src" });
     tests.linkLibrary(bof_launcher_lib);
@@ -45,6 +45,7 @@ pub fn buildTestBofs(
         "test_async",
         "test_obj3",
         "test_obj4",
+        "test_long_running",
     }) |name| {
         const obj = b.addObject(.{
             .name = name,

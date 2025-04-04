@@ -395,6 +395,53 @@ test "bof-launcher.bofs.runAsyncProcess" {
     //std.debug.print("{?s}\n", .{context3.getOutput()});
 }
 
+test "bof-launcher.bofs.masking" {
+    try bof.initLauncher();
+    defer bof.releaseLauncher();
+
+    try bof.memoryMaskWin32ApiCall("all", true);
+
+    const allocator = std.testing.allocator;
+
+    const bof_data1 = try loadBofFromFile(allocator, "zig-out/bin/test_long_running");
+    defer allocator.free(bof_data1);
+
+    const bof_data2 = try loadBofFromFile(allocator, "zig-out/bin/test_obj3");
+    defer allocator.free(bof_data2);
+
+    const object1 = try bof.Object.initFromMemory(bof_data1);
+    defer object1.release();
+
+    const object2 = try bof.Object.initFromMemory(bof_data2);
+    defer object2.release();
+
+    try expect(object1.isValid());
+    try expect(object2.isValid());
+
+    var contexts = std.ArrayList(*bof.Context).init(allocator);
+    defer {
+        for (contexts.items) |ctx| ctx.release();
+        contexts.deinit();
+    }
+
+    for (0..10) |_| {
+        const context = try object1.runAsyncThread(null, null, null);
+        try contexts.append(context);
+    }
+
+    const context2 = try object2.run(null);
+    defer context2.release();
+
+    for (contexts.items) |ctx| ctx.wait();
+
+    try expect(context2.isRunning() == false);
+
+    for (contexts.items) |ctx| {
+        try expect(ctx.getExitCode() == 0);
+    }
+    try expect(context2.getExitCode() == 1);
+}
+
 test "bof-launcher.info" {
     try bof.initLauncher();
     defer bof.releaseLauncher();
