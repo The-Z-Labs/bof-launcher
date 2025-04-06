@@ -2475,7 +2475,7 @@ fn zgateBegin(func: ZGateWin32ApiCall) linksection(zgate_csection) bool {
     }
 
     zgateXorAllocations();
-    zgateMaskAllBofs();
+    zgateXorBofs();
 
     if (gstate.dll.base_address != 0) {
         zgateSetCodeProtect(gstate.dll.text_section, w32.PAGE_READWRITE);
@@ -2492,7 +2492,7 @@ fn zgateEnd() linksection(zgate_csection) void {
     }
 
     zgateXorAllocations();
-    zgateUnmaskAllBofs();
+    zgateXorBofs();
 
     // resume threads
     for (gstate.contexts.items) |ctx| {
@@ -2510,6 +2510,45 @@ fn zgateXorBytes(bytes: []u8) linksection(zgate_csection) void {
     }
 }
 
+fn zgateXorBof(bof: *Bof) linksection(zgate_csection) void {
+    if (bof.is_masked) {
+        for (bof.sections[0..bof.sections_num]) |section| {
+            zgateXorBytes(section.mem);
+        }
+        for (bof.sections[0..bof.sections_num]) |section| {
+            if (section.is_code) zgateSetCodeProtect(section.mem, w32.PAGE_EXECUTE_READ);
+        }
+    } else {
+        for (bof.sections[0..bof.sections_num]) |section| {
+            if (section.is_code) zgateSetCodeProtect(section.mem, w32.PAGE_READWRITE);
+        }
+        for (bof.sections[0..bof.sections_num]) |section| {
+            zgateXorBytes(section.mem);
+        }
+    }
+    bof.is_masked = !bof.is_masked;
+}
+
+fn zgateXorBofs() linksection(zgate_csection) void {
+    for (gstate.bof_pool.bofs) |*bof| {
+        if (bof.is_allocated and bof.is_loaded and bof.masking_enabled) {
+            zgateXorBof(bof);
+        }
+    }
+}
+
+fn zgateXorAllocations() linksection(zgate_csection) void {
+    var it = gstate.allocations.?.iterator();
+    while (it.next()) |kv| {
+        const addr = kv.key_ptr.*;
+        const size = kv.value_ptr.*;
+        const bytes = @as([*]u8, @ptrFromInt(addr))[0..size];
+
+        zgateXorBytes(bytes);
+        if (false) std.debug.print("Alloc mask: 0x{x} {d}\n", .{ addr, bytes.len });
+    }
+}
+
 fn zgateSetCodeProtect(section: []u8, new_protect: w32.DWORD) linksection(zgate_csection) void {
     var res: w32.BOOL = undefined;
     var old_protect: w32.DWORD = undefined;
@@ -2524,54 +2563,6 @@ fn zgateSetCodeProtect(section: []u8, new_protect: w32.DWORD) linksection(zgate_
     if (res == w32.FALSE) {
         zgateOutputDebugStringAPtr("zgateCodeSetProtect: Fatal error. FlushInstructionCache() failed.");
         zgateExitProcessPtr(1);
-    }
-}
-
-fn zgateMaskAllBofs() linksection(zgate_csection) void {
-    for (gstate.bof_pool.bofs) |*bof| {
-        if (bof.is_allocated and bof.is_loaded and !bof.is_masked and bof.masking_enabled) {
-            for (bof.sections[0..bof.sections_num]) |section| {
-                if (section.is_code) {
-                    zgateSetCodeProtect(section.mem, w32.PAGE_READWRITE);
-                }
-            }
-
-            for (bof.sections[0..bof.sections_num]) |section| {
-                zgateXorBytes(section.mem);
-            }
-
-            bof.is_masked = true;
-        }
-    }
-}
-
-fn zgateUnmaskAllBofs() linksection(zgate_csection) void {
-    for (gstate.bof_pool.bofs) |*bof| {
-        if (bof.is_allocated and bof.is_loaded and bof.is_masked and bof.masking_enabled) {
-            for (bof.sections[0..bof.sections_num]) |section| {
-                zgateXorBytes(section.mem);
-            }
-
-            for (bof.sections[0..bof.sections_num]) |section| {
-                if (section.is_code) {
-                    zgateSetCodeProtect(section.mem, w32.PAGE_EXECUTE_READ);
-                }
-            }
-
-            bof.is_masked = false;
-        }
-    }
-}
-
-fn zgateXorAllocations() linksection(zgate_csection) void {
-    var it = gstate.allocations.?.iterator();
-    while (it.next()) |kv| {
-        const addr = kv.key_ptr.*;
-        const size = kv.value_ptr.*;
-        const bytes = @as([*]u8, @ptrFromInt(addr))[0..size];
-
-        zgateXorBytes(bytes);
-        if (false) std.debug.print("Alloc mask: 0x{x} {d}\n", .{ addr, bytes.len });
     }
 }
 
