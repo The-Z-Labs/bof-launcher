@@ -70,7 +70,7 @@ const Bof = struct {
         std.log.debug("Entering go()...", .{});
         const exit_code = bof.entry_point.?(
             if (arg_data) |ad| ad.ptr else null,
-            if (arg_data) |ad| @as(i32, @intCast(ad.len)) else 0,
+            if (arg_data) |ad| @intCast(ad.len) else 0,
         );
         _ = context.exit_code.swap(exit_code, .seq_cst);
         {
@@ -1105,7 +1105,7 @@ const BofPool = struct {
 
         pool.bofs[slot_idx].is_allocated = true;
         return .{
-            .index = @as(u16, @intCast(slot_idx)),
+            .index = @intCast(slot_idx),
             .generation = blk: {
                 pool.generations[slot_idx] += 1;
                 break :blk pool.generations[slot_idx];
@@ -1293,7 +1293,7 @@ export fn bofObjectInitFromMemory(
     const bof_handle = gstate.bof_pool.allocateBofHandle();
     var bof = gstate.bof_pool.getBofPtrIfValid(bof_handle).?;
 
-    bof.load(gstate.allocator.?, file_data_ptr[0..@as(usize, @intCast(file_data_len))]) catch {
+    bof.load(gstate.allocator.?, file_data_ptr[0..@intCast(file_data_len)]) catch {
         std.log.debug("Failed to load BOF. Aborting.", .{});
         return -1;
     };
@@ -1380,7 +1380,7 @@ fn run(
     if (gstate.bof_pool.getBofPtrIfValid(bof_handle)) |bof| {
         bof.run(
             context,
-            if (arg_data_ptr) |ptr| ptr[0..@as(usize, @intCast(arg_data_len))] else null,
+            if (arg_data_ptr) |ptr| ptr[0..@intCast(arg_data_len)] else null,
         );
         out_context.* = @ptrCast(context);
         try gstate.contexts.append(context);
@@ -1407,7 +1407,7 @@ fn runDebug(
     };
     bof.run(
         context,
-        if (arg_data_ptr) |ptr| ptr[0..@as(usize, @intCast(arg_data_len))] else null,
+        if (arg_data_ptr) |ptr| ptr[0..@intCast(arg_data_len)] else null,
     );
     out_context.* = @ptrCast(context);
     context.done_event.set();
