@@ -2574,19 +2574,36 @@ fn zgateXorAllocations() linksection(zgate_csection) void {
 }
 
 fn zgateSetCodeProtect(section: []u8, new_protect: w32.DWORD) linksection(zgate_csection) void {
-    var res: w32.BOOL = undefined;
-    var old_protect: w32.DWORD = undefined;
+    assert(new_protect == w32.PAGE_READWRITE or new_protect == w32.PAGE_EXECUTE_READ);
 
-    res = zgateVirtualProtectPtr(@ptrCast(section.ptr), section.len, new_protect, &old_protect);
-    if (res == w32.FALSE) {
-        zgateOutputDebugStringAPtr("zgateCodeSetProtect: Fatal error. VirtualProtect() failed.");
-        zgateExitProcessPtr(1);
-    }
+    if (@import("builtin").os.tag == .windows) {
+        var res: w32.BOOL = undefined;
+        var old_protect: w32.DWORD = undefined;
 
-    res = zgateFlushInstructionCachePtr(@ptrFromInt(~@as(usize, 0)), section.ptr, section.len);
-    if (res == w32.FALSE) {
-        zgateOutputDebugStringAPtr("zgateCodeSetProtect: Fatal error. FlushInstructionCache() failed.");
-        zgateExitProcessPtr(1);
+        res = zgateVirtualProtectPtr(@ptrCast(section.ptr), section.len, new_protect, &old_protect);
+        if (res == w32.FALSE) {
+            zgateOutputDebugStringAPtr("zgateCodeSetProtect: Fatal error. VirtualProtect() failed.");
+            zgateExitProcessPtr(1);
+        }
+
+        res = zgateFlushInstructionCachePtr(@ptrFromInt(~@as(usize, 0)), section.ptr, section.len);
+        if (res == w32.FALSE) {
+            zgateOutputDebugStringAPtr("zgateCodeSetProtect: Fatal error. FlushInstructionCache() failed.");
+            zgateExitProcessPtr(1);
+        }
+    } else {
+        const ret = linux.mprotect(
+            section.ptr,
+            section.len,
+            if (new_protect == w32.PAGE_EXECUTE_READ)
+                linux.PROT.READ | linux.PROT.EXEC
+            else
+                linux.PROT.READ | linux.PROT.WRITE,
+        );
+        if (ret == std.math.maxInt(usize)) {
+            std.log.err("zgateCodeSetProtect: Fatal error. mprotect() failed.", .{});
+            std.posix.exit(1);
+        }
     }
 }
 
