@@ -26,6 +26,8 @@ const Bof = struct {
 
     is_allocated: bool = false,
     is_loaded: bool = false,
+    is_masked: bool = false,
+    api_masking_enabled: bool = true,
 
     sections_mem: ?[]u8 = null,
     sections: [max_num_sections]BofSection = undefined,
@@ -34,9 +36,6 @@ const Bof = struct {
     entry_point: ?*const fn (arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 = null,
 
     user_externals: std.StringHashMap(usize) = undefined,
-
-    masking_enabled: bool = true,
-    is_masked: bool = false,
 
     fn init() Bof {
         return .{};
@@ -129,8 +128,8 @@ const Bof = struct {
             }
             bof.user_externals.deinit();
 
-            bof.masking_enabled = true;
             bof.is_masked = false;
+            bof.api_masking_enabled = true;
             bof.sections_mem = null;
             bof.entry_point = null;
             bof.is_loaded = false;
@@ -1378,10 +1377,35 @@ fn run(
     }
 
     if (gstate.bof_pool.getBofPtrIfValid(bof_handle)) |bof| {
+        // Mask all other BOFs that are not currently running.
+        for_each_bof: for (gstate.bof_pool.bofs) |*ibof| {
+            if (!ibof.is_allocated or !ibof.is_loaded) continue :for_each_bof;
+
+            if (ibof == bof) continue :for_each_bof;
+
+            // Check if `ibof` is currently running.
+            for (gstate.contexts.items) |ctx| {
+                if (gstate.bof_pool.getBofPtrIfValid(ctx.handle)) |ctx_bof| {
+                    if (ibof == ctx_bof and ctx.done_event.isSet() == false) continue :for_each_bof;
+                }
+            }
+
+            zgateXorBof(ibof);
+            assert(ibof.api_masking_enabled == true);
+            ibof.api_masking_enabled = false; // Already masked so don't mask/unmask on API calls.
+        }
         bof.run(
             context,
             if (arg_data_ptr) |ptr| ptr[0..@intCast(arg_data_len)] else null,
         );
+        // Unmask all masked BOFs.
+        for (gstate.bof_pool.bofs) |*ibof| {
+            if (ibof.is_allocated and ibof.is_loaded and ibof.is_masked) {
+                zgateXorBof(ibof);
+                assert(ibof.api_masking_enabled == false);
+                ibof.api_masking_enabled = true;
+            }
+        }
         out_context.* = @ptrCast(context);
         try gstate.contexts.append(context);
         context.done_event.set();
@@ -2531,7 +2555,7 @@ fn zgateXorBof(bof: *Bof) linksection(zgate_csection) void {
 
 fn zgateXorBofs() linksection(zgate_csection) void {
     for (gstate.bof_pool.bofs) |*bof| {
-        if (bof.is_allocated and bof.is_loaded and bof.masking_enabled) {
+        if (bof.is_allocated and bof.is_loaded and bof.api_masking_enabled) {
             zgateXorBof(bof);
         }
     }

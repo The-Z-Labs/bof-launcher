@@ -432,6 +432,8 @@ test "bof-launcher.bofs.masking" {
     const context2 = try object2.run(null);
     defer context2.release();
 
+    try expect(try bof.run(bof_data2) == 1);
+
     for (contexts.items) |ctx| ctx.wait();
 
     try expect(context2.isRunning() == false);
