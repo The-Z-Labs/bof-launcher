@@ -22,15 +22,13 @@ const BofSection = struct {
 };
 
 const Bof = struct {
-    const max_num_sections = 16;
-
     is_allocated: bool = false,
     is_loaded: bool = false,
     is_masked: bool = false,
     api_masking_enabled: bool = true,
 
     sections_mem: ?[]u8 = null,
-    sections: [max_num_sections]BofSection = undefined,
+    sections: [16]BofSection = undefined,
     sections_num: u32 = 0,
 
     entry_point: ?*const fn (arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 = null,
@@ -185,7 +183,7 @@ const Bof = struct {
         var func_addr_to_got_entry = std.AutoHashMap(usize, u32).init(arena);
         defer func_addr_to_got_entry.deinit();
 
-        assert((section_headers.len + 1) <= max_num_sections);
+        assert((section_headers.len + 1) <= bof.sections.len);
 
         // Start from 1 because 0 is reserved for GOT section.
         bof.sections_num = 1;
@@ -600,7 +598,7 @@ const Bof = struct {
         var func_addr_to_got_entry = std.AutoHashMap(usize, u32).init(arena);
         defer func_addr_to_got_entry.deinit();
 
-        assert((section_headers.items.len + 1) <= max_num_sections);
+        assert((section_headers.items.len + 1) <= bof.sections.len);
 
         // Start from 1 because 0 is reserved for GOT section.
         bof.sections_num = 1;
@@ -2102,8 +2100,8 @@ const gstate = struct {
     var output_contexts: std.AutoHashMap(u32, ?*BofContext) = undefined;
     var output_contexts_mutex: std.Thread.Mutex = .{};
 
-    var mask_key_data: [32]u8 = undefined;
-    var mask_key: []const u8 = mask_key_data[0..13];
+    var mask_key_data: [32]u8 linksection(zgate_dsection) = undefined;
+    var mask_key: []const u8 linksection(zgate_dsection) = mask_key_data[0..13];
     var mask_win32_api: [@typeInfo(ZGateWin32ApiCall).Enum.fields.len]bool = undefined;
 
     var process_id: u32 = 0;
@@ -2116,8 +2114,9 @@ const gstate = struct {
 
     var dll: struct {
         base_address: usize = 0,
-        text_section: []u8 = undefined,
-    } = .{};
+        sections_to_mask: [8]BofSection = undefined,
+        sections_to_mask_num: u32 = 0,
+    } linksection(zgate_dsection) = .{};
 };
 
 fn initLauncher() !void {
@@ -2380,21 +2379,58 @@ fn initLauncher() !void {
     gstate.max_num_external_functions = @divExact(gstate.max_got_section_size, 16);
 
     if (gstate.dll.base_address != 0) {
+        var num_sections: u32 = 0;
+
         const dll_base = gstate.dll.base_address;
+
+        gstate.dll.sections_to_mask[num_sections] = .{
+            .mem = @as([*]u8, @ptrFromInt(dll_base))[0..@sizeOf(w32.IMAGE_DOS_HEADER)],
+            .is_code = false,
+        };
+        num_sections += 1;
+
         const nt_headers_offset: u32 = @intCast(@as(*const w32.IMAGE_DOS_HEADER, @ptrFromInt(dll_base)).e_lfanew);
-        const nt_headers = @as(*const w32.IMAGE_NT_HEADERS, @ptrFromInt(dll_base + nt_headers_offset)).*;
+        const nt_headers: *const w32.IMAGE_NT_HEADERS = @ptrFromInt(dll_base + nt_headers_offset);
+        const nt_headers_size = @offsetOf(w32.IMAGE_NT_HEADERS, "OptionalHeader") +
+            nt_headers.FileHeader.SizeOfOptionalHeader;
+
+        gstate.dll.sections_to_mask[num_sections] = .{
+            .mem = @as([*]u8, @ptrFromInt(dll_base + nt_headers_offset))[0..nt_headers_size],
+            .is_code = false,
+        };
+        num_sections += 1;
 
         const section_headers: [*]const w32.IMAGE_SECTION_HEADER = @ptrFromInt(dll_base + nt_headers_offset +
-            @offsetOf(w32.IMAGE_NT_HEADERS, "OptionalHeader") + nt_headers.FileHeader.SizeOfOptionalHeader);
+            nt_headers_size);
 
         for (0..nt_headers.FileHeader.NumberOfSections) |i| {
             if (std.mem.eql(u8, section_headers[i].Name[0..5], ".text")) {
-                gstate.dll.text_section = @as(
+                const mem: []u8 = @as(
                     [*]u8,
                     @ptrFromInt(dll_base + section_headers[i].VirtualAddress),
                 )[0..section_headers[i].SizeOfRawData];
+
+                gstate.dll.sections_to_mask[num_sections] = .{ .mem = mem, .is_code = true };
+
+                num_sections += 1;
+            } else if (std.mem.eql(u8, section_headers[i].Name[0..6], ".reloc") or
+                std.mem.eql(u8, section_headers[i].Name[0..6], ".rdata") or
+                std.mem.eql(u8, section_headers[i].Name[0..5], ".data") or
+                std.mem.eql(u8, section_headers[i].Name[0..6], ".pdata"))
+            {
+                const mem: []u8 = @as(
+                    [*]u8,
+                    @ptrFromInt(dll_base + section_headers[i].VirtualAddress),
+                )[0..section_headers[i].SizeOfRawData];
+
+                zgateSetCodeProtect(mem, w32.PAGE_READWRITE);
+
+                gstate.dll.sections_to_mask[num_sections] = .{ .mem = mem, .is_code = false };
+
+                num_sections += 1;
             }
         }
+        gstate.dll.sections_to_mask_num = num_sections;
     }
 
     gstate.is_valid = true;
@@ -2502,8 +2538,11 @@ fn zgateBegin(func: ZGateWin32ApiCall) linksection(zgate_csection) bool {
     zgateXorBofs();
 
     if (gstate.dll.base_address != 0) {
-        zgateSetCodeProtect(gstate.dll.text_section, w32.PAGE_READWRITE);
-        zgateXorBytes(gstate.dll.text_section);
+        for (0..gstate.dll.sections_to_mask_num) |i| {
+            const section = &gstate.dll.sections_to_mask[i];
+            if (section.is_code) zgateSetCodeProtect(section.mem, w32.PAGE_READWRITE);
+            zgateXorBytes(section.mem);
+        }
     }
 
     return true;
@@ -2511,8 +2550,11 @@ fn zgateBegin(func: ZGateWin32ApiCall) linksection(zgate_csection) bool {
 
 fn zgateEnd() linksection(zgate_csection) void {
     if (gstate.dll.base_address != 0) {
-        zgateXorBytes(gstate.dll.text_section);
-        zgateSetCodeProtect(gstate.dll.text_section, w32.PAGE_EXECUTE_READ);
+        for (0..gstate.dll.sections_to_mask_num) |i| {
+            const section = &gstate.dll.sections_to_mask[i];
+            zgateXorBytes(section.mem);
+            if (section.is_code) zgateSetCodeProtect(section.mem, w32.PAGE_EXECUTE_READ);
+        }
     }
 
     zgateXorAllocations();
