@@ -1,7 +1,30 @@
 const w32 = @import("bof_api").win32;
+const std = @import("std");
 
 pub fn main() !void {
-    const text_data = @embedFile("shellcode_in_zig_win_x64.bin");
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
+    var cmd_args_iter = try std.process.argsWithAllocator(allocator);
+    defer cmd_args_iter.deinit();
+
+    _ = cmd_args_iter.next() orelse unreachable;
+    const shellcode_file = cmd_args_iter.next() orelse {
+        try usage();
+        return;
+    };
+
+    const file_exe = try std.fs.cwd().openFile(shellcode_file, .{});
+    defer file_exe.close();
+
+    const file_exe_data = try file_exe.reader().readAllAlloc(allocator, 16 * 1024 * 1024);
+    defer allocator.free(file_exe_data);
+
+    // Extract .text section from input executable.
+    const parser = try std.coff.Coff.init(file_exe_data, false);
+    const text_header = parser.getSectionByName(".text") orelse unreachable;
+    const text_data = parser.getSectionData(text_header);
 
     const addr = w32.VirtualAlloc(
         null,
@@ -27,4 +50,14 @@ pub fn main() !void {
 
     // Call our shellcode
     @as(*const fn () callconv(.C) void, @ptrCast(section.ptr))();
+}
+
+fn usage() !void {
+    const stdout = std.io.getStdOut().writer();
+    try stdout.print(
+        \\
+        \\ USAGE:
+        \\      shellcode_launcher <shellcode_exe_file>
+        \\
+    , .{});
 }
