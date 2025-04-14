@@ -234,9 +234,8 @@ pub fn build(
                     }
                     debug_exe.addObject(obj);
                     b.installArtifact(debug_exe);
-                } else {
-                    b.getInstallStep().dependOn(&b.addInstallFile(obj.getEmittedBin(), bin_full_bof_name).step);
                 }
+                b.getInstallStep().dependOn(&b.addInstallFile(obj.getEmittedBin(), bin_full_bof_name).step);
             }
         }
     }
