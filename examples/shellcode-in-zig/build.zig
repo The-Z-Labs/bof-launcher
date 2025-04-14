@@ -32,6 +32,8 @@ pub fn build(
     shellcode_exe.entry = .{ .symbol_name = "wWinMainCRTStartup" };
     shellcode_exe.bundle_compiler_rt = false;
 
+    const dump_text_section = DumpTextSection.create(b, shellcode_exe.getEmittedBin());
+
     const shellcode_launcher_exe = b.addExecutable(.{
         .name = std.mem.join(b.allocator, "_", &.{
             "shellcode_launcher",
@@ -44,11 +46,9 @@ pub fn build(
     });
     shellcode_launcher_exe.root_module.addImport("bof_api", bof_api_module);
 
-    b.installArtifact(shellcode_exe);
-    b.installArtifact(shellcode_launcher_exe);
-
-    const dump_text_section = DumpTextSection.create(b, shellcode_exe.getEmittedBin());
-    shellcode_launcher_exe.step.dependOn(&dump_text_section.step);
+    const install_shellcode_launcher_exe = b.addInstallArtifact(shellcode_launcher_exe, .{});
+    install_shellcode_launcher_exe.step.dependOn(&dump_text_section.step);
+    b.getInstallStep().dependOn(&install_shellcode_launcher_exe.step);
 }
 
 const DumpTextSection = struct {

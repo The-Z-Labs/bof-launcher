@@ -209,6 +209,9 @@ pub fn build(
                     .root_source_file = .{ .cwd_relative = thisDir() ++ "/../bof-launcher/src/bof_launcher_api.zig" },
                 });
 
+                b.getInstallStep().dependOn(&b.addInstallFile(obj.getEmittedBin(), bin_full_bof_name).step);
+
+                // Build debug executable in debug mode.
                 if (bof_optimize == .Debug) {
                     const linux_triple = target.result.linuxTriple(b.allocator) catch unreachable;
                     if (bof_launcher_lib_map.get(linux_triple) == null) continue;
@@ -235,7 +238,6 @@ pub fn build(
                     debug_exe.addObject(obj);
                     b.installArtifact(debug_exe);
                 }
-                b.getInstallStep().dependOn(&b.addInstallFile(obj.getEmittedBin(), bin_full_bof_name).step);
             }
         }
     }
