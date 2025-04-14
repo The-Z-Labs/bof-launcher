@@ -30,8 +30,6 @@ pub fn wWinMainCRTStartup() callconv(.C) void {
     const MessageBoxA: *const fn (?HWND, ?LPCSTR, ?LPCSTR, UINT) callconv(WINAPI) c_int =
         @ptrFromInt(w32_loader.getProcAddress(user32_base, w32_loader.hash_MessageBoxA));
 
-    _ = MessageBoxA(null, null, null, 0);
-
     const VirtualAlloc: *const fn (?LPVOID, SIZE_T, DWORD, DWORD) callconv(WINAPI) ?LPVOID =
         @ptrFromInt(w32_loader.getProcAddress(kernel32_base, w32_loader.hash_VirtualAlloc));
 
@@ -57,7 +55,9 @@ pub fn wWinMainCRTStartup() callconv(.C) void {
     if (mem[64] != 64) _ = MessageBoxA(null, null, null, 0);
     if (mem[128] != 128) _ = MessageBoxA(null, null, null, 0);
 
-    _ = MessageBoxA(null, null, null, 0);
+    _ = MessageBoxA(null, &str_shellcode, &str_example, 0);
 }
 
 const str_user32: [11:0]u8 linksection(".text") = .{ 'u', 's', 'e', 'r', '3', '2', '.', 'd', 'l', 'l', 0 };
+const str_example: [8:0]u8 linksection(".text") = .{ 'e', 'x', 'a', 'm', 'p', 'l', 'e', 0 };
+const str_shellcode: [10:0]u8 linksection(".text") = .{ 's', 'h', 'e', 'l', 'l', 'c', 'o', 'd', 'e', 0 };

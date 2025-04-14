@@ -9,7 +9,8 @@ pub fn main() !void {
     var cmd_args_iter = try std.process.argsWithAllocator(allocator);
     defer cmd_args_iter.deinit();
 
-    _ = cmd_args_iter.next() orelse unreachable;
+    _ = cmd_args_iter.skip(); // skip program name
+
     const shellcode_file = cmd_args_iter.next() orelse {
         try usage();
         return;
