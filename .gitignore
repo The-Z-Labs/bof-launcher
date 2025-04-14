@@ -13,8 +13,7 @@
 !*.py
 !Makefile
 !LICENSE*
-!bofs/src/helloBof.coff.x64.o
-!bofs/src/helloBof.coff.x86.o
+!bofs/src/_embed_manual/*
 
 !*.ini
 !*.txt

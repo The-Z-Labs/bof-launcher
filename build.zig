@@ -8,6 +8,7 @@ pub fn build(b: *std.Build) void {
     ensureZigVersion() catch return;
 
     std.fs.cwd().deleteTree("zig-out") catch {};
+    std.fs.cwd().deleteTree("bofs/src/_embed_generated") catch {};
 
     const supported_targets: []const std.Target.Query = &.{
         .{ .cpu_arch = .x86, .os_tag = .windows, .abi = .gnu },
@@ -45,6 +46,9 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run all tests");
     test_step.dependOn(b.getInstallStep());
 
+    const bof_launcher_lib_step = b.step("bof_launcher_lib", "bof-launcher library build step");
+    b.getInstallStep().dependOn(bof_launcher_lib_step);
+
     var bof_launcher_lib_map = std.StringHashMap(*std.Build.Step.Compile).init(b.allocator);
 
     for (targets_to_build) |target_query| {
@@ -58,7 +62,7 @@ pub fn build(b: *std.Build) void {
         //
         // Bof-launcher library
         //
-        const bof_launcher_lib = @import("bof-launcher/build.zig").build(b, options);
+        const bof_launcher_lib = @import("bof-launcher/build.zig").build(b, bof_launcher_lib_step, options);
 
         bof_launcher_lib_map.put(
             options.target.result.linuxTriple(b.allocator) catch unreachable,
@@ -124,7 +128,14 @@ pub fn build(b: *std.Build) void {
     //
     // BOFs
     //
-    @import("bofs/build.zig").build(b, optimize, bof_launcher_api_module, bof_api_module, bof_launcher_lib_map) catch unreachable;
+    @import("bofs/build.zig").build(
+        b,
+        bof_launcher_lib_step,
+        optimize,
+        bof_launcher_api_module,
+        bof_api_module,
+        bof_launcher_lib_map,
+    ) catch unreachable;
 }
 
 inline fn thisDir() []const u8 {

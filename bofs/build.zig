@@ -82,6 +82,7 @@ const Bof = struct {
 
 pub fn build(
     b: *std.Build,
+    bof_parent_step: *std.Build.Step,
     bof_optimize: std.builtin.Mode,
     bof_launcher_api_module: *std.Build.Module,
     bof_api_module: *std.Build.Module,
@@ -209,12 +210,13 @@ pub fn build(
                     .root_source_file = .{ .cwd_relative = thisDir() ++ "/../bof-launcher/src/bof_launcher_api.zig" },
                 });
 
+                obj.step.dependOn(bof_parent_step);
+
                 b.getInstallStep().dependOn(&b.addInstallFile(obj.getEmittedBin(), bin_full_bof_name).step);
 
                 // Build debug executable in debug mode.
                 if (bof_optimize == .Debug) {
                     const linux_triple = target.result.linuxTriple(b.allocator) catch unreachable;
-                    if (bof_launcher_lib_map.get(linux_triple) == null) continue;
 
                     const full_debug_exe_name = try std.mem.join(
                         b.allocator,

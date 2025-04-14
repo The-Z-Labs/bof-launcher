@@ -31,7 +31,7 @@ pub const Options = struct {
     }
 };
 
-pub fn build(b: *std.Build, options: Options) *std.Build.Step.Compile {
+pub fn build(b: *std.Build, parent_step: *std.Build.Step, options: Options) *std.Build.Step.Compile {
     const static_lib = b.addStaticLibrary(.{
         .name = std.mem.join(b.allocator, "_", &.{
             "bof_launcher",
@@ -50,7 +50,7 @@ pub fn build(b: *std.Build, options: Options) *std.Build.Step.Compile {
         static_lib.linkSystemLibrary2("ole32", .{});
     }
     buildLib(static_lib, options);
-    b.installArtifact(static_lib);
+    parent_step.dependOn(&b.addInstallArtifact(static_lib, .{}).step);
 
     if (options.target.result.cpu.arch != .x86) { // TODO: Shared library fails to build on x86.
         const shared_lib = b.addSharedLibrary(.{
@@ -67,12 +67,17 @@ pub fn build(b: *std.Build, options: Options) *std.Build.Step.Compile {
             // TODO: Remove this
             .link_libc = options.target.result.os.tag == .linux,
         });
+        buildLib(shared_lib, options);
+        parent_step.dependOn(&b.addInstallArtifact(shared_lib, .{}).step);
+
         if (options.target.query.os_tag == .windows) {
             shared_lib.linkSystemLibrary2("ws2_32", .{});
             shared_lib.linkSystemLibrary2("ole32", .{});
+
+            parent_step.dependOn(&b.addInstallArtifact(shared_lib, .{
+                .dest_dir = .{ .override = .{ .custom = "../bofs/src/_embed_generated" } },
+            }).step);
         }
-        buildLib(shared_lib, options);
-        b.installArtifact(shared_lib);
     }
 
     return static_lib;
