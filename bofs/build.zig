@@ -212,8 +212,6 @@ pub fn build(
 
                 obj.step.dependOn(bof_parent_step);
 
-                b.getInstallStep().dependOn(&b.addInstallFile(obj.getEmittedBin(), bin_full_bof_name).step);
-
                 // Build debug executable in debug mode.
                 if (bof_optimize == .Debug) {
                     const linux_triple = target.result.linuxTriple(b.allocator) catch unreachable;
@@ -239,6 +237,8 @@ pub fn build(
                     }
                     debug_exe.addObject(obj);
                     b.installArtifact(debug_exe);
+                } else {
+                    b.getInstallStep().dependOn(&b.addInstallFile(obj.getEmittedBin(), bin_full_bof_name).step);
                 }
             }
         }
