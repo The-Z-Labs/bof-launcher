@@ -1,8 +1,6 @@
 const bofs_included_in_launcher = [_]Bof{
     .{ .name = "helloBof", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    .{ .name = "wProcessInjectionSrdi", .formats = &.{.coff}, .archs = &.{
-        .x64,
-    } },
+    .{ .name = "wProcessInjectionSrdi", .formats = &.{.coff}, .archs = &.{.x64} },
     .{ .name = "runBofFromBof", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "misc", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "udpScanner", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
@@ -153,70 +151,43 @@ pub fn build(
                 }
 
                 const target = b.resolveTargetQuery(Bof.getTargetQuery(format, arch));
-                const obj = switch (lang) {
-                    .@"asm" => unreachable,
-                    .zig => b.addObject(.{
-                        .name = bof.name,
-                        .root_source_file = .{ .cwd_relative = source_file_path },
-                        .target = target,
-                        .optimize = bof_optimize,
-                    }),
-                    .c => blk: {
-                        const obj = b.addObject(.{
-                            .name = bof.name,
-                            // TODO: Zig bug. Remove below line once fixed.
-                            .root_source_file = b.path("tests/src/dummy.zig"),
-                            .target = target,
-                            .optimize = bof_optimize,
-                        });
-                        obj.addCSourceFile(.{
-                            .file = .{ .cwd_relative = source_file_path },
-                            .flags = &.{
-                                "-DBOF", "-D_GNU_SOURCE",
-                                if (arch == .x86 or arch == .x64)
-                                    "-include" ++ thisDir() ++ "/src/force_intel_asm.h"
-                                else
-                                    "",
-                                if (arch == .x86) "-DWOW64" else "",
-                            },
-                        });
-                        if (format == .coff) {
-                            obj.addIncludePath(.{ .cwd_relative = windows_include_dir });
-                        } else if (format == .elf) {
-                            const linux_include_dir = try std.mem.join(
-                                b.allocator,
-                                "",
-                                &.{
-                                    lib_dir,
-                                    "/libc/include/",
-                                    @tagName(target.result.cpu.arch),
-                                    "-linux-",
-                                    @tagName(target.result.abi),
-                                },
-                            );
-                            obj.addIncludePath(.{ .cwd_relative = linux_include_dir });
-                            obj.addIncludePath(.{ .cwd_relative = linux_libc_include_dir });
-                            obj.addIncludePath(.{ .cwd_relative = linux_any_include_dir });
-                        }
-                        break :blk obj;
-                    },
-                };
-                obj.addIncludePath(b.path("include"));
-                obj.root_module.addImport("bof_api", bof_api_module);
-                obj.root_module.pic = true;
-                obj.root_module.single_threaded = true;
-                obj.root_module.strip = if (bof_optimize == .Debug) false else true;
-                obj.root_module.unwind_tables = false;
+                const obj = try addBofObj(
+                    b,
+                    lang,
+                    bof,
+                    source_file_path,
+                    target,
+                    .ReleaseSmall,
+                    format,
+                    arch,
+                    windows_include_dir,
+                    linux_libc_include_dir,
+                    linux_any_include_dir,
+                    lib_dir,
+                    bof_api_module,
+                    bof_parent_step,
+                );
 
-                // Needed for BOFs that launch other BOFs
-                obj.root_module.addAnonymousImport("bof_launcher_api", .{
-                    .root_source_file = .{ .cwd_relative = thisDir() ++ "/../bof-launcher/src/bof_launcher_api.zig" },
-                });
-
-                obj.step.dependOn(bof_parent_step);
+                b.getInstallStep().dependOn(&b.addInstallFile(obj.getEmittedBin(), bin_full_bof_name).step);
 
                 // Build debug executable in debug mode.
                 if (bof_optimize == .Debug) {
+                    const debug_obj = try addBofObj(
+                        b,
+                        lang,
+                        bof,
+                        source_file_path,
+                        target,
+                        .Debug,
+                        format,
+                        arch,
+                        windows_include_dir,
+                        linux_libc_include_dir,
+                        linux_any_include_dir,
+                        lib_dir,
+                        bof_api_module,
+                        bof_parent_step,
+                    );
                     const linux_triple = target.result.linuxTriple(b.allocator) catch unreachable;
 
                     const full_debug_exe_name = try std.mem.join(
@@ -238,14 +209,93 @@ pub fn build(
                         debug_exe.linkSystemLibrary2("ole32", .{});
                         debug_exe.linkSystemLibrary2("kernel32", .{});
                     }
-                    debug_exe.addObject(obj);
+                    debug_exe.addObject(debug_obj);
                     b.installArtifact(debug_exe);
-                } else {
-                    b.getInstallStep().dependOn(&b.addInstallFile(obj.getEmittedBin(), bin_full_bof_name).step);
                 }
             }
         }
     }
+}
+
+fn addBofObj(
+    b: *std.Build,
+    lang: BofLang,
+    bof: Bof,
+    source_file_path: []const u8,
+    target: std.Build.ResolvedTarget,
+    bof_optimize: std.builtin.OptimizeMode,
+    format: BofFormat,
+    arch: BofArch,
+    windows_include_dir: []const u8,
+    linux_libc_include_dir: []const u8,
+    linux_any_include_dir: []const u8,
+    lib_dir: []const u8,
+    bof_api_module: *std.Build.Module,
+    bof_parent_step: *std.Build.Step,
+) !*std.Build.Step.Compile {
+    const obj = switch (lang) {
+        .@"asm" => unreachable,
+        .zig => b.addObject(.{
+            .name = bof.name,
+            .root_source_file = .{ .cwd_relative = source_file_path },
+            .target = target,
+            .optimize = bof_optimize,
+        }),
+        .c => blk: {
+            const obj = b.addObject(.{
+                .name = bof.name,
+                // TODO: Zig bug. Remove below line once fixed.
+                .root_source_file = b.path("tests/src/dummy.zig"),
+                .target = target,
+                .optimize = bof_optimize,
+            });
+            obj.addCSourceFile(.{
+                .file = .{ .cwd_relative = source_file_path },
+                .flags = &.{
+                    "-DBOF", "-D_GNU_SOURCE",
+                    if (arch == .x86 or arch == .x64)
+                        "-include" ++ thisDir() ++ "/src/force_intel_asm.h"
+                    else
+                        "",
+                    if (arch == .x86) "-DWOW64" else "",
+                },
+            });
+            if (format == .coff) {
+                obj.addIncludePath(.{ .cwd_relative = windows_include_dir });
+            } else if (format == .elf) {
+                const linux_include_dir = try std.mem.join(
+                    b.allocator,
+                    "",
+                    &.{
+                        lib_dir,
+                        "/libc/include/",
+                        @tagName(target.result.cpu.arch),
+                        "-linux-",
+                        @tagName(target.result.abi),
+                    },
+                );
+                obj.addIncludePath(.{ .cwd_relative = linux_include_dir });
+                obj.addIncludePath(.{ .cwd_relative = linux_libc_include_dir });
+                obj.addIncludePath(.{ .cwd_relative = linux_any_include_dir });
+            }
+            break :blk obj;
+        },
+    };
+    obj.addIncludePath(b.path("include"));
+    obj.root_module.addImport("bof_api", bof_api_module);
+    obj.root_module.pic = true;
+    obj.root_module.single_threaded = true;
+    obj.root_module.strip = if (bof_optimize == .Debug) false else true;
+    obj.root_module.unwind_tables = false;
+
+    // Needed for BOFs that launch other BOFs
+    obj.root_module.addAnonymousImport("bof_launcher_api", .{
+        .root_source_file = .{ .cwd_relative = thisDir() ++ "/../bof-launcher/src/bof_launcher_api.zig" },
+    });
+
+    obj.step.dependOn(bof_parent_step);
+
+    return obj;
 }
 
 fn generateBofCollectionYaml(
