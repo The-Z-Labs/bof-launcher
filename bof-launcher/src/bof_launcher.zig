@@ -28,7 +28,7 @@ const Bof = struct {
     api_masking_enabled: bool = true,
 
     sections_mem: ?[]u8 = null,
-    sections: [16]BofSection = undefined,
+    sections: [32]BofSection = undefined,
     sections_num: u32 = 0,
 
     entry_point: ?*const fn (arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 = null,
