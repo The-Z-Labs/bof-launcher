@@ -1,5 +1,6 @@
 const std = @import("std");
 const beacon = @import("bof_api").beacon;
+const bof_launcher = @import("bof_launcher_api");
 
 pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     var parser = beacon.datap{};
@@ -189,7 +190,8 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     bootstrap[bootstrap_i] = 0xc3;
     bootstrap_i += 1;
 
-    return 0;
+    const exit_code = bof_launcher.run(bof_data) catch return 250;
+    return exit_code + 5;
 }
 
 const rdi_shellcode64_len = 2772;

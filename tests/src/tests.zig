@@ -628,3 +628,39 @@ test "bof-launcher.getProcAddress" {
     try expect(func("aaa") == 0);
     try expect(func123("bbb") == 123);
 }
+
+test "bof-launcher.wProcessInjectionSrdi" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+    if (@import("builtin").cpu.arch != .x86_64) return error.SkipZigTest;
+
+    const allocator = std.testing.allocator;
+
+    const hello_bof_data = try loadBofFromFile(allocator, "zig-out/bin/helloBof");
+    defer allocator.free(hello_bof_data);
+
+    const srdi_bof_data = try loadBofFromFile(allocator, "zig-out/bin/wProcessInjectionSrdi");
+    defer allocator.free(srdi_bof_data);
+
+    try bof.initLauncher();
+    defer bof.releaseLauncher();
+
+    const srdi_bof_object = try bof.Object.initFromMemory(srdi_bof_data);
+    defer srdi_bof_object.release();
+
+    const args = try bof.Args.init();
+    defer args.release();
+
+    args.begin();
+    {
+        const len_str = try std.fmt.allocPrint(allocator, "i:{d}", .{hello_bof_data.len});
+        defer allocator.free(len_str);
+        try args.add(len_str);
+    }
+    try args.add(std.mem.asBytes(&hello_bof_data.ptr));
+    args.end();
+
+    const context = try srdi_bof_object.run(args.getBuffer());
+    defer context.release();
+
+    try expect(context.getExitCode() == 128);
+}
