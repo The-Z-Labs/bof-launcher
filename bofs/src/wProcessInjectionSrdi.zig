@@ -1,11 +1,19 @@
+const std = @import("std");
 const beacon = @import("bof_api").beacon;
 
 pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     var parser = beacon.datap{};
     beacon.dataParse(&parser, arg_data, arg_len);
 
-    var bof_data_len: i32 = 0;
-    const bof_data = beacon.dataExtract(&parser, &bof_data_len);
+    const bof_data = blk: {
+        const bof_len = beacon.dataInt(&parser);
+
+        // BOF address must be passed like this:
+        // try bof_args.add(std.mem.asBytes(&bof_ptr));
+        const bof_ptr: *const [@sizeOf(usize)]u8 = @ptrCast(beacon.dataExtract(&parser, null));
+
+        break :blk @as([*]const u8, @ptrFromInt(std.mem.readInt(usize, bof_ptr, .little)))[0..@intCast(bof_len)];
+    };
 
     const bof_launcher_bytes = if (@import("builtin").cpu.arch == .x86)
         @embedFile("_embed_generated/bof_launcher_win_x86_shared.dll")
@@ -64,7 +72,6 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     bootstrap_i += 4;
 
     const user_data_location: u32 = @intCast(dll_offset + bof_launcher_bytes.len);
-    _ = bof_data;
 
     // add r8, <offset of the dll> + <length of dll>
     bootstrap[bootstrap_i] = 0x49;
@@ -75,6 +82,8 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     bootstrap_i += 1;
     @memcpy(bootstrap[bootstrap_i..][0..4], @as([*]const u8, @ptrCast(&user_data_location))[0..4]);
     bootstrap_i += 4;
+
+    const bof_data_len: u32 = @intCast(bof_data.len);
 
     // mov r9d, <length of user data>
     bootstrap[bootstrap_i] = 0x41;
