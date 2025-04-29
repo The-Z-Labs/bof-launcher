@@ -25,7 +25,8 @@ const bofs_included_in_launcher = [_]Bof{
     .{ .name = "wInjectionChainStage1A", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{.x64} },
     .{ .name = "wInjectionChainStage2C", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "kmodLoader", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    //.{ .name = "adcs_enum_com2", .srcfile = "entry", .dir = "adcs_enum_com2/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    // so called BOF0 - special purpose BOF that acts as a standalone implant, that uses other BOFs as its post-ex modules:
+    .{ .name = "z-beacon", .formats = &.{.elf, .coff}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
 };
 
 // Additional/3rdparty BOFs for building should be added below
