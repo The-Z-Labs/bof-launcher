@@ -1317,7 +1317,7 @@ export fn bofRun(
     // TODO: For testing.
     if (false) {
         if (@import("builtin").os.tag == .windows) {
-            if (init_res == 0 and run_res == 0 and bof_context.getExitCode() == 1) {
+            if (init_res == 0 and run_res == 0) {
                 const ctx = @as(*BofContext, @ptrCast(@alignCast(bof_context)));
 
                 const user32_dll = w32.LoadLibraryA("user32.dll").?;

