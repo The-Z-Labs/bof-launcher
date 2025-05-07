@@ -18,6 +18,16 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
         break :blk @as([*]const u8, @ptrFromInt(std.mem.readInt(usize, bof_ptr, .little)))[0..@intCast(bof_len)];
     };
 
+    const shellcode_bytes = genShellcode(bof_bytes) catch return 0xff;
+    defer freeShellcode(shellcode_bytes);
+
+    @as(*const fn () callconv(.C) void, @ptrCast(shellcode_bytes.ptr))();
+
+    const exit_code = bof_launcher.run(bof_bytes) catch return 0xff;
+    return exit_code + 5;
+}
+
+fn genShellcode(bof_bytes: []const u8) ![]const u8 {
     const bof_launcher_bytes = if (@import("builtin").cpu.arch == .x86)
         @embedFile("_embed_generated/bof_launcher_win_x86_shared.dll")
     else
@@ -27,8 +37,6 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
         rdi_shellcode32[0..rdi_shellcode32_len]
     else
         rdi_shellcode64[0..rdi_shellcode64_len];
-
-    _ = beacon.printf(0, "ptr: %p len: %d\n%s\n", bof_launcher_bytes.ptr, bof_launcher_bytes.len, rdi_shellcode64);
 
     var bootstrap: [69]u8 = undefined;
     var bootstrap_i: usize = 0;
@@ -60,7 +68,7 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     bootstrap_bytes[bootstrap_i] = 0xc8;
     bootstrap_i += 1;
 
-    const bof_run_hash: u32 = 0x28fe7d78;
+    const bof_run_hash: u32 = 0x28fe7d78; // Hash of "bofRun" string
 
     // mov edx, <hash of function name>
     bootstrap_bytes[bootstrap_i] = 0xba;
@@ -190,8 +198,7 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
         std.heap.page_allocator,
         u8,
         &[_][]const u8{ bootstrap_bytes, rdi_shellcode_bytes, bof_launcher_bytes, bof_bytes },
-    ) catch return 249;
-    defer std.heap.page_allocator.free(shellcode_bytes);
+    ) catch @panic("OOM");
 
     var old_protection: w32.DWORD = 0;
     if (w32.VirtualProtect(
@@ -199,21 +206,22 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
         shellcode_bytes.len,
         w32.PAGE_EXECUTE_READ,
         &old_protection,
-    ) == w32.FALSE) return 248;
+    ) == w32.FALSE) return error.VirtualProtectFailed;
 
     if (w32.VirtualProtect(
         shellcode_bytes.ptr,
         4096,
         w32.PAGE_EXECUTE_READWRITE,
         &old_protection,
-    ) == w32.FALSE) return 247;
+    ) == w32.FALSE) return error.VirtualProtectFailed;
 
     _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), shellcode_bytes.ptr, shellcode_bytes.len);
 
-    @as(*const fn () callconv(.C) void, @ptrCast(shellcode_bytes.ptr))();
+    return shellcode_bytes;
+}
 
-    const exit_code = bof_launcher.run(bof_bytes) catch return 250;
-    return exit_code + 5;
+fn freeShellcode(shellcode_bytes: []const u8) void {
+    std.heap.page_allocator.free(shellcode_bytes);
 }
 
 const rdi_shellcode64_len = 2772;
