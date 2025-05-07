@@ -47,6 +47,16 @@ fn genShellcode(bof_bytes: []const u8) ![]const u8 {
     const bof_data_len: u32 = @intCast(bof_bytes.len);
     const rdi_flags: u32 = 0;
 
+    // RDI shellcode function that bootstrap calls:
+    //
+    // ULONG_PTR LoadDLL(
+    //      PBYTE   pbModule,           // Arg 1
+    //      DWORD   dwFunctionHash,     // Arg 2
+    //      LPVOID  lpUserData,         // Arg 3
+    //      DWORD   dwUserdataLen,      // Arg 4
+    //      PVOID   pvShellcodeBase,    // Arg 5
+    //      DWORD   dwFlags)            // Arg 6
+
     // Pushes next instruction address to stack
     // call 0x5
     try w.writeAll(&.{ 0xe8, 0x00, 0x00, 0x00, 0x00 });
@@ -57,15 +67,18 @@ fn genShellcode(bof_bytes: []const u8) ![]const u8 {
     // mov r8, rcx
     try w.writeAll(&.{ 0x49, 0x89, 0xc8 });
 
+    // Arg 2 (dwFunctionHash)
     // Hash of "bofRun" string
     // mov edx, <hash of function name>
     try w.writeByte(0xba);
     try w.writeInt(u32, 0x28fe7d78, .little);
 
+    // Arg 3 (lpUserData)
     // add r8, <offset of the dll> + <length of dll>
     try w.writeAll(&.{ 0x49, 0x81, 0xc0 });
     try w.writeInt(u32, user_data_location, .little);
 
+    // Arg 4 (dwUserdataLen)
     // mov r9d, <length of user data>
     try w.writeAll(&.{ 0x41, 0xb9 });
     try w.writeInt(u32, bof_data_len, .little);
@@ -84,19 +97,22 @@ fn genShellcode(bof_bytes: []const u8) ![]const u8 {
     // sub rsp, 6 * 8
     try w.writeAll(&.{ 0x48, 0x83, 0xec, 6 * 8 });
 
-    // Shellcode base
+    // Arg 5 (pvShellcodeBase)
     // mov qword ptr [rsp + 4 * 8], rcx
     try w.writeAll(&.{ 0x48, 0x89, 0x4c, 0x24, 4 * 8 });
 
+    // Arg 1 (pbModule)
     // add rcx, <offset of the dll>
     try w.writeAll(&.{ 0x48, 0x81, 0xc1 });
     try w.writeInt(u32, dll_offset, .little);
 
+    // Arg 6 (dwFlags)
     // mov dword ptr [rsp + 5 * 8], <rdi flags>
     try w.writeAll(&.{ 0xc7, 0x44, 0x24, 5 * 8 });
     try w.writeInt(u32, rdi_flags, .little);
 
-    // call - Transfer execution to the RDI
+    // Transfer execution to the RDI
+    // call LoadDLL
     try w.writeByte(0xe8);
     try w.writeAll(&.{ @intCast(@sizeOf(@TypeOf(bootstrap)) - try fbs_bootstrap.getPos() - 4), 0x00, 0x00, 0x00 });
 
