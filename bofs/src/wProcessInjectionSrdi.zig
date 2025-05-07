@@ -39,165 +39,80 @@ fn genShellcode(bof_bytes: []const u8) ![]const u8 {
         rdi_shellcode64[0..rdi_shellcode64_len];
 
     var bootstrap: [69]u8 = undefined;
-    var bootstrap_i: usize = 0;
-    const bootstrap_bytes = bootstrap[0..];
+    var fbs_bootstrap = std.io.fixedBufferStream(bootstrap[0..]);
+    const w = fbs_bootstrap.writer();
 
-    // call 0x5 (pushes next instruction address to stack)
-    bootstrap_bytes[bootstrap_i] = 0xe8;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0x00;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0x00;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0x00;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0x00;
-    bootstrap_i += 1;
-
-    const dll_offset: u32 = @intCast(@sizeOf(@TypeOf(bootstrap)) - bootstrap_i + rdi_shellcode_bytes.len);
-
-    // pop rcx
-    bootstrap_bytes[bootstrap_i] = 0x59;
-    bootstrap_i += 1;
-
-    // mov r8, rcx
-    bootstrap_bytes[bootstrap_i] = 0x49;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0x89;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0xc8;
-    bootstrap_i += 1;
-
-    const bof_run_hash: u32 = 0x28fe7d78; // Hash of "bofRun" string
-
-    // mov edx, <hash of function name>
-    bootstrap_bytes[bootstrap_i] = 0xba;
-    bootstrap_i += 1;
-    @memcpy(bootstrap_bytes[bootstrap_i..][0..4], @as([*]const u8, @ptrCast(&bof_run_hash))[0..4]);
-    bootstrap_i += 4;
-
+    const dll_offset: u32 = @intCast(@sizeOf(@TypeOf(bootstrap)) - 5 + rdi_shellcode_bytes.len);
     const user_data_location: u32 = @intCast(dll_offset + bof_launcher_bytes.len);
-
-    // add r8, <offset of the dll> + <length of dll>
-    bootstrap_bytes[bootstrap_i] = 0x49;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0x81;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0xc0;
-    bootstrap_i += 1;
-    @memcpy(bootstrap_bytes[bootstrap_i..][0..4], @as([*]const u8, @ptrCast(&user_data_location))[0..4]);
-    bootstrap_i += 4;
-
     const bof_data_len: u32 = @intCast(bof_bytes.len);
-
-    // mov r9d, <length of user data>
-    bootstrap_bytes[bootstrap_i] = 0x41;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0xb9;
-    bootstrap_i += 1;
-    @memcpy(bootstrap_bytes[bootstrap_i..][0..4], @as([*]const u8, @ptrCast(&bof_data_len))[0..4]);
-    bootstrap_i += 4;
-
-    // push rsi
-    bootstrap_bytes[bootstrap_i] = 0x56;
-    bootstrap_i += 1;
-
-    // mov rsi, rsp
-    bootstrap_bytes[bootstrap_i] = 0x48;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0x89;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0xe6;
-    bootstrap_i += 1;
-
-    // and rsp, 0x0FFFFFFFFFFFFFFF0 (align the stack to 16 bytes)
-    bootstrap_bytes[bootstrap_i] = 0x48;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0x83;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0xe4;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0xf0;
-    bootstrap_i += 1;
-
-    // sub rsp, 0x30 (create some breathing room on the stack)
-    bootstrap_bytes[bootstrap_i] = 0x48;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0x83;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0xec;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 6 * 8; // 32 bytes for shadow space + 16 bytes for last args
-    bootstrap_i += 1;
-
-    // mov qword ptr [rsp + 0x20], rcx (shellcode base) - Push in arg 5
-    bootstrap_bytes[bootstrap_i] = 0x48;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0x89;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0x4c;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0x24;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 4 * 8;
-    bootstrap_i += 1;
-
-    // add rcx, <offset of the dll>
-    bootstrap_bytes[bootstrap_i] = 0x48;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0x81;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0xc1;
-    bootstrap_i += 1;
-    @memcpy(bootstrap_bytes[bootstrap_i..][0..4], @as([*]const u8, @ptrCast(&dll_offset))[0..4]);
-    bootstrap_i += 4;
-
     const rdi_flags: u32 = 0;
 
-    // mov dword ptr [rsp + 0x28], <Flags> - Push arg 6 just above shadow space
-    bootstrap_bytes[bootstrap_i] = 0xc7;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0x44;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0x24;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 5 * 8;
-    bootstrap_i += 1;
-    @memcpy(bootstrap_bytes[bootstrap_i..][0..4], @as([*]const u8, @ptrCast(&rdi_flags))[0..4]);
-    bootstrap_i += 4;
+    // Pushes next instruction address to stack
+    // call 0x5
+    try w.writeAll(&.{ 0xe8, 0x00, 0x00, 0x00, 0x00 });
+
+    // pop rcx
+    try w.writeByte(0x59);
+
+    // mov r8, rcx
+    try w.writeAll(&.{ 0x49, 0x89, 0xc8 });
+
+    // Hash of "bofRun" string
+    // mov edx, <hash of function name>
+    try w.writeByte(0xba);
+    try w.writeInt(u32, 0x28fe7d78, .little);
+
+    // add r8, <offset of the dll> + <length of dll>
+    try w.writeAll(&.{ 0x49, 0x81, 0xc0 });
+    try w.writeInt(u32, user_data_location, .little);
+
+    // mov r9d, <length of user data>
+    try w.writeAll(&.{ 0x41, 0xb9 });
+    try w.writeInt(u32, bof_data_len, .little);
+
+    // push rsi
+    try w.writeByte(0x56);
+
+    // mov rsi, rsp
+    try w.writeAll(&.{ 0x48, 0x89, 0xe6 });
+
+    // Align stack to 16 bytes
+    // and rsp, -16
+    try w.writeAll(&.{ 0x48, 0x83, 0xe4, 0xf0 });
+
+    // Shadow space (4 * 8) + two args (2 * 8)
+    // sub rsp, 6 * 8
+    try w.writeAll(&.{ 0x48, 0x83, 0xec, 6 * 8 });
+
+    // Shellcode base
+    // mov qword ptr [rsp + 4 * 8], rcx
+    try w.writeAll(&.{ 0x48, 0x89, 0x4c, 0x24, 4 * 8 });
+
+    // add rcx, <offset of the dll>
+    try w.writeAll(&.{ 0x48, 0x81, 0xc1 });
+    try w.writeInt(u32, dll_offset, .little);
+
+    // mov dword ptr [rsp + 5 * 8], <rdi flags>
+    try w.writeAll(&.{ 0xc7, 0x44, 0x24, 5 * 8 });
+    try w.writeInt(u32, rdi_flags, .little);
 
     // call - Transfer execution to the RDI
-    bootstrap_bytes[bootstrap_i] = 0xe8;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = @intCast(@sizeOf(@TypeOf(bootstrap)) - bootstrap_i - 4); // Skip over the remainder of instructions
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0x00;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0x00;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0x00;
-    bootstrap_i += 1;
+    try w.writeByte(0xe8);
+    try w.writeAll(&.{ @intCast(@sizeOf(@TypeOf(bootstrap)) - try fbs_bootstrap.getPos() - 4), 0x00, 0x00, 0x00 });
 
-    // mov rsp, rsi - Reset our original stack pointer
-    bootstrap_bytes[bootstrap_i] = 0x48;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0x89;
-    bootstrap_i += 1;
-    bootstrap_bytes[bootstrap_i] = 0xf4;
-    bootstrap_i += 1;
+    // mov rsp, rsi
+    try w.writeAll(&.{ 0x48, 0x89, 0xf4 });
 
-    // pop rsi - Put things back where we left them
-    bootstrap_bytes[bootstrap_i] = 0x5e;
-    bootstrap_i += 1;
+    // pop rsi
+    try w.writeByte(0x5e);
 
-    // ret - return to caller
-    bootstrap_bytes[bootstrap_i] = 0xc3;
-    bootstrap_i += 1;
+    // ret
+    try w.writeByte(0xc3);
 
     const shellcode_bytes = std.mem.concat(
         std.heap.page_allocator,
         u8,
-        &[_][]const u8{ bootstrap_bytes, rdi_shellcode_bytes, bof_launcher_bytes, bof_bytes },
+        &[_][]const u8{ fbs_bootstrap.getWritten(), rdi_shellcode_bytes, bof_launcher_bytes, bof_bytes },
     ) catch @panic("OOM");
 
     var old_protection: w32.DWORD = 0;
