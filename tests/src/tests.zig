@@ -651,12 +651,18 @@ test "bof-launcher.wProcessInjectionSrdi" {
     defer args.release();
 
     args.begin();
+    // BOF bytes len
     {
         const len_str = try std.fmt.allocPrint(allocator, "i:{d}", .{hello_bof_data.len});
         defer allocator.free(len_str);
         try args.add(len_str);
     }
+    // BOF bytes pointer
     try args.add(std.mem.asBytes(&hello_bof_data.ptr));
+    // PID
+    try args.add("i:0");
+    // Optional: -dumpbin (dump final shellcode to disk)
+    try args.add("-dumpbin");
     args.end();
 
     const context = try srdi_bof_object.run(args.getBuffer());

