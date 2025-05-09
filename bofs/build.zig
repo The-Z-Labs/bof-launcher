@@ -26,7 +26,7 @@ const bofs_included_in_launcher = [_]Bof{
     .{ .name = "wInjectionChainStage2C", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "kmodLoader", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     // so called BOF0 - special purpose BOF that acts as a standalone implant, that uses other BOFs as its post-ex modules:
-    .{ .name = "z-beacon", .formats = &.{.elf, .coff}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+    .{ .name = "z-beacon", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
 };
 
 // Additional/3rdparty BOFs for building should be added below
@@ -170,6 +170,12 @@ pub fn build(
                 );
 
                 b.getInstallStep().dependOn(&b.addInstallFile(obj.getEmittedBin(), bin_full_bof_name).step);
+
+                if (format == .elf and arch == .x64 and std.mem.eql(u8, bof.name, "z-beacon")) {
+                    b.getInstallStep().dependOn(&b.addInstallArtifact(obj, .{
+                        .dest_dir = .{ .override = .{ .custom = "../examples/implant/src/_embed_generated" } },
+                    }).step);
+                }
 
                 // Build debug executable in debug mode.
                 if (bof_optimize == .Debug) {

