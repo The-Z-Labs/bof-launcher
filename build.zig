@@ -107,12 +107,14 @@ pub fn build(b: *std.Build) void {
         //
         // Examples: implant
         //
-        @import("examples/implant/build.zig").build(
-            b,
-            options,
-            bof_launcher_lib,
-            bof_launcher_api_module,
-        );
+        if (false) {
+            @import("examples/implant/build.zig").build(
+                b,
+                options,
+                bof_launcher_lib,
+                bof_launcher_api_module,
+            );
+        }
 
         // TODO: Compiler bug? Looks like all tests pass but test runner reports
         // error.
