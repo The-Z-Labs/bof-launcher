@@ -104,18 +104,6 @@ pub fn build(b: *std.Build) void {
         //
         @import("examples/integration-with-c/build.zig").build(b, options, bof_launcher_lib);
 
-        //
-        // Examples: implant
-        //
-        if (false) {
-            @import("examples/implant/build.zig").build(
-                b,
-                options,
-                bof_launcher_lib,
-                bof_launcher_api_module,
-            );
-        }
-
         // TODO: Compiler bug? Looks like all tests pass but test runner reports
         // error.
         if (options.target.result.cpu.arch == .x86 and
@@ -135,6 +123,16 @@ pub fn build(b: *std.Build) void {
             bof_launcher_api_module,
             bof_api_module,
         ).step);
+
+        //
+        // Examples: implant
+        //
+        @import("examples/implant/build.zig").build(
+            b,
+            options,
+            bof_launcher_lib,
+            bof_launcher_api_module,
+        );
     }
 
     //
