@@ -17,6 +17,29 @@ pub fn build(
     if (options.target.query.os_tag == .linux) {
 
         //
+        // building executable
+        //
+        const exe = b.addExecutable(.{
+            .name = std.mem.join(b.allocator, "_", &.{
+                "implant-executable",
+                options.osTagStr(),
+                options.cpuArchStr(),
+            }) catch @panic("OOM"),
+            .root_source_file = .{ .cwd_relative = home_path ++ "src/main.zig" },
+            .target = options.target,
+            .optimize = options.optimize,
+        });
+
+        exe.linkLibrary(bof_launcher_lib);
+        exe.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
+
+        b.getInstallStep().dependOn(&b.addInstallArtifact(exe, .{
+            .dest_dir = .{ .override = .{ .custom = "../" ++ home_path ++ "src/_embed_generated" } },
+        }).step);
+
+        b.installArtifact(exe);
+
+        //
         // building shellcode
         //
         const name = std.mem.join(b.allocator, "_", &.{
@@ -51,28 +74,5 @@ pub fn build(
         );
         b.getInstallStep().dependOn(&install_step.step);
         b.installArtifact(shellcode);
-
-        //
-        // building executable
-        //
-        const exe = b.addExecutable(.{
-            .name = std.mem.join(b.allocator, "_", &.{
-                "implant-executable",
-                options.osTagStr(),
-                options.cpuArchStr(),
-            }) catch @panic("OOM"),
-            .root_source_file = .{ .cwd_relative = home_path ++ "src/main.zig" },
-            .target = options.target,
-            .optimize = options.optimize,
-        });
-
-        exe.linkLibrary(bof_launcher_lib);
-        exe.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
-
-        b.getInstallStep().dependOn(&b.addInstallArtifact(exe, .{
-            .dest_dir = .{ .override = .{ .custom = "../" ++ home_path ++ "src/_embed_generated" } },
-        }).step);
-
-        b.installArtifact(exe);
     }
 }
