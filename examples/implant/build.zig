@@ -11,6 +11,7 @@ pub fn build(
     options: Options,
     bof_launcher_lib: *std.Build.Step.Compile,
     bof_launcher_api_module: *std.Build.Module,
+    bof0_step: *std.Build.Step,
 ) void {
     if (options.target.query.cpu_arch != .x86_64) return;
 
@@ -32,6 +33,8 @@ pub fn build(
 
         exe.linkLibrary(bof_launcher_lib);
         exe.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
+
+        exe.step.dependOn(bof0_step);
 
         b.getInstallStep().dependOn(&b.addInstallArtifact(exe, .{
             .dest_dir = .{ .override = .{ .custom = "../" ++ home_path ++ "src/_embed_generated" } },
@@ -62,6 +65,8 @@ pub fn build(
         shellcode.use_llvm = true;
         shellcode.pie = true;
         shellcode.setLinkerScript(b.path("examples/shellcode-in-zig/src/linker.ld"));
+
+        shellcode.step.dependOn(&exe.step);
 
         const copied = b.addObjCopy(shellcode.getEmittedBin(), .{
             .format = .bin,

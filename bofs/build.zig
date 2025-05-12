@@ -89,7 +89,7 @@ pub fn build(
     bof_launcher_api_module: *std.Build.Module,
     bof_api_module: *std.Build.Module,
     bof_launcher_lib_map: std.StringHashMap(*std.Build.Step.Compile),
-) !void {
+) !*std.Build.Step.Compile {
     var bofs_to_build = std.ArrayList(Bof).init(b.allocator);
     defer bofs_to_build.deinit();
 
@@ -102,6 +102,8 @@ pub fn build(
     const parsed_str = try std.json.parseFromSlice(ZigEnv, b.allocator, zig_env, .{ .ignore_unknown_fields = true });
     defer parsed_str.deinit();
     const lib_dir = parsed_str.value.lib_dir;
+
+    var bof0: *std.Build.Step.Compile = undefined;
 
     try addBofsToBuild(&bofs_to_build);
 
@@ -172,6 +174,7 @@ pub fn build(
                 b.getInstallStep().dependOn(&b.addInstallFile(obj.getEmittedBin(), bin_full_bof_name).step);
 
                 if (format == .elf and arch == .x64 and std.mem.eql(u8, bof.name, "z-beacon")) {
+                    bof0 = obj;
                     b.getInstallStep().dependOn(&b.addInstallArtifact(obj, .{
                         .dest_dir = .{ .override = .{ .custom = "../examples/implant/src/_embed_generated" } },
                     }).step);
@@ -222,6 +225,8 @@ pub fn build(
             }
         }
     }
+
+    return bof0;
 }
 
 fn addBofObj(
