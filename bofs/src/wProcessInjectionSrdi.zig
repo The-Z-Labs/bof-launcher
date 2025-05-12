@@ -42,6 +42,11 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     return exit_code + 5;
 }
 
+const RDI_FLAG_CLEARHEADER = 0x1;
+const RDI_FLAG_CLEARMEMORY = 0x2;
+const RDI_FLAG_OBFUSCATEIMPORTS = 0x4;
+const RDI_FLAG_PASS_SHELLCODE_BASE = 0x8;
+
 fn genShellcode(bof_bytes: []const u8) ![]const u8 {
     const bof_launcher_bytes = if (@import("builtin").cpu.arch == .x86)
         @embedFile("_embed_generated/bof_launcher_win_x86_shared.dll")
@@ -60,7 +65,7 @@ fn genShellcode(bof_bytes: []const u8) ![]const u8 {
     const dll_offset: u32 = @intCast(@sizeOf(@TypeOf(bootstrap)) - 5 + rdi_shellcode_bytes.len);
     const user_data_location: u32 = @intCast(dll_offset + bof_launcher_bytes.len);
     const bof_data_len: u32 = @intCast(bof_bytes.len);
-    const rdi_flags: u32 = 0;
+    const rdi_flags: u32 = RDI_FLAG_CLEARHEADER;
 
     // RDI shellcode function that bootstrap calls:
     //
@@ -70,7 +75,7 @@ fn genShellcode(bof_bytes: []const u8) ![]const u8 {
     //      LPVOID  lpUserData,         // Arg 3
     //      DWORD   dwUserdataLen,      // Arg 4
     //      PVOID   pvShellcodeBase,    // Arg 5
-    //      DWORD   dwFlags)            // Arg 6
+    //      DWORD   dwFlags)            // Arg 6 (RDI_FLAG_*)
 
     // Pushes next instruction address to stack
     // call 0x5
