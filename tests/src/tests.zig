@@ -660,7 +660,7 @@ test "bof-launcher.wProcessInjectionSrdi" {
     // BOF bytes pointer
     try args.add(std.mem.asBytes(&hello_bof_data.ptr));
     // PID
-    try args.add("i:0");
+    try args.add("i:-1");
     // Optional: -dumpbin (dump final shellcode to disk)
     try args.add("-dumpbin");
     args.end();
@@ -668,5 +668,5 @@ test "bof-launcher.wProcessInjectionSrdi" {
     const context = try srdi_bof_object.run(args.getBuffer());
     defer context.release();
 
-    try expect(context.getExitCode() == 128);
+    try expect(context.getExitCode() == 0);
 }

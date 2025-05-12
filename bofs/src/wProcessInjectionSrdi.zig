@@ -19,7 +19,6 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     };
 
     const pid = beacon.dataInt(&parser);
-    _ = pid;
 
     const dumpbin = blk: {
         if (beacon.dataLength(&parser) != 0) {
@@ -31,15 +30,36 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
         }
         break :blk false;
     };
-    _ = dumpbin;
 
     const shellcode_bytes = genShellcode(bof_bytes) catch return 0xff;
     defer freeShellcode(shellcode_bytes);
 
-    @as(*const fn () callconv(.C) void, @ptrCast(shellcode_bytes.ptr))();
+    if (dumpbin) {
+        // ...
+    }
 
-    const exit_code = bof_launcher.run(bof_bytes) catch return 0xff;
-    return exit_code + 5;
+    // PID 0 is Windows idle process
+    if (pid == 0) {
+        return 0;
+    }
+
+    // PID -1 is current process
+    if (pid == -1) {
+        @as(*const fn () callconv(.C) void, @ptrCast(shellcode_bytes.ptr))();
+        return 0;
+    }
+
+    const process = w32.OpenProcess(
+        w32.PROCESS_VM_READ | w32.PROCESS_VM_WRITE | w32.PROCESS_CREATE_THREAD,
+        w32.FALSE,
+        @bitCast(pid),
+    ) orelse return 0xff;
+    defer _ = w32.CloseHandle(process);
+
+    //const exit_code = bof_launcher.run(bof_bytes) catch return 0xff;
+    //return exit_code + 5;
+
+    return 0;
 }
 
 const RDI_FLAG_CLEARHEADER = 0x1;

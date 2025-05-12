@@ -1250,7 +1250,7 @@ export fn bofArgsAdd(args: *pubapi.Args, arg: [*]const u8, arg_size: c_int) call
         params.length -= 1;
         params.buffer.? += @as(usize, @intCast(1));
     } else if (std.mem.eql(u8, sArg_type, "int") or std.mem.eql(u8, sArg_type, "i")) {
-        const numArg = std.fmt.parseUnsigned(u32, sArg, 10) catch return -1;
+        const numArg = std.fmt.parseInt(i32, sArg, 10) catch return -1;
 
         std.log.debug("Int param: {s} {d}", .{ sArg, sArg.len });
 
@@ -1261,7 +1261,7 @@ export fn bofArgsAdd(args: *pubapi.Args, arg: [*]const u8, arg_size: c_int) call
         params.length -= 4;
         params.buffer.? += 4;
     } else if (std.mem.eql(u8, sArg_type, "short") or std.mem.eql(u8, sArg_type, "s")) {
-        const numArg = std.fmt.parseUnsigned(u16, sArg, 10) catch return -1;
+        const numArg = std.fmt.parseInt(i16, sArg, 10) catch return -1;
 
         std.log.debug("Short param: {s} {d}", .{ sArg, sArg.len });
 
@@ -2745,13 +2745,13 @@ var zgateOpenProcessPtr: *const fn (
     w32.DWORD,
     w32.BOOL,
     w32.DWORD,
-) callconv(w32.WINAPI) w32.HANDLE linksection(zgate_dsection) = undefined;
+) callconv(w32.WINAPI) ?w32.HANDLE linksection(zgate_dsection) = undefined;
 
 var zgateOpenThreadPtr: *const fn (
     w32.DWORD,
     w32.BOOL,
     w32.DWORD,
-) callconv(w32.WINAPI) w32.HANDLE linksection(zgate_dsection) = undefined;
+) callconv(w32.WINAPI) ?w32.HANDLE linksection(zgate_dsection) = undefined;
 
 var zgateWriteProcessMemoryPtr: *const fn (
     w32.HANDLE,
@@ -2965,7 +2965,7 @@ fn zgateOpenProcess(
     dwDesiredAccess: w32.DWORD,
     bInheritHandle: w32.BOOL,
     dwProcessId: w32.DWORD,
-) linksection(zgate_csection) callconv(w32.WINAPI) w32.HANDLE {
+) linksection(zgate_csection) callconv(w32.WINAPI) ?w32.HANDLE {
     const do_mask = zgateBegin(.OpenProcess);
     const ret = zgateOpenProcessPtr(dwDesiredAccess, bInheritHandle, dwProcessId);
     if (do_mask) zgateEnd();
@@ -2976,7 +2976,7 @@ fn zgateOpenThread(
     dwDesiredAccess: w32.DWORD,
     bInheritHandle: w32.BOOL,
     dwThreadId: w32.DWORD,
-) linksection(zgate_csection) callconv(w32.WINAPI) w32.HANDLE {
+) linksection(zgate_csection) callconv(w32.WINAPI) ?w32.HANDLE {
     const do_mask = zgateBegin(.OpenProcess);
     const ret = zgateOpenThreadPtr(dwDesiredAccess, bInheritHandle, dwThreadId);
     if (do_mask) zgateEnd();

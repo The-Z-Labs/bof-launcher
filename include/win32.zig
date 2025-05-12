@@ -85,8 +85,9 @@ pub const STANDARD_RIGHTS_WRITE = READ_CONTROL;
 pub const STANDARD_RIGHTS_EXECUTE = READ_CONTROL;
 
 pub const PROCESS_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0xffff;
-pub const PROCESS_VM_OPERATION = 0x0008;
 pub const PROCESS_CREATE_THREAD = 0x0002;
+pub const PROCESS_VM_OPERATION = 0x0008;
+pub const PROCESS_VM_READ = 0x0010;
 pub const PROCESS_VM_WRITE = 0x0020;
 
 pub const JOB_OBJECT_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0x3F;
@@ -463,13 +464,13 @@ pub extern "kernel32" fn OpenProcess(
     dwDesiredAccess: DWORD,
     bInheritHandle: BOOL,
     dwProcessId: DWORD,
-) callconv(WINAPI) HANDLE;
+) callconv(WINAPI) ?HANDLE;
 
 pub extern "kernel32" fn OpenThread(
     dwDesiredAccess: DWORD,
     bInheritHandle: BOOL,
     dwThreadId: DWORD,
-) callconv(WINAPI) HANDLE;
+) callconv(WINAPI) ?HANDLE;
 
 pub extern "kernel32" fn WriteProcessMemory(
     hProcess: HANDLE,
