@@ -65,7 +65,7 @@ fn genShellcode(bof_bytes: []const u8) ![]const u8 {
     const dll_offset: u32 = @intCast(@sizeOf(@TypeOf(bootstrap)) - 5 + rdi_shellcode_bytes.len);
     const user_data_location: u32 = @intCast(dll_offset + bof_launcher_bytes.len);
     const bof_data_len: u32 = @intCast(bof_bytes.len);
-    const rdi_flags: u32 = RDI_FLAG_CLEARHEADER;
+    const rdi_flags: u32 = 0; // No flags
 
     // RDI shellcode function that bootstrap calls:
     //
@@ -154,19 +154,12 @@ fn genShellcode(bof_bytes: []const u8) ![]const u8 {
     var old_protection: w32.DWORD = 0;
     if (w32.VirtualProtect(
         shellcode_bytes.ptr,
-        shellcode_bytes.len,
-        w32.PAGE_EXECUTE_READ,
-        &old_protection,
-    ) == w32.FALSE) return error.VirtualProtectFailed;
-
-    if (w32.VirtualProtect(
-        shellcode_bytes.ptr,
         4096,
-        w32.PAGE_EXECUTE_READWRITE,
+        w32.PAGE_EXECUTE_READ, // TODO: Do we need PAGE_EXECUTE_READWRITE? Verify in the debugger.
         &old_protection,
     ) == w32.FALSE) return error.VirtualProtectFailed;
 
-    _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), shellcode_bytes.ptr, shellcode_bytes.len);
+    _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), shellcode_bytes.ptr, 4096);
 
     return shellcode_bytes;
 }
