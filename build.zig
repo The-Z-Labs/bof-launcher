@@ -51,6 +51,18 @@ pub fn build(b: *std.Build) void {
 
     var bof_launcher_lib_map = std.StringHashMap(*std.Build.Step.Compile).init(b.allocator);
 
+    //
+    // BOFs
+    //
+    const bof0 = @import("bofs/build.zig").build(
+        b,
+        bof_launcher_lib_step,
+        optimize,
+        bof_launcher_api_module,
+        bof_api_module,
+        bof_launcher_lib_map,
+    ) catch unreachable;
+
     for (targets_to_build) |target_query| {
         const options = Options{ .target = b.resolveTargetQuery(target_query), .optimize = optimize };
 
@@ -104,6 +116,17 @@ pub fn build(b: *std.Build) void {
         //
         @import("examples/integration-with-c/build.zig").build(b, options, bof_launcher_lib);
 
+        //
+        // Examples: Linux implant
+        //
+        @import("examples/implant/build.zig").build(
+            b,
+            options,
+            bof_launcher_lib,
+            bof_launcher_api_module,
+            &bof0.step,
+        );
+
         // TODO: Compiler bug? Looks like all tests pass but test runner reports
         // error.
         if (options.target.result.cpu.arch == .x86 and
@@ -123,29 +146,7 @@ pub fn build(b: *std.Build) void {
             bof_launcher_api_module,
             bof_api_module,
         ).step);
-
-        //
-        // Examples: implant
-        //
-        @import("examples/implant/build.zig").build(
-            b,
-            options,
-            bof_launcher_lib,
-            bof_launcher_api_module,
-        );
     }
-
-    //
-    // BOFs
-    //
-    @import("bofs/build.zig").build(
-        b,
-        bof_launcher_lib_step,
-        optimize,
-        bof_launcher_api_module,
-        bof_api_module,
-        bof_launcher_lib_map,
-    ) catch unreachable;
 }
 
 inline fn thisDir() []const u8 {
