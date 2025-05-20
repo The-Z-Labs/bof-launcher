@@ -155,7 +155,7 @@ pub fn build(b: *std.Build) !void {
                 if (format == .coff and arch == .aarch64) continue;
                 if (format == .coff and arch == .arm) continue;
 
-                const full_bof_name = Bof.fullName(b.allocator, bof.name, format, arch, .ReleaseSmall);
+                const full_name = Bof.fullName(b.allocator, bof.name, format, arch, .ReleaseSmall);
 
                 if (lang == .@"asm") {
                     // We provide fasm binaries only for x86.
@@ -166,9 +166,9 @@ pub fn build(b: *std.Build) !void {
                         thisDir() ++ "/../bin/fasm" ++ if (@import("builtin").os.tag == .windows) ".exe" else "",
                     });
                     run_fasm.addFileArg(b.path(source_file_path));
-                    const output_path = run_fasm.addOutputFileArg(full_bof_name);
+                    const output_path = run_fasm.addOutputFileArg(full_name);
 
-                    b.getInstallStep().dependOn(&b.addInstallBinFile(output_path, full_bof_name).step);
+                    b.getInstallStep().dependOn(&b.addInstallBinFile(output_path, full_name).step);
 
                     continue; // This is all we need to do in case of asm BOF. Continue to the next BOF.
                 }
@@ -187,7 +187,7 @@ pub fn build(b: *std.Build) !void {
 
                 const obj = try addBofObj(
                     b,
-                    full_bof_name,
+                    full_name,
                     lang,
                     source_file_path,
                     target,
@@ -203,15 +203,18 @@ pub fn build(b: *std.Build) !void {
                 );
                 b.getInstallStep().dependOn(&b.addInstallArtifact(
                     obj,
-                    .{ .dest_dir = .{ .override = .bin } },
+                    .{
+                        .dest_dir = .{ .override = .bin },
+                        .dest_sub_path = b.fmt("{s}.o", .{full_name}),
+                    },
                 ).step);
 
                 // Build debug executable from a BOF.
                 if (bof_optimize == .Debug) {
-                    const debug_name = Bof.fullName(b.allocator, bof.name, format, arch, .Debug);
+                    const full_name_debug = Bof.fullName(b.allocator, bof.name, format, arch, .Debug);
                     const debug_obj = try addBofObj(
                         b,
-                        debug_name,
+                        full_name_debug,
                         lang,
                         source_file_path,
                         target,
@@ -227,7 +230,7 @@ pub fn build(b: *std.Build) !void {
                     );
                     const debug_exe = b.addExecutable(.{
                         .root_source_file = b.path("src/_debug_entry.zig"),
-                        .name = debug_name,
+                        .name = full_name_debug,
                         .target = target,
                         .optimize = .Debug,
                     });

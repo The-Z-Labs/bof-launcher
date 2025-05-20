@@ -42,16 +42,20 @@ pub fn build(b: *std.Build) !void {
                 if (format == .coff and arch == .aarch64) continue;
                 if (format == .coff and arch == .arm) continue;
 
-                const obj = bofs_dep.artifact(@import("bof_launcher_bofs").Bof.fullName(
+                const full_name = @import("bof_launcher_bofs").Bof.fullName(
                     b.allocator,
                     bof.name,
                     format,
                     arch,
                     .ReleaseSmall,
-                ));
+                );
+                const obj = bofs_dep.artifact(full_name);
                 b.getInstallStep().dependOn(&b.addInstallArtifact(
                     obj,
-                    .{ .dest_dir = .{ .override = .bin } },
+                    .{
+                        .dest_dir = .{ .override = .bin },
+                        .dest_sub_path = b.fmt("{s}.o", .{full_name}),
+                    },
                 ).step);
 
                 if (optimize == .Debug) {
@@ -112,20 +116,14 @@ pub fn build(b: *std.Build) !void {
         // bof stager
         {
             const dep = b.dependency("bof_stager", .{ .target = target, .optimize = optimize });
-            const exe = dep.artifact(b.fmt(
-                "bof_stager_{s}_{s}",
-                .{ osTagStr(target), cpuArchStr(target) },
-            ));
+            const exe = dep.artifact(b.fmt("bof_stager_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }));
             b.installArtifact(exe);
         }
 
         // process injection chain
         if (target.result.os.tag == .windows) {
             const dep = b.dependency("process_injection_chain", .{ .target = target, .optimize = optimize });
-            const exe = dep.artifact(b.fmt(
-                "process_injection_chain_{s}_{s}",
-                .{ osTagStr(target), cpuArchStr(target) },
-            ));
+            const exe = dep.artifact(b.fmt("process_injection_chain_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }));
             b.installArtifact(exe);
         }
 
