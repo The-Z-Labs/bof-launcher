@@ -1,11 +1,11 @@
 .{
-    .name = "bof-launcher",
+    .name = "bof_launcher",
     .version = "1.0.0",
     .paths = .{
         "build.zig",
         "build.zig.zon",
-        "bof-launcher",
         "include",
+        "bof-launcher",
         "bofs",
         "examples",
         "tests",
@@ -13,5 +13,28 @@
         "bin",
         "LICENSE",
         "README.md",
+    },
+    .dependencies = .{
+        .bof_launcher_lib = .{
+            .path = "bof-launcher",
+        },
+        .bof_launcher_bofs = .{
+            .path = "bofs",
+        },
+        .integration_with_c = .{
+            .path = "examples/integration-with-c",
+        },
+        .bof_stager = .{
+            .path = "examples/BOF-stager",
+        },
+        .process_injection_chain = .{
+            .path = "examples/process-injection-chain",
+        },
+        .shellcode_in_zig = .{
+            .path = "examples/shellcode-in-zig",
+        },
+        .implant = .{
+            .path = "examples/implant",
+        },
     },
 }

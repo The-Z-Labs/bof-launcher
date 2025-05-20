@@ -1,0 +1,18 @@
+.{
+    .name = "process_injection_chain",
+    .version = "1.0.0",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "README.md",
+    },
+    .dependencies = .{
+        .bof_launcher_lib = .{
+            .path = "../../bof-launcher",
+        },
+        .bof_launcher_bofs = .{
+            .path = "../../bofs",
+        },
+    },
+}

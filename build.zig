@@ -2,13 +2,10 @@ const std = @import("std");
 
 pub const min_zig_version = std.SemanticVersion{ .major = 0, .minor = 13, .patch = 0 };
 
-const Options = @import("bof-launcher/build.zig").Options;
-
-pub fn build(b: *std.Build) void {
+pub fn build(b: *std.Build) !void {
     ensureZigVersion() catch return;
 
     std.fs.cwd().deleteTree("zig-out") catch {};
-    std.fs.cwd().deleteTree("bofs/src/_embed_generated") catch {};
 
     const supported_targets: []const std.Target.Query = &.{
         .{ .cpu_arch = .x86, .os_tag = .windows, .abi = .gnu },
@@ -26,131 +23,192 @@ pub fn build(b: *std.Build) void {
 
     const std_target = b.standardTargetOptions(.{ .whitelist = supported_targets });
     const optimize = b.option(
-        std.builtin.Mode,
+        std.builtin.OptimizeMode,
         "optimize",
         "Prioritize performance, safety, or binary size (-O flag)",
     ) orelse .ReleaseSmall;
-
-    const bof_api_module = b.addModule("bof_api", .{
-        .root_source_file = b.path("include/bof_api.zig"),
-    });
-    const bof_launcher_api_module = b.addModule("bof_launcher_api", .{
-        .root_source_file = b.path("bof-launcher/src/bof_launcher_api.zig"),
-    });
 
     const targets_to_build: []const std.Target.Query = if (b.user_input_options.contains("target"))
         &.{std_target.query}
     else
         supported_targets;
 
-    const test_step = b.step("test", "Run all tests");
-    test_step.dependOn(b.getInstallStep());
+    const bofs_dep = b.dependency("bof_launcher_bofs", .{ .optimize = optimize });
 
-    const bof_launcher_lib_step = b.step("bof_launcher_lib", "bof-launcher library build step");
-    b.getInstallStep().dependOn(bof_launcher_lib_step);
+    // Install BOFs
+    for (@import("bof_launcher_bofs").bofs_to_build) |bof| {
+        for (bof.formats) |format| {
+            for (bof.archs) |arch| {
+                if (format == .coff and arch == .aarch64) continue;
+                if (format == .coff and arch == .arm) continue;
 
-    var bof_launcher_lib_map = std.StringHashMap(*std.Build.Step.Compile).init(b.allocator);
+                const obj = bofs_dep.artifact(@import("bof_launcher_bofs").Bof.fullName(
+                    b.allocator,
+                    bof.name,
+                    format,
+                    arch,
+                    .ReleaseSmall,
+                ));
+                b.getInstallStep().dependOn(&b.addInstallArtifact(
+                    obj,
+                    .{ .dest_dir = .{ .override = .bin } },
+                ).step);
 
-    //
-    // BOFs
-    //
-    const bof0 = @import("bofs/build.zig").build(
-        b,
-        bof_launcher_lib_step,
-        optimize,
-        bof_launcher_api_module,
-        bof_api_module,
-        bof_launcher_lib_map,
-    ) catch unreachable;
+                if (optimize == .Debug) {
+                    const debug_exe = bofs_dep.artifact(@import("bof_launcher_bofs").Bof.fullName(
+                        b.allocator,
+                        bof.name,
+                        format,
+                        arch,
+                        .Debug,
+                    ));
+                    b.installArtifact(debug_exe);
+                }
+            }
+        }
+    }
 
+    // Install bof launcher library
     for (targets_to_build) |target_query| {
-        const options = Options{ .target = b.resolveTargetQuery(target_query), .optimize = optimize };
+        const target = b.resolveTargetQuery(target_query);
 
-        //
-        // Build test BOFs
-        //
-        @import("tests/build.zig").buildTestBofs(b, options, bof_api_module);
-
-        //
-        // Bof-launcher library
-        //
-        const bof_launcher_lib = @import("bof-launcher/build.zig").build(b, bof_launcher_lib_step, options);
-
-        bof_launcher_lib_map.put(
-            options.target.result.linuxTriple(b.allocator) catch unreachable,
-            bof_launcher_lib,
-        ) catch unreachable;
-
-        //
-        // Examples: BOF stager
-        //
-        @import("examples/BOF-stager/build.zig").build(
-            b,
-            options,
-            bof_launcher_lib,
-            bof_launcher_api_module,
+        const bof_launcher_dep = b.dependency(
+            "bof_launcher_lib",
+            .{ .target = target, .optimize = optimize },
         );
 
-        //
-        // Examples: process injection chain
-        //
-        @import("examples/process-injection-chain/build.zig").build(
-            b,
-            options,
-            bof_launcher_lib,
-            bof_launcher_api_module,
-            bof_api_module,
+        _ = bof_launcher_dep.module("bof_launcher_api");
+
+        const bof_launcher_lib = bof_launcher_dep.artifact(
+            @import("bof_launcher_lib").libFileName(b.allocator, target, .static),
         );
+        b.installArtifact(bof_launcher_lib);
 
-        //
-        // Examples: shellcode in zig
-        //
-        @import("examples/shellcode-in-zig/build.zig").build(
-            b,
-            options,
-            bof_api_module,
-        );
+        if (target.result.cpu.arch != .x86) { // TODO: Shared library fails to build on x86.
+            const bof_launcher_shared_lib = bof_launcher_dep.artifact(
+                @import("bof_launcher_lib").libFileName(b.allocator, target, .dynamic),
+            );
+            b.installArtifact(bof_launcher_shared_lib);
+        }
+    }
 
-        //
-        // Examples: integration with c
-        //
-        @import("examples/integration-with-c/build.zig").build(b, options, bof_launcher_lib);
+    const osTagStr = @import("bof_launcher_lib").osTagStr;
+    const cpuArchStr = @import("bof_launcher_lib").cpuArchStr;
 
-        //
-        // Examples: Linux implant
-        //
-        @import("examples/implant/build.zig").build(
-            b,
-            options,
-            bof_launcher_lib,
-            bof_launcher_api_module,
-            &bof0.step,
-        );
+    // Install examples
+    for (targets_to_build) |target_query| {
+        const target = b.resolveTargetQuery(target_query);
 
-        // TODO: Compiler bug? Looks like all tests pass but test runner reports
-        // error.
-        if (options.target.result.cpu.arch == .x86 and
-            options.target.result.os.tag == .linux and
-            optimize == .ReleaseSmall)
+        // integration with c
         {
-            continue;
+            const dep = b.dependency("integration_with_c", .{ .target = target, .optimize = optimize });
+            const exe = dep.artifact(b.fmt(
+                "integration_with_c_{s}_{s}",
+                .{ osTagStr(target), cpuArchStr(target) },
+            ));
+            b.installArtifact(exe);
         }
 
-        //
-        // Run test BOFs (`zig build test`)
-        //
-        test_step.dependOn(&@import("tests/build.zig").runTests(
-            b,
-            options,
-            bof_launcher_lib,
-            bof_launcher_api_module,
-            bof_api_module,
-        ).step);
-    }
-}
+        // bof stager
+        {
+            const dep = b.dependency("bof_stager", .{ .target = target, .optimize = optimize });
+            const exe = dep.artifact(b.fmt(
+                "bof_stager_{s}_{s}",
+                .{ osTagStr(target), cpuArchStr(target) },
+            ));
+            b.installArtifact(exe);
+        }
 
-inline fn thisDir() []const u8 {
-    return comptime std.fs.path.dirname(@src().file) orelse ".";
+        // process injection chain
+        if (target.result.os.tag == .windows) {
+            const dep = b.dependency("process_injection_chain", .{ .target = target, .optimize = optimize });
+            const exe = dep.artifact(b.fmt(
+                "process_injection_chain_{s}_{s}",
+                .{ osTagStr(target), cpuArchStr(target) },
+            ));
+            b.installArtifact(exe);
+        }
+
+        // shellcode in zig
+        if (target.result.cpu.arch == .x86_64) {
+            const dep = b.dependency("shellcode_in_zig", .{ .target = target, .optimize = optimize });
+            const shellcode_launcher_exe = dep.artifact(b.fmt(
+                "shellcode_launcher_{s}_{s}",
+                .{ osTagStr(target), cpuArchStr(target) },
+            ));
+            b.installArtifact(shellcode_launcher_exe);
+
+            const shellcode_name = b.fmt("shellcode_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) });
+            const shellcode_exe = dep.artifact(shellcode_name);
+            b.installArtifact(shellcode_exe);
+
+            if (target.result.os.tag == .linux) {
+                const copy = b.addObjCopy(shellcode_exe.getEmittedBin(), .{ .format = .bin, .only_section = ".text" });
+                const install = b.addInstallBinFile(copy.getOutput(), b.fmt("{s}.bin", .{shellcode_name}));
+                b.getInstallStep().dependOn(&install.step);
+            }
+        }
+
+        // implant
+        if (target.result.os.tag == .linux and target.result.cpu.arch == .x86_64) {
+            const dep = b.dependency("implant", .{ .target = target, .optimize = optimize });
+            const implant_exe = dep.artifact(b.fmt(
+                "implant_executable_{s}_{s}",
+                .{ osTagStr(target), cpuArchStr(target) },
+            ));
+            b.installArtifact(implant_exe);
+
+            const shellcode_name = b.fmt("implant_shellcode_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) });
+            const shellcode_exe = dep.artifact(shellcode_name);
+            b.installArtifact(shellcode_exe);
+
+            const copy = b.addObjCopy(shellcode_exe.getEmittedBin(), .{ .format = .bin, .only_section = ".text" });
+            const install = b.addInstallBinFile(copy.getOutput(), b.fmt("{s}.bin", .{shellcode_name}));
+            b.getInstallStep().dependOn(&install.step);
+        }
+    }
+
+    // Build, install and run tests
+    const test_step = b.step("test", "Run all tests");
+
+    for (targets_to_build) |target_query| {
+        const target = b.resolveTargetQuery(target_query);
+
+        const bof_launcher_dep = b.dependency(
+            "bof_launcher_lib",
+            .{ .target = target, .optimize = optimize },
+        );
+        const bof_launcher_api_module = bof_launcher_dep.module("bof_launcher_api");
+
+        const bof_launcher_lib = bof_launcher_dep.artifact(
+            @import("bof_launcher_lib").libFileName(b.allocator, target, .static),
+        );
+
+        const bof_api_module = bofs_dep.module("bof_api");
+
+        const tests = b.addTest(.{
+            .name = "bof-launcher-tests",
+            .root_source_file = bofs_dep.path("src/tests/tests.zig"),
+            .target = target,
+            .optimize = optimize,
+            //.filter = "masking",
+        });
+        tests.addIncludePath(bof_launcher_dep.path("src"));
+        tests.linkLibrary(bof_launcher_lib);
+        tests.addCSourceFile(.{
+            .file = bofs_dep.path("src/tests/tests.c"),
+            .flags = &.{"-std=c99"},
+        });
+        tests.linkLibC();
+        tests.root_module.addImport("bof_api", bof_api_module);
+        tests.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
+
+        const run_step = b.addRunArtifact(tests);
+        run_step.skip_foreign_checks = true;
+        run_step.step.dependOn(b.getInstallStep());
+
+        test_step.dependOn(&run_step.step);
+    }
 }
 
 fn ensureZigVersion() !void {

@@ -1,0 +1,14 @@
+.{
+    .name = "bof_launcher_lib",
+    .version = "1.0.0",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+    .dependencies = .{
+        .bof_launcher_win32 = .{
+            .path = "../win32-api",
+        },
+    },
+}

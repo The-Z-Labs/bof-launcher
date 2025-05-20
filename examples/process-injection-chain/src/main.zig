@@ -169,7 +169,7 @@ fn usage() !void {
     try stdout.print(
         \\
         \\ USAGE:
-        \\      simple_chain <PID>
+        \\      process_injection_chain <PID>
         \\ ARGS:
         \\      <PID>       Remote process ID.
         \\ 

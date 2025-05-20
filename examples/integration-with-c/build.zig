@@ -1,34 +1,35 @@
 const std = @import("std");
 
-const Options = @import("../../bof-launcher/build.zig").Options;
+pub fn build(b: *std.Build) void {
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
 
-pub fn build(
-    b: *std.Build,
-    options: Options,
-    bof_launcher_lib: *std.Build.Step.Compile,
-) void {
+    const bof_launcher_dep = b.dependency(
+        "bof_launcher_lib",
+        .{ .target = target, .optimize = optimize },
+    );
+    const bof_launcher_lib = bof_launcher_dep.artifact(
+        @import("bof_launcher_lib").libFileName(b.allocator, target, .static),
+    );
+
     const exe = b.addExecutable(.{
-        .name = std.mem.join(b.allocator, "_", &.{
-            "integration_with_c",
-            options.osTagStr(),
-            options.cpuArchStr(),
-        }) catch @panic("OOM"),
-        .target = options.target,
-        .optimize = options.optimize,
+        .name = b.fmt(
+            "integration_with_c_{s}_{s}",
+            .{
+                @import("bof_launcher_lib").osTagStr(target),
+                @import("bof_launcher_lib").cpuArchStr(target),
+            },
+        ),
+        .target = target,
+        .optimize = optimize,
     });
-
-    exe.addIncludePath(.{ .cwd_relative = thisDir() ++ "/../../bof-launcher/src" });
+    exe.addIncludePath(bof_launcher_dep.path("src"));
     exe.addCSourceFile(.{
-        .file = .{ .cwd_relative = thisDir() ++ "/main.c" },
+        .file = b.path("main.c"),
         .flags = &.{"-std=c99"},
     });
-
     exe.linkLibrary(bof_launcher_lib);
     exe.linkLibC();
 
     b.installArtifact(exe);
-}
-
-inline fn thisDir() []const u8 {
-    return comptime std.fs.path.dirname(@src().file) orelse ".";
 }

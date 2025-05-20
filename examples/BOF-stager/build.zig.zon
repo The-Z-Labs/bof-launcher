@@ -1,0 +1,15 @@
+.{
+    .name = "bof_stager",
+    .version = "1.0.0",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "README.md",
+    },
+    .dependencies = .{
+        .bof_launcher_lib = .{
+            .path = "../../bof-launcher",
+        },
+    },
+}

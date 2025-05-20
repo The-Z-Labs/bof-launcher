@@ -1,103 +1,101 @@
 const std = @import("std");
 
-pub const Options = struct {
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.Mode,
+pub fn build(b: *std.Build) void {
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
 
-    pub fn osTagStr(options: Options) []const u8 {
-        return switch (options.target.result.os.tag) {
-            .windows => "win",
-            .linux => "lin",
-            else => unreachable,
-        };
-    }
+    _ = b.addModule("bof_launcher_api", .{
+        .root_source_file = b.path("src/bof_launcher_api.zig"),
+    });
 
-    pub fn cpuArchStr(options: Options) []const u8 {
-        return switch (options.target.result.cpu.arch) {
-            .x86_64 => "x64",
-            .x86 => "x86",
-            .aarch64 => "aarch64",
-            .arm => "arm",
-            else => unreachable,
-        };
-    }
+    const win32_dep = b.dependency("bof_launcher_win32", .{});
+    const win32_module = win32_dep.module("bof_launcher_win32");
 
-    pub fn objFormatStr(options: Options) []const u8 {
-        return switch (options.target.result.os.tag) {
-            .windows => "coff",
-            .linux => "elf",
-            else => unreachable,
-        };
-    }
-};
-
-pub fn build(b: *std.Build, parent_step: *std.Build.Step, options: Options) *std.Build.Step.Compile {
     const static_lib = b.addStaticLibrary(.{
-        .name = std.mem.join(b.allocator, "_", &.{
-            "bof_launcher",
-            options.osTagStr(),
-            options.cpuArchStr(),
-        }) catch @panic("OOM"),
-        .root_source_file = .{ .cwd_relative = thisDir() ++ "/src/bof_launcher.zig" },
-        .target = options.target,
-        .optimize = options.optimize,
+        .name = libFileName(b.allocator, target, .static),
+        .root_source_file = b.path("src/bof_launcher.zig"),
+        .target = target,
+        .optimize = optimize,
 
         // TODO: Remove this
-        .link_libc = options.target.result.os.tag == .linux,
+        .link_libc = target.result.os.tag == .linux,
     });
-    if (options.target.query.os_tag == .windows) {
-        static_lib.linkSystemLibrary2("ws2_32", .{});
-        static_lib.linkSystemLibrary2("ole32", .{});
-    }
-    buildLib(static_lib, options);
-    parent_step.dependOn(&b.addInstallArtifact(static_lib, .{}).step);
+    static_lib.root_module.addImport("bof_launcher_win32", win32_module);
+    buildLib(b, static_lib, target, optimize);
 
-    if (options.target.result.cpu.arch != .x86) { // TODO: Shared library fails to build on x86.
+    if (target.result.cpu.arch != .x86) { // TODO: Shared library fails to build on x86.
         const shared_lib = b.addSharedLibrary(.{
-            .name = std.mem.join(b.allocator, "_", &.{
-                "bof_launcher",
-                options.osTagStr(),
-                options.cpuArchStr(),
-                "shared",
-            }) catch @panic("OOM"),
-            .root_source_file = .{ .cwd_relative = thisDir() ++ "/src/bof_launcher.zig" },
-            .target = options.target,
-            .optimize = options.optimize,
+            .name = libFileName(b.allocator, target, .dynamic),
+            .root_source_file = b.path("src/bof_launcher.zig"),
+            .target = target,
+            .optimize = optimize,
 
             // TODO: Remove this
-            .link_libc = options.target.result.os.tag == .linux,
+            .link_libc = target.result.os.tag == .linux,
         });
-        buildLib(shared_lib, options);
-        parent_step.dependOn(&b.addInstallArtifact(shared_lib, .{}).step);
-
-        if (options.target.query.os_tag == .windows) {
-            shared_lib.linkSystemLibrary2("ws2_32", .{});
-            shared_lib.linkSystemLibrary2("ole32", .{});
-
-            parent_step.dependOn(&b.addInstallArtifact(shared_lib, .{
-                .dest_dir = .{ .override = .{ .custom = "../bofs/src/_embed_generated" } },
-            }).step);
-        }
+        shared_lib.root_module.addImport("bof_launcher_win32", win32_module);
+        buildLib(b, shared_lib, target, optimize);
     }
-
-    return static_lib;
 }
 
-fn buildLib(lib: *std.Build.Step.Compile, options: Options) void {
+fn buildLib(
+    b: *std.Build,
+    lib: *std.Build.Step.Compile,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.Mode,
+) void {
     lib.root_module.pic = true;
-    if (options.optimize == .ReleaseSmall) {
+    if (optimize == .ReleaseSmall) {
         lib.root_module.unwind_tables = false;
     }
     lib.addCSourceFile(.{
-        .file = .{ .cwd_relative = thisDir() ++ "/src/beacon/beacon_impl.c" },
+        .file = b.path("src/beacon/beacon_impl.c"),
         .flags = &.{"-std=c99"},
     });
     lib.addCSourceFile(.{
-        .file = .{ .cwd_relative = thisDir() ++ "/src/beacon/stb_sprintf.c" },
+        .file = b.path("src/beacon/stb_sprintf.c"),
         .flags = &.{ "-std=c99", "-fno-sanitize=undefined" },
     });
+    if (target.query.os_tag == .windows) {
+        lib.linkSystemLibrary2("ws2_32", .{});
+        lib.linkSystemLibrary2("ole32", .{});
+    }
+    b.installArtifact(lib);
 }
 
-inline fn thisDir() []const u8 {
-    return comptime std.fs.path.dirname(@src().file) orelse ".";
+pub fn osTagStr(target: std.Build.ResolvedTarget) []const u8 {
+    return switch (target.result.os.tag) {
+        .windows => "win",
+        .linux => "lin",
+        else => unreachable,
+    };
+}
+
+pub fn cpuArchStr(target: std.Build.ResolvedTarget) []const u8 {
+    return switch (target.result.cpu.arch) {
+        .x86_64 => "x64",
+        .x86 => "x86",
+        .aarch64 => "aarch64",
+        .arm => "arm",
+        else => unreachable,
+    };
+}
+
+pub fn libFileName(
+    allocator: std.mem.Allocator,
+    target: std.Build.ResolvedTarget,
+    linkage: std.builtin.LinkMode,
+) []const u8 {
+    if (linkage == .dynamic) {
+        return std.mem.join(
+            allocator,
+            "_",
+            &.{ "bof_launcher", osTagStr(target), cpuArchStr(target), "shared" },
+        ) catch @panic("OOM");
+    }
+    return std.mem.join(
+        allocator,
+        "_",
+        &.{ "bof_launcher", osTagStr(target), cpuArchStr(target) },
+    ) catch @panic("OOM");
 }

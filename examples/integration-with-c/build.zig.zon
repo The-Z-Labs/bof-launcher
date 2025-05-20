@@ -1,0 +1,16 @@
+.{
+    .name = "integration_with_c",
+    .version = "1.0.0",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "main.c",
+        "Makefile",
+        "make.bat",
+    },
+    .dependencies = .{
+        .bof_launcher_lib = .{
+            .path = "../../bof-launcher",
+        },
+    },
+}

@@ -68,10 +68,7 @@ const RDI_FLAG_OBFUSCATEIMPORTS = 0x4;
 const RDI_FLAG_PASS_SHELLCODE_BASE = 0x8;
 
 fn genShellcode(bof_bytes: []const u8) ![]const u8 {
-    const bof_launcher_bytes = if (@import("builtin").cpu.arch == .x86)
-        @embedFile("_embed_generated/bof_launcher_win_x86_shared.dll")
-    else
-        @embedFile("_embed_generated/bof_launcher_win_x64_shared.dll");
+    const bof_launcher_bytes = @embedFile("bof_launcher_lib_embed");
 
     const rdi_shellcode_bytes = if (@import("builtin").cpu.arch == .x86)
         rdi_shellcode32[0..rdi_shellcode32_len]

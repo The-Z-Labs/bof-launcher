@@ -1872,7 +1872,7 @@ export fn bofContextGetOutput(context: *BofContext, len: ?*c_int) callconv(.C) ?
     return @ptrCast(context.output.items.ptr);
 }
 
-const w32 = @import("win32.zig");
+const w32 = @import("bof_launcher_win32");
 const linux = std.os.linux;
 
 const thunk_offset = switch (@import("builtin").cpu.arch) {

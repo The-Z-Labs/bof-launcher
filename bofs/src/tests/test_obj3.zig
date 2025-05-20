@@ -8,6 +8,11 @@ extern fn @"kernel32$VirtualFree"(
     dwFreeType: w32.DWORD,
 ) callconv(w32.WINAPI) w32.BOOL;
 
+const VirtualFree = if (@import("builtin").mode == .Debug)
+    w32.VirtualFree
+else
+    @"kernel32$VirtualFree";
+
 extern fn malloc(usize) callconv(.C) ?*anyopaque;
 extern fn free(?*anyopaque) callconv(.C) void;
 
@@ -46,7 +51,7 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
 
             mem[100] += 10;
 
-            _ = @"kernel32$VirtualFree"(addr, 0, w32.MEM_RELEASE);
+            _ = VirtualFree(addr, 0, w32.MEM_RELEASE);
 
             if (mem[100] != 133) return 155;
         }
@@ -77,7 +82,7 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
             if (mem.?[30] != 3) return 254;
             if (mem.?[90] != 7) return 254;
 
-            _ = @"kernel32$VirtualFree"(addr, 0, w32.MEM_RELEASE);
+            _ = VirtualFree(addr, 0, w32.MEM_RELEASE);
 
             if (mem.?[10] != 1) return 252;
             if (mem.?[20] != 2) return 252;

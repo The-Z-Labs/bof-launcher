@@ -2,7 +2,7 @@ const std = @import("std");
 const assert = std.debug.assert;
 const bof = @import("bof_launcher_api");
 
-const bof_raw = @embedFile("_embed_generated/z-beacon.o");
+const bof_raw = @embedFile("z_beacon_embed");
 
 pub fn main() noreturn {
 

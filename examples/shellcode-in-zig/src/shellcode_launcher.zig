@@ -1,4 +1,4 @@
-const w32 = @import("bof_api").win32;
+const w32 = @import("bof_launcher_win32");
 const std = @import("std");
 
 pub fn main() !void {

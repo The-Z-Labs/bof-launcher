@@ -3,7 +3,7 @@ const std = @import("std");
 const main = @import("main");
 const bof_launcher = @import("bof_launcher_api");
 
-const exe_raw = @embedFile("_embed_generated/implant-executable_lin_x64");
+const exe_raw = @embedFile("implant_executable_embed");
 
 pub export fn _start() linksection(".startup") callconv(.Naked) noreturn {
     asm volatile (switch (builtin.cpu.arch) {

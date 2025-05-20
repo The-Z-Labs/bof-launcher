@@ -1,0 +1,21 @@
+.{
+    .name = "implant",
+    .version = "1.0.0",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "README.md",
+    },
+    .dependencies = .{
+        .bof_launcher_lib = .{
+            .path = "../../bof-launcher",
+        },
+        .bof_launcher_bofs = .{
+            .path = "../../bofs",
+        },
+        .shellcode_in_zig = .{
+            .path = "../shellcode-in-zig",
+        },
+    },
+}
