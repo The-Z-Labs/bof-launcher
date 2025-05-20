@@ -38,12 +38,13 @@ fn testRunBofFromFile(
 
     const allocator = gpa.allocator();
 
+    const os = @import("builtin").os.tag;
     const pathname = try std.mem.join(allocator, ".", &.{
         bof_path,
         if (@import("builtin").os.tag == .windows) "coff" else "elf",
         switch (@import("builtin").cpu.arch) {
-            .x86_64 => "x64.obj",
-            .x86 => "x86.obj",
+            .x86_64 => if (os == .windows) "x64.obj" else "x64.o",
+            .x86 => if (os == .windows) "x86.obj" else "x86.o",
             .aarch64 => "aarch64.o",
             .arm => "arm.o",
             else => unreachable,
@@ -59,12 +60,13 @@ fn testRunBofFromFile(
 }
 
 fn loadBofFromFile(allocator: std.mem.Allocator, bof_name: [:0]const u8) ![]u8 {
+    const os = @import("builtin").os.tag;
     const pathname = try std.mem.join(allocator, ".", &.{
         bof_name,
-        if (@import("builtin").os.tag == .windows) "coff" else "elf",
+        if (os == .windows) "coff" else "elf",
         switch (@import("builtin").cpu.arch) {
-            .x86_64 => "x64.obj",
-            .x86 => "x86.obj",
+            .x86_64 => if (os == .windows) "x64.obj" else "x64.o",
+            .x86 => if (os == .windows) "x86.obj" else "x86.o",
             .aarch64 => "aarch64.o",
             .arm => "arm.o",
             else => unreachable,
