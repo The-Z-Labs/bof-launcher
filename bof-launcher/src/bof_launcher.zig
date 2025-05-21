@@ -951,13 +951,6 @@ const Bof = struct {
                                 @as(*align(1) usize, @ptrFromInt(addr_p)).* =
                                     @as(usize, @intCast(@as(u64, @bitCast(@as(i64, @intCast(addr_s)) + addend))));
                             },
-                            10, 11 => {
-                                // R_X86_64_32, S + A
-                                // R_X86_64_32S, S + A
-
-                                @as(*align(1) u32, @ptrFromInt(addr_p)).* =
-                                    @truncate(@as(u64, @bitCast(@as(i64, @intCast(addr_s)) + addend)));
-                            },
                             0x2, 0x4 => {
                                 // R_X86_64_PC32 (0x2), S + A - P
                                 // R_X86_64_PLT32 (0x4), L + A - P
