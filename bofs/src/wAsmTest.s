@@ -5,9 +5,9 @@ go:
     sub $40, %rsp
     mov $12345, %eax
 
-    mov $0, %edi
-    lea msg(%rip), %rsi
-    mov %eax, %edx
+    mov $0, %ecx
+    lea msg(%rip), %rdx
+    mov %eax, %r8d
     call BeaconPrintf
 
     add $40, %rsp
@@ -17,4 +17,4 @@ go:
 .data
 
 msg:
-.ascii "Hello from asm BOF on Linux! eax is %d\12\0"
+.ascii "Hello from asm BOF on Windows! eax is %d\12\0"

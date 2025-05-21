@@ -10,6 +10,7 @@ const bofs_included_in_launcher = [_]Bof{
     .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWhoami", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     //.{ .name = "wDirectSyscall", .formats = &.{.coff}, .archs = &.{.x64} },
+    .{ .name = "wAsmTest", .formats = &.{.coff}, .archs = &.{.x64} },
     .{ .name = "lAsmTest", .formats = &.{.elf}, .archs = &.{.x64} },
     .{ .name = "uname", .dir = "coreutils/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "hostid", .dir = "coreutils/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
