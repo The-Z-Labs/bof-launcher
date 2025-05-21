@@ -9,6 +9,7 @@
 !*.zig.zon
 !*.h
 !*.asm
+!*.s
 !*.bat
 !*.py
 !Makefile

@@ -10,7 +10,7 @@ const bofs_included_in_launcher = [_]Bof{
     .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWhoami", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     //.{ .name = "wDirectSyscall", .formats = &.{.coff}, .archs = &.{.x64} },
-    //.{ .name = "lAsmTest", .formats = &.{.elf}, .archs = &.{.x64} },
+    .{ .name = "lAsmTest", .formats = &.{.elf}, .archs = &.{.x64} },
     .{ .name = "uname", .dir = "coreutils/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "hostid", .dir = "coreutils/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "hostname", .dir = "coreutils/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
@@ -157,7 +157,7 @@ pub fn build(b: *std.Build) !void {
 
                 const full_name = Bof.fullName(b.allocator, bof.name, format, arch, .ReleaseSmall);
 
-                if (lang == .@"asm") {
+                if (false and lang == .@"asm") {
                     // We provide fasm binaries only for x86.
                     if (@import("builtin").cpu.arch != .x86_64 and @import("builtin").cpu.arch != .x86)
                         continue;
@@ -266,7 +266,12 @@ fn addBofObj(
     bof_launcher_dep: *std.Build.Dependency,
 ) !*std.Build.Step.Compile {
     const obj = switch (lang) {
-        .@"asm" => unreachable,
+        .@"asm" => b.addAssembly(.{
+            .name = full_name,
+            .source_file = b.path(source_file_path),
+            .target = target,
+            .optimize = bof_optimize,
+        }),
         .zig => b.addObject(.{
             .name = full_name,
             .root_source_file = b.path(source_file_path),
@@ -313,26 +318,29 @@ fn addBofObj(
             break :blk obj;
         },
     };
-    obj.addIncludePath(b.path("src/include"));
-    obj.root_module.addImport("bof_api", bof_api_module);
-    obj.root_module.pic = true;
-    obj.root_module.single_threaded = true;
-    obj.root_module.strip = if (bof_optimize == .Debug) false else true;
-    obj.root_module.unwind_tables = false;
 
-    // Needed for BOFs that launch other BOFs
-    obj.root_module.addAnonymousImport(
-        "bof_launcher_api",
-        .{ .root_source_file = bof_launcher_dep.path("src/bof_launcher_api.zig") },
-    );
+    if (lang != .@"asm") {
+        obj.addIncludePath(b.path("src/include"));
+        obj.root_module.addImport("bof_api", bof_api_module);
+        obj.root_module.pic = true;
+        obj.root_module.single_threaded = true;
+        obj.root_module.strip = if (bof_optimize == .Debug) false else true;
+        obj.root_module.unwind_tables = false;
 
-    if (arch != .x86) { // TODO: Shared library fails to build on x86.
-        const bof_launcher_shared_lib = bof_launcher_dep.artifact(
-            @import("bof_launcher_lib").libFileName(b.allocator, target, .dynamic),
+        // Needed for BOFs that launch other BOFs
+        obj.root_module.addAnonymousImport(
+            "bof_launcher_api",
+            .{ .root_source_file = bof_launcher_dep.path("src/bof_launcher_api.zig") },
         );
-        obj.root_module.addAnonymousImport("bof_launcher_lib_embed", .{
-            .root_source_file = bof_launcher_shared_lib.getEmittedBin(),
-        });
+
+        if (arch != .x86) { // TODO: Shared library fails to build on x86.
+            const bof_launcher_shared_lib = bof_launcher_dep.artifact(
+                @import("bof_launcher_lib").libFileName(b.allocator, target, .dynamic),
+            );
+            obj.root_module.addAnonymousImport("bof_launcher_lib_embed", .{
+                .root_source_file = bof_launcher_shared_lib.getEmittedBin(),
+            });
+        }
     }
 
     return obj;
@@ -384,17 +392,16 @@ fn getBofSourcePathAndLang(
 
     const lang: BofLang = blk: {
         std.fs.cwd().access(b.fmt("{s}.zig", .{b.pathFromRoot(bof_src_path)}), .{}) catch {
-            std.fs.cwd().access(b.fmt("{s}.asm", .{b.pathFromRoot(bof_src_path)}), .{}) catch break :blk .c;
+            std.fs.cwd().access(b.fmt("{s}.s", .{b.pathFromRoot(bof_src_path)}), .{}) catch break :blk .c;
             break :blk .@"asm";
         };
         break :blk .zig;
     };
 
-    const extension = blk: {
-        std.fs.cwd().access(b.fmt("{s}.cpp", .{b.pathFromRoot(bof_src_path)}), .{}) catch {
-            break :blk @tagName(lang);
-        };
-        break :blk "cpp";
+    const extension = switch (lang) {
+        .zig => "zig",
+        .c => "c",
+        .@"asm" => "s",
     };
 
     const source_file_path = b.fmt("{s}.{s}", .{ bof_src_path, extension });
