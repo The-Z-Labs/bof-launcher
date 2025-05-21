@@ -9,7 +9,7 @@ go:
     mov $12345, %eax
 
     mov $0, %edi
-    lea ($msg), %rsi
+    mov $msg, %rsi
     mov %eax, %edx
     call BeaconPrintf
 
