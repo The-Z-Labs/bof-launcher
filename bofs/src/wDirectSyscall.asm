@@ -1,3 +1,8 @@
+;
+; This BOF must be built with flat assembler (fasm)
+; https://flatassembler.net/download.php
+; fasm wDirectSyscall.asm
+;
 format MS64 COFF
 
 public go

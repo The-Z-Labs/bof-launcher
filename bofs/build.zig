@@ -9,7 +9,6 @@ const bofs_included_in_launcher = [_]Bof{
     .{ .name = "wWinver", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWhoami", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
-    //.{ .name = "wDirectSyscall", .formats = &.{.coff}, .archs = &.{.x64} },
     .{ .name = "wAsmTest", .formats = &.{.coff}, .archs = &.{.x64} },
     .{ .name = "lAsmTest", .formats = &.{.elf}, .archs = &.{.x64} },
     .{ .name = "uname", .dir = "coreutils/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
@@ -23,7 +22,6 @@ const bofs_included_in_launcher = [_]Bof{
     .{ .name = "wInjectionChainStage1", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wInjectionChainStage2", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wInjectionChainStage3", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
-    //.{ .name = "wInjectionChainStage1A", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{.x64} },
     .{ .name = "wInjectionChainStage2C", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "kmodLoader", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     // so called BOF0 - special purpose BOF that acts as a standalone implant, that uses other BOFs as its post-ex modules:
@@ -157,22 +155,6 @@ pub fn build(b: *std.Build) !void {
                 if (format == .coff and arch == .arm) continue;
 
                 const full_name = Bof.fullName(b.allocator, bof.name, format, arch, .ReleaseSmall);
-
-                if (false and lang == .@"asm") {
-                    // We provide fasm binaries only for x86.
-                    if (@import("builtin").cpu.arch != .x86_64 and @import("builtin").cpu.arch != .x86)
-                        continue;
-
-                    const run_fasm = b.addSystemCommand(&.{
-                        thisDir() ++ "/../bin/fasm" ++ if (@import("builtin").os.tag == .windows) ".exe" else "",
-                    });
-                    run_fasm.addFileArg(b.path(source_file_path));
-                    const output_path = run_fasm.addOutputFileArg(full_name);
-
-                    b.getInstallStep().dependOn(&b.addInstallBinFile(output_path, full_name).step);
-
-                    continue; // This is all we need to do in case of asm BOF. Continue to the next BOF.
-                }
 
                 const target = b.resolveTargetQuery(Bof.getTargetQuery(format, arch));
 

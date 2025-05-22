@@ -41,7 +41,7 @@ pub fn main() !void {
     defer bof_stage0.release();
 
     const bof_stage1 = blk: {
-        const coff = try loadBofFromFile(allocator, "wInjectionChainStage1A");
+        const coff = try loadBofFromFile(allocator, "wInjectionChainStage1");
         defer allocator.free(coff);
         break :blk try bof.Object.initFromMemory(coff);
     };
