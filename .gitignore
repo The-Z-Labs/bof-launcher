@@ -22,9 +22,6 @@
 !*.md
 !*.yaml
 
-!bin/fasm.exe
-!bin/fasm
-
 !.ignore
 !.gitkeep
 !.gitignore
