@@ -272,12 +272,7 @@ fn addBofObj(
             obj.addCSourceFile(.{
                 .file = b.path(source_file_path),
                 .flags = &.{
-                    "-DBOF", "-D_GNU_SOURCE",
-                    if (arch == .x86 or arch == .x64)
-                        "-include" ++ thisDir() ++ "/src/force_intel_asm.h"
-                    else
-                        "",
-                    if (arch == .x86) "-DWOW64" else "",
+                    "-DBOF", "-D_GNU_SOURCE", if (arch == .x86) "-DWOW64" else "",
                 },
             });
             if (format == .coff) {
@@ -302,14 +297,14 @@ fn addBofObj(
         },
     };
 
+    obj.root_module.pic = true;
+    obj.root_module.single_threaded = true;
+    obj.root_module.strip = if (bof_optimize == .Debug) false else true;
+    obj.root_module.unwind_tables = false;
+
     if (lang != .@"asm") {
         obj.addIncludePath(b.path("src/include"));
         obj.root_module.addImport("bof_api", bof_api_module);
-        obj.root_module.pic = true;
-        obj.root_module.single_threaded = true;
-        obj.root_module.strip = if (bof_optimize == .Debug) false else true;
-        obj.root_module.unwind_tables = false;
-
         // Needed for BOFs that launch other BOFs
         obj.root_module.addAnonymousImport(
             "bof_launcher_api",
@@ -390,8 +385,4 @@ fn getBofSourcePathAndLang(
     const source_file_path = b.fmt("{s}.{s}", .{ bof_src_path, extension });
 
     return .{ source_file_path, lang };
-}
-
-inline fn thisDir() []const u8 {
-    return comptime std.fs.path.dirname(@src().file) orelse ".";
 }
