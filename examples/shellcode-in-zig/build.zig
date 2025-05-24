@@ -16,7 +16,7 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = .ReleaseSmall,
             .single_threaded = true,
-            .unwind_tables = false,
+            .unwind_tables = .none,
             .strip = true,
             .link_libc = false,
             .pic = true,

@@ -46,7 +46,7 @@ fn buildLib(
 ) void {
     lib.root_module.pic = true;
     if (optimize == .ReleaseSmall) {
-        lib.root_module.unwind_tables = false;
+        lib.root_module.unwind_tables = .none;
     }
     lib.addCSourceFile(.{
         .file = b.path("src/beacon/beacon_impl.c"),
@@ -56,7 +56,7 @@ fn buildLib(
         .file = b.path("src/beacon/stb_sprintf.c"),
         .flags = &.{ "-std=c99", "-fno-sanitize=undefined" },
     });
-    if (target.query.os_tag == .windows) {
+    if (target.result.os.tag == .windows) {
         lib.linkSystemLibrary2("ws2_32", .{});
         lib.linkSystemLibrary2("ole32", .{});
     }

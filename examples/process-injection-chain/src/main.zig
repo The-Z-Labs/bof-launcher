@@ -4,7 +4,7 @@ const bof = @import("bof_launcher_api");
 const w32 = @import("bof_api").win32;
 const shared = @import("shared");
 
-pub const std_options = .{
+pub const std_options = std.Options{
     .log_level = .info,
 };
 
@@ -154,7 +154,7 @@ fn loadBofFromFile(allocator: std.mem.Allocator, bof_name: [:0]const u8) ![]cons
     });
     defer allocator.free(pathname);
 
-    var bof_path: [std.fs.MAX_PATH_BYTES:0]u8 = undefined;
+    var bof_path: [std.fs.max_path_bytes:0]u8 = undefined;
     const absolute_bof_path = try std.fs.cwd().realpath(pathname, bof_path[0..]);
     bof_path[absolute_bof_path.len] = 0;
 

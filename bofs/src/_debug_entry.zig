@@ -26,7 +26,7 @@ pub fn main() !void {
     while (cmd_args_iter.next()) |arg| {
         // handle case when file:<filepath> argument is provided
         if (std.mem.indexOf(u8, arg, "file:") != null) {
-            var iter = std.mem.tokenize(u8, arg, ":");
+            var iter = std.mem.tokenizeScalar(u8, arg, ':');
 
             _ = iter.next() orelse return error.BadData;
             const file_path = iter.next() orelse return error.BadData;

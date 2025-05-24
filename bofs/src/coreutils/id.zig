@@ -64,10 +64,10 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
         if (name) |n| {
             pwd = posix.getpwnam(@as([*:0]u8, @ptrCast(n)));
             if (pwd) |p| {
-                ruid = p.pw_uid;
-                rgid = p.pw_gid;
+                ruid = p.uid;
+                rgid = p.gid;
 
-                if (getgrouplist(p.pw_name.?, p.pw_gid, &groups_gids, &ngroups) == -1)
+                if (getgrouplist(p.name.?, p.gid, &groups_gids, &ngroups) == -1)
                     return 1;
             } else return 1;
         } else return 1;
@@ -90,7 +90,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
 
     _ = beacon.printf(0, "uid=%d", ruid);
     if (pwd) |p|
-        _ = beacon.printf(0, "(%s)", p.pw_name);
+        _ = beacon.printf(0, "(%s)", p.name);
 
     _ = beacon.printf(0, " gid=%d", rgid);
     grp = posix.getgrgid(rgid);
@@ -102,7 +102,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
             _ = beacon.printf(0, " euid=%d", euid);
             pwd = posix.getpwuid(euid);
             if (pwd) |p| {
-                _ = beacon.printf(0, "(%s)", p.pw_name);
+                _ = beacon.printf(0, "(%s)", p.name);
             }
         }
 

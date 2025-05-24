@@ -2,7 +2,7 @@ const std = @import("std");
 const assert = std.debug.assert;
 const bof = @import("bof_launcher_api");
 
-pub const std_options = .{
+pub const std_options = std.Options{
     .http_disable_tls = true,
     .log_level = .info,
 };
@@ -142,7 +142,7 @@ const ImplantActions = struct {
     kmodRemove: ?*const fn (mod_name: [*:0]const u8, flags: u32) callconv(.C) c_int = null,
 
     pub fn attachFunctionality(self: *Self, bofObj: bof.Object) void {
-        const fields = @typeInfo(Self).Struct.fields;
+        const fields = @typeInfo(Self).@"struct".fields;
 
         var ptr_table: [fields.len]usize = undefined;
 

@@ -12,12 +12,10 @@ const BOOL = w32.BOOL;
 const w32_loader = @import("win32_api_loader.zig");
 
 comptime {
-    @export(wWinMainCRTStartup, .{ .name = "wWinMainCRTStartup" });
+    @export(&wWinMainCRTStartup, .{ .name = "wWinMainCRTStartup" });
 }
 
 pub fn wWinMainCRTStartup() callconv(.C) void {
-    @setAlignStack(16);
-
     const kernel32_base = w32_loader.getDllBase(w32_loader.hash_kernel32);
 
     const LoadLibraryA: *const fn ([*:0]const u8) callconv(WINAPI) ?HMODULE =

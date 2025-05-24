@@ -68,10 +68,10 @@ fn parseRawPayloads(allocator: mem.Allocator, payloads_buf: []const u8) ![]Paylo
     var list = std.ArrayList(Payload).init(allocator);
     defer list.deinit();
 
-    var line_iter = mem.split(u8, payloads_buf, "\n");
+    var line_iter = mem.splitScalar(u8, payloads_buf, '\n');
 
     while (line_iter.next()) |p| {
-        var iter = mem.split(u8, p, " ");
+        var iter = mem.splitScalar(u8, p, ' ');
 
         // get ports
         const ports_spec = iter.next() orelse return error.BadData;
@@ -105,13 +105,13 @@ fn extractPorts(allocator: mem.Allocator, port_spec: []const u8) ![]u16 {
     var list = std.ArrayList(u16).init(allocator);
     defer list.deinit();
 
-    var iter = mem.tokenize(u8, port_spec, ",");
+    var iter = mem.tokenizeScalar(u8, port_spec, ',');
 
     while (iter.next()) |port_set| {
         if (mem.containsAtLeast(u8, port_set, 1, "-")) {
             // we're dealing with a port range, like: 1-3 in a set
 
-            var iter2 = mem.tokenize(u8, port_set, "-");
+            var iter2 = mem.tokenizeScalar(u8, port_set, '-');
 
             const first_port = fmt.parseInt(
                 u16,
@@ -151,7 +151,7 @@ fn extractIPs(allocator: mem.Allocator, ip_spec: []const u8) ![][]const u8 {
     }
 
     // splitting IP to get last octet for expansion (IP specification in a form us only supported x.x.x.1-3)
-    var iter = mem.split(u8, ip_spec, ".");
+    var iter = mem.splitScalar(u8, ip_spec, '.');
     var i: u32 = 0;
     var buf: [32]u8 = undefined;
     var buf_index: usize = 0;
@@ -171,7 +171,7 @@ fn extractIPs(allocator: mem.Allocator, ip_spec: []const u8) ![][]const u8 {
 
     // Expanding last octet
     if (mem.containsAtLeast(u8, ip_last_octet, 1, "-")) {
-        var iter2 = mem.tokenize(u8, ip_last_octet, "-");
+        var iter2 = mem.tokenizeScalar(u8, ip_last_octet, '-');
 
         const sFirst_Num = iter2.next() orelse return error.BadData;
         const first_num = fmt.parseInt(u16, sFirst_Num, 10) catch return error.BadData;
@@ -226,7 +226,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     debugPrint("UDP probes:\n {s}\n", .{payloads_buf});
 
     // spliting IP:port specification argument to IPs and ports parts
-    var iter = mem.split(u8, sTargets_spec, ":");
+    var iter = mem.splitScalar(u8, sTargets_spec, ':');
     const sIP_spec = iter.next() orelse unreachable;
     const sPort_spec = iter.next() orelse "";
 

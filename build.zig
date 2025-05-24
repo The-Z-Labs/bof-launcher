@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub const min_zig_version = std.SemanticVersion{ .major = 0, .minor = 13, .patch = 0 };
+pub const min_zig_version = std.SemanticVersion{ .major = 0, .minor = 14, .patch = 1 };
 
 pub fn build(b: *std.Build) !void {
     ensureZigVersion() catch return;

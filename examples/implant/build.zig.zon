@@ -1,6 +1,7 @@
 .{
-    .name = "implant",
+    .name = .implant,
     .version = "1.0.0",
+    .fingerprint = 0x5a0930a339cb97fb,
     .paths = .{
         "build.zig",
         "build.zig.zon",

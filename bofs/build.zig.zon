@@ -1,6 +1,7 @@
 .{
-    .name = "bof_launcher_bofs",
+    .name = .bof_launcher_bofs,
     .version = "1.0.0",
+    .fingerprint = 0xc4eb75cc1d57bd8e,
     .paths = .{
         "build.zig",
         "build.zig.zon",

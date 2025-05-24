@@ -69,7 +69,8 @@ pub extern fn getifaddrs(ifap: **ifaddrs) callconv(.C) i32;
 pub extern fn freeifaddrs(ifap: *ifaddrs) callconv(.C) void;
 
 // https://man7.org/linux/man-pages/man3/getnameinfo.3.html
-pub extern fn getnameinfo(addr: *std.posix.sockaddr,
+pub extern fn getnameinfo(
+    addr: *std.posix.sockaddr,
     addrlen: c.socklen_t,
     noalias host: ?[*]u8,
     hostlen: c.socklen_t,
@@ -90,58 +91,55 @@ pub const sockaddr_ll = extern struct {
     sll_addr: [8]u8,
 };
 
-
 fn flagsDisplay(flags: u32) void {
     _ = beacon.printf(0, "flags=%u<", flags);
 
-    if(flags & IFF_UP != 0) {
+    if (flags & IFF_UP != 0) {
         _ = beacon.printf(0, "UP");
-    } else
-        _ = beacon.printf(0, "DOWN");
-    if(flags & IFF_BROADCAST != 0)
+    } else _ = beacon.printf(0, "DOWN");
+    if (flags & IFF_BROADCAST != 0)
         _ = beacon.printf(0, ",BROADCAST");
-    if(flags & IFF_DEBUG != 0)
+    if (flags & IFF_DEBUG != 0)
         _ = beacon.printf(0, ",DEBUG");
-    if(flags & IFF_LOOPBACK != 0)
+    if (flags & IFF_LOOPBACK != 0)
         _ = beacon.printf(0, ",LOOPBACK");
-    if(flags & IFF_POINTOPOINT != 0)
+    if (flags & IFF_POINTOPOINT != 0)
         _ = beacon.printf(0, ",POINT-TO-POINT");
-    if(flags & IFF_RUNNING != 0)
+    if (flags & IFF_RUNNING != 0)
         _ = beacon.printf(0, ",RUNNING");
-    if(flags & IFF_NOARP != 0)
+    if (flags & IFF_NOARP != 0)
         _ = beacon.printf(0, ",NOARP");
-    if(flags & IFF_PROMISC != 0)
+    if (flags & IFF_PROMISC != 0)
         _ = beacon.printf(0, ",PROMISC");
-    if(flags & IFF_NOTRAILERS != 0)
+    if (flags & IFF_NOTRAILERS != 0)
         _ = beacon.printf(0, ",NOTRAILERS");
-    if(flags & IFF_ALLMULTI != 0)
+    if (flags & IFF_ALLMULTI != 0)
         _ = beacon.printf(0, ",ALLMULTI");
-    if(flags & IFF_MASTER != 0)
+    if (flags & IFF_MASTER != 0)
         _ = beacon.printf(0, ",MASTER");
-    if(flags & IFF_SLAVE != 0)
+    if (flags & IFF_SLAVE != 0)
         _ = beacon.printf(0, ",SLAVE");
-    if(flags & IFF_MULTICAST != 0)
+    if (flags & IFF_MULTICAST != 0)
         _ = beacon.printf(0, ",MULTICAST");
     _ = beacon.printf(0, ">");
 }
 
-fn flagsParseOption(flags: i16, opt: []u8) i16 {
-    var ret_flags: i16 = flags;
+fn flagsParseOption(flags: std.os.linux.IFF, opt: []u8) std.os.linux.IFF {
+    var ret_flags: std.os.linux.IFF = flags;
 
-    if(std.mem.eql(u8, opt, "up"))
-        ret_flags = flags | IFF_UP;
-    if(std.mem.eql(u8, opt, "down"))
-        ret_flags = flags & ~@as(i16, IFF_UP);
-    if(std.mem.eql(u8, opt, "promisc"))
-        ret_flags = flags | IFF_PROMISC;
-    if(std.mem.eql(u8, opt, "-promisc"))
-        ret_flags = flags & ~@as(i16, IFF_PROMISC);
+    if (std.mem.eql(u8, opt, "up"))
+        ret_flags.UP = true;
+    if (std.mem.eql(u8, opt, "down"))
+        ret_flags.UP = false;
+    if (std.mem.eql(u8, opt, "promisc"))
+        ret_flags.PROMISC = true;
+    if (std.mem.eql(u8, opt, "-promisc"))
+        ret_flags.PROMISC = false;
 
     return ret_flags;
 }
 
 pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
-
     const allocator = std.heap.page_allocator;
 
     // argument was provided parse it
@@ -159,9 +157,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
         const opt_ptr = beacon.dataExtract(&parser, &opt_len);
         const opt = opt_ptr.?[0..@intCast(opt_len - 1)];
 
-        const sockfd = std.posix.socket(std.posix.AF.INET,
-            std.posix.SOCK.DGRAM | std.posix.SOCK.CLOEXEC, 0
-        ) catch unreachable;
+        const sockfd = std.posix.socket(std.posix.AF.INET, std.posix.SOCK.DGRAM | std.posix.SOCK.CLOEXEC, 0) catch unreachable;
         defer std.posix.close(sockfd);
 
         var ifr: std.os.linux.ifreq = undefined;
@@ -195,75 +191,74 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
 
         // check if given interface was already added
         for (interfaces.items) |iface| {
-            if(std.mem.eql(u8, iface, cur_iface_name))
+            if (std.mem.eql(u8, iface, cur_iface_name))
                 continue :outer;
-        }
-        else interfaces.append(cur_iface_name) catch unreachable;
+        } else interfaces.append(cur_iface_name) catch unreachable;
     }
 
     // iterate over each interface name and print its statistics
     for (interfaces.items) |iface| {
-
         iter = list;
         while (iter != null) : (iter = iter.?.ifa_next) {
             var host = [_]u8{0} ** NI_MAXHOST;
             var netmask = [_]u8{0} ** NI_MAXHOST;
             var aux = [_]u8{0} ** NI_MAXHOST;
-	    const family = iter.?.ifa_addr.?.family;
+            const family = iter.?.ifa_addr.?.family;
             const cur_iface_name = std.mem.sliceTo(iter.?.ifa_name.?, 0);
             const flags = iter.?.ifa_flags;
 
-            if(std.mem.eql(u8, iface, cur_iface_name)) {
-
+            if (std.mem.eql(u8, iface, cur_iface_name)) {
                 if (family == std.os.linux.AF.INET) {
                     _ = getnameinfo(iter.?.ifa_addr.?, @sizeOf(std.posix.sockaddr.in), &host, NI_MAXHOST, null, 0, NI_NUMERICHOST);
                     _ = getnameinfo(iter.?.ifa_netmask.?, @sizeOf(std.posix.sockaddr.in), &netmask, NI_MAXHOST, null, 0, NI_NUMERICHOST);
 
-                    if(flags & IFF_BROADCAST != 0) {
+                    if (flags & IFF_BROADCAST != 0) {
                         _ = getnameinfo(iter.?.ifa_ifu.ifu_broadaddr.?, @sizeOf(std.posix.sockaddr.in), &aux, NI_MAXHOST, null, 0, NI_NUMERICHOST);
-		        _ = beacon.printf(0, "\tinet %s netmask=%s broadcast=%s\n", &host, &netmask, &aux);
-                    }
-                    else {
+                        _ = beacon.printf(0, "\tinet %s netmask=%s broadcast=%s\n", &host, &netmask, &aux);
+                    } else {
                         _ = getnameinfo(iter.?.ifa_ifu.ifu_dstaddr.?, @sizeOf(std.posix.sockaddr.in), &aux, NI_MAXHOST, null, 0, NI_NUMERICHOST);
-		        _ = beacon.printf(0, "\tinet %s netmask=%s point2point=%s\n", &host, &netmask, &aux);
+                        _ = beacon.printf(0, "\tinet %s netmask=%s point2point=%s\n", &host, &netmask, &aux);
                     }
                 }
                 if (family == std.os.linux.AF.INET6) {
                     _ = getnameinfo(iter.?.ifa_addr.?, @sizeOf(std.posix.sockaddr.in6), &host, NI_MAXHOST, null, 0, NI_NUMERICHOST);
                     _ = getnameinfo(iter.?.ifa_netmask.?, @sizeOf(std.posix.sockaddr.in6), &netmask, NI_MAXHOST, null, 0, NI_NUMERICHOST);
-		    _ = beacon.printf(0, "\tinet %s netmask=%s\n", &host, &netmask);
+                    _ = beacon.printf(0, "\tinet %s netmask=%s\n", &host, &netmask);
                 }
-	        if (family == std.os.linux.AF.PACKET) {
-
+                if (family == std.os.linux.AF.PACKET) {
                     _ = beacon.printf(0, "%s: ", iface.ptr);
                     flagsDisplay(flags);
                     _ = beacon.printf(0, "\n");
 
                     // display HW address
-                    if(!std.mem.eql(u8, iface, "lo")) {
-                        if(iter.?.ifa_addr) |addr| {
+                    if (!std.mem.eql(u8, iface, "lo")) {
+                        if (iter.?.ifa_addr) |addr| {
                             const s = @as(*sockaddr_ll, @ptrCast(@alignCast(addr)));
                             var i: u32 = 0;
 
                             _ = beacon.printf(0, "\tether ");
-                            while (i < s.sll_halen) : (i+=1) {
+                            while (i < s.sll_halen) : (i += 1) {
                                 _ = beacon.printf(0, "%x", s.sll_addr[i]);
-                                if(i+1 != s.sll_halen)  { _  = beacon.printf(0, ":"); } else { _  = beacon.printf(0, "\n"); }
+                                if (i + 1 != s.sll_halen) {
+                                    _ = beacon.printf(0, ":");
+                                } else {
+                                    _ = beacon.printf(0, "\n");
+                                }
                             }
                         }
                     }
 
-	            if(iter.?.ifa_data != null) {
+                    if (iter.?.ifa_data != null) {
                         const stats = @as(*std.os.linux.rtnl_link_stats, @ptrCast(@alignCast(iter.?.ifa_data)));
-		        _ = beacon.printf(0, "\tRX packets %d bytes %d\n", stats.rx_packets, stats.rx_bytes);
-		        _ = beacon.printf(0, "\tRX errors %d dropped %d overruns %d frame %d\n", stats.rx_errors, stats.rx_dropped, stats.rx_fifo_errors, stats.rx_frame_errors);
-		        _ = beacon.printf(0, "\tTX packets %d bytes %d\n", stats.tx_packets, stats.tx_bytes);
-		        _ = beacon.printf(0, "\tTX errors %d dropped %d overruns %d carrier %d collisions %d\n", stats.tx_errors, stats.tx_dropped, stats.tx_fifo_errors, stats.tx_carrier_errors, stats.collisions);
+                        _ = beacon.printf(0, "\tRX packets %d bytes %d\n", stats.rx_packets, stats.rx_bytes);
+                        _ = beacon.printf(0, "\tRX errors %d dropped %d overruns %d frame %d\n", stats.rx_errors, stats.rx_dropped, stats.rx_fifo_errors, stats.rx_frame_errors);
+                        _ = beacon.printf(0, "\tTX packets %d bytes %d\n", stats.tx_packets, stats.tx_bytes);
+                        _ = beacon.printf(0, "\tTX errors %d dropped %d overruns %d carrier %d collisions %d\n", stats.tx_errors, stats.tx_dropped, stats.tx_fifo_errors, stats.tx_carrier_errors, stats.collisions);
                     }
                 }
             }
 
-	    //std.debug.print("{any}\n\n\n", .{iter.?.*});
+            //std.debug.print("{any}\n\n\n", .{iter.?.*});
         }
         _ = beacon.printf(0, "\n");
     }

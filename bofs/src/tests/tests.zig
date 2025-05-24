@@ -51,7 +51,7 @@ fn testRunBofFromFile(
     });
     defer allocator.free(pathname);
 
-    var bof_path_buffer: [std.fs.MAX_PATH_BYTES:0]u8 = undefined;
+    var bof_path_buffer: [std.fs.max_path_bytes:0]u8 = undefined;
     const absolute_bof_path = try std.fs.cwd().realpath(pathname, bof_path_buffer[0..]);
     bof_path_buffer[absolute_bof_path.len] = 0;
 
@@ -72,7 +72,7 @@ fn loadBofFromFile(allocator: std.mem.Allocator, bof_name: [:0]const u8) ![]u8 {
     });
     defer allocator.free(pathname);
 
-    var bof_path: [std.fs.MAX_PATH_BYTES:0]u8 = undefined;
+    var bof_path: [std.fs.max_path_bytes:0]u8 = undefined;
     const absolute_bof_path = try std.fs.cwd().realpath(pathname, bof_path[0..]);
     bof_path[absolute_bof_path.len] = 0;
 

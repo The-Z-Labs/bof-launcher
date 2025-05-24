@@ -300,7 +300,7 @@ fn addBofObj(
     obj.root_module.pic = true;
     obj.root_module.single_threaded = true;
     obj.root_module.strip = if (bof_optimize == .Debug) false else true;
-    obj.root_module.unwind_tables = false;
+    obj.root_module.unwind_tables = .none;
 
     if (lang != .@"asm") {
         obj.addIncludePath(b.path("src/include"));

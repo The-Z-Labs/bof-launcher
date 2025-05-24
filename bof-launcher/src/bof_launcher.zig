@@ -3,7 +3,7 @@ const assert = std.debug.assert;
 
 const pubapi = @import("bof_launcher_api.zig");
 
-pub const std_options = .{
+pub const std_options = std.Options{
     .log_level = std.log.default_level,
 };
 
@@ -259,7 +259,7 @@ const Bof = struct {
                         @intFromEnum(sym.symbol.section_number) == 0 and
                         std.mem.indexOfScalar(u8, sym_name, '@') != null)
                     {
-                        var it = std.mem.split(u8, sym_name, "@");
+                        var it = std.mem.splitScalar(u8, sym_name, '@');
                         const func_name = it.first();
                         maybe_func_addr = gstate.func_lookup.get(func_name[1..]);
                     }
@@ -269,7 +269,7 @@ const Bof = struct {
                     @intFromEnum(sym.symbol.section_number) == 0 and
                     std.mem.indexOfScalar(u8, sym_name, '$') != null)
                 {
-                    var it = std.mem.split(u8, sym_name, "$");
+                    var it = std.mem.splitScalar(u8, sym_name, '$');
                     const dll_name = it.first();
 
                     assert(!std.mem.eql(u8, dll_name, sym_name));
@@ -284,7 +284,7 @@ const Bof = struct {
                         std.mem.concatWithSentinel(arena, u8, &.{dll_name[0..]}, 0);
                     defer arena.free(dll_name_z);
 
-                    var it2 = std.mem.split(u8, it.next().?, "@");
+                    var it2 = std.mem.splitScalar(u8, it.next().?, '@');
                     const func_name_z = try std.mem.concatWithSentinel(
                         arena,
                         u8,
@@ -312,7 +312,7 @@ const Bof = struct {
                 }
 
                 if (maybe_func_addr == null and @intFromEnum(sym.symbol.section_number) == 0) {
-                    var it = std.mem.split(u8, sym_name, "@");
+                    var it = std.mem.splitScalar(u8, sym_name, '@');
                     const func_name = it.first();
 
                     const func_name_z = try if (@import("builtin").cpu.arch == .x86)
@@ -1208,7 +1208,7 @@ export fn bofArgsAdd(args: *pubapi.Args, arg: [*]const u8, arg_size: c_int) call
     var sArg = arg[0..@intCast(arg_size)];
     var sArg_type: []const u8 = "str";
 
-    var iter = std.mem.tokenizeAny(u8, sArg, ":");
+    var iter = std.mem.tokenizeScalar(u8, sArg, ':');
 
     // get first element or return if argument was empty
     const prefix = iter.next() orelse return -1;
@@ -1448,7 +1448,7 @@ export fn bofObjectRun(
 }
 
 export fn bofDebugRun(
-    go_func: *const fn (?[*]u8, i32) callconv(.C) u8,
+    go_func: *const fn (?[*]u8, i32) callconv(.c) u8,
     arg_data_ptr: ?[*]u8,
     arg_data_len: c_int,
     out_context: **pubapi.Context,
@@ -1468,7 +1468,9 @@ const ThreadData = struct {
     run_in_new_process: bool,
 };
 
-fn threadFunc(raw_ptr: ?*anyopaque) callconv(.C) if (@import("builtin").os.tag == .windows)
+fn threadFunc(
+    raw_ptr: ?*anyopaque,
+) callconv(if (@import("builtin").os.tag == .windows) .winapi else .c) if (@import("builtin").os.tag == .windows)
     w32.DWORD
 else
     ?*anyopaque {
@@ -1804,11 +1806,11 @@ export fn bofMemoryMaskKey(key: [*]const u8, key_len: c_int) callconv(.C) c_int 
 export fn bofMemoryMaskWin32ApiCall(win32_api_name: [*:0]const u8, masking_enabled: c_int) callconv(.C) c_int {
     if (!gstate.is_valid) return -1;
     if (std.mem.eql(u8, std.mem.span(win32_api_name), "all")) {
-        inline for (@typeInfo(ZGateWin32ApiCall).Enum.fields, 0..) |_, i| {
+        inline for (@typeInfo(ZGateWin32ApiCall).@"enum".fields, 0..) |_, i| {
             gstate.mask_win32_api[i] = if (masking_enabled == 0) false else true;
         }
     } else {
-        inline for (@typeInfo(ZGateWin32ApiCall).Enum.fields, 0..) |field, i| {
+        inline for (@typeInfo(ZGateWin32ApiCall).@"enum".fields, 0..) |field, i| {
             if (std.mem.eql(u8, std.mem.span(win32_api_name), field.name)) {
                 gstate.mask_win32_api[i] = if (masking_enabled == 0) false else true;
                 return 0;
@@ -2102,7 +2104,7 @@ const gstate = struct {
 
     var mask_key_data: [32]u8 linksection(zgate_dsection) = undefined;
     var mask_key: []const u8 linksection(zgate_dsection) = mask_key_data[0..13];
-    var mask_win32_api: [@typeInfo(ZGateWin32ApiCall).Enum.fields.len]bool = undefined;
+    var mask_win32_api: [@typeInfo(ZGateWin32ApiCall).@"enum".fields.len]bool = undefined;
 
     var process_id: u32 = 0;
     var main_thread_id: u32 = 0;

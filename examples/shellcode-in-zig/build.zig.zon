@@ -1,6 +1,7 @@
 .{
-    .name = "shellcode_in_zig",
+    .name = .shellcode_in_zig,
     .version = "1.0.0",
+    .fingerprint = 0x27166f863eeef8c4,
     .paths = .{
         "build.zig",
         "build.zig.zon",

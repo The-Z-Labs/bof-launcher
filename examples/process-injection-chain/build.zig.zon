@@ -1,6 +1,7 @@
 .{
-    .name = "process_injection_chain",
+    .name = .process_injection_chain,
     .version = "1.0.0",
+    .fingerprint = 0x70d6a68b3272341c,
     .paths = .{
         "build.zig",
         "build.zig.zon",

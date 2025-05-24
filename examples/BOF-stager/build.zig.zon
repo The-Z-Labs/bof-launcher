@@ -1,6 +1,7 @@
 .{
-    .name = "bof_stager",
+    .name = .bof_stager,
     .version = "1.0.0",
+    .fingerprint = 0x9f3c397dd024cbc3,
     .paths = .{
         "build.zig",
         "build.zig.zon",

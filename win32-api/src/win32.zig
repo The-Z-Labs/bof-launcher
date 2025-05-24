@@ -360,14 +360,17 @@ pub const GetCurrentProcess = windows.kernel32.GetCurrentProcess;
 pub const WaitForSingleObject = windows.kernel32.WaitForSingleObject;
 pub const ReadFile = windows.kernel32.ReadFile;
 pub const WriteFile = windows.kernel32.WriteFile;
-pub const CloseHandle = windows.kernel32.CloseHandle;
 pub const DuplicateHandle = windows.kernel32.DuplicateHandle;
-pub const GetCurrentProcessId = windows.kernel32.GetCurrentProcessId;
 pub const GetCurrentThreadId = windows.kernel32.GetCurrentThreadId;
-pub const GetCurrentThread = windows.kernel32.GetCurrentThread;
 pub const FreeLibrary = windows.kernel32.FreeLibrary;
 pub const CreateThread = windows.kernel32.CreateThread;
 pub const GetSystemInfo = windows.kernel32.GetSystemInfo;
+
+pub extern "kernel32" fn GetCurrentProcessId() callconv(WINAPI) DWORD;
+
+pub extern "kernel32" fn GetCurrentThread() callconv(WINAPI) HANDLE;
+
+pub extern "kernel32" fn CloseHandle(hObject: HANDLE) callconv(WINAPI) BOOL;
 
 pub extern "kernel32" fn FlushInstructionCache(
     hProcess: HANDLE,

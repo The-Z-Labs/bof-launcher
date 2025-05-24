@@ -1,6 +1,7 @@
 .{
-    .name = "integration_with_c",
+    .name = .integration_with_c,
     .version = "1.0.0",
+    .fingerprint = 0x8998e7d9a3532a16,
     .paths = .{
         "build.zig",
         "build.zig.zon",
