@@ -23,19 +23,20 @@ pub fn build(b: *std.Build) void {
     static_lib.root_module.addImport("bof_launcher_win32", win32_module);
     buildLib(b, static_lib, target, optimize);
 
-    if (target.result.cpu.arch != .x86) { // TODO: Shared library fails to build on x86.
-        const shared_lib = b.addSharedLibrary(.{
-            .name = libFileName(b.allocator, target, .dynamic),
-            .root_source_file = b.path("src/bof_launcher.zig"),
-            .target = target,
-            .optimize = optimize,
+    // TODO: Shared library fails to build on Linux x86.
+    if (target.result.cpu.arch == .x86 and target.result.os.tag == .linux) return;
 
-            // TODO: Remove this
-            .link_libc = target.result.os.tag == .linux,
-        });
-        shared_lib.root_module.addImport("bof_launcher_win32", win32_module);
-        buildLib(b, shared_lib, target, optimize);
-    }
+    const shared_lib = b.addSharedLibrary(.{
+        .name = libFileName(b.allocator, target, .dynamic),
+        .root_source_file = b.path("src/bof_launcher.zig"),
+        .target = target,
+        .optimize = optimize,
+
+        // TODO: Remove this
+        .link_libc = target.result.os.tag == .linux,
+    });
+    shared_lib.root_module.addImport("bof_launcher_win32", win32_module);
+    buildLib(b, shared_lib, target, optimize);
 }
 
 fn buildLib(

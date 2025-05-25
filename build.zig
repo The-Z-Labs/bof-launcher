@@ -88,12 +88,13 @@ pub fn build(b: *std.Build) !void {
         );
         b.installArtifact(bof_launcher_lib);
 
-        if (target.result.cpu.arch != .x86) { // TODO: Shared library fails to build on x86.
-            const bof_launcher_shared_lib = bof_launcher_dep.artifact(
-                @import("bof_launcher_lib").libFileName(b.allocator, target, .dynamic),
-            );
-            b.installArtifact(bof_launcher_shared_lib);
-        }
+        // TODO: Shared library fails to build on Linux x86.
+        if (target.result.cpu.arch == .x86 and target.result.os.tag == .linux) continue;
+
+        const bof_launcher_shared_lib = bof_launcher_dep.artifact(
+            @import("bof_launcher_lib").libFileName(b.allocator, target, .dynamic),
+        );
+        b.installArtifact(bof_launcher_shared_lib);
     }
 
     const osTagStr = @import("bof_launcher_lib").osTagStr;

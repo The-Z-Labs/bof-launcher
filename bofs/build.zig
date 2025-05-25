@@ -311,7 +311,11 @@ fn addBofObj(
             .{ .root_source_file = bof_launcher_dep.path("src/bof_launcher_api.zig") },
         );
 
-        if (arch != .x86) { // TODO: Shared library fails to build on x86.
+        if (target.result.cpu.arch == .x86 and
+            target.result.os.tag == .linux)
+        {
+            // TODO: Shared library fails to build on Linux x86.
+        } else {
             const bof_launcher_shared_lib = bof_launcher_dep.artifact(
                 @import("bof_launcher_lib").libFileName(b.allocator, target, .dynamic),
             );
