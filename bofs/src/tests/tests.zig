@@ -555,20 +555,16 @@ test "bof-launcher.wWinverC" {
     try expect(context.getOutput() != null);
 }
 
-test "bof-launcher.wDirectSyscall" {
-    if (true) return error.SkipZigTest; // TODO: Re-enable asm BOFs
+test "bof-launcher.wAsmTest" {
     if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
     if (@import("builtin").cpu.arch != .x86_64) return error.SkipZigTest;
-
-    const detected_version = std.zig.system.windows.detectRuntimeVersion();
-    if (!detected_version.isAtLeast(.win10)) return error.SkipZigTest;
 
     try bof.initLauncher();
     defer bof.releaseLauncher();
 
     const allocator = std.testing.allocator;
 
-    const bof_data = try loadBofFromFile(allocator, "zig-out/bin/wDirectSyscall");
+    const bof_data = try loadBofFromFile(allocator, "zig-out/bin/wAsmTest");
     defer allocator.free(bof_data);
 
     const object = try bof.Object.initFromMemory(bof_data);
@@ -579,11 +575,10 @@ test "bof-launcher.wDirectSyscall" {
 
     try expect(context.getExitCode() == 0);
     try expect(context.getOutput() != null);
-    try std.testing.expectEqualStrings("NtCreateFile syscall (called directly)", context.getOutput().?[0..38]);
+    try std.testing.expectEqualStrings("Hello from asm BOF on Windows! eax is 12345", context.getOutput().?[0..43]);
 }
 
 test "bof-launcher.lAsmTest" {
-    if (true) return error.SkipZigTest; // TODO: Re-enable asm BOFs
     if (@import("builtin").os.tag != .linux) return error.SkipZigTest;
     if (@import("builtin").cpu.arch != .x86_64) return error.SkipZigTest;
 
