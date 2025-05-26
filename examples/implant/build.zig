@@ -17,7 +17,7 @@ pub fn build(b: *std.Build) void {
     );
 
     const bofs_dep = b.dependency("bof_launcher_bofs", .{ .optimize = optimize });
-    const z_beacon = bofs_dep.artifact("z_beacon.elf.x64");
+    const z_beacon = bofs_dep.artifact("z-beac0n.elf.x64");
 
     const shellcode_in_zig_dep = b.dependency("shellcode_in_zig", .{ .target = target, .optimize = optimize });
 
