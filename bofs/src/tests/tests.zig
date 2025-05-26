@@ -6,11 +6,11 @@ fn runBofFromFile(
     bof_path: [:0]const u8,
     arg_data_ptr: ?[*]u8,
     arg_data_len: i32,
-) !u8 {
-    const file = std.fs.openFileAbsoluteZ(bof_path, .{}) catch unreachable;
+) !*bof.Context {
+    const file = try std.fs.openFileAbsoluteZ(bof_path, .{});
     defer file.close();
 
-    const file_data = file.reader().readAllAlloc(allocator, 16 * 1024 * 1024) catch unreachable;
+    const file_data = try file.reader().readAllAlloc(allocator, 16 * 1024 * 1024);
     defer allocator.free(file_data);
 
     const object = try bof.Object.initFromMemory(file_data);
@@ -19,20 +19,20 @@ fn runBofFromFile(
     const context = try object.run(
         if (arg_data_ptr) |d| d[0..@intCast(arg_data_len)] else null,
     );
-    defer context.release();
+    //defer context.release();
 
     //if (context.getOutput()) |output| {
     //    std.debug.print("{s}", .{output});
     //}
 
-    return context.getExitCode();
+    return context;
 }
 
 fn testRunBofFromFile(
     bof_path: [:0]const u8,
     arg_data_ptr: ?[*]u8,
     arg_data_len: i32,
-) !u8 {
+) !*bof.Context {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
 
@@ -93,30 +93,132 @@ test "bof-launcher.basic" {
     var bytes: [hex_stream.len / 2]u8 = undefined;
     _ = try std.fmt.hexToBytes(&bytes, hex_stream);
 
-    try expect(0 == try testRunBofFromFile("zig-out/bin/test_obj0", null, 0));
-    try expect(123 == try testRunBofFromFile("zig-out/bin/test_beacon_format", &bytes, bytes.len));
+    {
+        const context = try testRunBofFromFile("zig-out/bin/test_obj0", null, 0);
+        defer context.release();
+        try expect(context.getExitCode() == 0);
+        try std.testing.expectEqualStrings("--- test_obj0.zig ---\n", context.getOutput().?[0..22]);
+        try std.testing.expectEqualStrings("Hello, go!\n", context.getOutput().?[22..][0..11]);
+        try std.testing.expectEqualStrings("func() it\n", context.getOutput().?[22..][11..][0..10]);
+    }
+    {
+        const context = try testRunBofFromFile("zig-out/bin/test_beacon_format", &bytes, bytes.len);
+        defer context.release();
+        try expect(context.getExitCode() == 123);
+        try std.testing.expectEqualStrings("--- testBeaconFormat.c ---\n", context.getOutput().?[0..27]);
+        try std.testing.expectEqualStrings("!!!! Start testBeaconFormat !!!!\n", context.getOutput().?[27..][0..33]);
+        try std.testing.expectEqualStrings(
+            "BeaconFormat test with end of string (EOS) issue:\n",
+            context.getOutput().?[27..][33..][0..50],
+        );
+        try std.testing.expectEqualStrings(
+            "The user passed in the integer: 13\n",
+            context.getOutput().?[27..][33..][50..][0..35],
+        );
+        try std.testing.expectEqualStrings(
+            "The user passed in the string: 777\n",
+            context.getOutput().?[27..][33..][50..][35..][0..35],
+        );
+    }
 
     {
         try bof.initLauncher();
         defer bof.releaseLauncher();
-        try expect(6 == try testRunBofFromFile("zig-out/bin/test_obj1", &bytes, bytes.len));
-        try expect(15 == try testRunBofFromFile("zig-out/bin/test_obj2", &bytes, bytes.len));
-        try expect(0 == try testRunBofFromFile("zig-out/bin/test_obj0", null, 0));
+        {
+            const context = try testRunBofFromFile("zig-out/bin/test_obj1", &bytes, bytes.len);
+            defer context.release();
+            try expect(context.getExitCode() == 6);
+            try std.testing.expectEqualStrings("--- test_obj1.zig ---\n", context.getOutput().?[0..22]);
+            try std.testing.expectEqualStrings("BeaconPrintf has been called\n", context.getOutput().?[22..][0..29]);
+        }
+        {
+            const context = try testRunBofFromFile("zig-out/bin/test_obj2", &bytes, bytes.len);
+            defer context.release();
+            try expect(context.getExitCode() == 15);
+            try std.testing.expectEqualStrings("--- test_obj2.c ---\n", context.getOutput().?[0..20]);
+            try std.testing.expectEqualStrings("bof\n", context.getOutput().?[20..][0..4]);
+            try std.testing.expectEqualStrings("arg_len (from go): 35\n", context.getOutput().?[20..][4..][0..22]);
+            try std.testing.expectEqualStrings("Length: (from go): 31\n", context.getOutput().?[20..][4..][22..][0..22]);
+        }
+        {
+            const context = try testRunBofFromFile("zig-out/bin/test_obj0", null, 0);
+            defer context.release();
+            try expect(context.getExitCode() == 0);
+            try std.testing.expectEqualStrings("--- test_obj0.zig ---\n", context.getOutput().?[0..22]);
+            try std.testing.expectEqualStrings("Hello, go!\n", context.getOutput().?[22..][0..11]);
+            try std.testing.expectEqualStrings("func() it\n", context.getOutput().?[22..][11..][0..10]);
+        }
     }
 
     {
         bof.releaseLauncher();
         try bof.initLauncher();
         defer bof.releaseLauncher();
-        try expect(6 == try testRunBofFromFile("zig-out/bin/test_obj1", &bytes, bytes.len));
-        try expect(0 == try testRunBofFromFile("zig-out/bin/test_obj0", null, 0));
-        try expect(6 == try testRunBofFromFile("zig-out/bin/test_obj1", &bytes, bytes.len));
-        try expect(0 == try testRunBofFromFile("zig-out/bin/test_obj4", &bytes, bytes.len));
+        {
+            const context = try testRunBofFromFile("zig-out/bin/test_obj1", &bytes, bytes.len);
+            defer context.release();
+            try expect(context.getExitCode() == 6);
+            try std.testing.expectEqualStrings("--- test_obj1.zig ---\n", context.getOutput().?[0..22]);
+            try std.testing.expectEqualStrings("BeaconPrintf has been called\n", context.getOutput().?[22..][0..29]);
+        }
+        {
+            const context = try testRunBofFromFile("zig-out/bin/test_obj0", null, 0);
+            defer context.release();
+            try expect(context.getExitCode() == 0);
+            try std.testing.expectEqualStrings("--- test_obj0.zig ---\n", context.getOutput().?[0..22]);
+            try std.testing.expectEqualStrings("Hello, go!\n", context.getOutput().?[22..][0..11]);
+            try std.testing.expectEqualStrings("func() it\n", context.getOutput().?[22..][11..][0..10]);
+        }
+        {
+            const context = try testRunBofFromFile("zig-out/bin/test_obj1", &bytes, bytes.len);
+            defer context.release();
+            try expect(context.getExitCode() == 6);
+            try std.testing.expectEqualStrings("--- test_obj1.zig ---\n", context.getOutput().?[0..22]);
+            try std.testing.expectEqualStrings("BeaconPrintf has been called\n", context.getOutput().?[22..][0..29]);
+        }
+        {
+            const context = try testRunBofFromFile("zig-out/bin/test_obj4", &bytes, bytes.len);
+            defer context.release();
+            try expect(context.getExitCode() == 0);
+        }
     }
 
-    try expect(15 == try testRunBofFromFile("zig-out/bin/test_obj2", &bytes, bytes.len));
-    try expect(123 == try testRunBofFromFile("zig-out/bin/test_beacon_format", &bytes, bytes.len));
-    try expect(0 == try testRunBofFromFile("zig-out/bin/test_obj0", null, 0));
+    {
+        const context = try testRunBofFromFile("zig-out/bin/test_obj2", &bytes, bytes.len);
+        defer context.release();
+        try expect(context.getExitCode() == 15);
+        try std.testing.expectEqualStrings("--- test_obj2.c ---\n", context.getOutput().?[0..20]);
+        try std.testing.expectEqualStrings("bof\n", context.getOutput().?[20..][0..4]);
+        try std.testing.expectEqualStrings("arg_len (from go): 35\n", context.getOutput().?[20..][4..][0..22]);
+        try std.testing.expectEqualStrings("Length: (from go): 31\n", context.getOutput().?[20..][4..][22..][0..22]);
+    }
+    {
+        const context = try testRunBofFromFile("zig-out/bin/test_beacon_format", &bytes, bytes.len);
+        defer context.release();
+        try expect(context.getExitCode() == 123);
+        try std.testing.expectEqualStrings("--- testBeaconFormat.c ---\n", context.getOutput().?[0..27]);
+        try std.testing.expectEqualStrings("!!!! Start testBeaconFormat !!!!\n", context.getOutput().?[27..][0..33]);
+        try std.testing.expectEqualStrings(
+            "BeaconFormat test with end of string (EOS) issue:\n",
+            context.getOutput().?[27..][33..][0..50],
+        );
+        try std.testing.expectEqualStrings(
+            "The user passed in the integer: 13\n",
+            context.getOutput().?[27..][33..][50..][0..35],
+        );
+        try std.testing.expectEqualStrings(
+            "The user passed in the string: 777\n",
+            context.getOutput().?[27..][33..][50..][35..][0..35],
+        );
+    }
+    {
+        const context = try testRunBofFromFile("zig-out/bin/test_obj0", null, 0);
+        defer context.release();
+        try expect(context.getExitCode() == 0);
+        try std.testing.expectEqualStrings("--- test_obj0.zig ---\n", context.getOutput().?[0..22]);
+        try std.testing.expectEqualStrings("Hello, go!\n", context.getOutput().?[22..][0..11]);
+        try std.testing.expectEqualStrings("func() it\n", context.getOutput().?[22..][11..][0..10]);
+    }
 }
 
 test "bof-launcher.beacon.format" {
@@ -127,7 +229,25 @@ test "bof-launcher.beacon.format" {
     var bytes: [hex_stream.len / 2]u8 = undefined;
     _ = try std.fmt.hexToBytes(&bytes, hex_stream);
 
-    try expect(123 == try testRunBofFromFile("zig-out/bin/test_beacon_format", &bytes, bytes.len));
+    {
+        const context = try testRunBofFromFile("zig-out/bin/test_beacon_format", &bytes, bytes.len);
+        defer context.release();
+        try expect(context.getExitCode() == 123);
+        try std.testing.expectEqualStrings("--- testBeaconFormat.c ---\n", context.getOutput().?[0..27]);
+        try std.testing.expectEqualStrings("!!!! Start testBeaconFormat !!!!\n", context.getOutput().?[27..][0..33]);
+        try std.testing.expectEqualStrings(
+            "BeaconFormat test with end of string (EOS) issue:\n",
+            context.getOutput().?[27..][33..][0..50],
+        );
+        try std.testing.expectEqualStrings(
+            "The user passed in the integer: 13\n",
+            context.getOutput().?[27..][33..][50..][0..35],
+        );
+        try std.testing.expectEqualStrings(
+            "The user passed in the string: 777\n",
+            context.getOutput().?[27..][33..][50..][35..][0..35],
+        );
+    }
 }
 
 extern fn ctestBasic0() c_int;
