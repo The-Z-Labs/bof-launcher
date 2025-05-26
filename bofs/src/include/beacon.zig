@@ -35,7 +35,7 @@ extern fn BeaconDataParse(parser: ?*datap, buffer: ?[*]u8, size: i32) callconv(.
 extern fn BeaconDataInt(parser: *datap) callconv(.C) i32;
 extern fn BeaconDataShort(parser: *datap) callconv(.C) i16;
 extern fn BeaconDataLength(parser: *datap) callconv(.C) i32;
-extern fn BeaconDataExtract(parser: ?*datap, size: ?*i32) callconv(.C) ?[*]u8;
+extern fn BeaconDataExtract(parser: ?*datap, size: ?*i32) callconv(.C) ?[*:0]u8;
 extern fn BeaconFormatAlloc(format: ?*formatp, maxsz: i32) callconv(.C) void;
 extern fn BeaconFormatReset(format: ?*formatp) callconv(.C) void;
 extern fn BeaconFormatFree(format: ?*formatp) callconv(.C) void;

@@ -87,7 +87,7 @@ pub export fn BeaconDataLength(parser: *datap) callconv(.C) i32 {
     return parser.length;
 }
 
-pub export fn BeaconDataExtract(parser: ?*datap, size: ?*i32) callconv(.C) ?[*]u8 {
+pub export fn BeaconDataExtract(parser: ?*datap, size: ?*i32) callconv(.C) ?[*:0]u8 {
     var length: i32 = 0;
 
     var outdata: ?[*]u8 = null;
@@ -108,7 +108,7 @@ pub export fn BeaconDataExtract(parser: ?*datap, size: ?*i32) callconv(.C) ?[*]u
     if (size != null and outdata != null) {
         size.?.* = length;
     }
-    return outdata;
+    return @ptrCast(outdata);
 }
 
 pub export fn BeaconFormatAlloc(format: ?*formatp, maxsz: i32) callconv(.C) void {

@@ -1140,7 +1140,7 @@ const BofArgs = extern struct {
     size: i32 = 0,
 
     blob: ?[*]u8 = null,
-    const blob_size = 128;
+    const blob_size = 4096;
 };
 
 export fn bofArgsInit(out_args: **pubapi.Args) callconv(.C) c_int {

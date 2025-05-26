@@ -854,3 +854,46 @@ test "bof-launcher.runBofFromBof" {
     try std.testing.expectEqualStrings("[2] Child BOF output: \n", context.getOutput().?[29..][29..][0..23]);
     try std.testing.expectEqualStrings("hello, bof!\n", context.getOutput().?[29..][29..][23..][0..12]);
 }
+
+test "bof-launcher.args" {
+    try bof.initLauncher();
+    defer bof.releaseLauncher();
+
+    const allocator = std.testing.allocator;
+
+    const bof_data = try loadBofFromFile(allocator, "zig-out/bin/test_args");
+    defer allocator.free(bof_data);
+
+    const object = try bof.Object.initFromMemory(bof_data);
+    defer object.release();
+
+    const args = try bof.Args.init();
+    defer args.release();
+
+    for (0..2) |_| {
+        args.begin();
+        try args.add("i:123");
+        try args.add("int:-123");
+        try args.add("i:2147483647"); // max signed int
+        try args.add("i:-2147483648"); // min signed int
+        try args.add("short:32767"); // max short
+        try args.add("s:-32768"); // min short
+
+        for (0..32) |i| {
+            const str = try std.fmt.allocPrint(allocator, "i:{d}", .{i});
+            defer allocator.free(str);
+            try args.add(str);
+        }
+        try args.add("z:red apple");
+        try args.add("str:green grid  ");
+        try args.add("blue");
+
+        try args.add("dksdjksadjksajdksajdksajdksajdksajdksajdksabxc daskildjald daskljdasldjska djkajdksalds s02w0201mskasl");
+        args.end();
+
+        const context = try object.run(args.getBuffer());
+        defer context.release();
+        try expect(context.getExitCode() == 0);
+        try std.testing.expectEqualStrings("--- test_args.zig ---\n", context.getOutput().?[0..22]);
+    }
+}
