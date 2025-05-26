@@ -19,11 +19,6 @@ fn runBofFromFile(
     const context = try object.run(
         if (arg_data_ptr) |d| d[0..@intCast(arg_data_len)] else null,
     );
-    //defer context.release();
-
-    //if (context.getOutput()) |output| {
-    //    std.debug.print("{s}", .{output});
-    //}
 
     return context;
 }
@@ -180,6 +175,7 @@ test "bof-launcher.basic" {
             const context = try testRunBofFromFile("zig-out/bin/test_obj4", &bytes, bytes.len);
             defer context.release();
             try expect(context.getExitCode() == 0);
+            try std.testing.expectEqualStrings("--- test_obj4.zig ---\n", context.getOutput().?[0..22]);
         }
     }
 
@@ -335,9 +331,6 @@ test "bof-launcher.bofs.load_run" {
     try std.testing.expectEqualStrings("--- test_obj2.c ---", context4.getOutput().?[0..19]);
 
     try expect(context3.getOutput() != null);
-    //if (context3.getOutput()) |output| {
-    //    std.debug.print("{s}", .{output});
-    //}
 
     try expect(object0.isValid());
     try expect(context0.getObject().isValid());
@@ -682,8 +675,8 @@ test "bof-launcher.tcpScanner" {
         const context = try object.run(args.getBuffer());
         defer context.release();
         try expect(context.getExitCode() == 0);
-        try std.testing.expectEqualStrings("IP: 127.0.0.1:1", context.getOutput().?[0..15]);
-        try std.testing.expectEqualStrings("port: 1", context.getOutput().?[16..][0..7]);
+        try std.testing.expectEqualStrings("IP: 127.0.0.1:1\n", context.getOutput().?[0..16]);
+        try std.testing.expectEqualStrings("port: 1\n", context.getOutput().?[16..][0..8]);
     }
     {
         const args = try bof.Args.init();
@@ -746,7 +739,7 @@ test "bof-launcher.wAsmTest" {
 
     try expect(context.getExitCode() == 0);
     try expect(context.getOutput() != null);
-    try std.testing.expectEqualStrings("Hello from asm BOF on Windows! eax is 12345", context.getOutput().?[0..43]);
+    try std.testing.expectEqualStrings("Hello from asm BOF on Windows! eax is 12345\n", context.getOutput().?[0..44]);
 }
 
 test "bof-launcher.lAsmTest" {
@@ -769,7 +762,7 @@ test "bof-launcher.lAsmTest" {
 
     try expect(context.getExitCode() == 0);
     try expect(context.getOutput() != null);
-    try std.testing.expectEqualStrings("Hello from asm BOF on Linux! eax is 12345", context.getOutput().?[0..41]);
+    try std.testing.expectEqualStrings("Hello from asm BOF on Linux! eax is 12345\n", context.getOutput().?[0..42]);
 }
 
 test "bof-launcher.getProcAddress" {
@@ -856,8 +849,8 @@ test "bof-launcher.runBofFromBof" {
 
     try expect(context.getExitCode() == 0);
     try expect(context.getOutput() != null);
-    try std.testing.expectEqualStrings("[1] Child BOF exit code: 123", context.getOutput().?[0..28]);
-    try std.testing.expectEqualStrings("[2] Child BOF exit code: 123", context.getOutput().?[29..][0..28]);
-    try std.testing.expectEqualStrings("[2] Child BOF output: ", context.getOutput().?[29..][29..][0..22]);
-    try std.testing.expectEqualStrings("hello, bof!", context.getOutput().?[29..][29..][23..][0..11]);
+    try std.testing.expectEqualStrings("[1] Child BOF exit code: 123\n", context.getOutput().?[0..29]);
+    try std.testing.expectEqualStrings("[2] Child BOF exit code: 123\n", context.getOutput().?[29..][0..29]);
+    try std.testing.expectEqualStrings("[2] Child BOF output: \n", context.getOutput().?[29..][29..][0..23]);
+    try std.testing.expectEqualStrings("hello, bof!\n", context.getOutput().?[29..][29..][23..][0..12]);
 }
