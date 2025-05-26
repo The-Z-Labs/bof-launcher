@@ -888,7 +888,7 @@ test "bof-launcher.args" {
         try args.add("str:green grid  ");
         try args.add("blue");
 
-        try args.add("dksdjksadjksajdksajdksajdksajdksajdksajdksabxc daskildjald daskljdasldjska djkajdksalds s02w0201mskasl");
+        try args.add("dksdjksadjksajdksajdksajdksajdksajdksajdksabxc\ndaskildjald daskljdasldjska\tdjkajdksalds s02w0201mskasl");
         args.end();
 
         const context = try object.run(args.getBuffer());

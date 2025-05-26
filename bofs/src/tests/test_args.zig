@@ -33,7 +33,7 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
         if (!std.mem.eql(u8, "blue", std.mem.span(str))) return 1;
     }
 
-    if (!std.mem.eql(u8, "dksdjksadjksajdksajdksajdksajdksajdksajdksabxc daskildjald daskljdasldjska djkajdksalds s02w0201mskasl", std.mem.span(beacon.dataExtract(&parser, null).?))) return 1;
+    if (!std.mem.eql(u8, "dksdjksadjksajdksajdksajdksajdksajdksajdksabxc\ndaskildjald daskljdasldjska\tdjkajdksalds s02w0201mskasl", std.mem.span(beacon.dataExtract(&parser, null).?))) return 1;
 
     return 0;
 }
