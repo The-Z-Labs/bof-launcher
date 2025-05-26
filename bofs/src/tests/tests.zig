@@ -256,7 +256,10 @@ test "bof-launcher.stress" {
 
             object = try bof.Object.initFromMemory(bof_data);
             try expect(object.isValid());
-            (try object.run(null)).release();
+            const context = try object.run(null);
+            defer context.release();
+
+            try std.testing.expectEqualStrings("--- test_obj0.zig ---", context.getOutput().?[0..21]);
         }
     }
 }
@@ -438,6 +441,8 @@ test "bof-launcher.bofs.masking" {
         try expect(ctx.getExitCode() == 0);
     }
     try expect(context2.getExitCode() == 1);
+
+    try std.testing.expectEqualStrings("--- test_obj3.zig ---", context2.getOutput().?[0..21]);
 }
 
 test "bof-launcher.info" {
@@ -486,6 +491,8 @@ test "bof-launcher.info" {
     try expect(data[0] == 2);
     try expect(data[50] == 0x70de_c0de);
     try expect(data[99] == 113);
+
+    try std.testing.expectEqualStrings("--- test_obj3.zig ---", context.getOutput().?[0..21]);
 }
 
 test "bof-launcher.udpScanner" {
@@ -551,6 +558,7 @@ test "bof-launcher.wWinverC" {
 
     try expect(context.getExitCode() == 0);
     try expect(context.getOutput() != null);
+    try std.testing.expectEqualStrings("Windows version: ", context.getOutput().?[0..17]);
 }
 
 test "bof-launcher.wAsmTest" {
