@@ -78,7 +78,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
         while (i < ngroups) {
             const g = posix.getgrgid(groups_gids[i]);
 
-            const name = mem.Allocator.dupeZ(allocator, u8, mem.sliceTo(g.?.gr_name, 0)) catch return 1;
+            const name = allocator.dupe(u8, mem.sliceTo(g.?.gr_name, 0)) catch return 1;
             groups_names.append(name) catch return 1;
             i = i + 1;
         }
