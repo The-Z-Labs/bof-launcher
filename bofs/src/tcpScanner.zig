@@ -197,9 +197,9 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
             //  zero) or unsuccessfully (SO_ERROR is one of the usual
             //  error codes listed here, explaining the reason for the
             //  failure).
-            std.posix.connect(sockfd, &dest_addr.any, dest_addr.getOsSockLen()) catch unreachable;
+            std.posix.connect(sockfd, &dest_addr.any, dest_addr.getOsSockLen()) catch {};
 
-            std.posix.setsockopt(sockfd, std.posix.SOL.SOCKET, std.posix.SO.LINGER, std.mem.asBytes(&lin)) catch unreachable;
+            std.posix.setsockopt(sockfd, std.posix.SOL.SOCKET, std.posix.SO.LINGER, std.mem.asBytes(&lin)) catch {};
 
             // use this on Windows: https://github.com/ziglang/zig/blob/956f53beb09c07925970453d4c178c6feb53ba70/lib/std/os/windows.zig#L1687
             const nevents = posix.poll(&pfd, POLL_TIMEOUT) catch 0;
