@@ -355,38 +355,36 @@ test "bof-launcher.bofs.runAsyncProcess" {
     );
     defer context2.release();
 
-    if (false) {
-        const context3 = try object.runAsyncProcess(
-            @constCast(std.mem.asBytes(&[_]i32{ 8, 30 })),
-            null,
-            null,
-        );
-        defer context3.release();
-    }
+    const context3 = try object.runAsyncProcess(
+        @constCast(std.mem.asBytes(&[_]i32{ 8, 30 })),
+        null,
+        null,
+    );
+    defer context3.release();
 
     try expect(context1.getObject().handle == object.handle);
     try expect(context2.getObject().handle == object.handle);
-    //try expect(context3.getObject().handle == object.handle);
+    try expect(context3.getObject().handle == object.handle);
 
     context1.wait();
     context2.wait();
-    //context3.wait();
+    context3.wait();
 
     try expect(context1.isRunning() == false);
     try expect(context2.isRunning() == false);
-    //try expect(context3.isRunning() == false);
+    try expect(context3.isRunning() == false);
 
     try expect(context1.getExitCode() == 10);
     try expect(context2.getExitCode() == 20);
-    //try expect(context3.getExitCode() == 30);
+    try expect(context3.getExitCode() == 30);
 
     try expect(context1.getOutput() != null);
     try expect(context2.getOutput() != null);
-    //try expect(context3.getOutput() != null);
+    try expect(context3.getOutput() != null);
 
     try std.testing.expectEqualStrings("--- test_async.zig ---", context1.getOutput().?[0..22]);
     try std.testing.expectEqualStrings("--- test_async.zig ---", context2.getOutput().?[0..22]);
-    //try std.testing.expectEqualStrings("--- test_async.zig ---", context3.getOutput().?[0..22]);
+    try std.testing.expectEqualStrings("--- test_async.zig ---", context3.getOutput().?[0..22]);
 
     //std.debug.print("{?s}\n", .{context1.getOutput()});
     //std.debug.print("{?s}\n", .{context2.getOutput()});
@@ -664,4 +662,29 @@ test "bof-launcher.wProcessInjectionSrdi" {
     defer context.release();
 
     try expect(context.getExitCode() == 0);
+}
+
+test "bof-launcher.runBofFromBof" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+
+    try bof.initLauncher();
+    defer bof.releaseLauncher();
+
+    const allocator = std.testing.allocator;
+
+    const bof_data = try loadBofFromFile(allocator, "zig-out/bin/runBofFromBof");
+    defer allocator.free(bof_data);
+
+    const object = try bof.Object.initFromMemory(bof_data);
+    defer object.release();
+
+    const context = try object.run(null);
+    defer context.release();
+
+    try expect(context.getExitCode() == 0);
+    try expect(context.getOutput() != null);
+    try std.testing.expectEqualStrings("[1] Child BOF exit code: 123", context.getOutput().?[0..28]);
+    try std.testing.expectEqualStrings("[2] Child BOF exit code: 123", context.getOutput().?[29..][0..28]);
+    try std.testing.expectEqualStrings("[2] Child BOF output: ", context.getOutput().?[29..][29..][0..22]);
+    try std.testing.expectEqualStrings("hello, bof!", context.getOutput().?[29..][29..][23..][0..11]);
 }
