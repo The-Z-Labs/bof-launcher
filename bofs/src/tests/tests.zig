@@ -539,6 +539,51 @@ test "bof-launcher.udpScanner" {
     }
 }
 
+test "bof-launcher.tcpScanner" {
+    try bof.initLauncher();
+    defer bof.releaseLauncher();
+
+    const allocator = std.testing.allocator;
+
+    const bof_data = try loadBofFromFile(allocator, "zig-out/bin/tcpScanner");
+    defer allocator.free(bof_data);
+
+    const object = try bof.Object.initFromMemory(bof_data);
+    defer object.release();
+
+    {
+        const args = try bof.Args.init();
+        defer args.release();
+
+        args.begin();
+        try args.add("127.0.0.1:1");
+        args.end();
+
+        const context = try object.run(args.getBuffer());
+        defer context.release();
+        try expect(context.getExitCode() == 0);
+        try std.testing.expectEqualStrings("IP: 127.0.0.1:1", context.getOutput().?[0..15]);
+        try std.testing.expectEqualStrings("port: 1", context.getOutput().?[16..][0..7]);
+    }
+    {
+        const args = try bof.Args.init();
+        defer args.release();
+
+        args.begin();
+        try args.add("127-0.0.1:1"); // bad IP
+        args.end();
+
+        const context = try object.run(args.getBuffer());
+        defer context.release();
+        try expect(context.getExitCode() == 2);
+    }
+    {
+        const context = try object.run(null);
+        defer context.release();
+        try expect(context.getExitCode() == 1);
+    }
+}
+
 test "bof-launcher.wWinverC" {
     if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
 
