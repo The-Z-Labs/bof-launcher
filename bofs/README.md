@@ -1,11 +1,11 @@
 # Z-Labs BOFs collection
 
+### Cross-platform BOFs
+
 | BOF name  | Description | Supported platforms | Example
 | ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
 | [tcpScanner](src/tcpScanner.zig)  | TCP connect() port scanner  | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `tcpScanner 4.3.2.1-255:22,80` |
 | [udpScanner](src/udpScanner.zig) | UDP port sweeper | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `udpScanner 4.3.2.1-255:5000-5010` |
-| [winver](src/wWinver.zig) | show the edition, version, and system type of Windows operating system | `Windows x86/x86_64` | `winver` |
-
 
 ### GNU coreutils
 
@@ -27,3 +27,8 @@
 | ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
 | [ifconfig](src/net-tools/ifconfig.zig) | Display the status of the currently active network interfaces. Manipulate current state of the device | `Linux x86/x86_64/ARMv6+/AArch64` | `ifconfig eth0 promisc` |
 
+### Windows-only BOFs
+
+| BOF name  | Description | Supported platforms | Example
+| ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
+| [winver](src/wWinver.zig) | show the edition, version, and system type of Windows operating system | `Windows x86/x86_64` | `winver` |
