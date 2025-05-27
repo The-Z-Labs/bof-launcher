@@ -6,6 +6,7 @@
 | ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
 | [tcpScanner](src/tcpScanner.zig)  | TCP connect() port scanner  | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `tcpScanner 4.3.2.1-255:22,80` |
 | [udpScanner](src/udpScanner.zig) | UDP port sweeper | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `udpScanner 4.3.2.1-255:5000-5010` |
+| [z-beac0n](src/z-beac0n.zig) | So called BOF zero (BOF0). An example of a BOF that can operate as standalone implant | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `z-beac0n` |
 
 ### GNU coreutils
 
@@ -25,7 +26,13 @@
 
 | BOF name  | Description | Supported platforms | Example
 | ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
-| [ifconfig](src/net-tools/ifconfig.zig) | Display the status of the currently active network interfaces. Manipulate current state of the device | `Linux x86/x86_64/ARMv6+/AArch64` | `ifconfig eth0 promisc` |
+| [ifconfig](src/net-tools/ifconfig.zig) | Display the status of the currently active network interfaces. With root privileges: also manipulate current state of the device | `Linux x86/x86_64/ARMv6+/AArch64` | `ifconfig eth0 promisc` |
+
+### Linux-only BOFs
+
+| BOF name  | Description | Supported platforms | Example
+| ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
+| [kmodLoader](src/kmodLoader.zig) | API-style BOF; load/unload kernel module directly from memory (root privileges required) | `Linux x86/x86_64/ARMv6+/AArch64` | see docs |
 
 ### Windows-only BOFs
 
