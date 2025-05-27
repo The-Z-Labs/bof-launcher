@@ -8,7 +8,7 @@ const bofs_included_in_launcher = [_]Bof{
     .{ .name = "simple", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "wWinver", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
-    .{ .name = "wWhoami", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    .{ .name = "whoami", .formats = &.{ .elf, .coff}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "wAsmTest", .formats = &.{.coff}, .archs = &.{.x64} },
     .{ .name = "lAsmTest", .formats = &.{.elf}, .archs = &.{.x64} },
     .{ .name = "uname", .dir = "coreutils/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },

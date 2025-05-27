@@ -1,6 +1,7 @@
 const std = @import("std");
 const w32 = @import("bof_api").win32;
 const beacon = @import("bof_api").beacon;
+const posix = @import("bof_api").posix;
 
 fn getTokenInfo(allocator: std.mem.Allocator, token_type: w32.TOKEN_INFORMATION_CLASS) ?*anyopaque {
     _ = allocator;
@@ -18,13 +19,17 @@ fn getTokenInfo(allocator: std.mem.Allocator, token_type: w32.TOKEN_INFORMATION_
 }
 
 pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
-    //var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    //defer _ = gpa.deinit();
-    //const allocator = gpa.allocator();
-
     const allocator = std.heap.page_allocator;
 
-    _ = getTokenInfo(allocator, .TokenUser);
+    if (@import("builtin").os.tag == .windows) {
+        _ = getTokenInfo(allocator, .TokenUser);
+    } else {
+        const euid = posix.geteuid();
+        const pwd = posix.getpwuid(euid);
+        if (pwd) |p| {
+            _ = beacon.printf(0, "%s", p.name);
+        }
+    }
 
     return 0;
 }
