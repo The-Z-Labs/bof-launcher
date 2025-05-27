@@ -3,17 +3,15 @@
     .version = "1.0.0",
     .fingerprint = 0x133c46ea88384cbb,
     .paths = .{
-        "build.zig",
-        "build.zig.zon",
-        "include",
         "bof-launcher",
         "bofs",
         "examples",
-        "tests",
         "utils",
-        "bin",
+        "win32-api",
         "LICENSE",
         "README.md",
+        "build.zig",
+        "build.zig.zon",
     },
     .dependencies = .{
         .bof_launcher_lib = .{
