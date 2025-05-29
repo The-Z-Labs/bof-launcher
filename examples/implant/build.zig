@@ -17,15 +17,15 @@ pub fn build(b: *std.Build) void {
     );
 
     const bofs_dep = b.dependency("bof_launcher_bofs", .{ .optimize = optimize });
-    const z_beacon = bofs_dep.artifact("z-beac0n.elf.x64");
+    const z_beacon = bofs_dep.artifact("z-beac0n-core.elf.x64");
 
     const shellcode_in_zig_dep = b.dependency("shellcode_in_zig", .{ .target = target, .optimize = optimize });
 
     //
-    // Executable
+    // z-beac0n implant: stageless payload (executable)
     //
     const exe = b.addExecutable(.{
-        .name = b.fmt("implant_executable_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }),
+        .name = b.fmt("z-beac0n_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }),
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
@@ -39,15 +39,16 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(exe);
 
     //
-    // Shellcode
+    // z-beac0n implant: stageless payload (shellcode)
     //
-    const shellcode_name = b.fmt("implant_shellcode_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) });
+    const shellcode_name = b.fmt("shellcode_binary_temp_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) });
     const shellcode = b.addExecutable(.{
         .name = shellcode_name,
         .root_source_file = b.path("src/shellcode.zig"),
         .target = target,
         .optimize = .ReleaseSmall,
         .link_libc = false,
+        .strip = true,
         .single_threaded = true,
     });
     shellcode.link_eh_frame_hdr = false;
@@ -63,6 +64,12 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(shellcode);
 
     const copy = b.addObjCopy(shellcode.getEmittedBin(), .{ .format = .bin, .only_section = ".text" });
-    const install = b.addInstallBinFile(copy.getOutput(), b.fmt("{s}.bin", .{shellcode_name}));
+    const install = b.addInstallBinFile(copy.getOutput(), b.fmt("z-beac0n_{s}_{s}.bin", .{osTagStr(target), cpuArchStr(target)}));
     b.getInstallStep().dependOn(&install.step);
+
+    //
+    // z-beac0n implant: stageless payload (shared library)
+    //
+    // TODO
+
 }

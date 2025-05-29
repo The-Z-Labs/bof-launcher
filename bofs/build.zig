@@ -25,7 +25,7 @@ const bofs_included_in_launcher = [_]Bof{
     .{ .name = "wInjectionChainStage2C", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "kmodLoader", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     // so called BOF0 - special purpose BOF that acts as a standalone implant, that uses other BOFs as its post-ex modules:
-    .{ .name = "z-beac0n", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+    .{ .name = "z-beac0n-core", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
 };
 
 const bofs_for_testing = [_]Bof{
