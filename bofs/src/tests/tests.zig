@@ -77,6 +77,7 @@ fn loadBofFromFile(allocator: std.mem.Allocator, bof_name: [:0]const u8) ![]u8 {
     return try file.reader().readAllAlloc(allocator, 16 * 1024 * 1024);
 }
 
+const bofs_path = "zig-out/bin/bofs/";
 const expect = std.testing.expect;
 
 test "bof-launcher.basic" {
@@ -89,7 +90,7 @@ test "bof-launcher.basic" {
     _ = try std.fmt.hexToBytes(&bytes, hex_stream);
 
     {
-        const context = try testRunBofFromFile("zig-out/bin/test_obj0", null, 0);
+        const context = try testRunBofFromFile(bofs_path ++ "test_obj0", null, 0);
         defer context.release();
         try expect(context.getExitCode() == 0);
         try std.testing.expectEqualStrings("--- test_obj0.zig ---\n", context.getOutput().?[0..22]);
@@ -97,7 +98,7 @@ test "bof-launcher.basic" {
         try std.testing.expectEqualStrings("func() it\n", context.getOutput().?[22..][11..][0..10]);
     }
     {
-        const context = try testRunBofFromFile("zig-out/bin/test_beacon_format", &bytes, bytes.len);
+        const context = try testRunBofFromFile(bofs_path ++ "test_beacon_format", &bytes, bytes.len);
         defer context.release();
         try expect(context.getExitCode() == 123);
         try std.testing.expectEqualStrings("--- testBeaconFormat.c ---\n", context.getOutput().?[0..27]);
@@ -120,14 +121,14 @@ test "bof-launcher.basic" {
         try bof.initLauncher();
         defer bof.releaseLauncher();
         {
-            const context = try testRunBofFromFile("zig-out/bin/test_obj1", &bytes, bytes.len);
+            const context = try testRunBofFromFile(bofs_path ++ "test_obj1", &bytes, bytes.len);
             defer context.release();
             try expect(context.getExitCode() == 6);
             try std.testing.expectEqualStrings("--- test_obj1.zig ---\n", context.getOutput().?[0..22]);
             try std.testing.expectEqualStrings("BeaconPrintf has been called\n", context.getOutput().?[22..][0..29]);
         }
         {
-            const context = try testRunBofFromFile("zig-out/bin/test_obj2", &bytes, bytes.len);
+            const context = try testRunBofFromFile(bofs_path ++ "test_obj2", &bytes, bytes.len);
             defer context.release();
             try expect(context.getExitCode() == 15);
             try std.testing.expectEqualStrings("--- test_obj2.c ---\n", context.getOutput().?[0..20]);
@@ -136,7 +137,7 @@ test "bof-launcher.basic" {
             try std.testing.expectEqualStrings("Length: (from go): 31\n", context.getOutput().?[20..][4..][22..][0..22]);
         }
         {
-            const context = try testRunBofFromFile("zig-out/bin/test_obj0", null, 0);
+            const context = try testRunBofFromFile(bofs_path ++ "test_obj0", null, 0);
             defer context.release();
             try expect(context.getExitCode() == 0);
             try std.testing.expectEqualStrings("--- test_obj0.zig ---\n", context.getOutput().?[0..22]);
@@ -150,14 +151,14 @@ test "bof-launcher.basic" {
         try bof.initLauncher();
         defer bof.releaseLauncher();
         {
-            const context = try testRunBofFromFile("zig-out/bin/test_obj1", &bytes, bytes.len);
+            const context = try testRunBofFromFile(bofs_path ++ "test_obj1", &bytes, bytes.len);
             defer context.release();
             try expect(context.getExitCode() == 6);
             try std.testing.expectEqualStrings("--- test_obj1.zig ---\n", context.getOutput().?[0..22]);
             try std.testing.expectEqualStrings("BeaconPrintf has been called\n", context.getOutput().?[22..][0..29]);
         }
         {
-            const context = try testRunBofFromFile("zig-out/bin/test_obj0", null, 0);
+            const context = try testRunBofFromFile(bofs_path ++ "test_obj0", null, 0);
             defer context.release();
             try expect(context.getExitCode() == 0);
             try std.testing.expectEqualStrings("--- test_obj0.zig ---\n", context.getOutput().?[0..22]);
@@ -165,14 +166,14 @@ test "bof-launcher.basic" {
             try std.testing.expectEqualStrings("func() it\n", context.getOutput().?[22..][11..][0..10]);
         }
         {
-            const context = try testRunBofFromFile("zig-out/bin/test_obj1", &bytes, bytes.len);
+            const context = try testRunBofFromFile(bofs_path ++ "test_obj1", &bytes, bytes.len);
             defer context.release();
             try expect(context.getExitCode() == 6);
             try std.testing.expectEqualStrings("--- test_obj1.zig ---\n", context.getOutput().?[0..22]);
             try std.testing.expectEqualStrings("BeaconPrintf has been called\n", context.getOutput().?[22..][0..29]);
         }
         {
-            const context = try testRunBofFromFile("zig-out/bin/test_obj4", &bytes, bytes.len);
+            const context = try testRunBofFromFile(bofs_path ++ "test_obj4", &bytes, bytes.len);
             defer context.release();
             try expect(context.getExitCode() == 0);
             try std.testing.expectEqualStrings("--- test_obj4.zig ---\n", context.getOutput().?[0..22]);
@@ -180,7 +181,7 @@ test "bof-launcher.basic" {
     }
 
     {
-        const context = try testRunBofFromFile("zig-out/bin/test_obj2", &bytes, bytes.len);
+        const context = try testRunBofFromFile(bofs_path ++ "test_obj2", &bytes, bytes.len);
         defer context.release();
         try expect(context.getExitCode() == 15);
         try std.testing.expectEqualStrings("--- test_obj2.c ---\n", context.getOutput().?[0..20]);
@@ -189,7 +190,7 @@ test "bof-launcher.basic" {
         try std.testing.expectEqualStrings("Length: (from go): 31\n", context.getOutput().?[20..][4..][22..][0..22]);
     }
     {
-        const context = try testRunBofFromFile("zig-out/bin/test_beacon_format", &bytes, bytes.len);
+        const context = try testRunBofFromFile(bofs_path ++ "test_beacon_format", &bytes, bytes.len);
         defer context.release();
         try expect(context.getExitCode() == 123);
         try std.testing.expectEqualStrings("--- testBeaconFormat.c ---\n", context.getOutput().?[0..27]);
@@ -208,7 +209,7 @@ test "bof-launcher.basic" {
         );
     }
     {
-        const context = try testRunBofFromFile("zig-out/bin/test_obj0", null, 0);
+        const context = try testRunBofFromFile(bofs_path ++ "test_obj0", null, 0);
         defer context.release();
         try expect(context.getExitCode() == 0);
         try std.testing.expectEqualStrings("--- test_obj0.zig ---\n", context.getOutput().?[0..22]);
@@ -226,7 +227,7 @@ test "bof-launcher.beacon.format" {
     _ = try std.fmt.hexToBytes(&bytes, hex_stream);
 
     {
-        const context = try testRunBofFromFile("zig-out/bin/test_beacon_format", &bytes, bytes.len);
+        const context = try testRunBofFromFile(bofs_path ++ "test_beacon_format", &bytes, bytes.len);
         defer context.release();
         try expect(context.getExitCode() == 123);
         try std.testing.expectEqualStrings("--- testBeaconFormat.c ---\n", context.getOutput().?[0..27]);
@@ -260,7 +261,7 @@ test "bof-launcher.ctest.basic1" {
 
     const allocator = std.testing.allocator;
 
-    const bof_data = try loadBofFromFile(allocator, "zig-out/bin/test_obj0");
+    const bof_data = try loadBofFromFile(allocator, bofs_path ++ "test_obj0");
     defer allocator.free(bof_data);
 
     try expect(ctestBasic1(bof_data.ptr, @intCast(bof_data.len)) == 1);
@@ -272,7 +273,7 @@ test "bof-launcher.ctest.basic2" {
     defer bof.releaseLauncher();
     const allocator = std.testing.allocator;
 
-    const bof_data = try loadBofFromFile(allocator, "zig-out/bin/test_obj0");
+    const bof_data = try loadBofFromFile(allocator, bofs_path ++ "test_obj0");
     defer allocator.free(bof_data);
 
     try expect(ctestBasic2(bof_data.ptr, @intCast(bof_data.len)) == 1);
@@ -284,10 +285,10 @@ test "bof-launcher.bofs.load_run" {
 
     const allocator = std.testing.allocator;
 
-    const bof_data0 = try loadBofFromFile(allocator, "zig-out/bin/test_obj1");
+    const bof_data0 = try loadBofFromFile(allocator, bofs_path ++ "test_obj1");
     defer allocator.free(bof_data0);
 
-    const bof_data1 = try loadBofFromFile(allocator, "zig-out/bin/test_obj2");
+    const bof_data1 = try loadBofFromFile(allocator, bofs_path ++ "test_obj2");
     defer allocator.free(bof_data1);
 
     const object0 = try bof.Object.initFromMemory(bof_data0);
@@ -351,7 +352,7 @@ test "bof-launcher.bofs.load_run" {
 test "bof-launcher.stress" {
     const allocator = std.testing.allocator;
 
-    const bof_data = try loadBofFromFile(allocator, "zig-out/bin/test_obj0");
+    const bof_data = try loadBofFromFile(allocator, bofs_path ++ "test_obj0");
     defer allocator.free(bof_data);
 
     try bof.initLauncher();
@@ -383,7 +384,7 @@ test "bof-launcher.bofs.runAsyncThread" {
 
     const allocator = std.testing.allocator;
 
-    const bof_data = try loadBofFromFile(allocator, "zig-out/bin/test_async");
+    const bof_data = try loadBofFromFile(allocator, bofs_path ++ "test_async");
     defer allocator.free(bof_data);
 
     const object = try bof.Object.initFromMemory(bof_data);
@@ -449,7 +450,7 @@ test "bof-launcher.bofs.runAsyncProcess" {
 
     const allocator = std.testing.allocator;
 
-    const bof_data = try loadBofFromFile(allocator, "zig-out/bin/test_async");
+    const bof_data = try loadBofFromFile(allocator, bofs_path ++ "test_async");
     defer allocator.free(bof_data);
 
     const object = try bof.Object.initFromMemory(bof_data);
@@ -515,10 +516,10 @@ test "bof-launcher.bofs.masking" {
 
     const allocator = std.testing.allocator;
 
-    const bof_data1 = try loadBofFromFile(allocator, "zig-out/bin/test_long_running");
+    const bof_data1 = try loadBofFromFile(allocator, bofs_path ++ "test_long_running");
     defer allocator.free(bof_data1);
 
-    const bof_data2 = try loadBofFromFile(allocator, "zig-out/bin/test_obj3");
+    const bof_data2 = try loadBofFromFile(allocator, bofs_path ++ "test_obj3");
     defer allocator.free(bof_data2);
 
     const object1 = try bof.Object.initFromMemory(bof_data1);
@@ -588,7 +589,7 @@ test "bof-launcher.info" {
 
     try expect(written.len == 10 + 3 * @sizeOf(usize));
 
-    const bof_data = try loadBofFromFile(allocator, "zig-out/bin/test_obj3");
+    const bof_data = try loadBofFromFile(allocator, bofs_path ++ "test_obj3");
     defer allocator.free(bof_data);
 
     const object = try bof.Object.initFromMemory(bof_data);
@@ -614,7 +615,7 @@ test "bof-launcher.udpScanner" {
 
     const allocator = std.testing.allocator;
 
-    const bof_data = try loadBofFromFile(allocator, "zig-out/bin/udpScanner");
+    const bof_data = try loadBofFromFile(allocator, bofs_path ++ "udpScanner");
     defer allocator.free(bof_data);
 
     const object = try bof.Object.initFromMemory(bof_data);
@@ -658,7 +659,7 @@ test "bof-launcher.tcpScanner" {
 
     const allocator = std.testing.allocator;
 
-    const bof_data = try loadBofFromFile(allocator, "zig-out/bin/tcpScanner");
+    const bof_data = try loadBofFromFile(allocator, bofs_path ++ "tcpScanner");
     defer allocator.free(bof_data);
 
     const object = try bof.Object.initFromMemory(bof_data);
@@ -705,7 +706,7 @@ test "bof-launcher.wWinverC" {
 
     const allocator = std.testing.allocator;
 
-    const bof_data = try loadBofFromFile(allocator, "zig-out/bin/wWinverC");
+    const bof_data = try loadBofFromFile(allocator, bofs_path ++ "wWinverC");
     defer allocator.free(bof_data);
 
     const object = try bof.Object.initFromMemory(bof_data);
@@ -728,7 +729,7 @@ test "bof-launcher.wAsmTest" {
 
     const allocator = std.testing.allocator;
 
-    const bof_data = try loadBofFromFile(allocator, "zig-out/bin/wAsmTest");
+    const bof_data = try loadBofFromFile(allocator, bofs_path ++ "wAsmTest");
     defer allocator.free(bof_data);
 
     const object = try bof.Object.initFromMemory(bof_data);
@@ -751,7 +752,7 @@ test "bof-launcher.lAsmTest" {
 
     const allocator = std.testing.allocator;
 
-    const bof_data = try loadBofFromFile(allocator, "zig-out/bin/lAsmTest");
+    const bof_data = try loadBofFromFile(allocator, bofs_path ++ "lAsmTest");
     defer allocator.free(bof_data);
 
     const object = try bof.Object.initFromMemory(bof_data);
@@ -768,7 +769,7 @@ test "bof-launcher.lAsmTest" {
 test "bof-launcher.getProcAddress" {
     const allocator = std.testing.allocator;
 
-    const bof_data = try loadBofFromFile(allocator, "zig-out/bin/test_obj0");
+    const bof_data = try loadBofFromFile(allocator, bofs_path ++ "test_obj0");
     defer allocator.free(bof_data);
 
     try bof.initLauncher();
@@ -794,10 +795,10 @@ test "bof-launcher.wProcessInjectionSrdi" {
 
     const allocator = std.testing.allocator;
 
-    const hello_bof_data = try loadBofFromFile(allocator, "zig-out/bin/helloBof");
+    const hello_bof_data = try loadBofFromFile(allocator, bofs_path ++ "helloBof");
     defer allocator.free(hello_bof_data);
 
-    const srdi_bof_data = try loadBofFromFile(allocator, "zig-out/bin/wProcessInjectionSrdi");
+    const srdi_bof_data = try loadBofFromFile(allocator, bofs_path ++ "wProcessInjectionSrdi");
     defer allocator.free(srdi_bof_data);
 
     try bof.initLauncher();
@@ -838,7 +839,7 @@ test "bof-launcher.runBofFromBof" {
 
     const allocator = std.testing.allocator;
 
-    const bof_data = try loadBofFromFile(allocator, "zig-out/bin/runBofFromBof");
+    const bof_data = try loadBofFromFile(allocator, bofs_path ++ "runBofFromBof");
     defer allocator.free(bof_data);
 
     const object = try bof.Object.initFromMemory(bof_data);
@@ -861,7 +862,7 @@ test "bof-launcher.args" {
 
     const allocator = std.testing.allocator;
 
-    const bof_data = try loadBofFromFile(allocator, "zig-out/bin/test_args");
+    const bof_data = try loadBofFromFile(allocator, bofs_path ++ "test_args");
     defer allocator.free(bof_data);
 
     const object = try bof.Object.initFromMemory(bof_data);

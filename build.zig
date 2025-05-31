@@ -36,6 +36,7 @@ pub fn build(b: *std.Build) !void {
     const bofs_dep = b.dependency("bof_launcher_bofs", .{ .optimize = optimize });
 
     // Install BOFs
+    const bofs_path = "bin/bofs";
     for (@import("bof_launcher_bofs").bofs_to_build) |bof| {
         for (bof.formats) |format| {
             for (bof.archs) |arch| {
@@ -53,20 +54,18 @@ pub fn build(b: *std.Build) !void {
                 b.getInstallStep().dependOn(&b.addInstallArtifact(
                     obj,
                     .{
-                        .dest_dir = .{ .override = .bin },
+                        .dest_dir = .{ .override = .{ .custom = bofs_path } },
                         .dest_sub_path = b.fmt("{s}.o", .{full_name}),
                     },
                 ).step);
 
                 if (optimize == .Debug) {
-                    const debug_exe = bofs_dep.artifact(@import("bof_launcher_bofs").Bof.fullName(
-                        b.allocator,
-                        bof.name,
-                        format,
-                        arch,
-                        .Debug,
-                    ));
-                    b.installArtifact(debug_exe);
+                    const full_name_debug = @import("bof_launcher_bofs").Bof.fullName(b.allocator, bof.name, format, arch, .Debug);
+                    const debug_exe = bofs_dep.artifact(full_name_debug);
+                    b.getInstallStep().dependOn(&b.addInstallArtifact(
+                        debug_exe,
+                        .{ .dest_dir = .{ .override = .{ .custom = bofs_path } } },
+                    ).step);
                 }
             }
         }
@@ -162,7 +161,7 @@ pub fn build(b: *std.Build) !void {
             b.installArtifact(shellcode_exe);
 
             const copy = b.addObjCopy(shellcode_exe.getEmittedBin(), .{ .format = .bin, .only_section = ".text" });
-            const install = b.addInstallBinFile(copy.getOutput(), b.fmt("z-beac0n_{s}_{s}.bin", .{osTagStr(target), cpuArchStr(target)}));
+            const install = b.addInstallBinFile(copy.getOutput(), b.fmt("z-beac0n_{s}_{s}.bin", .{ osTagStr(target), cpuArchStr(target) }));
             b.getInstallStep().dependOn(&install.step);
         }
     }
