@@ -86,9 +86,6 @@ pub fn build(b: *std.Build) !void {
             @import("bof_launcher_lib").libFileName(b.allocator, target, .static),
         );
 		
-        // FORCE COMPILER-RT TO BE BUNDLED
-        bof_launcher_lib.bundle_compiler_rt = true;
-		
         b.installArtifact(bof_launcher_lib);
 
         // TODO: Shared library fails to build on Linux x86.
