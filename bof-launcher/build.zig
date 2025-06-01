@@ -61,6 +61,7 @@ fn buildLib(
         lib.linkSystemLibrary2("ws2_32", .{});
         lib.linkSystemLibrary2("ole32", .{});
     }
+    lib.bundle_compiler_rt = true;
     b.installArtifact(lib);
 }
 
