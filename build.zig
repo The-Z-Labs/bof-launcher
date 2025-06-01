@@ -85,7 +85,6 @@ pub fn build(b: *std.Build) !void {
         const bof_launcher_lib = bof_launcher_dep.artifact(
             @import("bof_launcher_lib").libFileName(b.allocator, target, .static),
         );
-		
         b.installArtifact(bof_launcher_lib);
 
         // TODO: Shared library fails to build on Linux x86.
