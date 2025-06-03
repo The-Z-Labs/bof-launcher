@@ -20,6 +20,18 @@ pub fn build(b: *std.Build) !void {
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.arm1176jz_s }, // ARMv6kz
         },
     };
+    const nolibc_linux_targets: []const std.Target.Query = &.{
+        .{ .cpu_arch = .x86, .os_tag = .linux, .abi = .none },
+        .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .none },
+        .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .none },
+        .{
+            .cpu_arch = .arm,
+            .os_tag = .linux,
+            .abi = .none,
+            .cpu_model = .{ .explicit = &std.Target.arm.cpu.arm1176jz_s }, // ARMv6kz
+        },
+    };
+    const bof_launcher_lib_targets = supported_targets ++ nolibc_linux_targets;
 
     const std_target = b.standardTargetOptions(.{ .whitelist = supported_targets });
     const optimize = b.option(
@@ -60,7 +72,13 @@ pub fn build(b: *std.Build) !void {
                 ).step);
 
                 if (optimize == .Debug) {
-                    const full_name_debug = @import("bof_launcher_bofs").Bof.fullName(b.allocator, bof.name, format, arch, .Debug);
+                    const full_name_debug = @import("bof_launcher_bofs").Bof.fullName(
+                        b.allocator,
+                        bof.name,
+                        format,
+                        arch,
+                        .Debug,
+                    );
                     const debug_exe = bofs_dep.artifact(full_name_debug);
                     b.getInstallStep().dependOn(&b.addInstallArtifact(
                         debug_exe,
@@ -72,7 +90,7 @@ pub fn build(b: *std.Build) !void {
     }
 
     // Install bof launcher library
-    for (targets_to_build) |target_query| {
+    for (bof_launcher_lib_targets) |target_query| {
         const target = b.resolveTargetQuery(target_query);
 
         const bof_launcher_dep = b.dependency(
@@ -80,12 +98,12 @@ pub fn build(b: *std.Build) !void {
             .{ .target = target, .optimize = optimize },
         );
 
-        _ = bof_launcher_dep.module("bof_launcher_api");
-
-        const bof_launcher_lib = bof_launcher_dep.artifact(
-            @import("bof_launcher_lib").libFileName(b.allocator, target, .static),
-        );
-        b.installArtifact(bof_launcher_lib);
+        if (target.result.abi != .none) {
+            const bof_launcher_lib = bof_launcher_dep.artifact(
+                @import("bof_launcher_lib").libFileName(b.allocator, target, .static),
+            );
+            b.installArtifact(bof_launcher_lib);
+        }
 
         // TODO: Shared library fails to build on Linux x86.
         if (target.result.cpu.arch == .x86 and target.result.os.tag == .linux) continue;
@@ -161,7 +179,10 @@ pub fn build(b: *std.Build) !void {
             b.installArtifact(shellcode_exe);
 
             const copy = b.addObjCopy(shellcode_exe.getEmittedBin(), .{ .format = .bin, .only_section = ".text" });
-            const install = b.addInstallBinFile(copy.getOutput(), b.fmt("z-beac0n_{s}_{s}.bin", .{ osTagStr(target), cpuArchStr(target) }));
+            const install = b.addInstallBinFile(
+                copy.getOutput(),
+                b.fmt("z-beac0n_{s}_{s}.bin", .{ osTagStr(target), cpuArchStr(target) }),
+            );
             b.getInstallStep().dependOn(&install.step);
         }
     }

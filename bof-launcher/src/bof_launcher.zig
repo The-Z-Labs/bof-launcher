@@ -7,6 +7,8 @@ pub const std_options = std.Options{
     .log_level = std.log.default_level,
 };
 
+const with_libc = @import("builtin").link_libc;
+
 const BofHandle = packed struct(u32) {
     index: u16 = 0,
     generation: u16 = 0,
@@ -730,10 +732,10 @@ const Bof = struct {
                             const func_name_z = try std.mem.concatWithSentinel(arena, u8, &.{func_name[0..]}, 0);
                             defer arena.free(func_name_z);
 
-                            if (gstate.libc == null) {
+                            if (with_libc and gstate.libc == null) {
                                 gstate.libc = std.DynLib.open("libc.so.6") catch null;
                             }
-                            if (gstate.libc != null) {
+                            if (with_libc and gstate.libc != null) {
                                 maybe_func_ptr = @intFromPtr(gstate.libc.?.lookup(*anyopaque, func_name_z));
                             }
                             if (maybe_func_ptr == null) {
@@ -1704,6 +1706,10 @@ fn runAsync(
     comptime run_in_new_process: bool,
     out_context: **pubapi.Context,
 ) !void {
+    if (@import("builtin").os.tag == .linux and with_libc == false) {
+        return error.ThreadingDisabledNoLibC;
+    }
+
     const context = try gstate.allocator.?.create(BofContext);
     context.* = BofContext.init(gstate.allocator.?, bof_handle);
     errdefer {
@@ -2030,7 +2036,7 @@ fn queryPageSize() u32 {
         return @intCast(info.dwPageSize);
     }
     // TODO: Is it correct?
-    const page_size: u32 = @intCast(linux.getauxval(std.elf.AT_PAGESZ));
+    const page_size: u32 = if (with_libc) @intCast(linux.getauxval(std.elf.AT_PAGESZ)) else 0;
     return if (page_size != 0) page_size else 4096;
 }
 
@@ -2088,8 +2094,8 @@ const gstate = struct {
     var func_lookup: std.StringHashMap(usize) = undefined;
     var bof_pool: BofPool = undefined;
 
-    var libc: if (@import("builtin").os.tag == .linux) ?std.DynLib else void = null;
-    var libpthread: if (@import("builtin").os.tag == .linux) ?std.DynLib else void = null;
+    var libc: if (with_libc and @import("builtin").os.tag == .linux) ?std.DynLib else void = null;
+    var libpthread: if (with_libc and @import("builtin").os.tag == .linux) ?std.DynLib else void = null;
     var pthread_create: *const fn (
         noalias newthread: *pthread_t,
         noalias attr: ?*anyopaque,
@@ -2361,7 +2367,7 @@ fn initLauncher() !void {
         _ = w32.CoInitializeEx(null, w32.COINIT_MULTITHREADED);
     }
 
-    if (@import("builtin").os.tag == .linux) {
+    if (with_libc and @import("builtin").os.tag == .linux) {
         gstate.libpthread = try std.DynLib.open("libpthread.so.0");
 
         gstate.pthread_create = gstate.libpthread.?.lookup(@TypeOf(gstate.pthread_create), "pthread_create").?;
@@ -2455,11 +2461,11 @@ export fn bofLauncherRelease() callconv(.C) void {
         _ = w32.WSACleanup();
     }
     if (@import("builtin").os.tag == .linux) {
-        if (gstate.libc != null) {
+        if (with_libc and gstate.libc != null) {
             gstate.libc.?.close();
             gstate.libc = null;
         }
-        if (gstate.libpthread != null) {
+        if (with_libc and gstate.libpthread != null) {
             gstate.libpthread.?.close();
             gstate.libpthread = null;
         }

@@ -11,17 +11,17 @@ pub fn build(b: *std.Build) void {
     const win32_dep = b.dependency("bof_launcher_win32", .{});
     const win32_module = win32_dep.module("bof_launcher_win32");
 
-    const static_lib = b.addStaticLibrary(.{
-        .name = libFileName(b.allocator, target, .static),
-        .root_source_file = b.path("src/bof_launcher.zig"),
-        .target = target,
-        .optimize = optimize,
-
-        // TODO: Remove this
-        .link_libc = target.result.os.tag == .linux,
-    });
-    static_lib.root_module.addImport("bof_launcher_win32", win32_module);
-    buildLib(b, static_lib, target, optimize);
+    if (target.result.abi != .none) {
+        const static_lib = b.addStaticLibrary(.{
+            .name = libFileName(b.allocator, target, .static),
+            .root_source_file = b.path("src/bof_launcher.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = target.result.os.tag == .linux,
+        });
+        static_lib.root_module.addImport("bof_launcher_win32", win32_module);
+        buildLib(b, static_lib, target, optimize);
+    }
 
     // TODO: Shared library fails to build on Linux x86.
     if (target.result.cpu.arch == .x86 and target.result.os.tag == .linux) return;
@@ -31,9 +31,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/bof_launcher.zig"),
         .target = target,
         .optimize = optimize,
-
-        // TODO: Remove this
-        .link_libc = target.result.os.tag == .linux,
+        .link_libc = target.result.os.tag == .linux and target.result.abi != .none,
     });
     shared_lib.root_module.addImport("bof_launcher_win32", win32_module);
     buildLib(b, shared_lib, target, optimize);
@@ -62,6 +60,7 @@ fn buildLib(
         lib.linkSystemLibrary2("ole32", .{});
     }
     lib.bundle_compiler_rt = true;
+    lib.want_lto = true;
     b.installArtifact(lib);
 }
 
@@ -88,11 +87,17 @@ pub fn libFileName(
     target: std.Build.ResolvedTarget,
     linkage: std.builtin.LinkMode,
 ) []const u8 {
-    if (linkage == .dynamic) {
+    if (linkage == .dynamic and target.result.abi != .none) {
         return std.mem.join(
             allocator,
             "_",
             &.{ "bof_launcher", osTagStr(target), cpuArchStr(target), "shared" },
+        ) catch @panic("OOM");
+    } else if (linkage == .dynamic and target.result.abi == .none) {
+        return std.mem.join(
+            allocator,
+            "_",
+            &.{ "bof_launcher", osTagStr(target), cpuArchStr(target), "shared_nolibc" },
         ) catch @panic("OOM");
     }
     return std.mem.join(

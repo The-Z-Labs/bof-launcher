@@ -898,3 +898,11 @@ test "bof-launcher.args" {
         try std.testing.expectEqualStrings("--- test_args.zig ---\n", context.getOutput().?[0..22]);
     }
 }
+
+test "bof-launcher.nolibc_dynlib" {
+    if (@import("builtin").os.tag != .linux) return error.SkipZigTest;
+    if (@import("builtin").cpu.arch != .x86_64) return error.SkipZigTest;
+
+    var lib = try std.DynLib.open("zig-out/lib/libbof_launcher_lin_x64_shared_nolibc.so");
+    defer lib.close();
+}
