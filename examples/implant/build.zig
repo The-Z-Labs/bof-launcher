@@ -13,7 +13,7 @@ pub fn build(b: *std.Build) void {
     );
     const bof_launcher_api_module = bof_launcher_dep.module("bof_launcher_api");
     const bof_launcher_lib = bof_launcher_dep.artifact(
-        @import("bof_launcher_lib").libFileName(b.allocator, target, .static),
+        @import("bof_launcher_lib").libFileName(b.allocator, target, null),
     );
 
     const bofs_dep = b.dependency("bof_launcher_bofs", .{ .optimize = optimize });
@@ -64,7 +64,7 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(shellcode);
 
     const copy = b.addObjCopy(shellcode.getEmittedBin(), .{ .format = .bin, .only_section = ".text" });
-    const install = b.addInstallBinFile(copy.getOutput(), b.fmt("z-beac0n_{s}_{s}.bin", .{osTagStr(target), cpuArchStr(target)}));
+    const install = b.addInstallBinFile(copy.getOutput(), b.fmt("z-beac0n_{s}_{s}.bin", .{ osTagStr(target), cpuArchStr(target) }));
     b.getInstallStep().dependOn(&install.step);
 
     //

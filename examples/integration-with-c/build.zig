@@ -9,7 +9,7 @@ pub fn build(b: *std.Build) void {
         .{ .target = target, .optimize = optimize },
     );
     const bof_launcher_lib = bof_launcher_dep.artifact(
-        @import("bof_launcher_lib").libFileName(b.allocator, target, .static),
+        @import("bof_launcher_lib").libFileName(b.allocator, target, null),
     );
 
     const exe = b.addExecutable(.{

@@ -10,7 +10,7 @@ pub fn build(b: *std.Build) void {
     );
     const bof_launcher_api_module = bof_launcher_dep.module("bof_launcher_api");
     const bof_launcher_lib = bof_launcher_dep.artifact(
-        @import("bof_launcher_lib").libFileName(b.allocator, target, .static),
+        @import("bof_launcher_lib").libFileName(b.allocator, target, null),
     );
 
     const bofs_dep = b.dependency("bof_launcher_bofs", .{ .optimize = optimize });

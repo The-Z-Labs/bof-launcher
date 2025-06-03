@@ -12,24 +12,36 @@ pub fn build(b: *std.Build) void {
     const win32_module = win32_dep.module("bof_launcher_win32");
 
     const static_lib = b.addStaticLibrary(.{
-        .name = libFileName(b.allocator, target, .static),
+        .name = libFileName(b.allocator, target, null),
         .root_source_file = b.path("src/bof_launcher.zig"),
         .target = target,
         .optimize = optimize,
         .link_libc = target.result.os.tag == .linux,
     });
     static_lib.root_module.addImport("bof_launcher_win32", win32_module);
-    buildLib(b, static_lib, target, optimize, .static);
+    buildLib(b, static_lib, target, optimize);
 
     const shared_lib = b.addSharedLibrary(.{
-        .name = libFileName(b.allocator, target, .dynamic),
+        .name = libFileName(b.allocator, target, "shared"),
         .root_source_file = b.path("src/bof_launcher.zig"),
         .target = target,
         .optimize = optimize,
-        .link_libc = target.result.os.tag == .linux and target.result.abi != .none,
+        .link_libc = target.result.os.tag == .linux,
     });
     shared_lib.root_module.addImport("bof_launcher_win32", win32_module);
-    buildLib(b, shared_lib, target, optimize, .dynamic);
+    buildLib(b, shared_lib, target, optimize);
+
+    if (target.result.os.tag == .linux) {
+        const shared_nolibc_lib = b.addSharedLibrary(.{
+            .name = libFileName(b.allocator, target, "shared_nolibc"),
+            .root_source_file = b.path("src/bof_launcher.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = false,
+        });
+        shared_nolibc_lib.root_module.addImport("bof_launcher_win32", win32_module);
+        buildLib(b, shared_nolibc_lib, target, optimize);
+    }
 }
 
 fn buildLib(
@@ -37,7 +49,6 @@ fn buildLib(
     lib: *std.Build.Step.Compile,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.Mode,
-    linkage: std.builtin.LinkMode,
 ) void {
     lib.root_module.pic = true;
     if (optimize == .ReleaseSmall) {
@@ -56,7 +67,7 @@ fn buildLib(
         lib.linkSystemLibrary2("ole32", .{});
     }
     lib.bundle_compiler_rt = true;
-    if (linkage == .dynamic) {
+    if (lib.isDynamicLibrary()) {
         if (target.result.cpu.arch == .x86 and target.result.os.tag == .linux) {
             // TODO: LTO causes problems on Linux x86 (segfault in Zig test runner).
             lib.want_lto = false;
@@ -88,19 +99,13 @@ pub fn cpuArchStr(target: std.Build.ResolvedTarget) []const u8 {
 pub fn libFileName(
     allocator: std.mem.Allocator,
     target: std.Build.ResolvedTarget,
-    linkage: std.builtin.LinkMode,
+    suffix: ?[]const u8,
 ) []const u8 {
-    if (linkage == .dynamic and target.result.abi != .none) {
+    if (suffix) |s| {
         return std.mem.join(
             allocator,
             "_",
-            &.{ "bof_launcher", osTagStr(target), cpuArchStr(target), "shared" },
-        ) catch @panic("OOM");
-    } else if (linkage == .dynamic and target.result.abi == .none) {
-        return std.mem.join(
-            allocator,
-            "_",
-            &.{ "bof_launcher", osTagStr(target), cpuArchStr(target), "shared_nolibc" },
+            &.{ "bof_launcher", osTagStr(target), cpuArchStr(target), s },
         ) catch @panic("OOM");
     }
     return std.mem.join(

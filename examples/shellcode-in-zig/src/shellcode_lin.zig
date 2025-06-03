@@ -17,8 +17,10 @@ pub export fn _start() linksection(".startup") callconv(.Naked) noreturn {
 }
 
 fn entry() noreturn {
+    const bof_launcher_bytes = @embedFile("bof_launcher_lib_nolibc_embed");
+
     const stdout = std.io.getStdOut().writer();
-    stdout.print("Zig-based shellcode on Linux\n", .{}) catch unreachable;
+    stdout.print("Zig-based shellcode on Linux 0x{x}\n", .{@intFromPtr(bof_launcher_bytes.ptr)}) catch {};
 
     _ = std.os.linux.syscall1(.exit, 0);
     unreachable;

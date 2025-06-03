@@ -20,35 +20,22 @@ pub fn build(b: *std.Build) !void {
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.arm1176jz_s }, // ARMv6kz
         },
     };
-    const nolibc_linux_targets: []const std.Target.Query = &.{
-        .{ .cpu_arch = .x86, .os_tag = .linux, .abi = .none },
-        .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .none },
-        .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .none },
-        .{
-            .cpu_arch = .arm,
-            .os_tag = .linux,
-            .abi = .none,
-            .cpu_model = .{ .explicit = &std.Target.arm.cpu.arm1176jz_s }, // ARMv6kz
-        },
-    };
-    const bof_launcher_lib_targets = supported_targets ++ nolibc_linux_targets;
 
-    const std_target = b.standardTargetOptions(.{ .whitelist = supported_targets });
     const optimize = b.option(
         std.builtin.OptimizeMode,
         "optimize",
         "Prioritize performance, safety, or binary size (-O flag)",
     ) orelse .ReleaseSmall;
 
-    const targets_to_build: []const std.Target.Query = if (b.user_input_options.contains("target"))
-        &.{std_target.query}
-    else
-        supported_targets;
+    const osTagStr = @import("bof_launcher_lib").osTagStr;
+    const cpuArchStr = @import("bof_launcher_lib").cpuArchStr;
+    const libFileName = @import("bof_launcher_lib").libFileName;
 
-    const bofs_dep = b.dependency("bof_launcher_bofs", .{ .optimize = optimize });
-
+    //
     // Install BOFs
+    //
     const bofs_path = "bin/bofs";
+    const bofs_dep = b.dependency("bof_launcher_bofs", .{ .optimize = optimize });
     for (@import("bof_launcher_bofs").bofs_to_build) |bof| {
         for (bof.formats) |format| {
             for (bof.archs) |arch| {
@@ -89,8 +76,10 @@ pub fn build(b: *std.Build) !void {
         }
     }
 
+    //
     // Install bof launcher library
-    for (bof_launcher_lib_targets) |target_query| {
+    //
+    for (supported_targets) |target_query| {
         const target = b.resolveTargetQuery(target_query);
 
         const bof_launcher_dep = b.dependency(
@@ -98,27 +87,27 @@ pub fn build(b: *std.Build) !void {
             .{ .target = target, .optimize = optimize },
         );
 
-        if (target.result.abi != .none) {
-            const bof_launcher_lib = bof_launcher_dep.artifact(
-                @import("bof_launcher_lib").libFileName(b.allocator, target, .static),
-            );
-            b.installArtifact(bof_launcher_lib);
-        }
+        b.installArtifact(bof_launcher_dep.artifact(
+            libFileName(b.allocator, target, null),
+        ));
 
         // TODO: Shared library fails to build on Linux x86.
         if (target.result.cpu.arch == .x86 and target.result.os.tag == .linux) continue;
 
-        const bof_launcher_shared_lib = bof_launcher_dep.artifact(
-            @import("bof_launcher_lib").libFileName(b.allocator, target, .dynamic),
-        );
-        b.installArtifact(bof_launcher_shared_lib);
+        b.installArtifact(bof_launcher_dep.artifact(
+            libFileName(b.allocator, target, "shared"),
+        ));
+        if (target.result.os.tag == .linux) {
+            b.installArtifact(bof_launcher_dep.artifact(
+                libFileName(b.allocator, target, "shared_nolibc"),
+            ));
+        }
     }
 
-    const osTagStr = @import("bof_launcher_lib").osTagStr;
-    const cpuArchStr = @import("bof_launcher_lib").cpuArchStr;
-
+    //
     // Install examples
-    for (targets_to_build) |target_query| {
+    //
+    for (supported_targets) |target_query| {
         const target = b.resolveTargetQuery(target_query);
 
         // integration with c
@@ -137,60 +126,76 @@ pub fn build(b: *std.Build) !void {
             const exe = dep.artifact(b.fmt("bof_stager_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }));
             b.installArtifact(exe);
         }
+    }
 
-        // process injection chain
-        if (target.result.os.tag == .windows) {
-            const dep = b.dependency("process_injection_chain", .{ .target = target, .optimize = optimize });
-            const exe = dep.artifact(b.fmt("process_injection_chain_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }));
-            b.installArtifact(exe);
-        }
+    // shellcode in zig
+    for ([_]std.Target.Query{
+        .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu },
+        .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
+    }) |target_query| {
+        const target = b.resolveTargetQuery(target_query);
 
-        // shellcode in zig
-        if (target.result.cpu.arch == .x86_64) {
-            const dep = b.dependency("shellcode_in_zig", .{ .target = target, .optimize = optimize });
-            const shellcode_launcher_exe = dep.artifact(b.fmt(
-                "shellcode_launcher_{s}_{s}",
-                .{ osTagStr(target), cpuArchStr(target) },
-            ));
-            b.installArtifact(shellcode_launcher_exe);
+        const dep = b.dependency("shellcode_in_zig", .{ .target = target, .optimize = optimize });
+        const shellcode_launcher_exe = dep.artifact(b.fmt(
+            "shellcode_launcher_{s}_{s}",
+            .{ osTagStr(target), cpuArchStr(target) },
+        ));
+        b.installArtifact(shellcode_launcher_exe);
 
-            const shellcode_name = b.fmt("shellcode_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) });
-            const shellcode_exe = dep.artifact(shellcode_name);
-            b.installArtifact(shellcode_exe);
+        const shellcode_name = b.fmt("shellcode_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) });
+        const shellcode_exe = dep.artifact(shellcode_name);
+        b.installArtifact(shellcode_exe);
 
-            if (target.result.os.tag == .linux) {
-                const copy = b.addObjCopy(shellcode_exe.getEmittedBin(), .{ .format = .bin, .only_section = ".text" });
-                const install = b.addInstallBinFile(copy.getOutput(), b.fmt("{s}.bin", .{shellcode_name}));
-                b.getInstallStep().dependOn(&install.step);
-            }
-        }
-
-        // implant
-        if (target.result.os.tag == .linux and target.result.cpu.arch == .x86_64) {
-            const dep = b.dependency("implant", .{ .target = target, .optimize = optimize });
-            const implant_exe = dep.artifact(b.fmt(
-                "z-beac0n_{s}_{s}",
-                .{ osTagStr(target), cpuArchStr(target) },
-            ));
-            b.installArtifact(implant_exe);
-
-            const shellcode_name = b.fmt("shellcode_binary_temp_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) });
-            const shellcode_exe = dep.artifact(shellcode_name);
-            b.installArtifact(shellcode_exe);
-
+        if (target.result.os.tag == .linux) {
             const copy = b.addObjCopy(shellcode_exe.getEmittedBin(), .{ .format = .bin, .only_section = ".text" });
-            const install = b.addInstallBinFile(
-                copy.getOutput(),
-                b.fmt("z-beac0n_{s}_{s}.bin", .{ osTagStr(target), cpuArchStr(target) }),
-            );
+            const install = b.addInstallBinFile(copy.getOutput(), b.fmt("{s}.bin", .{shellcode_name}));
             b.getInstallStep().dependOn(&install.step);
         }
     }
 
+    // process injection chain
+    for ([_]std.Target.Query{
+        .{ .cpu_arch = .x86, .os_tag = .windows, .abi = .gnu },
+        .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu },
+    }) |target_query| {
+        const target = b.resolveTargetQuery(target_query);
+
+        const dep = b.dependency("process_injection_chain", .{ .target = target, .optimize = optimize });
+        const exe = dep.artifact(b.fmt("process_injection_chain_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }));
+        b.installArtifact(exe);
+    }
+
+    // implant
+    for ([_]std.Target.Query{
+        .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
+    }) |target_query| {
+        const target = b.resolveTargetQuery(target_query);
+
+        const dep = b.dependency("implant", .{ .target = target, .optimize = optimize });
+        const implant_exe = dep.artifact(b.fmt(
+            "z-beac0n_{s}_{s}",
+            .{ osTagStr(target), cpuArchStr(target) },
+        ));
+        b.installArtifact(implant_exe);
+
+        const shellcode_name = b.fmt("shellcode_binary_temp_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) });
+        const shellcode_exe = dep.artifact(shellcode_name);
+        b.installArtifact(shellcode_exe);
+
+        const copy = b.addObjCopy(shellcode_exe.getEmittedBin(), .{ .format = .bin, .only_section = ".text" });
+        const install = b.addInstallBinFile(
+            copy.getOutput(),
+            b.fmt("z-beac0n_{s}_{s}.bin", .{ osTagStr(target), cpuArchStr(target) }),
+        );
+        b.getInstallStep().dependOn(&install.step);
+    }
+
+    //
     // Build, install and run tests
+    //
     const test_step = b.step("test", "Run all tests");
 
-    for (targets_to_build) |target_query| {
+    for (supported_targets) |target_query| {
         const target = b.resolveTargetQuery(target_query);
 
         const bof_launcher_dep = b.dependency(
@@ -200,7 +205,7 @@ pub fn build(b: *std.Build) !void {
         const bof_launcher_api_module = bof_launcher_dep.module("bof_launcher_api");
 
         const bof_launcher_lib = bof_launcher_dep.artifact(
-            @import("bof_launcher_lib").libFileName(b.allocator, target, .static),
+            libFileName(b.allocator, target, null),
         );
 
         const bof_api_module = bofs_dep.module("bof_api");

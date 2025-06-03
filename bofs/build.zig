@@ -166,7 +166,7 @@ pub fn build(b: *std.Build) !void {
                 const bof_launcher_api_module = bof_launcher_dep.module("bof_launcher_api");
 
                 const bof_launcher_lib = bof_launcher_dep.artifact(
-                    @import("bof_launcher_lib").libFileName(b.allocator, target, .static),
+                    @import("bof_launcher_lib").libFileName(b.allocator, target, null),
                 );
 
                 const obj = try addBofObj(
@@ -318,7 +318,7 @@ fn addBofObj(
             // TODO: Shared library fails to build on Linux x86.
         } else {
             const bof_launcher_shared_lib = bof_launcher_dep.artifact(
-                @import("bof_launcher_lib").libFileName(b.allocator, target, .dynamic),
+                @import("bof_launcher_lib").libFileName(b.allocator, target, "shared"),
             );
             obj.root_module.addAnonymousImport("bof_launcher_lib_embed", .{
                 .root_source_file = bof_launcher_shared_lib.getEmittedBin(),
