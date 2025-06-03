@@ -60,7 +60,12 @@ fn buildLib(
         lib.linkSystemLibrary2("ole32", .{});
     }
     lib.bundle_compiler_rt = true;
-    lib.want_lto = true;
+    if (target.result.cpu.arch == .x86 and target.result.os.tag == .linux) {
+        // TODO: LTO causes problems on Linux x86 (segfault in Zig test runner)
+        lib.want_lto = false;
+    } else {
+        lib.want_lto = true;
+    }
     b.installArtifact(lib);
 }
 
