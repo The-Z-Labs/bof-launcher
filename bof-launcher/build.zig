@@ -20,7 +20,7 @@ pub fn build(b: *std.Build) void {
             .link_libc = target.result.os.tag == .linux,
         });
         static_lib.root_module.addImport("bof_launcher_win32", win32_module);
-        buildLib(b, static_lib, target, optimize);
+        buildLib(b, static_lib, target, optimize, .static);
     }
 
     // TODO: Shared library fails to build on Linux x86.
@@ -34,7 +34,7 @@ pub fn build(b: *std.Build) void {
         .link_libc = target.result.os.tag == .linux and target.result.abi != .none,
     });
     shared_lib.root_module.addImport("bof_launcher_win32", win32_module);
-    buildLib(b, shared_lib, target, optimize);
+    buildLib(b, shared_lib, target, optimize, .dynamic);
 }
 
 fn buildLib(
@@ -42,6 +42,7 @@ fn buildLib(
     lib: *std.Build.Step.Compile,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.Mode,
+    linkage: std.builtin.LinkMode,
 ) void {
     lib.root_module.pic = true;
     if (optimize == .ReleaseSmall) {
@@ -60,11 +61,13 @@ fn buildLib(
         lib.linkSystemLibrary2("ole32", .{});
     }
     lib.bundle_compiler_rt = true;
-    if (target.result.cpu.arch == .x86 and target.result.os.tag == .linux) {
-        // TODO: LTO causes problems on Linux x86 (segfault in Zig test runner)
-        lib.want_lto = false;
-    } else {
-        lib.want_lto = true;
+    if (linkage == .dynamic) {
+        if (target.result.cpu.arch == .x86 and target.result.os.tag == .linux) {
+            // TODO: LTO causes problems on Linux x86 (segfault in Zig test runner)
+            lib.want_lto = false;
+        } else {
+            lib.want_lto = true;
+        }
     }
     b.installArtifact(lib);
 }
