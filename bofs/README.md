@@ -6,7 +6,7 @@
 | ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
 | [tcpScanner](src/tcpScanner.zig)  | TCP connect() port scanner  | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `tcpScanner 4.3.2.1-255:22,80` |
 | [udpScanner](src/udpScanner.zig) | UDP port sweeper | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `udpScanner 4.3.2.1-255:5000-5010` |
-| [z-beac0n core](src/z-beac0nocre.zig) | So called BOF zero (BOF0). An example of a BOF that can operate as standalone implant | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `z-beac0n` |
+| [z-beac0n core](src/z-beac0n-core.zig) | So called BOF zero (BOF0). An example of a BOF that can operate as standalone implant | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `z-beac0n` |
 
 ### GNU coreutils
 
