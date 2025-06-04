@@ -11,11 +11,5 @@
         .bof_launcher_win32 = .{
             .path = "../../win32-api",
         },
-        .bof_launcher_lib = .{
-            .path = "../../bof-launcher",
-        },
-        .bof_launcher_bofs = .{
-            .path = "../../bofs",
-        },
     },
 }

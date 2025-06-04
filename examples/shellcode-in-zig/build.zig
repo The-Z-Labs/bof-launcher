@@ -28,14 +28,6 @@ pub fn build(b: *std.Build) void {
 
         b.installArtifact(shellcode_win_exe);
     } else if (target.result.os.tag == .linux) {
-        const bof_launcher_dep = b.dependency(
-            "bof_launcher_lib",
-            .{ .target = target, .optimize = optimize },
-        );
-        const bof_launcher_lib = bof_launcher_dep.artifact(
-            @import("bof_launcher_lib").libFileName(b.allocator, target, "shared_nolibc"),
-        );
-
         // Shellcode crafting based on: https://github.com/chivay/shellcodez
         const shellcode_lin_exe = b.addExecutable(.{
             .name = shellcode_name,
@@ -49,9 +41,6 @@ pub fn build(b: *std.Build) void {
         shellcode_lin_exe.use_llvm = true;
         shellcode_lin_exe.pie = true;
         shellcode_lin_exe.setLinkerScript(b.path("src/linker.ld"));
-        shellcode_lin_exe.root_module.addAnonymousImport("bof_launcher_lib_nolibc_embed", .{
-            .root_source_file = bof_launcher_lib.getEmittedBin(),
-        });
 
         const copy = b.addObjCopy(shellcode_lin_exe.getEmittedBin(), .{ .format = .bin, .only_section = ".text" });
         const install = b.addInstallBinFile(copy.getOutput(), b.fmt("{s}.bin", .{shellcode_name}));
