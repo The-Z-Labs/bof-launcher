@@ -5,6 +5,7 @@
 </p>
 
 Z-Labs blog:
+* [So you want to rapidly run a BOF? Let's look at this 'cli4bofs' thing then](https://blog.z-labs.eu/2025/06/04/all-about-cli4bofs-tool.html)
 * [Write, debug and execute BOFs with bof-launcher (part 2)](https://blog.z-labs.eu/2025/01/15/write-debug-and-execute-bofs-part2.html)
 * [Write, debug and execute BOFs with bof-launcher (part 1)](https://blog.z-labs.eu/2024/12/02/write-debug-and-execute-bofs-part1.html)
 * [Running BOFs with 'bof-launcher' library](https://blog.z-labs.eu/2024/02/08/bof-launcher.html)
