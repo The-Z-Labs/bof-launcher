@@ -905,4 +905,10 @@ test "bof-launcher.nolibc_dynlib" {
 
     var lib = try std.DynLib.open("zig-out/lib/libbof_launcher_lin_x64_shared_nolibc.so");
     defer lib.close();
+
+    const bofLauncherInit = lib.lookup(*const fn () callconv(.C) c_int, "bofLauncherInit") orelse return expect(false);
+    const bofLauncherRelease = lib.lookup(*const fn () callconv(.C) void, "bofLauncherRelease") orelse return expect(false);
+
+    try expect(bofLauncherInit() == 0);
+    defer bofLauncherRelease();
 }
