@@ -4,7 +4,4 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-<<<<<<< HEAD
 clap = { version = "4.5.39", features = ["derive"] }
-=======
->>>>>>> f571b867e9c283761d3fc090f94cb93997360abd
