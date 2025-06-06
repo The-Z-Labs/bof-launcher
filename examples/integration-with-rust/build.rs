@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+/// Build script assumes bof-launcher-win-x64.lib is in the lib/ directory.
+fn main() {
+=======
 use std::process::Command;
 use std::path::Path;
 /// Build script assumes bof-launcher-win-x64.lib is in the lib/ directory.
@@ -5,6 +9,7 @@ fn main() {
     // Compile the BOF C file to object file
     compile_bof();
 
+>>>>>>> f571b867e9c283761d3fc090f94cb93997360abd
     // Link libraries
     println!("cargo:rustc-link-lib=ole32"); // Link ole32.lib
     println!("cargo:rustc-link-lib=lib/bof_launcher_win_x64"); // Link to your `.lib` file
@@ -15,6 +20,8 @@ fn main() {
     println!("cargo:rustc-link-lib=libvcruntime"); // Visual C++ runtime
     println!("cargo:rustc-link-lib=kernel32"); // Windows kernel library
     println!("cargo:rustc-link-lib=user32"); // Windows user library
+<<<<<<< HEAD
+=======
 }
 
 fn compile_bof() {
@@ -88,4 +95,5 @@ fn is_source_newer(source: &str, target: &str) -> bool {
         }
         _ => true, // If we can't get metadata, assume we need to recompile
     }
+>>>>>>> f571b867e9c283761d3fc090f94cb93997360abd
 }
