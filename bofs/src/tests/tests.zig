@@ -1,5 +1,6 @@
 const std = @import("std");
 const bof = @import("bof_launcher_api");
+const w32 = @import("bof_launcher_win32");
 
 fn runBofFromFile(
     allocator: std.mem.Allocator,
@@ -810,25 +811,54 @@ test "bof-launcher.wProcessInjectionSrdi" {
     const args = try bof.Args.init();
     defer args.release();
 
-    args.begin();
-    // BOF bytes len
     {
-        const len_str = try std.fmt.allocPrint(allocator, "i:{d}", .{hello_bof_data.len});
-        defer allocator.free(len_str);
-        try args.add(len_str);
+        args.begin();
+        // BOF bytes len
+        {
+            const str = try std.fmt.allocPrint(allocator, "i:{d}", .{hello_bof_data.len});
+            defer allocator.free(str);
+            try args.add(str);
+        }
+        // BOF bytes pointer
+        try args.add(std.mem.asBytes(&hello_bof_data.ptr));
+        // PID
+        try args.add("i:-1"); // PID == -1 means current process.
+        // Optional: -dumpbin (dump final shellcode to disk)
+        try args.add("-dumpbin");
+        args.end();
+
+        const context = try srdi_bof_object.run(args.getBuffer());
+        defer context.release();
+
+        try expect(context.getExitCode() == 0);
     }
-    // BOF bytes pointer
-    try args.add(std.mem.asBytes(&hello_bof_data.ptr));
-    // PID
-    try args.add("i:-1");
-    // Optional: -dumpbin (dump final shellcode to disk)
-    try args.add("-dumpbin");
-    args.end();
+    {
+        var notepad = std.process.Child.init(&.{"notepad.exe"}, allocator);
+        try notepad.spawn();
+        defer _ = notepad.kill() catch unreachable;
 
-    const context = try srdi_bof_object.run(args.getBuffer());
-    defer context.release();
+        args.begin();
+        // BOF bytes len
+        {
+            const len_str = try std.fmt.allocPrint(allocator, "i:{d}", .{hello_bof_data.len});
+            defer allocator.free(len_str);
+            try args.add(len_str);
+        }
+        // BOF bytes pointer
+        try args.add(std.mem.asBytes(&hello_bof_data.ptr));
+        // PID
+        {
+            const str = try std.fmt.allocPrint(allocator, "i:{d}", .{w32.GetProcessId(notepad.id)});
+            defer allocator.free(str);
+            try args.add(str);
+        }
+        args.end();
 
-    try expect(context.getExitCode() == 0);
+        const context = try srdi_bof_object.run(args.getBuffer());
+        defer context.release();
+
+        try expect(context.getExitCode() == 0);
+    }
 }
 
 test "bof-launcher.runBofFromBof" {

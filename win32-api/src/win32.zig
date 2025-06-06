@@ -368,6 +368,8 @@ pub const GetSystemInfo = windows.kernel32.GetSystemInfo;
 
 pub extern "kernel32" fn GetCurrentProcessId() callconv(WINAPI) DWORD;
 
+pub extern "kernel32" fn GetProcessId(hProcess: HANDLE) callconv(WINAPI) DWORD;
+
 pub extern "kernel32" fn GetCurrentThread() callconv(WINAPI) HANDLE;
 
 pub extern "kernel32" fn CloseHandle(hObject: HANDLE) callconv(WINAPI) BOOL;

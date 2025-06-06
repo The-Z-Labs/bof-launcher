@@ -210,6 +210,9 @@ pub fn build(b: *std.Build) !void {
 
         const bof_api_module = bofs_dep.module("bof_api");
 
+        const win32_dep = b.dependency("bof_launcher_win32", .{});
+        const win32_module = win32_dep.module("bof_launcher_win32");
+
         const tests = b.addTest(.{
             .name = "bof-launcher-tests",
             .root_source_file = bofs_dep.path("src/tests/tests.zig"),
@@ -226,6 +229,7 @@ pub fn build(b: *std.Build) !void {
         tests.linkLibC();
         tests.root_module.addImport("bof_api", bof_api_module);
         tests.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
+        tests.root_module.addImport("bof_launcher_win32", win32_module);
 
         const run_step = b.addRunArtifact(tests);
         run_step.skip_foreign_checks = true;
