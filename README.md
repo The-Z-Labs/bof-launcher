@@ -190,11 +190,13 @@ examples: string:"usage examples of a BOF"
 
 [cli4bofs](https://github.com/The-Z-Labs/cli4bofs) - standalone command line program for running BOFs directly from a filesystem. Handy also during testing/verifying 3rd BOFs or during developing BOFs. Does not require [Cobalt Strike's Beacon](https://www.cobaltstrike.com/) and its aggresor scripts to run.
 
-### Examples of using bof-launcher in C
+### Examples of using bof-launcher in other programming languages
 
-*Integrating bof-launcher in program written in C*
+*Integrating bof-launcher in programs written in C and Rust*
 
-[integration-with-c](examples/integration-with-c) - simple example showing how to integrate bof-launcher in a application written in C/C++.
+[integration-with-c](examples/integration-with-c) - simple example showing how to integrate bof-launcher in an application written in `C`.
+
+[integration-with-rust](examples/integration-with-rust) - simple example showing how to integrate bof-launcher in an application written in `Rust`.
 
 ### Simple C2 solution with BOF execution capabilities
 
