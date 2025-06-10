@@ -366,6 +366,13 @@ pub const FreeLibrary = windows.kernel32.FreeLibrary;
 pub const CreateThread = windows.kernel32.CreateThread;
 pub const GetSystemInfo = windows.kernel32.GetSystemInfo;
 
+pub extern fn VirtualFreeEx(
+    hProcess: HANDLE,
+    lpAddress: ?LPVOID,
+    dwSize: SIZE_T,
+    dwFreeType: DWORD,
+) callconv(WINAPI) BOOL;
+
 pub extern "kernel32" fn GetCurrentProcessId() callconv(WINAPI) DWORD;
 
 pub extern "kernel32" fn GetProcessId(hProcess: HANDLE) callconv(WINAPI) DWORD;
