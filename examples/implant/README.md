@@ -10,7 +10,7 @@ z-beac0n is a Linux in-memory software implant. It is composed of:
 
 On the server side following components are available:
 
-- [stage-listener.py](src/stage-listener.py) - simple example of a HTTP(S)-based payload serving listener compatible with ["meterpreter protocol"](https://github.com/rsmudge/metasploit-loader); 
+- [stage-listener.py](src/stage-listener.py) - HTTP(S)-based payload serving listener compatible with ["meterpreter protocol"](https://github.com/rsmudge/metasploit-loader); 
 - [stager.py](src/stager.py) - Python-based staging script that fetches over HTTP(S) a payload and execute it in-memory in the context of Python's interpreter process;
 - [C2-https.py] - Command and control server for handling implant's beaconing.
 
