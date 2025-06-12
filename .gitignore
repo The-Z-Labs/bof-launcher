@@ -12,6 +12,7 @@
 !*.s
 !*.bat
 !*.py
+!*.go
 !Makefile
 !LICENSE*
 !bofs/src/tests/helloBof.coff.x64.o
