@@ -198,6 +198,8 @@ examples: string:"usage examples of a BOF"
 
 [integration-with-rust](examples/integration-with-rust) - simple example showing how to integrate bof-launcher in an application written in `Rust`.
 
+[integration-with-go](examples/integration-with-go) - simple example showing how to integrate bof-launcher in an application written in `Go`.
+
 ### Simple C2 solution with BOF execution capabilities
 
 *Implementing custom, cross-platform C2 solutions capable of running BOFs*
