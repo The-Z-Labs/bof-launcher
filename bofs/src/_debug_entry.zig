@@ -19,7 +19,7 @@ pub fn main() !void {
     const bof_args = try bof_launcher.Args.init();
     defer bof_args.release();
 
-    var file_data: ?[]u8 = null;
+    var file_data: ?[]const u8 = null;
     defer if (file_data) |fd| allocator.free(fd);
 
     bof_args.begin();
@@ -31,16 +31,13 @@ pub fn main() !void {
             _ = iter.next() orelse return error.BadData;
             const file_path = iter.next() orelse return error.BadData;
 
-            // load file content and remove final '\n' character (if present)
-
             file_data = try loadFileContent(allocator, @ptrCast(file_path));
-            const trimmed_file_data = std.mem.trimRight(u8, file_data.?, "\n");
 
-            const len_str = try std.fmt.allocPrint(allocator, "i:{d}", .{trimmed_file_data.len});
+            const len_str = try std.fmt.allocPrint(allocator, "i:{d}", .{file_data.?.len});
             defer allocator.free(len_str);
 
             try bof_args.add(len_str);
-            try bof_args.add(std.mem.asBytes(&trimmed_file_data.ptr));
+            try bof_args.add(std.mem.asBytes(&file_data.?.ptr));
 
             continue;
         }
@@ -73,7 +70,7 @@ pub fn main() !void {
 fn loadFileContent(
     allocator: std.mem.Allocator,
     file_path: [:0]const u8,
-) ![]u8 {
+) ![]const u8 {
     const file = try std.fs.openFileAbsoluteZ(file_path, .{});
     defer file.close();
 
@@ -81,7 +78,6 @@ fn loadFileContent(
     defer file_data.deinit();
 
     try file.reader().readAllArrayList(&file_data, 16 * 1024 * 1024);
-    //try file_data.append(0);
 
     return file_data.toOwnedSlice();
 }
