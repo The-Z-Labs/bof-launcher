@@ -68,7 +68,7 @@ fn parseRawPayloads(allocator: mem.Allocator, payloads_buf: []const u8) ![]Paylo
     var list = std.ArrayList(Payload).init(allocator);
     defer list.deinit();
 
-    var line_iter = mem.splitScalar(u8, payloads_buf, '\n');
+    var line_iter = mem.splitScalar(u8, mem.trimRight(u8, payloads_buf, "\n"), '\n');
 
     while (line_iter.next()) |p| {
         var iter = mem.splitScalar(u8, p, ' ');
