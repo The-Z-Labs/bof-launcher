@@ -192,7 +192,7 @@ examples: string:"usage examples of a BOF"
 
 ### Examples of using bof-launcher in other programming languages
 
-*Integrating bof-launcher in programs written in C and Rust*
+*Integrating bof-launcher in programs written in C, Rust and Go*
 
 [integration-with-c](examples/integration-with-c) - simple example showing how to integrate bof-launcher in an application written in `C`.
 
