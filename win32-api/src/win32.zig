@@ -44,6 +44,8 @@ pub const CONTEXT = windows.CONTEXT;
 pub const LPTHREAD_START_ROUTINE = windows.LPTHREAD_START_ROUTINE;
 pub const PMEMORY_BASIC_INFORMATION = windows.PMEMORY_BASIC_INFORMATION;
 pub const SYSTEM_INFO = windows.SYSTEM_INFO;
+pub const LPARAM = windows.LPARAM;
+pub const WNDENUMPROC = *const fn (HWND, LPARAM) callconv(WINAPI) BOOL;
 
 pub const INFINITE = windows.INFINITE;
 pub const WAIT_FAILED = windows.WAIT_FAILED;
@@ -732,6 +734,10 @@ pub extern "advapi32" fn GetTokenInformation(
 
 // user32
 pub extern "user32" fn MessageBoxA(?HWND, ?LPCSTR, ?LPCSTR, UINT) callconv(WINAPI) c_int;
+pub extern "user32" fn EnumWindows(lpEnumFunc: WNDENUMPROC, lParam: LPARAM) callconv(WINAPI) BOOL;
+pub extern "user32" fn GetWindowThreadProcessId(hWnd: HWND, lpdwProcessId: ?*DWORD) callconv(WINAPI) DWORD;
+pub extern "user32" fn SetForegroundWindow(hWnd: HWND) callconv(WINAPI) BOOL;
+pub extern "user32" fn GetForegroundWindow() callconv(WINAPI) ?HWND;
 
 // ole32
 pub extern "ole32" fn CoInitializeEx(pvReserved: ?LPVOID, dwCoInit: DWORD) callconv(WINAPI) HRESULT;
