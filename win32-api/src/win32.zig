@@ -7,6 +7,7 @@ pub const Win32Error = windows.Win32Error;
 pub const ULONG = windows.ULONG;
 pub const WCHAR = windows.WCHAR;
 pub const LPCSTR = windows.LPCSTR;
+pub const LPSTR = windows.LPSTR;
 pub const WINAPI = windows.WINAPI;
 pub const HMODULE = windows.HMODULE;
 pub const HINSTANCE = windows.HINSTANCE;
@@ -372,6 +373,12 @@ pub extern fn VirtualFreeEx(
     dwSize: SIZE_T,
     dwFreeType: DWORD,
 ) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn GetModuleFileNameA(
+    hModule: ?HMODULE,
+    lpFilename: LPSTR,
+    nSize: DWORD,
+) callconv(WINAPI) DWORD;
 
 pub extern "kernel32" fn GetCurrentProcessId() callconv(WINAPI) DWORD;
 
