@@ -355,6 +355,8 @@ pub extern "kernel32" fn VirtualProtect(
     lpflOldProtect: *DWORD,
 ) callconv(WINAPI) BOOL;
 
+pub const WAIT_OBJECT_0 = 0;
+
 pub const VirtualFree = windows.kernel32.VirtualFree;
 pub const GetLastError = windows.kernel32.GetLastError;
 pub const Sleep = windows.kernel32.Sleep;
