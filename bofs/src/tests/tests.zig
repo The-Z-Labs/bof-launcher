@@ -792,7 +792,6 @@ test "bof-launcher.getProcAddress" {
 
 test "bof-launcher.wProcessInjectionSrdi" {
     if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
-    if (@import("builtin").cpu.arch != .x86_64) return error.SkipZigTest;
 
     const allocator = std.testing.allocator;
 
@@ -832,7 +831,7 @@ test "bof-launcher.wProcessInjectionSrdi" {
 
         try expect(context.getExitCode() == 0);
     }
-    {
+    if (@import("builtin").cpu.arch == .x86_64) {
         var notepad = std.process.Child.init(&.{"notepad.exe"}, allocator);
         try notepad.spawn();
         defer _ = notepad.kill() catch unreachable;

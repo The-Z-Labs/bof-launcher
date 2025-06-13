@@ -1,7 +1,7 @@
 const bofs_included_in_launcher = [_]Bof{
     .{ .name = "helloBof", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "wProcessInfoMessageBox", .formats = &.{.coff}, .archs = &.{.x64} },
-    .{ .name = "wProcessInjectionSrdi", .formats = &.{.coff}, .archs = &.{.x64} },
+    .{ .name = "wProcessInjectionSrdi", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "runBofFromBof", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "misc", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "udpScanner", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
