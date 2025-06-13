@@ -9,12 +9,16 @@ pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
     var buf: [1024]u8 = undefined;
     const info = std.fmt.bufPrintZ(
         buf[0..],
-        "Hi, I'm a simple BOF that has been injected to a process:\n \nGetModuleFileNameA() --> {s}\nGetCurrentProcessId() --> {d}\nGetCurrentThreadId() --> {d}",
+        \\Hi, I'm a simple BOF that has been injected to a process:
+        \\
+        \\GetModuleFileNameA() --> {s}
+        \\GetCurrentProcessId() --> {d}
+        \\GetCurrentThreadId() --> {d}
+    ,
         .{ name, w32.GetCurrentProcessId(), w32.GetCurrentThreadId() },
     ) catch unreachable;
 
-    const MB_SYSTEMMODAL = 0x00001000;
-    _ = w32.MessageBoxA(null, info.ptr, "wProcessInfoMessageBox BOF", MB_SYSTEMMODAL);
+    _ = w32.MessageBoxA(null, info.ptr, "wProcessInfoMessageBox BOF", w32.MB_SYSTEMMODAL | w32.MB_ICONASTERISK);
 
     return 0;
 }

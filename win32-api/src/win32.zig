@@ -733,6 +733,10 @@ pub extern "advapi32" fn GetTokenInformation(
 ) callconv(WINAPI) BOOL;
 
 // user32
+pub const MB_ICONEXCLAMATION = 0x00000030;
+pub const MB_ICONASTERISK = 0x00000040;
+pub const MB_SYSTEMMODAL = 0x00001000;
+
 pub extern "user32" fn MessageBoxA(?HWND, ?LPCSTR, ?LPCSTR, UINT) callconv(WINAPI) c_int;
 pub extern "user32" fn EnumWindows(lpEnumFunc: WNDENUMPROC, lParam: LPARAM) callconv(WINAPI) BOOL;
 pub extern "user32" fn GetWindowThreadProcessId(hWnd: HWND, lpdwProcessId: ?*DWORD) callconv(WINAPI) DWORD;
