@@ -468,6 +468,10 @@ pub extern "kernel32" fn GetThreadContext(
     lpContext: *CONTEXT,
 ) callconv(WINAPI) BOOL;
 
+pub extern "kernel32" fn GetThreadId(
+    hThread: HANDLE,
+) callconv(WINAPI) DWORD;
+
 pub extern "kernel32" fn SetThreadContext(
     hThread: HANDLE,
     lpContext: *const CONTEXT,

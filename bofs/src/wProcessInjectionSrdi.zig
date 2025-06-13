@@ -100,6 +100,8 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     const thread_handle = w32.CreateRemoteThread(process, null, 0, @ptrCast(addr), null, 0, null) orelse return 0xff;
     defer _ = w32.CloseHandle(thread_handle);
 
+    _ = beacon.printf(0, "BOF runs in PID: %d, TID: %d\n", w32.GetProcessId(process), w32.GetThreadId(thread_handle));
+
     return 0;
 }
 
