@@ -50,10 +50,23 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.c) u8 {
             w32.PAGE_EXECUTE_READ,
             &old_protection,
         ) == w32.FALSE) return 0xff;
-
         if (w32.FlushInstructionCache(w32.GetCurrentProcess(), shellcode_bytes.ptr, 4096) == w32.FALSE) return 0xff;
 
         @as(*const fn () callconv(.C) void, @ptrCast(shellcode_bytes.ptr))();
+
+        // In Debug mode we restore memory protection to RW because Zig's memory allocator
+        // does something like this: @memset(mem, undefined) when freeing it.
+        if (@import("builtin").mode == .Debug) {
+            if (w32.VirtualProtect(
+                @constCast(shellcode_bytes.ptr),
+                4096,
+                w32.PAGE_READWRITE,
+                &old_protection,
+            ) == w32.FALSE) return 0xff;
+
+            if (w32.FlushInstructionCache(w32.GetCurrentProcess(), shellcode_bytes.ptr, 4096) == w32.FALSE) return 0xff;
+        }
+
         return 0;
     }
 
