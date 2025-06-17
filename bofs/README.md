@@ -33,6 +33,7 @@
 | BOF name  | Description | Supported platforms | Example
 | ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
 | [kmodLoader](src/kmodLoader.zig) | API-style BOF; load/unload kernel module directly from memory (root privileges required) | `Linux x86/x86_64/ARMv6+/AArch64` | see docs |
+| [lskmod](src/lskmod.zig) | list currently loaded kernel modules | `Linux x86/x86_64/ARMv6+/AArch64` | `lskmod` |
 
 ### Windows-only BOFs
 
