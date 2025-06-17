@@ -20,10 +20,10 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.c) u8 {
 
     const pid = beacon.dataInt(&parser);
 
-    const dumpbin = blk: {
+    const dump_shellcode = blk: {
         if (beacon.dataLength(&parser) != 0) {
             if (beacon.dataExtract(&parser, null)) |ptr| {
-                if (std.mem.eql(u8, std.mem.span(ptr), "-dumpbin")) break :blk true;
+                if (std.mem.eql(u8, std.mem.span(ptr), "--dump-shellcode")) break :blk true;
             }
         }
         break :blk false;
@@ -32,7 +32,7 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.c) u8 {
     const shellcode_bytes = genShellcode(bof_bytes) catch return 0xff;
     defer freeShellcode(shellcode_bytes);
 
-    if (dumpbin) {
+    if (dump_shellcode) {
         // TODO: Implement.
     }
 

@@ -822,8 +822,8 @@ test "bof-launcher.wProcessInjectionSrdi" {
         try args.add(std.mem.asBytes(&hello_bof_data.ptr));
         // PID
         try args.add("i:-1"); // PID == -1 means current process.
-        // Optional: -dumpbin (dump final shellcode to disk)
-        try args.add("-dumpbin");
+        // Optional: --dump-shellcode (dump final shellcode to disk)
+        try args.add("--dump-shellcode");
         args.end();
 
         const context = try srdi_bof_object.run(args.getBuffer());
