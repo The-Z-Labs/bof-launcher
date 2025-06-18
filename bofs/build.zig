@@ -8,7 +8,7 @@ const bofs_included_in_launcher = [_]Bof{
     .{ .name = "tcpScanner", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "simple", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "wWinver", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
-    .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 }, .cflagsFn = cflags_wWinverC },
     .{ .name = "whoami", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "wAsmTest", .formats = &.{.coff}, .archs = &.{.x64} },
     .{ .name = "lAsmTest", .formats = &.{.elf}, .archs = &.{.x64} },
@@ -26,7 +26,7 @@ const bofs_included_in_launcher = [_]Bof{
     .{ .name = "wInjectionChainStage2C", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "kmodLoader", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "lskmod", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    // so called BOF0 - special purpose BOF that acts as a standalone implant, that uses other BOFs as its post-ex modules:
+    // BOF0 - special purpose BOF that acts as a standalone implant and uses other BOFs as its post-ex modules:
     .{ .name = "z-beac0n-core", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
 };
 
@@ -41,6 +41,13 @@ const bofs_for_testing = [_]Bof{
     .{ .name = "test_beacon_format", .dir = "tests/", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "test_args", .dir = "tests/", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
 };
+
+const CFlagsFn = *const fn (*std.Build, BofFormat, BofArch) []const []const u8;
+
+fn cflags_wWinverC(b: *std.Build, format: BofFormat, arch: BofArch) []const []const u8 {
+    _ = .{ b, format, arch };
+    return &.{"-DMY_DEFINE"};
+}
 
 // Additional/3rdparty BOFs for building should be added below
 
@@ -63,6 +70,7 @@ pub const Bof = struct {
     name: []const u8,
     formats: []const BofFormat,
     archs: []const BofArch,
+    cflagsFn: ?CFlagsFn = null,
 
     pub fn getTargetQuery(format: BofFormat, arch: BofArch) std.Target.Query {
         if (arch == .arm) {
@@ -186,6 +194,7 @@ pub fn build(b: *std.Build) !void {
                     lib_dir,
                     bof_api_module,
                     bof_launcher_dep,
+                    bof.cflagsFn,
                 );
                 b.getInstallStep().dependOn(&b.addInstallArtifact(
                     obj,
@@ -213,6 +222,7 @@ pub fn build(b: *std.Build) !void {
                         lib_dir,
                         bof_api_module,
                         bof_launcher_dep,
+                        bof.cflagsFn,
                     );
                     const debug_exe = b.addExecutable(.{
                         .root_source_file = b.path("src/_debug_entry.zig"),
@@ -250,6 +260,7 @@ fn addBofObj(
     lib_dir: []const u8,
     bof_api_module: *std.Build.Module,
     bof_launcher_dep: *std.Build.Dependency,
+    cflagsFn: ?CFlagsFn,
 ) !*std.Build.Step.Compile {
     const obj = switch (lang) {
         .@"asm" => b.addAssembly(.{
@@ -267,19 +278,20 @@ fn addBofObj(
         .c => blk: {
             const obj = b.addObject(.{
                 .name = full_name,
-                // TODO: Zig bug. Remove below line once fixed.
-                .root_source_file = b.path("src/tests/dummy.zig"),
-                .target = target,
-                .optimize = bof_optimize,
+                .root_module = b.createModule(.{
+                    // TODO: Zig bug. `.root_source_file = null` should be possible.
+                    .root_source_file = b.path("src/tests/dummy.zig"),
+                    .target = target,
+                    .optimize = bof_optimize,
+                    .link_libc = false,
+                }),
             });
-            obj.addCSourceFile(.{
+            obj.root_module.addCSourceFile(.{
                 .file = b.path(source_file_path),
-                .flags = &.{
-                    "-DBOF", "-D_GNU_SOURCE", if (arch == .x86) "-DWOW64" else "",
-                },
+                .flags = if (cflagsFn) |cflags| cflags(b, format, arch) else &.{},
             });
             if (format == .coff) {
-                obj.addIncludePath(.{ .cwd_relative = windows_include_dir });
+                obj.root_module.addIncludePath(.{ .cwd_relative = windows_include_dir });
             } else if (format == .elf) {
                 const linux_include_dir = try std.mem.join(
                     b.allocator,
@@ -292,9 +304,9 @@ fn addBofObj(
                         @tagName(target.result.abi),
                     },
                 );
-                obj.addIncludePath(.{ .cwd_relative = linux_include_dir });
-                obj.addIncludePath(.{ .cwd_relative = linux_libc_include_dir });
-                obj.addIncludePath(.{ .cwd_relative = linux_any_include_dir });
+                obj.root_module.addIncludePath(.{ .cwd_relative = linux_include_dir });
+                obj.root_module.addIncludePath(.{ .cwd_relative = linux_libc_include_dir });
+                obj.root_module.addIncludePath(.{ .cwd_relative = linux_any_include_dir });
             }
             break :blk obj;
         },
@@ -306,7 +318,7 @@ fn addBofObj(
     obj.root_module.unwind_tables = .none;
 
     if (lang != .@"asm") {
-        obj.addIncludePath(b.path("src/include"));
+        obj.root_module.addIncludePath(b.path("src/include"));
         obj.root_module.addImport("bof_api", bof_api_module);
         // Needed for BOFs that launch other BOFs
         obj.root_module.addAnonymousImport(

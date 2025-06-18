@@ -6,7 +6,7 @@
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/wProcessInjectionSrdi.zig'
 ///examples: '
-/// wProcessInjectionSrdi i:985 s:<pointer bytes> i:<pid>
+/// wProcessInjectionSrdi i:985 z:<pointer bytes> i:<pid>
 ///'
 ///arguments:
 ///  - name: bof_data_len

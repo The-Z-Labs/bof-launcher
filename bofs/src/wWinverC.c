@@ -27,5 +27,9 @@ unsigned char go(unsigned char* arg_data, int arg_len) {
         version_info.dwMinorVersion,
         version_info.dwBuildNumber
     );
+
+#ifndef MY_DEFINE
+    return 1;
+#endif
     return 0;
 }
