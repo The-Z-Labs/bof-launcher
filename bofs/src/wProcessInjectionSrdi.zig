@@ -1,3 +1,34 @@
+///name: wProcessInjectionSrdi
+///description: "Injects any BOF to any process"
+///author: Z-Labs
+///tags: ['windows','srdi','z-labs','process','injection']
+///OS: windows
+///sources:
+///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/wProcessInjectionSrdi.zig'
+///examples: '
+/// wProcessInjectionSrdi i:985 s:<pointer bytes> i:<pid>
+///'
+///arguments:
+///  - name: bof_data_len
+///    desc: "Length in bytes of BOF to be injected"
+///    type: integer
+///    required: true
+///  - name: bof_data_ptr
+///    desc: "Pointer to the bytes of the BOF to be injected"
+///    type: string
+///    required: true
+///  - name: pid
+///    desc: "PID"
+///    type: integer
+///    required: true
+///  - name: dump_shellcode
+///    desc: "When --dump-shellcode string is present dump final shellcode to shellcode.bin file."
+///    type: string
+///    required: false
+///errors:
+///- name: UnknownError
+///  code: 0xff
+///  message: "Unknown error"
 const std = @import("std");
 const bof_api = @import("bof_api");
 const beacon = bof_api.beacon;
@@ -33,7 +64,9 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.c) u8 {
     defer freeShellcode(shellcode_bytes);
 
     if (dump_shellcode) {
-        // TODO: Implement.
+        const file = std.fs.cwd().createFile("shellcode.bin", .{}) catch return 0xff;
+        defer file.close();
+        file.writer().writeAll(shellcode_bytes) catch return 0xff;
     }
 
     // PID 0 is Windows idle process
