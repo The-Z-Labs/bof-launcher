@@ -276,18 +276,26 @@ fn addBofObj(
     cflagsFn: ?CFlagsFn,
 ) !*std.Build.Step.Compile {
     const obj = switch (lang) {
-        .@"asm" => b.addAssembly(.{
-            .name = full_name,
-            .source_file = b.path(source_file_path),
-            .target = target,
-            .optimize = bof_optimize,
-        }),
-        .zig => b.addObject(.{
-            .name = full_name,
-            .root_source_file = b.path(source_file_path),
-            .target = target,
-            .optimize = bof_optimize,
-        }),
+        .@"asm" => blk: {
+            const obj = b.addAssembly(.{
+                .name = full_name,
+                .source_file = b.path(source_file_path),
+                .target = target,
+                .optimize = bof_optimize,
+            });
+            if (cflagsFn) |callback| _ = callback(b, obj, format, arch);
+            break :blk obj;
+        },
+        .zig => blk: {
+            const obj = b.addObject(.{
+                .name = full_name,
+                .root_source_file = b.path(source_file_path),
+                .target = target,
+                .optimize = bof_optimize,
+            });
+            if (cflagsFn) |callback| _ = callback(b, obj, format, arch);
+            break :blk obj;
+        },
         .c => blk: {
             const obj = b.addObject(.{
                 .name = full_name,
