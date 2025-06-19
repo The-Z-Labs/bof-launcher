@@ -53,8 +53,8 @@ fn cflags_wWinverC(b: *std.Build, obj: *std.Build.Step.Compile, format: BofForma
 fn cflags_sniffer(b: *std.Build, obj: *std.Build.Step.Compile, format: BofFormat, arch: BofArch) []const []const u8 {
     _ = .{ format, arch };
 
-    obj.addIncludePath(b.path("dependencies/libpcap"));
-    obj.addObjectFile(b.path("dependencies/libpcap/libpcap.a"));
+    obj.root_module.addIncludePath(b.path("dependencies/libpcap"));
+    obj.root_module.addObjectFile(b.path("dependencies/libpcap/libpcap.a"));
 
     return &.{};
 }
@@ -97,13 +97,14 @@ pub const Bof = struct {
                 .x64 => .x86_64,
                 .x86 => .x86,
                 .aarch64 => .aarch64,
-                .arm => .arm,
+                .arm => unreachable,
             },
             .os_tag = switch (format) {
                 .coff => .windows,
                 .elf => .linux,
             },
-            .abi = if (arch == .arm) .gnueabihf else .gnu,
+            .abi = .gnu,
+            .glibc_version = .{ .major = 2, .minor = 38, .patch = 0 },
         };
     }
 
@@ -216,9 +217,6 @@ pub fn build(b: *std.Build) !void {
 
                 // Build debug executable from a BOF.
                 if (bof_optimize == .Debug) {
-                    // TODO: Link errors in debug mode.
-                    if (std.mem.eql(u8, bof.name, "sniffer")) continue;
-
                     const full_name_debug = Bof.fullName(b.allocator, bof.name, format, arch, .Debug);
                     const debug_obj = try addBofObj(
                         b,
@@ -315,17 +313,11 @@ fn addBofObj(
             if (format == .coff) {
                 obj.root_module.addIncludePath(.{ .cwd_relative = windows_include_dir });
             } else if (format == .elf) {
-                const linux_include_dir = try std.mem.join(
-                    b.allocator,
-                    "",
-                    &.{
-                        lib_dir,
-                        "/libc/include/",
-                        @tagName(target.result.cpu.arch),
-                        "-linux-",
-                        @tagName(target.result.abi),
-                    },
-                );
+                const linux_include_dir = b.fmt("{s}/libc/include/{s}-linux-{s}", .{
+                    lib_dir,
+                    @tagName(target.result.cpu.arch),
+                    @tagName(target.result.abi),
+                });
                 obj.root_module.addIncludePath(.{ .cwd_relative = linux_include_dir });
                 obj.root_module.addIncludePath(.{ .cwd_relative = linux_libc_include_dir });
                 obj.root_module.addIncludePath(.{ .cwd_relative = linux_any_include_dir });
