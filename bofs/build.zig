@@ -43,22 +43,6 @@ const bofs_for_testing = [_]Bof{
     .{ .name = "test_args", .dir = "tests/", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
 };
 
-const CFlagsFn = *const fn (*std.Build, *std.Build.Step.Compile, BofFormat, BofArch) []const []const u8;
-
-fn cflags_wWinverC(b: *std.Build, obj: *std.Build.Step.Compile, format: BofFormat, arch: BofArch) []const []const u8 {
-    _ = .{ b, obj, format, arch };
-    return &.{"-DMY_DEFINE"};
-}
-
-fn cflags_sniffer(b: *std.Build, obj: *std.Build.Step.Compile, format: BofFormat, arch: BofArch) []const []const u8 {
-    _ = .{ format, arch };
-
-    obj.root_module.addIncludePath(b.path("dependencies/libpcap"));
-    obj.root_module.addObjectFile(b.path("dependencies/libpcap/libpcap.a"));
-
-    return &.{};
-}
-
 // Additional/3rdparty BOFs for building should be added below
 
 const bofs_my_custom = [_]Bof{
@@ -92,7 +76,7 @@ pub const Bof = struct {
                 .cpu_model = .{ .explicit = &std.Target.arm.cpu.arm1176jz_s }, // ARMv6kz
             };
         }
-        return .{
+        var query = std.Target.Query{
             .cpu_arch = switch (arch) {
                 .x64 => .x86_64,
                 .x86 => .x86,
@@ -104,8 +88,10 @@ pub const Bof = struct {
                 .elf => .linux,
             },
             .abi = .gnu,
-            .glibc_version = .{ .major = 2, .minor = 38, .patch = 0 },
         };
+        if (format == .elf)
+            query.glibc_version = .{ .major = 2, .minor = 38, .patch = 0 };
+        return query;
     }
 
     pub fn fullName(
@@ -143,30 +129,7 @@ pub fn build(b: *std.Build) !void {
         .{ .root_source_file = win32_dep.path("src/win32.zig") },
     );
 
-    const ZigEnv = struct {
-        lib_dir: []const u8,
-    };
-    const zig_env_args: [2][]const u8 = .{ b.graph.zig_exe, "env" };
-    var out_code: u8 = undefined;
-    const zig_env = try b.runAllowFail(&zig_env_args, &out_code, .Ignore);
-    const parsed_str = try std.json.parseFromSlice(ZigEnv, b.allocator, zig_env, .{ .ignore_unknown_fields = true });
-    defer parsed_str.deinit();
-    const lib_dir = parsed_str.value.lib_dir;
-
     try generateBofCollectionYaml(b, &bofs_to_build);
-
-    const windows_include_dir = try std.fs.path.join(
-        b.allocator,
-        &.{ lib_dir, "/libc/include/any-windows-any" },
-    );
-    const linux_libc_include_dir = try std.fs.path.join(
-        b.allocator,
-        &.{ lib_dir, "/libc/include/generic-glibc" },
-    );
-    const linux_any_include_dir = try std.fs.path.join(
-        b.allocator,
-        &.{ lib_dir, "/libc/include/any-linux-any" },
-    );
 
     for (bofs_to_build) |bof| {
         const source_file_path, const lang = try getBofSourcePathAndLang(b, bof);
@@ -199,10 +162,6 @@ pub fn build(b: *std.Build) !void {
                     .ReleaseSmall,
                     format,
                     arch,
-                    windows_include_dir,
-                    linux_libc_include_dir,
-                    linux_any_include_dir,
-                    lib_dir,
                     bof_api_module,
                     bof_launcher_dep,
                     bof.cflagsFn,
@@ -227,10 +186,6 @@ pub fn build(b: *std.Build) !void {
                         .Debug,
                         format,
                         arch,
-                        windows_include_dir,
-                        linux_libc_include_dir,
-                        linux_any_include_dir,
-                        lib_dir,
                         bof_api_module,
                         bof_launcher_dep,
                         bof.cflagsFn,
@@ -265,10 +220,6 @@ fn addBofObj(
     bof_optimize: std.builtin.OptimizeMode,
     format: BofFormat,
     arch: BofArch,
-    windows_include_dir: []const u8,
-    linux_libc_include_dir: []const u8,
-    linux_any_include_dir: []const u8,
-    lib_dir: []const u8,
     bof_api_module: *std.Build.Module,
     bof_launcher_dep: *std.Build.Dependency,
     cflagsFn: ?CFlagsFn,
@@ -290,6 +241,7 @@ fn addBofObj(
                 .root_source_file = b.path(source_file_path),
                 .target = target,
                 .optimize = bof_optimize,
+                .link_libc = false,
             });
             if (cflagsFn) |callback| _ = callback(b, obj, format, arch);
             break :blk obj;
@@ -302,7 +254,7 @@ fn addBofObj(
                     .root_source_file = b.path("src/tests/dummy.zig"),
                     .target = target,
                     .optimize = bof_optimize,
-                    .link_libc = false,
+                    .link_libc = true,
                 }),
             });
             const flags = if (cflagsFn) |cflags| cflags(b, obj, format, arch) else &.{};
@@ -310,18 +262,6 @@ fn addBofObj(
                 .file = b.path(source_file_path),
                 .flags = flags,
             });
-            if (format == .coff) {
-                obj.root_module.addIncludePath(.{ .cwd_relative = windows_include_dir });
-            } else if (format == .elf) {
-                const linux_include_dir = b.fmt("{s}/libc/include/{s}-linux-{s}", .{
-                    lib_dir,
-                    @tagName(target.result.cpu.arch),
-                    @tagName(target.result.abi),
-                });
-                obj.root_module.addIncludePath(.{ .cwd_relative = linux_include_dir });
-                obj.root_module.addIncludePath(.{ .cwd_relative = linux_libc_include_dir });
-                obj.root_module.addIncludePath(.{ .cwd_relative = linux_any_include_dir });
-            }
             break :blk obj;
         },
     };
@@ -355,6 +295,22 @@ fn addBofObj(
     }
 
     return obj;
+}
+
+const CFlagsFn = *const fn (*std.Build, *std.Build.Step.Compile, BofFormat, BofArch) []const []const u8;
+
+fn cflags_wWinverC(b: *std.Build, obj: *std.Build.Step.Compile, format: BofFormat, arch: BofArch) []const []const u8 {
+    _ = .{ b, obj, format, arch };
+    return &.{"-DMY_DEFINE"};
+}
+
+fn cflags_sniffer(b: *std.Build, obj: *std.Build.Step.Compile, format: BofFormat, arch: BofArch) []const []const u8 {
+    _ = .{ format, arch };
+
+    obj.root_module.addIncludePath(b.path("dependencies/libpcap"));
+    obj.root_module.addObjectFile(b.path("dependencies/libpcap/libpcap.a"));
+
+    return &.{};
 }
 
 fn generateBofCollectionYaml(b: *std.Build, bofs: []const Bof) !void {
