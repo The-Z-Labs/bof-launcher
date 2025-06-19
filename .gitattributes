@@ -11,4 +11,5 @@
 
 *.exe binary
 *.o binary
+*.a binary
 bin/fasm binary
