@@ -26,7 +26,7 @@ const bofs_included_in_launcher = [_]Bof{
     .{ .name = "wInjectionChainStage2C", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "kmodLoader", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "lskmod", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    .{ .name = "sniffer", .formats = &.{.elf}, .archs = &.{.x64}, .cflagsFn = cflags_sniffer },
+    //.{ .name = "sniffer", .formats = &.{.elf}, .archs = &.{.x64}, .cflagsFn = cflags_sniffer },
     // BOF0 - special purpose BOF that acts as a standalone implant and uses other BOFs as its post-ex modules:
     .{ .name = "z-beac0n-core", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
 };
@@ -76,7 +76,7 @@ pub const Bof = struct {
                 .cpu_model = .{ .explicit = &std.Target.arm.cpu.arm1176jz_s }, // ARMv6kz
             };
         }
-        var query = std.Target.Query{
+        return .{
             .cpu_arch = switch (arch) {
                 .x64 => .x86_64,
                 .x86 => .x86,
@@ -89,9 +89,6 @@ pub const Bof = struct {
             },
             .abi = .gnu,
         };
-        if (format == .elf)
-            query.glibc_version = .{ .major = 2, .minor = 38, .patch = 0 };
-        return query;
     }
 
     pub fn fullName(
