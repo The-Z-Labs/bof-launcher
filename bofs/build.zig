@@ -26,7 +26,7 @@ const bofs_included_in_launcher = [_]Bof{
     .{ .name = "wInjectionChainStage2C", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "kmodLoader", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "lskmod", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    .{ .name = "sniffer", .formats = &.{.elf}, .archs = &.{ .x64 }, .cflagsFn = cflags_sniffer },
+    .{ .name = "sniffer", .formats = &.{.elf}, .archs = &.{.x64}, .cflagsFn = cflags_sniffer },
     // BOF0 - special purpose BOF that acts as a standalone implant and uses other BOFs as its post-ex modules:
     .{ .name = "z-beac0n-core", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
 };
@@ -51,14 +51,13 @@ fn cflags_wWinverC(b: *std.Build, obj: *std.Build.Step.Compile, format: BofForma
 }
 
 fn cflags_sniffer(b: *std.Build, obj: *std.Build.Step.Compile, format: BofFormat, arch: BofArch) []const []const u8 {
-    _ = .{ b, obj, format, arch };
+    _ = .{ format, arch };
 
     obj.addIncludePath(b.path("dependencies/libpcap"));
     obj.addObjectFile(b.path("dependencies/libpcap/libpcap.a"));
 
-    return &.{""};
+    return &.{};
 }
-
 
 // Additional/3rdparty BOFs for building should be added below
 
@@ -217,6 +216,9 @@ pub fn build(b: *std.Build) !void {
 
                 // Build debug executable from a BOF.
                 if (bof_optimize == .Debug) {
+                    // TODO: Link errors in debug mode.
+                    if (std.mem.eql(u8, bof.name, "sniffer")) continue;
+
                     const full_name_debug = Bof.fullName(b.allocator, bof.name, format, arch, .Debug);
                     const debug_obj = try addBofObj(
                         b,

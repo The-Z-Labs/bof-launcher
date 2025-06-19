@@ -59,6 +59,9 @@ pub fn build(b: *std.Build) !void {
                 ).step);
 
                 if (optimize == .Debug) {
+                    // TODO: Link errors in debug mode.
+                    if (std.mem.eql(u8, bof.name, "sniffer")) continue;
+
                     const full_name_debug = @import("bof_launcher_bofs").Bof.fullName(
                         b.allocator,
                         bof.name,
