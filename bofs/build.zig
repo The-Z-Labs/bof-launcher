@@ -42,10 +42,10 @@ const bofs_for_testing = [_]Bof{
     .{ .name = "test_args", .dir = "tests/", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
 };
 
-const CFlagsFn = *const fn (*std.Build, BofFormat, BofArch) []const []const u8;
+const CFlagsFn = *const fn (*std.Build, *std.Build.Step.Compile, BofFormat, BofArch) []const []const u8;
 
-fn cflags_wWinverC(b: *std.Build, format: BofFormat, arch: BofArch) []const []const u8 {
-    _ = .{ b, format, arch };
+fn cflags_wWinverC(b: *std.Build, obj: *std.Build.Step.Compile, format: BofFormat, arch: BofArch) []const []const u8 {
+    _ = .{ b, obj, format, arch };
     return &.{"-DMY_DEFINE"};
 }
 
@@ -286,9 +286,10 @@ fn addBofObj(
                     .link_libc = false,
                 }),
             });
+            const flags = if (cflagsFn) |cflags| cflags(b, obj, format, arch) else &.{};
             obj.root_module.addCSourceFile(.{
                 .file = b.path(source_file_path),
-                .flags = if (cflagsFn) |cflags| cflags(b, format, arch) else &.{},
+                .flags = flags,
             });
             if (format == .coff) {
                 obj.root_module.addIncludePath(.{ .cwd_relative = windows_include_dir });
