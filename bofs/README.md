@@ -8,6 +8,8 @@
 | [tcpScanner](src/tcpScanner.zig)  | TCP connect() port scanner  | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `tcpScanner 4.3.2.1-255:22,80` |
 | [udpScanner](src/udpScanner.zig) | UDP port sweeper | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `udpScanner 4.3.2.1-255:5000-5010` |
 | [whoami](src/whoami.zig) | On Linux: print effective user name; On Windows: output the current UserName and domain | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `whoami` |
+| [pwd](src/pwd.zig) | print name of current/working directory | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `pwd` |
+| [cd](src/cd.zig) | change working directory | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `cd /` |
 
 ## Linux-only BOFs
 
@@ -28,7 +30,6 @@
 | [id](src/coreutils/id.zig) | print real and effective user and group IDs | `Linux x86/x86_64/ARMv6+/AArch64` | `id www-data` |
 | [uname](src/coreutils/uname.zig) | print system information | `Linux x86/x86_64/ARMv6+/AArch64` | `uname -a` |
 | [cat](src/coreutils/cat.zig) | print content of a file | `Linux x86/x86_64/ARMv6+/AArch64` | `cat /etc/passwd` |
-| [pwd](src/coreutils/pwd.zig) | print name of current/working directory | `Linux x86/x86_64/ARMv6+/AArch64` | `pwd` |
 
 ### Net-tools
 

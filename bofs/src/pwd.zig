@@ -1,10 +1,10 @@
 ///name: pwd
 ///description: "Print name of current/working directory"
 ///author: Z-Labs
-///tags: ['linux','host-recon','z-labs']
-///OS: linux
+///tags: ['windows', 'linux','host-recon','z-labs']
+///OS: cross
 ///sources:
-///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/pwd.zig'
+///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/pwd.zig'
 ///examples: '
 /// pwd
 ///'
@@ -15,35 +15,37 @@
 ///- name: CwdUnlinked
 ///  code: 0x2
 ///  message: "The current working directory has been unlinked"
-///- name: OutOfMemory
+///- name: NameTooLong
 ///  code: 0x3
-///  message: "Out of memory"
+///  message: "Name too long"
 ///- name: UnknownError
 ///  code: 0x4
 ///  message: "Unknown error"
 const std = @import("std");
 const beacon = @import("bof_api").beacon;
-const linux = @import("bof_api").os.linux;
+const posix = @import("std").posix;
 
 // BOF-specific error codes
 const BofErrors = enum(u8) {
     AccesDenied = 0x1,
     CwdUnlinked,
-    OutOfMemory,
+    NameTooLong,
     UnknownError,
 };
 
-pub export fn go() callconv(.C) u8 {
+fn getCwd() !u8 {
     var buf: [4096]u8 = undefined;
-    const rc = std.os.linux.getcwd(&buf, buf.len);
-    switch (std.os.linux.E.init(rc)) {
-        .SUCCESS => {},
-        .ACCES => return @intFromEnum(BofErrors.AccesDenied),
-        .NOENT => return @intFromEnum(BofErrors.CwdUnlinked),
-        .NOMEM => return @intFromEnum(BofErrors.OutOfMemory),
-        else => return @intFromEnum(BofErrors.UnknownError),
-    }
-
+    _ = try std.posix.getcwd(buf[0..buf.len]);
     _ = beacon.printf(0, "%s", &buf);
+
     return 0;
+}
+
+pub export fn go() callconv(.C) u8 {
+
+    return getCwd() catch |err| switch (err) {
+        std.posix.GetCwdError.NameTooLong => return @intFromEnum(BofErrors.NameTooLong),
+        std.posix.GetCwdError.CurrentWorkingDirectoryUnlinked => return @intFromEnum(BofErrors.CwdUnlinked),
+        else => return @intFromEnum(BofErrors.UnknownError),
+    };
 }
