@@ -28,6 +28,7 @@
 | [id](src/coreutils/id.zig) | print real and effective user and group IDs | `Linux x86/x86_64/ARMv6+/AArch64` | `id www-data` |
 | [uname](src/coreutils/uname.zig) | print system information | `Linux x86/x86_64/ARMv6+/AArch64` | `uname -a` |
 | [cat](src/coreutils/cat.zig) | print content of a file | `Linux x86/x86_64/ARMv6+/AArch64` | `cat /etc/passwd` |
+| [pwd](src/coreutils/pwd.zig) | print name of current/working directory | `Linux x86/x86_64/ARMv6+/AArch64` | `pwd` |
 
 ### Net-tools
 
