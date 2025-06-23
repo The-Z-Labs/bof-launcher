@@ -295,7 +295,7 @@ fn addBofObj(
                 .target = target,
                 .optimize = bof.optimize,
             });
-            if (bof.customBuildFn) |customBuild| _ = customBuild(b, obj, bof.format, bof.arch);
+            if (bof.customBuildFn) |customBuild| _ = customBuild(b, obj, bof);
             break :blk obj;
         },
         .zig => blk: {
@@ -306,7 +306,7 @@ fn addBofObj(
                 .optimize = bof.optimize,
                 .link_libc = false,
             });
-            if (bof.customBuildFn) |customBuild| _ = customBuild(b, obj, bof.format, bof.arch);
+            if (bof.customBuildFn) |customBuild| _ = customBuild(b, obj, bof);
             break :blk obj;
         },
         .c => blk: {
@@ -320,7 +320,7 @@ fn addBofObj(
                     .link_libc = true,
                 }),
             });
-            const flags = if (bof.customBuildFn) |customBuild| customBuild(b, obj, bof.format, bof.arch) else &.{};
+            const flags = if (bof.customBuildFn) |customBuild| customBuild(b, obj, bof) else &.{};
             obj.root_module.addCSourceFile(.{
                 .file = b.path(bof.source_file_path),
                 .flags = flags,
@@ -360,15 +360,15 @@ fn addBofObj(
     return obj;
 }
 
-const CustomBuildFn = *const fn (*std.Build, *std.Build.Step.Compile, BofFormat, BofArch) []const []const u8;
+const CustomBuildFn = *const fn (*std.Build, *std.Build.Step.Compile, Bof) []const []const u8;
 
-fn build_wWinverC(b: *std.Build, obj: *std.Build.Step.Compile, format: BofFormat, arch: BofArch) []const []const u8 {
-    _ = .{ b, obj, format, arch };
+fn build_wWinverC(b: *std.Build, obj: *std.Build.Step.Compile, bof: Bof) []const []const u8 {
+    _ = .{ b, obj, bof };
     return &.{"-DMY_DEFINE"};
 }
 
-fn build_sniffer(b: *std.Build, obj: *std.Build.Step.Compile, format: BofFormat, arch: BofArch) []const []const u8 {
-    _ = .{ format, arch };
+fn build_sniffer(b: *std.Build, obj: *std.Build.Step.Compile, bof: Bof) []const []const u8 {
+    _ = bof;
 
     obj.root_module.addIncludePath(b.path("dependencies/libpcap"));
     obj.root_module.addObjectFile(b.path("dependencies/libpcap/libpcap.a"));
