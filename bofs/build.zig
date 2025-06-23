@@ -64,59 +64,15 @@ const bofs_for_testing = [_]BofTableItem{
 const bofs_my_custom = [_]BofTableItem{
     //.{ .name = "bof", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
 };
+
+// YOU CAN ADD OR REMOVE BOF TABLES HERE:
+const bof_tables = bofs_included_in_launcher ++ bofs_for_testing ++ bofs_my_custom;
+
 //
 // END: BOF TABLES
 //
 
-pub const bofs_to_build: []const Bof = init: {
-    // YOU CAN ADD OR REMOVE BOF TABLES HERE.
-    const all_bof_tables = bofs_included_in_launcher ++ bofs_for_testing ++ bofs_my_custom;
-
-    // Mul by 16 because we have 2 formats, 4 archs and 2 optimize modes.
-    const max_records = all_bof_tables.len * 16;
-
-    @setEvalBranchQuota(max_records);
-
-    var bofs: [max_records]Bof = undefined;
-
-    var index: usize = 0;
-    for (all_bof_tables) |bof| {
-        for (bof.formats) |format| {
-            for (bof.archs) |arch| {
-                if (format == .coff and arch == .aarch64) continue;
-                if (format == .coff and arch == .arm) continue;
-
-                bofs[index] = .{
-                    .dir = bof.dir,
-                    .srcfile = bof.srcfile,
-                    .name = bof.name,
-                    .format = format,
-                    .arch = arch,
-                    .cflagsFn = bof.cflagsFn,
-                    .optimize = .ReleaseSmall,
-                };
-                index += 1;
-
-                // TODO: This BOF fails to build in Debug mode.
-                if (std.mem.eql(u8, bof.name, "sniffer")) continue;
-
-                bofs[index] = .{
-                    .dir = bof.dir,
-                    .srcfile = bof.srcfile,
-                    .name = bof.name,
-                    .format = format,
-                    .arch = arch,
-                    .cflagsFn = bof.cflagsFn,
-                    .optimize = .Debug,
-                };
-                index += 1;
-            }
-        }
-    }
-
-    const final = bofs;
-    break :init final[0..index];
-};
+pub var bofs_to_build: []const Bof = undefined;
 
 const std = @import("std");
 
@@ -178,6 +134,8 @@ pub const Bof = struct {
 pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
 
+    genBofList(optimize);
+
     const win32_dep = b.dependency("bof_launcher_win32", .{});
 
     const bof_api_module = b.addModule("bof_api", .{
@@ -208,7 +166,6 @@ pub fn build(b: *std.Build) !void {
         );
 
         if (bof.optimize == .Debug) {
-            if (optimize != .Debug) continue;
             const debug_obj = try addBofObj(
                 b,
                 full_name,
@@ -260,6 +217,52 @@ pub fn build(b: *std.Build) !void {
             ).step);
         }
     }
+}
+
+fn genBofList(optimize: std.builtin.OptimizeMode) void {
+    const static = struct {
+        // Mul by 16 because we have 2 formats, 4 archs and 2 optimize modes.
+        var bofs: [bof_tables.len * 16]Bof = undefined;
+    };
+
+    var index: usize = 0;
+    for (bof_tables) |bof| {
+        for (bof.formats) |format| {
+            for (bof.archs) |arch| {
+                if (format == .coff and arch == .aarch64) continue;
+                if (format == .coff and arch == .arm) continue;
+
+                static.bofs[index] = .{
+                    .dir = bof.dir,
+                    .srcfile = bof.srcfile,
+                    .name = bof.name,
+                    .format = format,
+                    .arch = arch,
+                    .cflagsFn = bof.cflagsFn,
+                    .optimize = .ReleaseSmall,
+                };
+                index += 1;
+
+                if (optimize == .Debug) {
+                    // TODO: This BOF fails to build in Debug mode.
+                    if (std.mem.eql(u8, bof.name, "sniffer")) continue;
+
+                    static.bofs[index] = .{
+                        .dir = bof.dir,
+                        .srcfile = bof.srcfile,
+                        .name = bof.name,
+                        .format = format,
+                        .arch = arch,
+                        .cflagsFn = bof.cflagsFn,
+                        .optimize = .Debug,
+                    };
+                    index += 1;
+                }
+            }
+        }
+    }
+
+    bofs_to_build = static.bofs[0..index];
 }
 
 fn addBofObj(

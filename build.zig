@@ -39,7 +39,6 @@ pub fn build(b: *std.Build) !void {
     for (@import("bof_launcher_bofs").bofs_to_build) |bof| {
         const full_name = bof.fullName(b.allocator);
         if (bof.optimize == .Debug) {
-            if (optimize != .Debug) continue;
             b.getInstallStep().dependOn(&b.addInstallArtifact(
                 bofs_dep.artifact(full_name),
                 .{ .dest_dir = .{ .override = .{ .custom = bofs_path } } },
