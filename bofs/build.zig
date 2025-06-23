@@ -7,7 +7,7 @@ const BofTableItem = struct {
     name: []const u8,
     formats: []const BofFormat,
     archs: []const BofArch,
-    cflagsFn: ?CFlagsFn = null,
+    customBuildFn: ?CustomBuildFn = null,
 };
 
 const bofs_included_in_launcher = [_]BofTableItem{
@@ -20,7 +20,7 @@ const bofs_included_in_launcher = [_]BofTableItem{
     .{ .name = "tcpScanner", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "simple", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "wWinver", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
-    .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 }, .cflagsFn = cflags_wWinverC },
+    .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 }, .customBuildFn = build_wWinverC },
     .{ .name = "whoami", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "wAsmTest", .formats = &.{.coff}, .archs = &.{.x64} },
     .{ .name = "lAsmTest", .formats = &.{.elf}, .archs = &.{.x64} },
@@ -42,7 +42,7 @@ const bofs_included_in_launcher = [_]BofTableItem{
     .{ .name = "wInjectionChainStage2C", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "kmodLoader", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "lskmod", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    .{ .name = "sniffer", .formats = &.{.elf}, .archs = &.{.x64}, .cflagsFn = cflags_sniffer },
+    .{ .name = "sniffer", .formats = &.{.elf}, .archs = &.{.x64}, .customBuildFn = build_sniffer },
     // BOF0 - special purpose BOF that acts as a standalone implant and uses other BOFs as its post-ex modules:
     .{ .name = "z-beac0n-core", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
 };
@@ -59,7 +59,7 @@ const bofs_for_testing = [_]BofTableItem{
     .{ .name = "test_args", .dir = "tests/", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
 };
 
-// Additional/3rdparty BOFs for building should be added below
+// Additional/3rdparty BOFs for building should be added below:
 
 const bofs_my_custom = [_]BofTableItem{
     //.{ .name = "bof", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
@@ -77,7 +77,7 @@ pub var bofs_to_build: []const Bof = undefined;
 pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
 
-    bofs_to_build = genBofList(optimize);
+    bofs_to_build = genBofList(b, optimize);
 
     const win32_dep = b.dependency("bof_launcher_win32", .{});
 
@@ -89,13 +89,9 @@ pub fn build(b: *std.Build) !void {
         .{ .root_source_file = win32_dep.path("src/win32.zig") },
     );
 
-    try generateBofCollectionYaml(b, bofs_to_build);
+    try generateBofCollectionYaml(b);
 
     for (bofs_to_build) |bof| {
-        const source_file_path, const lang = try getBofSourcePathAndLang(b, bof);
-
-        const full_name = bof.fullName(b.allocator);
-
         const target = b.resolveTargetQuery(bof.getTargetQuery());
 
         const bof_launcher_dep = b.dependency(
@@ -108,19 +104,16 @@ pub fn build(b: *std.Build) !void {
             @import("bof_launcher_lib").libFileName(b.allocator, target, null),
         );
 
+        const full_name = bof.fullName(b.allocator);
+
         if (bof.optimize == .Debug) {
             const debug_obj = try addBofObj(
                 b,
+                bof,
                 full_name,
-                lang,
-                source_file_path,
                 target,
-                .Debug,
-                bof.format,
-                bof.arch,
                 bof_api_module,
                 bof_launcher_dep,
-                bof.cflagsFn,
             );
             const debug_exe = b.addExecutable(.{
                 .root_source_file = b.path("src/_debug_entry.zig"),
@@ -140,16 +133,11 @@ pub fn build(b: *std.Build) !void {
         } else {
             const obj = try addBofObj(
                 b,
+                bof,
                 full_name,
-                lang,
-                source_file_path,
                 target,
-                .ReleaseSmall,
-                bof.format,
-                bof.arch,
                 bof_api_module,
                 bof_launcher_dep,
-                bof.cflagsFn,
             );
             b.getInstallStep().dependOn(&b.addInstallArtifact(
                 obj,
@@ -175,8 +163,50 @@ pub const Bof = struct {
     name: []const u8,
     format: BofFormat,
     arch: BofArch,
-    cflagsFn: ?CFlagsFn,
+    lang: BofLang,
+    customBuildFn: ?CustomBuildFn,
     optimize: std.builtin.OptimizeMode,
+    source_file_path: []const u8,
+
+    fn init(b: *std.Build, item: BofTableItem, format: BofFormat, arch: BofArch, optimize: std.builtin.OptimizeMode) Bof {
+        const bof_src_path = std.mem.join(
+            b.allocator,
+            "",
+            &.{
+                "src/",
+                if (item.dir) |dir| dir else "",
+                if (item.srcfile) |srcfile| srcfile else item.name,
+            },
+        ) catch @panic("OOM");
+
+        const lang: BofLang = blk: {
+            std.fs.cwd().access(b.fmt("{s}.zig", .{b.pathFromRoot(bof_src_path)}), .{}) catch {
+                std.fs.cwd().access(b.fmt("{s}.s", .{b.pathFromRoot(bof_src_path)}), .{}) catch break :blk .c;
+                break :blk .@"asm";
+            };
+            break :blk .zig;
+        };
+
+        const extension = switch (lang) {
+            .zig => "zig",
+            .c => "c",
+            .@"asm" => "s",
+        };
+
+        const source_file_path = b.fmt("{s}.{s}", .{ bof_src_path, extension });
+
+        return .{
+            .dir = item.dir,
+            .srcfile = item.srcfile,
+            .name = item.name,
+            .format = format,
+            .arch = arch,
+            .customBuildFn = item.customBuildFn,
+            .optimize = optimize,
+            .lang = lang,
+            .source_file_path = source_file_path,
+        };
+    }
 
     pub fn getTargetQuery(bof: Bof) std.Target.Query {
         if (bof.arch == .arm) {
@@ -219,43 +249,27 @@ pub const Bof = struct {
     }
 };
 
-fn genBofList(optimize: std.builtin.OptimizeMode) []const Bof {
+fn genBofList(b: *std.Build, optimize: std.builtin.OptimizeMode) []const Bof {
     const static = struct {
         // Mul by 16 because we have 2 formats, 4 archs and 2 optimize modes.
         var bofs: [bof_tables.len * 16]Bof = undefined;
     };
 
     var index: usize = 0;
-    for (bof_tables) |bof| {
-        for (bof.formats) |format| {
-            for (bof.archs) |arch| {
+    for (bof_tables) |item| {
+        for (item.formats) |format| {
+            for (item.archs) |arch| {
                 if (format == .coff and arch == .aarch64) continue;
                 if (format == .coff and arch == .arm) continue;
 
-                static.bofs[index] = .{
-                    .dir = bof.dir,
-                    .srcfile = bof.srcfile,
-                    .name = bof.name,
-                    .format = format,
-                    .arch = arch,
-                    .cflagsFn = bof.cflagsFn,
-                    .optimize = .ReleaseSmall,
-                };
+                static.bofs[index] = Bof.init(b, item, format, arch, .ReleaseSmall);
                 index += 1;
 
                 if (optimize == .Debug) {
                     // TODO: This BOF fails to build in Debug mode.
-                    if (std.mem.eql(u8, bof.name, "sniffer")) continue;
+                    if (std.mem.eql(u8, item.name, "sniffer")) continue;
 
-                    static.bofs[index] = .{
-                        .dir = bof.dir,
-                        .srcfile = bof.srcfile,
-                        .name = bof.name,
-                        .format = format,
-                        .arch = arch,
-                        .cflagsFn = bof.cflagsFn,
-                        .optimize = .Debug,
-                    };
+                    static.bofs[index] = Bof.init(b, item, format, arch, .Debug);
                     index += 1;
                 }
             }
@@ -267,37 +281,32 @@ fn genBofList(optimize: std.builtin.OptimizeMode) []const Bof {
 
 fn addBofObj(
     b: *std.Build,
+    bof: Bof,
     full_name: []const u8,
-    lang: BofLang,
-    source_file_path: []const u8,
     target: std.Build.ResolvedTarget,
-    bof_optimize: std.builtin.OptimizeMode,
-    format: BofFormat,
-    arch: BofArch,
     bof_api_module: *std.Build.Module,
     bof_launcher_dep: *std.Build.Dependency,
-    cflagsFn: ?CFlagsFn,
 ) !*std.Build.Step.Compile {
-    const obj = switch (lang) {
+    const obj = switch (bof.lang) {
         .@"asm" => blk: {
             const obj = b.addAssembly(.{
                 .name = full_name,
-                .source_file = b.path(source_file_path),
+                .source_file = b.path(bof.source_file_path),
                 .target = target,
-                .optimize = bof_optimize,
+                .optimize = bof.optimize,
             });
-            if (cflagsFn) |callback| _ = callback(b, obj, format, arch);
+            if (bof.customBuildFn) |customBuild| _ = customBuild(b, obj, bof.format, bof.arch);
             break :blk obj;
         },
         .zig => blk: {
             const obj = b.addObject(.{
                 .name = full_name,
-                .root_source_file = b.path(source_file_path),
+                .root_source_file = b.path(bof.source_file_path),
                 .target = target,
-                .optimize = bof_optimize,
+                .optimize = bof.optimize,
                 .link_libc = false,
             });
-            if (cflagsFn) |callback| _ = callback(b, obj, format, arch);
+            if (bof.customBuildFn) |customBuild| _ = customBuild(b, obj, bof.format, bof.arch);
             break :blk obj;
         },
         .c => blk: {
@@ -307,13 +316,13 @@ fn addBofObj(
                     // TODO: Zig bug. `.root_source_file = null` should be possible.
                     .root_source_file = b.path("src/tests/dummy.zig"),
                     .target = target,
-                    .optimize = bof_optimize,
+                    .optimize = bof.optimize,
                     .link_libc = true,
                 }),
             });
-            const flags = if (cflagsFn) |cflags| cflags(b, obj, format, arch) else &.{};
+            const flags = if (bof.customBuildFn) |customBuild| customBuild(b, obj, bof.format, bof.arch) else &.{};
             obj.root_module.addCSourceFile(.{
-                .file = b.path(source_file_path),
+                .file = b.path(bof.source_file_path),
                 .flags = flags,
             });
             break :blk obj;
@@ -322,10 +331,10 @@ fn addBofObj(
 
     obj.root_module.pic = true;
     obj.root_module.single_threaded = true;
-    obj.root_module.strip = if (bof_optimize == .Debug) false else true;
+    obj.root_module.strip = if (bof.optimize == .Debug) false else true;
     obj.root_module.unwind_tables = .none;
 
-    if (lang != .@"asm") {
+    if (bof.lang != .@"asm") {
         obj.root_module.addIncludePath(b.path("src/include"));
         obj.root_module.addImport("bof_api", bof_api_module);
         // Needed for BOFs that launch other BOFs
@@ -351,14 +360,14 @@ fn addBofObj(
     return obj;
 }
 
-const CFlagsFn = *const fn (*std.Build, *std.Build.Step.Compile, BofFormat, BofArch) []const []const u8;
+const CustomBuildFn = *const fn (*std.Build, *std.Build.Step.Compile, BofFormat, BofArch) []const []const u8;
 
-fn cflags_wWinverC(b: *std.Build, obj: *std.Build.Step.Compile, format: BofFormat, arch: BofArch) []const []const u8 {
+fn build_wWinverC(b: *std.Build, obj: *std.Build.Step.Compile, format: BofFormat, arch: BofArch) []const []const u8 {
     _ = .{ b, obj, format, arch };
     return &.{"-DMY_DEFINE"};
 }
 
-fn cflags_sniffer(b: *std.Build, obj: *std.Build.Step.Compile, format: BofFormat, arch: BofArch) []const []const u8 {
+fn build_sniffer(b: *std.Build, obj: *std.Build.Step.Compile, format: BofFormat, arch: BofArch) []const []const u8 {
     _ = .{ format, arch };
 
     obj.root_module.addIncludePath(b.path("dependencies/libpcap"));
@@ -367,65 +376,31 @@ fn cflags_sniffer(b: *std.Build, obj: *std.Build.Step.Compile, format: BofFormat
     return &.{};
 }
 
-fn generateBofCollectionYaml(b: *std.Build, bofs: []const Bof) !void {
+fn generateBofCollectionYaml(b: *std.Build) !void {
     const doc_file = try std.fs.cwd().createFile("BOF-collection.yaml", .{});
     defer doc_file.close();
 
-    for (bofs) |bof| {
-        const source_file_path, const lang = try getBofSourcePathAndLang(b, bof);
+    for (bof_tables) |item| {
+        const bof = Bof.init(b, item, item.formats[0], item.archs[0], .ReleaseSmall);
+        if (bof.lang == .@"asm") continue;
 
-        if (lang != .@"asm") {
-            const source_file = try std.fs.cwd().openFile(b.pathFromRoot(source_file_path), .{});
-            defer source_file.close();
+        const source_file = try std.fs.cwd().openFile(b.pathFromRoot(bof.source_file_path), .{});
+        defer source_file.close();
 
-            const source = try source_file.readToEndAlloc(b.allocator, std.math.maxInt(u32));
-            defer b.allocator.free(source);
+        const source = try source_file.readToEndAlloc(b.allocator, std.math.maxInt(u32));
+        defer b.allocator.free(source);
 
-            _ = std.mem.replace(u8, source, "\r\n", "\n", source);
+        _ = std.mem.replace(u8, source, "\r\n", "\n", source);
 
-            var line_number: u32 = 1;
-            var iter = std.mem.splitSequence(u8, source, "\n");
-            while (iter.next()) |source_line| {
-                if (source_line.len >= 3 and std.mem.eql(u8, source_line[0..3], "///")) {
-                    if (line_number == 1) try doc_file.writeAll("---\n");
-                    line_number += 1;
-                    try doc_file.writeAll(source_line[3..]);
-                    try doc_file.writeAll("\n");
-                }
+        var line_number: u32 = 1;
+        var iter = std.mem.splitSequence(u8, source, "\n");
+        while (iter.next()) |source_line| {
+            if (source_line.len >= 3 and std.mem.eql(u8, source_line[0..3], "///")) {
+                if (line_number == 1) try doc_file.writeAll("---\n");
+                line_number += 1;
+                try doc_file.writeAll(source_line[3..]);
+                try doc_file.writeAll("\n");
             }
         }
     }
-}
-
-fn getBofSourcePathAndLang(
-    b: *std.Build,
-    bof: Bof,
-) !struct { []const u8, BofLang } {
-    const bof_src_path = try std.mem.join(
-        b.allocator,
-        "",
-        &.{
-            "src/",
-            if (bof.dir) |dir| dir else "",
-            if (bof.srcfile) |srcfile| srcfile else bof.name,
-        },
-    );
-
-    const lang: BofLang = blk: {
-        std.fs.cwd().access(b.fmt("{s}.zig", .{b.pathFromRoot(bof_src_path)}), .{}) catch {
-            std.fs.cwd().access(b.fmt("{s}.s", .{b.pathFromRoot(bof_src_path)}), .{}) catch break :blk .c;
-            break :blk .@"asm";
-        };
-        break :blk .zig;
-    };
-
-    const extension = switch (lang) {
-        .zig => "zig",
-        .c => "c",
-        .@"asm" => "s",
-    };
-
-    const source_file_path = b.fmt("{s}.{s}", .{ bof_src_path, extension });
-
-    return .{ source_file_path, lang };
 }
