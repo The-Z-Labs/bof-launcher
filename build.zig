@@ -37,42 +37,21 @@ pub fn build(b: *std.Build) !void {
     const bofs_path = "bin/bofs";
     const bofs_dep = b.dependency("bof_launcher_bofs", .{ .optimize = optimize });
     for (@import("bof_launcher_bofs").bofs_to_build) |bof| {
-        for (bof.formats) |format| {
-            for (bof.archs) |arch| {
-                if (format == .coff and arch == .aarch64) continue;
-                if (format == .coff and arch == .arm) continue;
-
-                const full_name = @import("bof_launcher_bofs").Bof.fullName(
-                    b.allocator,
-                    bof.name,
-                    format,
-                    arch,
-                    .ReleaseSmall,
-                );
-                const obj = bofs_dep.artifact(full_name);
-                b.getInstallStep().dependOn(&b.addInstallArtifact(
-                    obj,
-                    .{
-                        .dest_dir = .{ .override = .{ .custom = bofs_path } },
-                        .dest_sub_path = b.fmt("{s}.o", .{full_name}),
-                    },
-                ).step);
-
-                if (optimize == .Debug) {
-                    const full_name_debug = @import("bof_launcher_bofs").Bof.fullName(
-                        b.allocator,
-                        bof.name,
-                        format,
-                        arch,
-                        .Debug,
-                    );
-                    const debug_exe = bofs_dep.artifact(full_name_debug);
-                    b.getInstallStep().dependOn(&b.addInstallArtifact(
-                        debug_exe,
-                        .{ .dest_dir = .{ .override = .{ .custom = bofs_path } } },
-                    ).step);
-                }
-            }
+        const full_name = bof.fullName(b.allocator);
+        if (bof.optimize == .Debug) {
+            if (optimize != .Debug) continue;
+            b.getInstallStep().dependOn(&b.addInstallArtifact(
+                bofs_dep.artifact(full_name),
+                .{ .dest_dir = .{ .override = .{ .custom = bofs_path } } },
+            ).step);
+        } else {
+            b.getInstallStep().dependOn(&b.addInstallArtifact(
+                bofs_dep.artifact(full_name),
+                .{
+                    .dest_dir = .{ .override = .{ .custom = bofs_path } },
+                    .dest_sub_path = b.fmt("{s}.o", .{full_name}),
+                },
+            ).step);
         }
     }
 

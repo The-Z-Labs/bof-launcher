@@ -44,7 +44,6 @@ const BofErrors = enum(u8) {
 };
 
 fn listDirContent(dir_path: [*:0]u8) !u8 {
-
     var iter_dir = try std.fs.openDirAbsoluteZ(dir_path, .{ .iterate = true });
     defer iter_dir.close();
 
@@ -58,22 +57,21 @@ fn listDirContent(dir_path: [*:0]u8) !u8 {
 
         if (entry.kind == .directory) {
             _ = beacon.printf(0, "d");
-        } else
-            _ = beacon.printf(0, "-");
+        } else _ = beacon.printf(0, "-");
 
         const perm = f_metadata.permissions();
         if (@import("builtin").os.tag == .linux) {
-            if(perm.inner.unixHas(.user, .read)) _ = beacon.printf(0, "r") else _ = beacon.printf(0, "-");
-            if(perm.inner.unixHas(.user, .write)) _ = beacon.printf(0, "w") else _ = beacon.printf(0, "-");
-            if(perm.inner.unixHas(.user, .execute)) _ = beacon.printf(0, "x") else _ = beacon.printf(0, "-");
+            if (perm.inner.unixHas(.user, .read)) _ = beacon.printf(0, "r") else _ = beacon.printf(0, "-");
+            if (perm.inner.unixHas(.user, .write)) _ = beacon.printf(0, "w") else _ = beacon.printf(0, "-");
+            if (perm.inner.unixHas(.user, .execute)) _ = beacon.printf(0, "x") else _ = beacon.printf(0, "-");
 
-            if(perm.inner.unixHas(.group, .read)) _ = beacon.printf(0, "r") else _ = beacon.printf(0, "-");
-            if(perm.inner.unixHas(.group, .write)) _ = beacon.printf(0, "w") else _ = beacon.printf(0, "-");
-            if(perm.inner.unixHas(.group, .execute)) _ = beacon.printf(0, "x") else _ = beacon.printf(0, "-");
+            if (perm.inner.unixHas(.group, .read)) _ = beacon.printf(0, "r") else _ = beacon.printf(0, "-");
+            if (perm.inner.unixHas(.group, .write)) _ = beacon.printf(0, "w") else _ = beacon.printf(0, "-");
+            if (perm.inner.unixHas(.group, .execute)) _ = beacon.printf(0, "x") else _ = beacon.printf(0, "-");
 
-            if(perm.inner.unixHas(.other, .read)) _ = beacon.printf(0, "r") else _ = beacon.printf(0, "-");
-            if(perm.inner.unixHas(.other, .write)) _ = beacon.printf(0, "w") else _ = beacon.printf(0, "-");
-            if(perm.inner.unixHas(.other, .execute)) _ = beacon.printf(0, "x") else _ = beacon.printf(0, "-");
+            if (perm.inner.unixHas(.other, .read)) _ = beacon.printf(0, "r") else _ = beacon.printf(0, "-");
+            if (perm.inner.unixHas(.other, .write)) _ = beacon.printf(0, "w") else _ = beacon.printf(0, "-");
+            if (perm.inner.unixHas(.other, .execute)) _ = beacon.printf(0, "x") else _ = beacon.printf(0, "-");
         }
 
         _ = beacon.printf(0, "\t%d\t%s", f_stat.size, entry.name.ptr);
@@ -89,11 +87,10 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     var parser = beacon.datap{};
     beacon.dataParse(&parser, args, args_len);
 
-    if(beacon.dataExtract(&parser, null)) |dir_path| {
+    if (beacon.dataExtract(&parser, null)) |dir_path| {
         return listDirContent(dir_path) catch |err| switch (err) {
             std.fs.File.OpenError.FileNotFound => return @intFromEnum(BofErrors.FileNotFound),
             else => return @intFromEnum(BofErrors.UnknownError),
         };
-    } else
-        return @intFromEnum(BofErrors.DirNotProvided);
+    } else return @intFromEnum(BofErrors.DirNotProvided);
 }

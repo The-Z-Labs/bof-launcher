@@ -1,4 +1,16 @@
-const bofs_included_in_launcher = [_]Bof{
+//
+// BEGIN: BOF TABLES
+//
+const BofTableItem = struct {
+    dir: ?[]const u8 = null,
+    srcfile: ?[]const u8 = null,
+    name: []const u8,
+    formats: []const BofFormat,
+    archs: []const BofArch,
+    cflagsFn: ?CFlagsFn = null,
+};
+
+const bofs_included_in_launcher = [_]BofTableItem{
     .{ .name = "helloBof", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "wProcessInfoMessageBox", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wProcessInjectionSrdi", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
@@ -17,10 +29,10 @@ const bofs_included_in_launcher = [_]Bof{
     .{ .name = "hostname", .dir = "coreutils/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "uptime", .dir = "coreutils/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "id", .dir = "coreutils/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    .{ .name = "cat", .formats = &.{.elf, .coff}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    .{ .name = "pwd", .formats = &.{.elf, .coff}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    .{ .name = "cd", .formats = &.{.elf, .coff}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    .{ .name = "ls", .formats = &.{.elf, .coff}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+    .{ .name = "cat", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+    .{ .name = "pwd", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+    .{ .name = "cd", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+    .{ .name = "ls", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "ifconfig", .dir = "net-tools/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "wCloneProcess", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wInjectionChainStage0", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
@@ -30,12 +42,12 @@ const bofs_included_in_launcher = [_]Bof{
     .{ .name = "wInjectionChainStage2C", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "kmodLoader", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "lskmod", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    //.{ .name = "sniffer", .formats = &.{.elf}, .archs = &.{.x64}, .cflagsFn = cflags_sniffer },
+    .{ .name = "sniffer", .formats = &.{.elf}, .archs = &.{.x64}, .cflagsFn = cflags_sniffer },
     // BOF0 - special purpose BOF that acts as a standalone implant and uses other BOFs as its post-ex modules:
     .{ .name = "z-beac0n-core", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
 };
 
-const bofs_for_testing = [_]Bof{
+const bofs_for_testing = [_]BofTableItem{
     .{ .name = "test_obj0", .dir = "tests/", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "test_obj1", .dir = "tests/", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "test_obj2", .dir = "tests/", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
@@ -49,11 +61,62 @@ const bofs_for_testing = [_]Bof{
 
 // Additional/3rdparty BOFs for building should be added below
 
-const bofs_my_custom = [_]Bof{
+const bofs_my_custom = [_]BofTableItem{
     //.{ .name = "bof", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
 };
+//
+// END: BOF TABLES
+//
 
-pub const bofs_to_build = bofs_included_in_launcher ++ bofs_for_testing ++ bofs_my_custom;
+pub const bofs_to_build: []const Bof = init: {
+    // YOU CAN ADD OR REMOVE BOF TABLES HERE.
+    const all_bof_tables = bofs_included_in_launcher ++ bofs_for_testing ++ bofs_my_custom;
+
+    // Mul by 16 because we have 2 formats, 4 archs and 2 optimize modes.
+    const max_records = all_bof_tables.len * 16;
+
+    @setEvalBranchQuota(max_records);
+
+    var bofs: [max_records]Bof = undefined;
+
+    var index: usize = 0;
+    for (all_bof_tables) |bof| {
+        for (bof.formats) |format| {
+            for (bof.archs) |arch| {
+                if (format == .coff and arch == .aarch64) continue;
+                if (format == .coff and arch == .arm) continue;
+
+                bofs[index] = .{
+                    .dir = bof.dir,
+                    .srcfile = bof.srcfile,
+                    .name = bof.name,
+                    .format = format,
+                    .arch = arch,
+                    .cflagsFn = bof.cflagsFn,
+                    .optimize = .ReleaseSmall,
+                };
+                index += 1;
+
+                // TODO: This BOF fails to build in Debug mode.
+                if (std.mem.eql(u8, bof.name, "sniffer")) continue;
+
+                bofs[index] = .{
+                    .dir = bof.dir,
+                    .srcfile = bof.srcfile,
+                    .name = bof.name,
+                    .format = format,
+                    .arch = arch,
+                    .cflagsFn = bof.cflagsFn,
+                    .optimize = .Debug,
+                };
+                index += 1;
+            }
+        }
+    }
+
+    const final = bofs;
+    break :init final[0..index];
+};
 
 const std = @import("std");
 
@@ -62,16 +125,17 @@ const BofFormat = enum { coff, elf };
 const BofArch = enum { x64, x86, aarch64, arm };
 
 pub const Bof = struct {
-    dir: ?[]const u8 = null,
+    dir: ?[]const u8,
     // source Filename with contains go(). Only set if go() is in other file than .name
-    srcfile: ?[]const u8 = null,
+    srcfile: ?[]const u8,
     name: []const u8,
-    formats: []const BofFormat,
-    archs: []const BofArch,
-    cflagsFn: ?CFlagsFn = null,
+    format: BofFormat,
+    arch: BofArch,
+    cflagsFn: ?CFlagsFn,
+    optimize: std.builtin.OptimizeMode,
 
-    pub fn getTargetQuery(format: BofFormat, arch: BofArch) std.Target.Query {
-        if (arch == .arm) {
+    pub fn getTargetQuery(bof: Bof) std.Target.Query {
+        if (bof.arch == .arm) {
             // We basically force ARMv6 here.
             return .{
                 .cpu_arch = .arm,
@@ -81,13 +145,13 @@ pub const Bof = struct {
             };
         }
         return .{
-            .cpu_arch = switch (arch) {
+            .cpu_arch = switch (bof.arch) {
                 .x64 => .x86_64,
                 .x86 => .x86,
                 .aarch64 => .aarch64,
                 .arm => unreachable,
             },
-            .os_tag = switch (format) {
+            .os_tag = switch (bof.format) {
                 .coff => .windows,
                 .elf => .linux,
             },
@@ -95,30 +159,24 @@ pub const Bof = struct {
         };
     }
 
-    pub fn fullName(
-        allocator: std.mem.Allocator,
-        name: []const u8,
-        format: BofFormat,
-        arch: BofArch,
-        optimize: std.builtin.OptimizeMode,
-    ) []const u8 {
-        if (optimize == .Debug) {
+    pub fn fullName(bof: Bof, allocator: std.mem.Allocator) []const u8 {
+        if (bof.optimize == .Debug) {
             return std.mem.join(
                 allocator,
                 ".",
-                &.{ name, @tagName(format), @tagName(arch), "debug" },
+                &.{ bof.name, @tagName(bof.format), @tagName(bof.arch), "debug" },
             ) catch @panic("OOM");
         }
         return std.mem.join(
             allocator,
             ".",
-            &.{ name, @tagName(format), @tagName(arch) },
+            &.{ bof.name, @tagName(bof.format), @tagName(bof.arch) },
         ) catch @panic("OOM");
     }
 };
 
 pub fn build(b: *std.Build) !void {
-    const bof_optimize = b.standardOptimizeOption(.{});
+    const optimize = b.standardOptimizeOption(.{});
 
     const win32_dep = b.dependency("bof_launcher_win32", .{});
 
@@ -130,84 +188,76 @@ pub fn build(b: *std.Build) !void {
         .{ .root_source_file = win32_dep.path("src/win32.zig") },
     );
 
-    try generateBofCollectionYaml(b, &bofs_to_build);
+    try generateBofCollectionYaml(b, bofs_to_build);
 
     for (bofs_to_build) |bof| {
         const source_file_path, const lang = try getBofSourcePathAndLang(b, bof);
 
-        for (bof.formats) |format| {
-            for (bof.archs) |arch| {
-                if (format == .coff and arch == .aarch64) continue;
-                if (format == .coff and arch == .arm) continue;
+        const full_name = bof.fullName(b.allocator);
 
-                const full_name = Bof.fullName(b.allocator, bof.name, format, arch, .ReleaseSmall);
+        const target = b.resolveTargetQuery(bof.getTargetQuery());
 
-                const target = b.resolveTargetQuery(Bof.getTargetQuery(format, arch));
+        const bof_launcher_dep = b.dependency(
+            "bof_launcher_lib",
+            .{ .target = target, .optimize = optimize },
+        );
+        const bof_launcher_api_module = bof_launcher_dep.module("bof_launcher_api");
 
-                const bof_launcher_dep = b.dependency(
-                    "bof_launcher_lib",
-                    .{ .target = target, .optimize = bof_optimize },
-                );
-                const bof_launcher_api_module = bof_launcher_dep.module("bof_launcher_api");
+        const bof_launcher_lib = bof_launcher_dep.artifact(
+            @import("bof_launcher_lib").libFileName(b.allocator, target, null),
+        );
 
-                const bof_launcher_lib = bof_launcher_dep.artifact(
-                    @import("bof_launcher_lib").libFileName(b.allocator, target, null),
-                );
-
-                const obj = try addBofObj(
-                    b,
-                    full_name,
-                    lang,
-                    source_file_path,
-                    target,
-                    .ReleaseSmall,
-                    format,
-                    arch,
-                    bof_api_module,
-                    bof_launcher_dep,
-                    bof.cflagsFn,
-                );
-                b.getInstallStep().dependOn(&b.addInstallArtifact(
-                    obj,
-                    .{
-                        .dest_dir = .{ .override = .bin },
-                        .dest_sub_path = b.fmt("{s}.o", .{full_name}),
-                    },
-                ).step);
-
-                // Build debug executable from a BOF.
-                if (bof_optimize == .Debug) {
-                    const full_name_debug = Bof.fullName(b.allocator, bof.name, format, arch, .Debug);
-                    const debug_obj = try addBofObj(
-                        b,
-                        full_name_debug,
-                        lang,
-                        source_file_path,
-                        target,
-                        .Debug,
-                        format,
-                        arch,
-                        bof_api_module,
-                        bof_launcher_dep,
-                        bof.cflagsFn,
-                    );
-                    const debug_exe = b.addExecutable(.{
-                        .root_source_file = b.path("src/_debug_entry.zig"),
-                        .name = full_name_debug,
-                        .target = target,
-                        .optimize = .Debug,
-                    });
-                    debug_exe.linkLibrary(bof_launcher_lib);
-                    debug_exe.linkLibC();
-                    debug_exe.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
-                    if (target.query.os_tag == .windows) {
-                        debug_exe.linkSystemLibrary2("ws2_32", .{});
-                        debug_exe.linkSystemLibrary2("ole32", .{});
-                    }
-                    debug_exe.addObject(debug_obj);
-                    b.installArtifact(debug_exe);
-                }
+        if (bof.optimize == .Debug) {
+            if (optimize != .Debug) continue;
+            const debug_obj = try addBofObj(
+                b,
+                full_name,
+                lang,
+                source_file_path,
+                target,
+                .Debug,
+                bof.format,
+                bof.arch,
+                bof_api_module,
+                bof_launcher_dep,
+                bof.cflagsFn,
+            );
+            const debug_exe = b.addExecutable(.{
+                .root_source_file = b.path("src/_debug_entry.zig"),
+                .name = full_name,
+                .target = target,
+                .optimize = .Debug,
+            });
+            debug_exe.linkLibrary(bof_launcher_lib);
+            debug_exe.linkLibC();
+            debug_exe.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
+            if (target.query.os_tag == .windows) {
+                debug_exe.linkSystemLibrary2("ws2_32", .{});
+                debug_exe.linkSystemLibrary2("ole32", .{});
             }
+            debug_exe.addObject(debug_obj);
+            b.installArtifact(debug_exe);
+        } else {
+            const obj = try addBofObj(
+                b,
+                full_name,
+                lang,
+                source_file_path,
+                target,
+                .ReleaseSmall,
+                bof.format,
+                bof.arch,
+                bof_api_module,
+                bof_launcher_dep,
+                bof.cflagsFn,
+            );
+            b.getInstallStep().dependOn(&b.addInstallArtifact(
+                obj,
+                .{
+                    .dest_dir = .{ .override = .bin },
+                    .dest_sub_path = b.fmt("{s}.o", .{full_name}),
+                },
+            ).step);
         }
     }
 }
