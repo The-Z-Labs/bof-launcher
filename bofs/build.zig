@@ -74,67 +74,10 @@ const bof_tables = bofs_included_in_launcher ++ bofs_for_testing ++ bofs_my_cust
 
 pub var bofs_to_build: []const Bof = undefined;
 
-const std = @import("std");
-
-const BofLang = enum { zig, c, @"asm" };
-const BofFormat = enum { coff, elf };
-const BofArch = enum { x64, x86, aarch64, arm };
-
-pub const Bof = struct {
-    dir: ?[]const u8,
-    // source Filename with contains go(). Only set if go() is in other file than .name
-    srcfile: ?[]const u8,
-    name: []const u8,
-    format: BofFormat,
-    arch: BofArch,
-    cflagsFn: ?CFlagsFn,
-    optimize: std.builtin.OptimizeMode,
-
-    pub fn getTargetQuery(bof: Bof) std.Target.Query {
-        if (bof.arch == .arm) {
-            // We basically force ARMv6 here.
-            return .{
-                .cpu_arch = .arm,
-                .os_tag = .linux,
-                .abi = .gnueabihf,
-                .cpu_model = .{ .explicit = &std.Target.arm.cpu.arm1176jz_s }, // ARMv6kz
-            };
-        }
-        return .{
-            .cpu_arch = switch (bof.arch) {
-                .x64 => .x86_64,
-                .x86 => .x86,
-                .aarch64 => .aarch64,
-                .arm => unreachable,
-            },
-            .os_tag = switch (bof.format) {
-                .coff => .windows,
-                .elf => .linux,
-            },
-            .abi = .gnu,
-        };
-    }
-
-    pub fn fullName(bof: Bof, allocator: std.mem.Allocator) []const u8 {
-        if (bof.optimize == .Debug) {
-            return std.mem.join(
-                allocator,
-                ".",
-                &.{ bof.name, @tagName(bof.format), @tagName(bof.arch), "debug" },
-            ) catch @panic("OOM");
-        }
-        return std.mem.join(
-            allocator,
-            ".",
-            &.{ bof.name, @tagName(bof.format), @tagName(bof.arch) },
-        ) catch @panic("OOM");
-    }
-};
-
 pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
 
-    genBofList(optimize);
+    bofs_to_build = genBofList(optimize);
 
     const win32_dep = b.dependency("bof_launcher_win32", .{});
 
@@ -219,7 +162,64 @@ pub fn build(b: *std.Build) !void {
     }
 }
 
-fn genBofList(optimize: std.builtin.OptimizeMode) void {
+const std = @import("std");
+
+const BofLang = enum { zig, c, @"asm" };
+const BofFormat = enum { coff, elf };
+const BofArch = enum { x64, x86, aarch64, arm };
+
+pub const Bof = struct {
+    dir: ?[]const u8,
+    // source Filename with contains go(). Only set if go() is in other file than .name
+    srcfile: ?[]const u8,
+    name: []const u8,
+    format: BofFormat,
+    arch: BofArch,
+    cflagsFn: ?CFlagsFn,
+    optimize: std.builtin.OptimizeMode,
+
+    pub fn getTargetQuery(bof: Bof) std.Target.Query {
+        if (bof.arch == .arm) {
+            // We basically force ARMv6 here.
+            return .{
+                .cpu_arch = .arm,
+                .os_tag = .linux,
+                .abi = .gnueabihf,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.arm1176jz_s }, // ARMv6kz
+            };
+        }
+        return .{
+            .cpu_arch = switch (bof.arch) {
+                .x64 => .x86_64,
+                .x86 => .x86,
+                .aarch64 => .aarch64,
+                .arm => unreachable,
+            },
+            .os_tag = switch (bof.format) {
+                .coff => .windows,
+                .elf => .linux,
+            },
+            .abi = .gnu,
+        };
+    }
+
+    pub fn fullName(bof: Bof, allocator: std.mem.Allocator) []const u8 {
+        if (bof.optimize == .Debug) {
+            return std.mem.join(
+                allocator,
+                ".",
+                &.{ bof.name, @tagName(bof.format), @tagName(bof.arch), "debug" },
+            ) catch @panic("OOM");
+        }
+        return std.mem.join(
+            allocator,
+            ".",
+            &.{ bof.name, @tagName(bof.format), @tagName(bof.arch) },
+        ) catch @panic("OOM");
+    }
+};
+
+fn genBofList(optimize: std.builtin.OptimizeMode) []const Bof {
     const static = struct {
         // Mul by 16 because we have 2 formats, 4 archs and 2 optimize modes.
         var bofs: [bof_tables.len * 16]Bof = undefined;
@@ -262,7 +262,7 @@ fn genBofList(optimize: std.builtin.OptimizeMode) void {
         }
     }
 
-    bofs_to_build = static.bofs[0..index];
+    return static.bofs[0..index];
 }
 
 fn addBofObj(
