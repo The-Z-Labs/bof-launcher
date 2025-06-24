@@ -47,86 +47,86 @@ const BofErrors = enum(u8) {
 // RFC3339 implementation taken from:
 // https://www.aolium.com/karlseguin/cf03dee6-90e1-85ac-8442-cf9e6c11602a
 pub const DateTime = struct {
-  year: u16,
-  month: u8,
-  day: u8,
-  hour: u8,
-  minute: u8,
-  second: u8,
+    year: u16,
+    month: u8,
+    day: u8,
+    hour: u8,
+    minute: u8,
+    second: u8,
 };
 
 pub fn fromTimestamp(ts: u64) DateTime {
-  const SECONDS_PER_DAY = 86400;
-  const DAYS_PER_YEAR = 365;
-  const DAYS_IN_4YEARS = 1461;
-  const DAYS_IN_100YEARS = 36524;
-  const DAYS_IN_400YEARS = 146097;
-  const DAYS_BEFORE_EPOCH = 719468;
+    const SECONDS_PER_DAY = 86400;
+    const DAYS_PER_YEAR = 365;
+    const DAYS_IN_4YEARS = 1461;
+    const DAYS_IN_100YEARS = 36524;
+    const DAYS_IN_400YEARS = 146097;
+    const DAYS_BEFORE_EPOCH = 719468;
 
-  const seconds_since_midnight: u64 = @rem(ts, SECONDS_PER_DAY);
-  var day_n: u64 = DAYS_BEFORE_EPOCH + ts / SECONDS_PER_DAY;
-  var temp: u64 = 0;
+    const seconds_since_midnight: u64 = @rem(ts, SECONDS_PER_DAY);
+    var day_n: u64 = DAYS_BEFORE_EPOCH + ts / SECONDS_PER_DAY;
+    var temp: u64 = 0;
 
-  temp = 4 * (day_n + DAYS_IN_100YEARS + 1) / DAYS_IN_400YEARS - 1;
-  var year: u16 = @intCast(100 * temp);
-  day_n -= DAYS_IN_100YEARS * temp + temp / 4;
+    temp = 4 * (day_n + DAYS_IN_100YEARS + 1) / DAYS_IN_400YEARS - 1;
+    var year: u16 = @intCast(100 * temp);
+    day_n -= DAYS_IN_100YEARS * temp + temp / 4;
 
-  temp = 4 * (day_n + DAYS_PER_YEAR + 1) / DAYS_IN_4YEARS - 1;
-  year += @intCast(temp);
-  day_n -= DAYS_PER_YEAR * temp + temp / 4;
+    temp = 4 * (day_n + DAYS_PER_YEAR + 1) / DAYS_IN_4YEARS - 1;
+    year += @intCast(temp);
+    day_n -= DAYS_PER_YEAR * temp + temp / 4;
 
-  var month: u8 = @intCast((5 * day_n + 2) / 153);
-  const day: u8 = @intCast(day_n - (@as(u64, @intCast(month)) * 153 + 2) / 5 + 1);
+    var month: u8 = @intCast((5 * day_n + 2) / 153);
+    const day: u8 = @intCast(day_n - (@as(u64, @intCast(month)) * 153 + 2) / 5 + 1);
 
-  month += 3;
-  if (month > 12) {
-    month -= 12;
-    year += 1;
-  }
+    month += 3;
+    if (month > 12) {
+        month -= 12;
+        year += 1;
+    }
 
-  return DateTime{
-    .year = year,
-    .month = month,
-    .day = day,
-    .hour = @intCast(seconds_since_midnight / 3600),
-    .minute = @intCast(seconds_since_midnight % 3600 / 60),
-    .second = @intCast(seconds_since_midnight % 60)
-  };
+    return DateTime{
+        .year = year,
+        .month = month,
+        .day = day,
+        .hour = @intCast(seconds_since_midnight / 3600),
+        .minute = @intCast(seconds_since_midnight % 3600 / 60),
+        .second = @intCast(seconds_since_midnight % 60),
+    };
 }
 
 pub fn toRFC3339(dt: DateTime) [20]u8 {
-  var buf: [20]u8 = undefined;
-  _ = std.fmt.formatIntBuf(buf[0..4], dt.year, 10, .lower, .{.width = 4, .fill = '0'});
-  buf[4] = '-';
-  paddingTwoDigits(buf[5..7], dt.month);
-  buf[7] = '-';
-  paddingTwoDigits(buf[8..10], dt.day);
-  buf[10] = ' ';
+    var buf: [20]u8 = undefined;
+    _ = std.fmt.formatIntBuf(buf[0..4], dt.year, 10, .lower, .{ .width = 4, .fill = '0' });
+    buf[4] = '-';
+    paddingTwoDigits(buf[5..7], dt.month);
+    buf[7] = '-';
+    paddingTwoDigits(buf[8..10], dt.day);
+    buf[10] = ' ';
 
-  paddingTwoDigits(buf[11..13], dt.hour);
-  buf[13] = ':';
-  paddingTwoDigits(buf[14..16], dt.minute);
-  buf[16] = ':';
-  paddingTwoDigits(buf[17..19], dt.second);
-  buf[19] = 0;
+    paddingTwoDigits(buf[11..13], dt.hour);
+    buf[13] = ':';
+    paddingTwoDigits(buf[14..16], dt.minute);
+    buf[16] = ':';
+    paddingTwoDigits(buf[17..19], dt.second);
+    buf[19] = 0;
 
-  return buf;
+    return buf;
 }
 
 fn paddingTwoDigits(buf: *[2]u8, value: u8) void {
-  switch (value) {
-    0 => buf.* = "00".*,
-    1 => buf.* = "01".*,
-    2 => buf.* = "02".*,
-    3 => buf.* = "03".*,
-    4 => buf.* = "04".*,
-    5 => buf.* = "05".*, 
-    6 => buf.* = "06".*,
-    7 => buf.* = "07".*,
-    8 => buf.* = "08".*,
-    9 => buf.* = "09".*,
-    else => _ = std.fmt.formatIntBuf(buf, value, 10, .lower, .{}),
-  }
+    switch (value) {
+        0 => buf.* = "00".*,
+        1 => buf.* = "01".*,
+        2 => buf.* = "02".*,
+        3 => buf.* = "03".*,
+        4 => buf.* = "04".*,
+        5 => buf.* = "05".*,
+        6 => buf.* = "06".*,
+        7 => buf.* = "07".*,
+        8 => buf.* = "08".*,
+        9 => buf.* = "09".*,
+        else => _ = std.fmt.formatIntBuf(buf, value, 10, .lower, .{}),
+    }
 }
 // end of RFC3339 implementation
 
@@ -148,55 +148,49 @@ fn listDirContent(dir_path: [*:0]u8) !u8 {
             _ = beacon.printf(0, "c");
         } else if (entry.kind == .unix_domain_socket) {
             _ = beacon.printf(0, "u");
-        } else
-            _ = beacon.printf(0, "-");
+        } else _ = beacon.printf(0, "-");
 
         if (@import("builtin").os.tag == .linux) {
             var statx: std.os.linux.Statx = undefined;
-            _ = std.os.linux.statx(iter_dir.fd, @ptrCast(entry.name.ptr),
-                std.os.linux.AT.STATX_SYNC_AS_STAT |
+            _ = std.os.linux.statx(iter_dir.fd, @ptrCast(entry.name.ptr), std.os.linux.AT.STATX_SYNC_AS_STAT |
                 std.os.linux.AT.NO_AUTOMOUNT |
-                std.os.linux.AT.SYMLINK_NOFOLLOW,
-                std.os.linux.STATX_MODE |
+                std.os.linux.AT.SYMLINK_NOFOLLOW, std.os.linux.STATX_MODE |
                 std.os.linux.STATX_UID |
                 std.os.linux.STATX_GID |
                 std.os.linux.STATX_MTIME |
-                std.os.linux.STATX_SIZE,
-            &statx);
+                std.os.linux.STATX_SIZE, &statx);
 
             // print permissions
-            if((statx.mode & std.os.linux.S.IRUSR) != 0) _ = beacon.printf(0, "r") else _ = beacon.printf(0, "-");
-            if((statx.mode & std.os.linux.S.IWUSR) != 0) _ = beacon.printf(0, "w") else _ = beacon.printf(0, "-");
-            if((statx.mode & std.os.linux.S.IXUSR) != 0) {
+            if ((statx.mode & std.os.linux.S.IRUSR) != 0) _ = beacon.printf(0, "r") else _ = beacon.printf(0, "-");
+            if ((statx.mode & std.os.linux.S.IWUSR) != 0) _ = beacon.printf(0, "w") else _ = beacon.printf(0, "-");
+            if ((statx.mode & std.os.linux.S.IXUSR) != 0) {
                 if ((statx.mode & std.os.linux.S.ISUID) != 0) {
                     _ = beacon.printf(0, "s");
-                } else
-                    _ = beacon.printf(0, "x");
+                } else _ = beacon.printf(0, "x");
             } else _ = beacon.printf(0, "-");
 
-            if((statx.mode & std.os.linux.S.IRGRP) != 0) _ = beacon.printf(0, "r") else _ = beacon.printf(0, "-");
-            if((statx.mode & std.os.linux.S.IWGRP) != 0) _ = beacon.printf(0, "w") else _ = beacon.printf(0, "-");
-            if((statx.mode & std.os.linux.S.IXGRP) != 0) {
+            if ((statx.mode & std.os.linux.S.IRGRP) != 0) _ = beacon.printf(0, "r") else _ = beacon.printf(0, "-");
+            if ((statx.mode & std.os.linux.S.IWGRP) != 0) _ = beacon.printf(0, "w") else _ = beacon.printf(0, "-");
+            if ((statx.mode & std.os.linux.S.IXGRP) != 0) {
                 if ((statx.mode & std.os.linux.S.ISGID) != 0) {
                     _ = beacon.printf(0, "s");
-                } else
-                _ = beacon.printf(0, "x");
+                } else _ = beacon.printf(0, "x");
             } else _ = beacon.printf(0, "-");
 
-            if((statx.mode & std.os.linux.S.IROTH) != 0) _ = beacon.printf(0, "r") else _ = beacon.printf(0, "-");
-            if((statx.mode & std.os.linux.S.IWOTH) != 0) _ = beacon.printf(0, "w") else _ = beacon.printf(0, "-");
+            if ((statx.mode & std.os.linux.S.IROTH) != 0) _ = beacon.printf(0, "r") else _ = beacon.printf(0, "-");
+            if ((statx.mode & std.os.linux.S.IWOTH) != 0) _ = beacon.printf(0, "w") else _ = beacon.printf(0, "-");
 
-            if((statx.mode & std.os.linux.S.ISVTX) != 0) {
+            if ((statx.mode & std.os.linux.S.ISVTX) != 0) {
                 _ = beacon.printf(0, "t");
-            } else if((statx.mode & std.os.linux.S.IXOTH) != 0) {
+            } else if ((statx.mode & std.os.linux.S.IXOTH) != 0) {
                 _ = beacon.printf(0, "x");
             } else _ = beacon.printf(0, "-");
 
             // print file ownership
-            if(posix.getpwuid(statx.uid)) |pwd| {
+            if (posix.getpwuid(statx.uid)) |pwd| {
                 _ = beacon.printf(0, "\t%s", pwd.name);
             }
-            if(posix.getgrgid(statx.gid)) |grp| {
+            if (posix.getgrgid(statx.gid)) |grp| {
                 _ = beacon.printf(0, " %s", grp.gr_name);
             }
 
