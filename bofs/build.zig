@@ -411,6 +411,5 @@ fn generateBofCollectionYaml(b: *std.Build) !void {
     const doc_file_path = wf.add("bof-collection.yaml", list.items);
     b.addNamedLazyPath("bof_collection_doc", doc_file_path);
 
-    const doc_step = b.step("doc", "Generate documentation for BOFs");
-    doc_step.dependOn(&b.addInstallFile(doc_file_path, "bof-collection.yaml").step);
+    b.getInstallStep().dependOn(&b.addInstallFile(doc_file_path, "bof-collection.yaml").step);
 }

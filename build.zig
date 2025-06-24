@@ -45,8 +45,10 @@ pub fn build(b: *std.Build) !void {
         ).step);
     }
 
-    const doc_step = b.step("doc", "Generate documentation for BOFs");
-    doc_step.dependOn(&b.addInstallFile(bofs_dep.namedLazyPath("bof_collection_doc"), "bof-collection.yaml").step);
+    b.getInstallStep().dependOn(&b.addInstallFile(
+        bofs_dep.namedLazyPath("bof_collection_doc"),
+        "bof-collection.yaml",
+    ).step);
 
     //
     // Install bof launcher library
