@@ -5,8 +5,6 @@ pub const min_zig_version = std.SemanticVersion{ .major = 0, .minor = 14, .patch
 pub fn build(b: *std.Build) !void {
     ensureZigVersion() catch return;
 
-    std.fs.cwd().deleteTree("zig-out") catch {};
-
     const supported_targets: []const std.Target.Query = &.{
         .{ .cpu_arch = .x86, .os_tag = .windows, .abi = .gnu },
         .{ .cpu_arch = .x86, .os_tag = .linux, .abi = .gnu },
@@ -46,6 +44,9 @@ pub fn build(b: *std.Build) !void {
             },
         ).step);
     }
+
+    const doc_step = b.step("doc", "Generate documentation for BOFs");
+    doc_step.dependOn(&b.addInstallFile(bofs_dep.namedLazyPath("bof_collection_doc"), "bof-collection.yaml").step);
 
     //
     // Install bof launcher library

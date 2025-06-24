@@ -30,7 +30,6 @@
 !.gitattributes
 
 # Ignore some special directories and files
-BOF-collection.yaml
 .zig-cache
 zig-out
 backup

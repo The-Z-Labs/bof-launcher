@@ -378,8 +378,10 @@ fn build_sniffer(b: *std.Build, obj: *std.Build.Step.Compile, bof: Bof) []const 
 }
 
 fn generateBofCollectionYaml(b: *std.Build) !void {
-    const doc_file = try std.fs.cwd().createFile("BOF-collection.yaml", .{});
-    defer doc_file.close();
+    var list = std.ArrayList(u8).init(b.allocator);
+    defer list.deinit();
+
+    const doc_file = list.writer();
 
     for (bof_tables) |item| {
         const bof = Bof.init(b, item, item.formats[0], item.archs[0], .ReleaseSmall);
@@ -404,4 +406,11 @@ fn generateBofCollectionYaml(b: *std.Build) !void {
             }
         }
     }
+
+    const wf = b.addWriteFiles();
+    const doc_file_path = wf.add("bof-collection.yaml", list.items);
+    b.addNamedLazyPath("bof_collection_doc", doc_file_path);
+
+    const doc_step = b.step("doc", "Generate documentation for BOFs");
+    doc_step.dependOn(&b.addInstallFile(doc_file_path, "bof-collection.yaml").step);
 }
