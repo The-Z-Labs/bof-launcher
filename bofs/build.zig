@@ -2,12 +2,14 @@
 // BEGIN: BOF TABLES
 //
 const BofTableItem = struct {
-    dir: ?[]const u8 = null,
-    srcfile: ?[]const u8 = null,
     name: []const u8,
     formats: []const BofFormat,
     archs: []const BofArch,
-    customBuildFn: ?CustomBuildFn = null,
+    dir: ?[]const u8 = null,
+    custom_build_fn: ?CustomBuildFn = null,
+
+    // Source file name which contains go() entry point. Set it only if go() is in other file than name of the BOF.
+    srcfile: ?[]const u8 = null,
 };
 
 const bofs_included_in_launcher = [_]BofTableItem{
@@ -20,7 +22,7 @@ const bofs_included_in_launcher = [_]BofTableItem{
     .{ .name = "tcpScanner", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "simple", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "wWinver", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
-    .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 }, .customBuildFn = build_wWinverC },
+    .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 }, .custom_build_fn = build_wWinverC },
     .{ .name = "whoami", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "wAsmTest", .formats = &.{.coff}, .archs = &.{.x64} },
     .{ .name = "lAsmTest", .formats = &.{.elf}, .archs = &.{.x64} },
@@ -42,7 +44,7 @@ const bofs_included_in_launcher = [_]BofTableItem{
     .{ .name = "wInjectionChainStage2C", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "kmodLoader", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "lskmod", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    .{ .name = "sniffer", .formats = &.{.elf}, .archs = &.{.x64}, .customBuildFn = build_sniffer },
+    .{ .name = "sniffer", .formats = &.{.elf}, .archs = &.{.x64}, .custom_build_fn = build_sniffer },
     // BOF0 - special purpose BOF that acts as a standalone implant and uses other BOFs as its post-ex modules:
     .{ .name = "z-beac0n-core", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
 };
@@ -158,13 +160,12 @@ const BofArch = enum { x64, x86, aarch64, arm };
 
 pub const Bof = struct {
     dir: ?[]const u8,
-    // source Filename with contains go(). Only set if go() is in other file than .name
     srcfile: ?[]const u8,
     name: []const u8,
     format: BofFormat,
     arch: BofArch,
     lang: BofLang,
-    customBuildFn: ?CustomBuildFn,
+    custom_build_fn: ?CustomBuildFn,
     optimize: std.builtin.OptimizeMode,
     source_file_path: []const u8,
 
@@ -201,7 +202,7 @@ pub const Bof = struct {
             .name = item.name,
             .format = format,
             .arch = arch,
-            .customBuildFn = item.customBuildFn,
+            .custom_build_fn = item.custom_build_fn,
             .optimize = optimize,
             .lang = lang,
             .source_file_path = source_file_path,
@@ -295,7 +296,7 @@ fn addBofObj(
                 .target = target,
                 .optimize = bof.optimize,
             });
-            if (bof.customBuildFn) |customBuild| _ = customBuild(b, obj, bof);
+            if (bof.custom_build_fn) |customBuild| _ = customBuild(b, obj, bof);
             break :blk obj;
         },
         .zig => blk: {
@@ -306,7 +307,7 @@ fn addBofObj(
                 .optimize = bof.optimize,
                 .link_libc = false,
             });
-            if (bof.customBuildFn) |customBuild| _ = customBuild(b, obj, bof);
+            if (bof.custom_build_fn) |customBuild| _ = customBuild(b, obj, bof);
             break :blk obj;
         },
         .c => blk: {
@@ -320,7 +321,7 @@ fn addBofObj(
                     .link_libc = true,
                 }),
             });
-            const flags = if (bof.customBuildFn) |customBuild| customBuild(b, obj, bof) else &.{};
+            const flags = if (bof.custom_build_fn) |customBuild| customBuild(b, obj, bof) else &.{};
             obj.root_module.addCSourceFile(.{
                 .file = b.path(bof.source_file_path),
                 .flags = flags,

@@ -38,20 +38,13 @@ pub fn build(b: *std.Build) !void {
     const bofs_dep = b.dependency("bof_launcher_bofs", .{ .optimize = optimize });
     for (@import("bof_launcher_bofs").bofs_to_build) |bof| {
         const full_name = bof.fullName(b.allocator);
-        if (bof.optimize == .Debug) {
-            b.getInstallStep().dependOn(&b.addInstallArtifact(
-                bofs_dep.artifact(full_name),
-                .{ .dest_dir = .{ .override = .{ .custom = bofs_path } } },
-            ).step);
-        } else {
-            b.getInstallStep().dependOn(&b.addInstallArtifact(
-                bofs_dep.artifact(full_name),
-                .{
-                    .dest_dir = .{ .override = .{ .custom = bofs_path } },
-                    .dest_sub_path = b.fmt("{s}.o", .{full_name}),
-                },
-            ).step);
-        }
+        b.getInstallStep().dependOn(&b.addInstallArtifact(
+            bofs_dep.artifact(full_name),
+            .{
+                .dest_dir = .{ .override = .{ .custom = bofs_path } },
+                .dest_sub_path = if (bof.optimize != .Debug) b.fmt("{s}.o", .{full_name}) else null,
+            },
+        ).step);
     }
 
     //
