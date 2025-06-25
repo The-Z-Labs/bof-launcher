@@ -15,5 +15,10 @@
         .bof_launcher_win32 = .{
             .path = "../win32-api",
         },
+        .pcap = .{
+            .url = "https://github.com/the-tcpdump-group/libpcap/archive/refs/tags/libpcap-1.10.5.tar.gz",
+            .hash = "N-V-__8AANdNNQCyqRA0yJCh1bf7_epKUo_fLpUgHWytYdVu",
+            .version = "1.10.5",
+        },
     },
 }

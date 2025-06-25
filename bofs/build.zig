@@ -94,7 +94,7 @@ pub fn build(b: *std.Build) !void {
     try generateBofCollectionYaml(b);
 
     for (bofs_to_build) |bof| {
-        const target = b.resolveTargetQuery(bof.getTargetQuery());
+        const target = bof.target;
 
         const bof_launcher_dep = b.dependency(
             "bof_launcher_lib",
@@ -113,7 +113,6 @@ pub fn build(b: *std.Build) !void {
                 b,
                 bof,
                 full_name,
-                target,
                 bof_api_module,
                 bof_launcher_dep,
             );
@@ -137,7 +136,6 @@ pub fn build(b: *std.Build) !void {
                 b,
                 bof,
                 full_name,
-                target,
                 bof_api_module,
                 bof_launcher_dep,
             );
@@ -166,6 +164,7 @@ pub const Bof = struct {
     arch: BofArch,
     lang: BofLang,
     custom_build_fn: ?CustomBuildFn,
+    target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     source_file_path: []const u8,
 
@@ -206,11 +205,12 @@ pub const Bof = struct {
             .optimize = optimize,
             .lang = lang,
             .source_file_path = source_file_path,
+            .target = b.resolveTargetQuery(getTargetQuery(format, arch)),
         };
     }
 
-    pub fn getTargetQuery(bof: Bof) std.Target.Query {
-        if (bof.arch == .arm) {
+    fn getTargetQuery(format: BofFormat, arch: BofArch) std.Target.Query {
+        if (arch == .arm) {
             // We basically force ARMv6 here.
             return .{
                 .cpu_arch = .arm,
@@ -220,13 +220,13 @@ pub const Bof = struct {
             };
         }
         return .{
-            .cpu_arch = switch (bof.arch) {
+            .cpu_arch = switch (arch) {
                 .x64 => .x86_64,
                 .x86 => .x86,
                 .aarch64 => .aarch64,
                 .arm => unreachable,
             },
-            .os_tag = switch (bof.format) {
+            .os_tag = switch (format) {
                 .coff => .windows,
                 .elf => .linux,
             },
@@ -284,7 +284,6 @@ fn addBofObj(
     b: *std.Build,
     bof: Bof,
     full_name: []const u8,
-    target: std.Build.ResolvedTarget,
     bof_api_module: *std.Build.Module,
     bof_launcher_dep: *std.Build.Dependency,
 ) !*std.Build.Step.Compile {
@@ -293,7 +292,7 @@ fn addBofObj(
             const obj = b.addAssembly(.{
                 .name = full_name,
                 .source_file = b.path(bof.source_file_path),
-                .target = target,
+                .target = bof.target,
                 .optimize = bof.optimize,
             });
             if (bof.custom_build_fn) |customBuild| _ = customBuild(b, obj, bof);
@@ -303,7 +302,7 @@ fn addBofObj(
             const obj = b.addObject(.{
                 .name = full_name,
                 .root_source_file = b.path(bof.source_file_path),
-                .target = target,
+                .target = bof.target,
                 .optimize = bof.optimize,
                 .link_libc = false,
             });
@@ -316,7 +315,7 @@ fn addBofObj(
                 .root_module = b.createModule(.{
                     // TODO: Zig bug. `.root_source_file = null` should be possible.
                     .root_source_file = b.path("src/tests/dummy.zig"),
-                    .target = target,
+                    .target = bof.target,
                     .optimize = bof.optimize,
                     .link_libc = true,
                 }),
@@ -344,13 +343,13 @@ fn addBofObj(
             .{ .root_source_file = bof_launcher_dep.path("src/bof_launcher_api.zig") },
         );
 
-        if (target.result.cpu.arch == .x86 and
-            target.result.os.tag == .linux)
+        if (bof.target.result.cpu.arch == .x86 and
+            bof.target.result.os.tag == .linux)
         {
             // TODO: Shared library fails to build on Linux x86.
         } else {
             const bof_launcher_shared_lib = bof_launcher_dep.artifact(
-                @import("bof_launcher_lib").libFileName(b.allocator, target, "shared"),
+                @import("bof_launcher_lib").libFileName(b.allocator, bof.target, "shared"),
             );
             obj.root_module.addAnonymousImport("bof_launcher_lib_embed", .{
                 .root_source_file = bof_launcher_shared_lib.getEmittedBin(),
@@ -369,10 +368,53 @@ fn build_wWinverC(b: *std.Build, obj: *std.Build.Step.Compile, bof: Bof) []const
 }
 
 fn build_sniffer(b: *std.Build, obj: *std.Build.Step.Compile, bof: Bof) []const []const u8 {
-    _ = bof;
+    const pcap_dep = b.dependency("pcap", .{});
 
-    obj.root_module.addIncludePath(b.path("dependencies/libpcap"));
-    obj.root_module.addObjectFile(b.path("dependencies/libpcap/libpcap.a"));
+    if (false) {
+        const pcap = b.addStaticLibrary(.{
+            .name = b.fmt("pcap.{s}.{s}", .{ @tagName(bof.format), @tagName(bof.arch) }),
+            .target = bof.target,
+            .optimize = bof.optimize,
+            .link_libc = true,
+        });
+
+        pcap.root_module.addCSourceFiles(.{
+            .root = pcap_dep.path("."),
+            .files = &.{
+                "pcap-linux.c",
+                "fad-getad.c",
+                "pcap-netfilter-linux.c",
+                "pcap.c",
+                "gencode.c",
+                "optimize.c",
+                "nametoaddr.c",
+                "etherent.c",
+                "fmtutils.c",
+                "pcap-util.c",
+                "savefile.c",
+                "sf-pcap.c",
+                "bpf_dump.c",
+                "scanner.c",
+                "grammar.c",
+                //"strlcpy.c",
+            },
+            .flags = &.{
+                //"-std=c99",
+                //"-D_GNU_SOURCE",
+                //"-Os",
+                //"-Oz",
+                //"-fPIC",
+                "-Dthread_local=",
+                //"-DBUILDING_PCAP",
+                //"-Dpcap_EXPORTS",
+                //"-DHAVE_CONFIG_H",
+            },
+        });
+    }
+
+    obj.root_module.addIncludePath(pcap_dep.path("."));
+    //obj.root_module.linkLibrary(pcap);
+    obj.root_module.addObjectFile(b.path("deps/pcap/libpcap.elf.x64.a"));
 
     return &.{};
 }
