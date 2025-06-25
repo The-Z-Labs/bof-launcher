@@ -6,7 +6,7 @@
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/wProcessInjectionSrdi.zig'
 ///examples: '
-/// wProcessInjectionSrdi i:985 z:<pointer bytes> i:<pid>
+/// wProcessInjectionSrdi i:<bof_len_in_bytes> z:<pointer_to_bof_bytes> i:<pid>
 ///'
 ///arguments:
 ///  - name: bof_data_len
@@ -22,7 +22,7 @@
 ///    type: integer
 ///    required: true
 ///  - name: dump_shellcode
-///    desc: "When --dump-shellcode string is present dump final shellcode to shellcode.bin file."
+///    desc: "When --dump-shellcode string is present final shellcode will be written to 'shellcode.bin' file."
 ///    type: string
 ///    required: false
 ///errors:
