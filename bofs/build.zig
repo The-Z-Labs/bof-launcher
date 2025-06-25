@@ -44,7 +44,7 @@ const bofs_included_in_launcher = [_]BofTableItem{
     .{ .name = "wInjectionChainStage2C", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "kmodLoader", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "lskmod", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    .{ .name = "sniffer", .formats = &.{.elf}, .archs = &.{.x64}, .custom_build_fn = build_sniffer },
+    .{ .name = "sniffer", .formats = &.{.elf}, .archs = &.{ .x64, .x86 }, .custom_build_fn = build_sniffer },
     // BOF0 - special purpose BOF that acts as a standalone implant and uses other BOFs as its post-ex modules:
     .{ .name = "z-beac0n-core", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
 };
@@ -370,51 +370,8 @@ fn build_wWinverC(b: *std.Build, obj: *std.Build.Step.Compile, bof: Bof) []const
 fn build_sniffer(b: *std.Build, obj: *std.Build.Step.Compile, bof: Bof) []const []const u8 {
     const pcap_dep = b.dependency("pcap", .{});
 
-    if (false) {
-        const pcap = b.addStaticLibrary(.{
-            .name = b.fmt("pcap.{s}.{s}", .{ @tagName(bof.format), @tagName(bof.arch) }),
-            .target = bof.target,
-            .optimize = bof.optimize,
-            .link_libc = true,
-        });
-
-        pcap.root_module.addCSourceFiles(.{
-            .root = pcap_dep.path("."),
-            .files = &.{
-                "pcap-linux.c",
-                "fad-getad.c",
-                "pcap-netfilter-linux.c",
-                "pcap.c",
-                "gencode.c",
-                "optimize.c",
-                "nametoaddr.c",
-                "etherent.c",
-                "fmtutils.c",
-                "pcap-util.c",
-                "savefile.c",
-                "sf-pcap.c",
-                "bpf_dump.c",
-                "scanner.c",
-                "grammar.c",
-                //"strlcpy.c",
-            },
-            .flags = &.{
-                //"-std=c99",
-                //"-D_GNU_SOURCE",
-                //"-Os",
-                //"-Oz",
-                //"-fPIC",
-                "-Dthread_local=",
-                //"-DBUILDING_PCAP",
-                //"-Dpcap_EXPORTS",
-                //"-DHAVE_CONFIG_H",
-            },
-        });
-    }
-
     obj.root_module.addIncludePath(pcap_dep.path("."));
-    //obj.root_module.linkLibrary(pcap);
-    obj.root_module.addObjectFile(b.path("deps/pcap/libpcap.elf.x64.a"));
+    obj.root_module.addObjectFile(b.path(b.fmt("deps/pcap/libpcap.{s}.a", .{@tagName(bof.arch)})));
 
     return &.{};
 }
