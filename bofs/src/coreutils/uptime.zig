@@ -2,12 +2,12 @@ const std = @import("std");
 const beacon = @import("bof_api").beacon;
 const posix = @import("bof_api").posix;
 
-// https://gitlab.com/procps-ng/procps/-/blob/master/src/uptime.c
-// https://gitlab.com/procps-ng/procps/-/blob/master/library/uptime.c
-// https://github.com/trustedsec/CS-Situational-Awareness-BOF/blob/master/src/SA/uptime/entry.c
-//
-// TODO BOF: 
+// TODO BOF:
 // https://gitlab.com/procps-ng/procps/-/blob/master/src/w.c
+//
+
+const LOADAVG_FILE = "/proc/loadavg";
+const UPTIME_FILE = "/proc/uptime";
 
 // BOF-specific error codes
 const BofErrors = enum(u8) {
@@ -22,7 +22,7 @@ const BofErrors = enum(u8) {
 fn getUptimeLinux() !u8 {
     var buffer = [_]u8{0} ** 100;
 
-    const f = try std.fs.openFileAbsoluteZ("/proc/uptime", .{ .mode = .read_only} );
+    const f = try std.fs.openFileAbsoluteZ(UPTIME_FILE, .{ .mode = .read_only} );
     defer f.close();
 
     const uptimeStr = try f.reader().readUntilDelimiterOrEof(&buffer, '.') orelse
@@ -47,10 +47,26 @@ fn getUptimeLinux() !u8 {
     }
     if(minutes > 0) {
         _ = beacon.printf(0, "%d ", minutes);
-        if(minutes == 1) { _ = beacon.printf(0, "minute "); } else _ = beacon.printf(0, "minutes");
+        if(minutes == 1) { _ = beacon.printf(0, "minute "); } else _ = beacon.printf(0, "minutes ");
     }
 
+    // get number of users on the system
+    _ = posix.setutxent();
+
+    var nuser: u32 = 0;
+    var ut_entry = posix.getutxent();
+    while (ut_entry) |ut| {
+        if ((ut.ut_type == posix.USER_PROCESS)) {
+            nuser = nuser + 1;
+        }
+
+        ut_entry = posix.getutxent();
+    }
+    _ = posix.endutxent();
+    _ = beacon.printf(0, " users: %d", nuser);
+
     _ = beacon.printf(0, "\n");
+
     return 0;
 }
 
