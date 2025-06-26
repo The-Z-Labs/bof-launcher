@@ -44,7 +44,7 @@ const bofs_included_in_launcher = [_]BofTableItem{
     .{ .name = "wInjectionChainStage2C", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "kmodLoader", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "lskmod", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    .{ .name = "sniffer", .formats = &.{.elf}, .archs = &.{ .x64, .x86 }, .custom_build_fn = build_sniffer },
+    .{ .name = "sniffer", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_sniffer },
     // BOF0 - special purpose BOF that acts as a standalone implant and uses other BOFs as its post-ex modules:
     .{ .name = "z-beac0n-core", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
 };
@@ -267,9 +267,6 @@ fn genBofList(b: *std.Build, optimize: std.builtin.OptimizeMode) []const Bof {
                 index += 1;
 
                 if (optimize == .Debug) {
-                    // TODO: This BOF fails to build in Debug mode.
-                    if (std.mem.eql(u8, item.name, "sniffer")) continue;
-
                     static.bofs[index] = Bof.init(b, item, format, arch, .Debug);
                     index += 1;
                 }
@@ -370,8 +367,185 @@ fn build_wWinverC(b: *std.Build, obj: *std.Build.Step.Compile, bof: Bof) []const
 fn build_sniffer(b: *std.Build, obj: *std.Build.Step.Compile, bof: Bof) []const []const u8 {
     const pcap_dep = b.dependency("pcap", .{});
 
+    const pcap = b.addStaticLibrary(.{
+        .name = b.fmt("pcap.{s}", .{@tagName(bof.arch)}),
+        .target = bof.target,
+        .optimize = bof.optimize,
+        .link_libc = true,
+    });
+    pcap.addIncludePath(pcap_dep.path("."));
+    pcap.addCSourceFiles(.{
+        .root = pcap_dep.path("."),
+        .files = &.{
+            "pcap-linux.c",
+            "sf-pcapng.c",
+            "pcap-common.c",
+            "pcap-usb-linux-common.c",
+            "fad-getad.c",
+            "pcap.c",
+            "gencode.c",
+            "optimize.c",
+            "nametoaddr.c",
+            "etherent.c",
+            "fmtutils.c",
+            "pcap-util.c",
+            "savefile.c",
+            "sf-pcap.c",
+            "bpf_dump.c",
+            "bpf_image.c",
+            "bpf_filter.c",
+            "scanner.c",
+            "grammar.c",
+            "missing/strlcpy.c",
+            "missing/strlcat.c",
+        },
+        .flags = &.{
+            "-std=gnu99",
+            "-Dthread_local=",
+            "-DBUILDING_PCAP",
+            "-DHAVE_CONFIG_H",
+        },
+    });
+
+    const pcap_config = b.addConfigHeader(
+        .{
+            .style = .{ .autoconf_undef = pcap_dep.path("config.h.in") },
+        },
+        .{
+            .ARPA_INET_H_DECLARES_ETHER_HOSTTON = null,
+            .BDEBUG = null,
+            .ENABLE_REMOTE = null,
+            .HAVE_AIX_GETNETBYNAME_R = null,
+            .HAVE_AIX_GETPROTOBYNAME_R = null,
+            .HAVE_ASPRINTF = 1,
+            .HAVE_CONFIG_HAIKUCONFIG_H = null,
+            .HAVE_DAGAPI_H = null,
+            .HAVE_DAG_API = null,
+            .HAVE_DAG_GET_ERF_TYPES = null,
+            .HAVE_DAG_GET_STREAM_ERF_TYPES = null,
+            .HAVE_DAG_LARGE_STREAMS_API = null,
+            .HAVE_DAG_VDAG = null,
+            .HAVE_DECL_ETHER_HOSTTON = 1,
+            .HAVE_DL_HP_PPA_INFO_T_DL_MODULE_ID_1 = null,
+            .HAVE_DL_PASSIVE_REQ_T = null,
+            .HAVE_ETHER_HOSTTON = 1,
+            .HAVE_FFS = null,
+            .HAVE_FSEEKO = 1,
+            .HAVE_GETSPNAM = null,
+            .HAVE_GNU_STRERROR_R = null,
+            .HAVE_HPUX10_20_OR_LATER = null,
+            .HAVE_HPUX9 = null,
+            .HAVE_INTTYPES_H = 1,
+            .HAVE_LIBBSD = null,
+            .HAVE_LIBDLPI = null,
+            .HAVE_LIBNL = null,
+            .HAVE_LINUX_COMPILER_H = null,
+            .HAVE_LINUX_GETNETBYNAME_R = null,
+            .HAVE_LINUX_GETPROTOBYNAME_R = null,
+            .HAVE_LINUX_NET_TSTAMP_H = 1,
+            .HAVE_LINUX_SOCKET_H = null,
+            .HAVE_LINUX_USBDEVICE_FS_H = null,
+            .HAVE_LINUX_WIRELESS_H = null,
+            .HAVE_MEMORY_H = null,
+            .HAVE_NETPACKET_PACKET_H = null,
+            .HAVE_NET_BPF_H = null,
+            .HAVE_NET_ENET_H = null,
+            .HAVE_NET_IF_DL_H = null,
+            .HAVE_NET_IF_H = null,
+            .HAVE_NET_IF_MEDIA_H = null,
+            .HAVE_NET_IF_TYPES_H = null,
+            .HAVE_NET_NIT_H = null,
+            .HAVE_NET_PFILT_H = null,
+            .HAVE_NET_RAW_H = null,
+            .HAVE_OPENSSL = null,
+            .HAVE_OS_PROTO_H = null,
+            .HAVE_POSIX_STRERROR_R = null,
+            .HAVE_SEPTEL_API = null,
+            .HAVE_SNF_API = null,
+            .HAVE_SOCKLEN_T = 1,
+            .HAVE_SOLARIS = null,
+            .HAVE_SOLARIS_IRIX_GETNETBYNAME_R = null,
+            .HAVE_SOLARIS_IRIX_GETPROTOBYNAME_R = null,
+            .HAVE_STDINT_H = 1,
+            .HAVE_STDLIB_H = 1,
+            .HAVE_STRERROR = null,
+            .HAVE_STRINGS_H = 1,
+            .HAVE_STRING_H = 1,
+            .HAVE_STRLCAT = null,
+            .HAVE_STRLCPY = null,
+            .HAVE_STRTOK_R = 1,
+            .HAVE_STRUCT_BPF_TIMEVAL = null,
+            .HAVE_STRUCT_ETHER_ADDR = null,
+            .HAVE_STRUCT_MSGHDR_MSG_CONTROL = null,
+            .HAVE_STRUCT_MSGHDR_MSG_FLAGS = null,
+            .HAVE_STRUCT_RTE_ETHER_ADDR = null,
+            .HAVE_STRUCT_SOCKADDR_HCI_HCI_CHANNEL = null,
+            .HAVE_STRUCT_SOCKADDR_SA_LEN = null,
+            .HAVE_STRUCT_SOCKADDR_STORAGE = null,
+            .HAVE_STRUCT_TPACKET_AUXDATA_TP_VLAN_TCI = 1,
+            .HAVE_STRUCT_USBDEVFS_CTRLTRANSFER_BREQUESTTYPE = null,
+            .HAVE_SYS_BUFMOD_H = null,
+            .HAVE_SYS_DLPI_EXT_H = null,
+            .HAVE_SYS_DLPI_H = null,
+            .HAVE_SYS_IOCCOM_H = null,
+            .HAVE_SYS_NET_NIT_H = null,
+            .HAVE_SYS_SOCKIO_H = null,
+            .HAVE_SYS_STAT_H = 1,
+            .HAVE_SYS_TYPES_H = 1,
+            .HAVE_TC_API = null,
+            .HAVE_UNISTD_H = 1,
+            .HAVE_VASPRINTF = 1,
+            .HAVE_VSYSLOG = null,
+            .HAVE__WCSERROR_S = null,
+            .HAVE___ATOMIC_LOAD_N = 1,
+            .HAVE___ATOMIC_STORE_N = 1,
+            .INET6 = null,
+            .NETINET_ETHER_H_DECLARES_ETHER_HOSTTON = 1,
+            .NETINET_IF_ETHER_H_DECLARES_ETHER_HOSTTON = null,
+            .NET_ETHERNET_H_DECLARES_ETHER_HOSTTON = null,
+            .NO_PROTOCHAIN = null,
+            .PACKAGE_BUGREPORT = "https://github.com/the-tcpdump-group/libpcap/issues",
+            .PACKAGE_NAME = "pcap",
+            .PACKAGE_STRING = "pcap 1.10.4",
+            .PACKAGE_TARNAME = "libpcap",
+            .PACKAGE_URL = "https://www.tcpdump.org/",
+            .PACKAGE_VERSION = "1.10.4",
+            .PCAP_SUPPORT_BT = null,
+            .PCAP_SUPPORT_BT_MONITOR = null,
+            .PCAP_SUPPORT_DBUS = null,
+            .PCAP_SUPPORT_DPDK = null,
+            .PCAP_SUPPORT_LINUX_USBMON = null,
+            .PCAP_SUPPORT_NETFILTER = null,
+            .PCAP_SUPPORT_NETMAP = null,
+            .PCAP_SUPPORT_RDMASNIFF = null,
+            .SIZEOF_CONST_VOID_P = @sizeOf(usize),
+            .SIZEOF_VOID_P = @sizeOf(usize),
+            .STDC_HEADERS = 1,
+            .STRINGS_H_DECLARES_FFS = null,
+            .SYS_ETHERNET_H_DECLARES_ETHER_HOSTTON = null,
+            .YYDEBUG = null,
+            .YYTEXT_POINTER = 1,
+            ._FILE_OFFSET_BITS = null,
+            ._LARGEFILE_SOURCE = null,
+            ._LARGE_FILES = null,
+            ._SUN = null,
+            .@"const" = null,
+            .@"inline" = null,
+            .sinix = null,
+        },
+    );
+    if (bof.optimize == .Debug) {
+        pcap_config.addValue("BDEBUG", i32, 1);
+        pcap_config.addValue("YYDEBUG", i32, 1);
+    }
+    pcap.addConfigHeader(pcap_config);
+
+    const generated = b.addWriteFiles();
+    pcap.addIncludePath(generated.getDirectory());
+    _ = generated.addCopyFile(pcap_config.getOutput(), pcap_config.include_path);
+
     obj.root_module.addIncludePath(pcap_dep.path("."));
-    obj.root_module.addObjectFile(b.path(b.fmt("deps/pcap/libpcap.{s}.a", .{@tagName(bof.arch)})));
+    obj.root_module.linkLibrary(pcap);
 
     return &.{};
 }
