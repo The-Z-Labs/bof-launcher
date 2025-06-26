@@ -372,6 +372,7 @@ fn build_sniffer(b: *std.Build, obj: *std.Build.Step.Compile, bof: Bof) []const 
         .target = bof.target,
         .optimize = bof.optimize,
         .link_libc = true,
+        .pic = true,
     });
     pcap.addIncludePath(pcap_dep.path("."));
     pcap.addCSourceFiles(.{
