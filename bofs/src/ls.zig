@@ -202,9 +202,10 @@ fn listDirContent(dir_path: [*:0]u8) !u8 {
             const timeStr = toRFC3339(dt);
             _ = beacon.printf(0, " %s", &timeStr);
 
-            // print file name
-            _ = beacon.printf(0, "\t%s", entry.name.ptr);
         }
+
+        // print file name
+        _ = beacon.printf(0, "\t%s", entry.name.ptr);
 
         // additional prints (based on entry type)
         if (entry.kind == .directory)
