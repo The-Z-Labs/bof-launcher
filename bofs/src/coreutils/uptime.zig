@@ -56,7 +56,7 @@ fn getUptimeLinux() !u8 {
     var nuser: u32 = 0;
     var ut_entry = posix.getutxent();
     while (ut_entry) |ut| {
-        if ((ut.ut_type == posix.USER_PROCESS)) {
+        if ((ut.ut_type == posix.USER_PROCESS) and ((ut.ut_user[0]) != 0)) {
             nuser = nuser + 1;
         }
 
