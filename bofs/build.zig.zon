@@ -16,7 +16,7 @@
             .path = "../win32-api",
         },
         .pcap = .{
-            .url = "https://fuchsia.googlesource.com/third_party/github.com/the-tcpdump-group/libpcap/+archive/refs/heads/main.tar.gz",
+            .url = "https://fuchsia.googlesource.com/third_party/github.com/the-tcpdump-group/libpcap/+archive/30442177aa2adb2527ce08f7ac73e36577a9c869.tar.gz",
             .hash = "N-V-__8AACf1FwA1wd1cVzYKbr2p20f_Lx6Q3Ty-EjUp0etU",
             .version = "1.10.4",
         },
