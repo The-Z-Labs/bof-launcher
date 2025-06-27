@@ -216,8 +216,9 @@ fn listDirContent(dir_path: [*:0]u8) !u8 {
             _ = beacon.printf(0, "/");
 
         if (entry.kind == .sym_link) {
-            var buf = [_]u8{0} ** 4097;
-            _ = try std.posix.readlinkat(iter_dir.fd, entry.name, buf[0 .. buf.len - 1]);
+            var buf: [4096:0]u8 = undefined;
+            const link = try std.posix.readlinkat(iter_dir.fd, entry.name, buf[0..]);
+            buf[link.len] = 0;
             _ = beacon.printf(0, " -> %s", &buf);
         }
 
