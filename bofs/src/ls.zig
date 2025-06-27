@@ -209,9 +209,6 @@ fn listDirContent(dir_path: [*:0]u8) !u8 {
             @memcpy(filename[0..entry.name.len], entry.name);
             filename[entry.name.len] = 0;
             _ = beacon.printf(0, "\t%s", &filename);
-
-            comptime std.debug.assert(filename.len == 4096);
-            comptime std.debug.assert(@sizeOf(@TypeOf(filename)) == 4097);
         }
 
         // additional prints (based on entry type)
