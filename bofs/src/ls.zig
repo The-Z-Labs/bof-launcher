@@ -205,7 +205,7 @@ fn listDirContent(dir_path: [*:0]u8) !u8 {
 
         // print file name
         {
-            var filename: [4097]u8 = undefined;
+            var filename: [4096:0]u8 = undefined;
             @memcpy(filename[0..entry.name.len], entry.name);
             filename[entry.name.len] = 0;
             _ = beacon.printf(0, "\t%s", &filename);

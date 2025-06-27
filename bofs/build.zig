@@ -331,6 +331,11 @@ fn addBofObj(
     obj.root_module.single_threaded = true;
     obj.root_module.strip = if (bof.optimize == .Debug) false else true;
     obj.root_module.unwind_tables = .none;
+    if (bof.optimize != .Debug) {
+        // TODO: Consider this.
+        //obj.root_module.stack_protector = false;
+        //obj.root_module.stack_check = false;
+    }
 
     if (bof.lang != .@"asm") {
         obj.root_module.addIncludePath(b.path("src/include"));
