@@ -205,10 +205,10 @@ fn listDirContent(dir_path: [*:0]u8) !u8 {
 
         // print file name
         {
-            var entry_print: [2048]u8 = undefined;
-            @memcpy(entry_print[0..], entry.name);
-            entry_print[entry.name.len] = 0;
-            _ = beacon.printf(0, "\t%s", &entry_print);
+            var filename: [4097]u8 = undefined;
+            @memcpy(filename[0..entry.name.len], entry.name);
+            filename[entry.name.len] = 0;
+            _ = beacon.printf(0, "\t%s", &filename);
         }
 
         // additional prints (based on entry type)
