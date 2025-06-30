@@ -96,7 +96,7 @@ const Bof = struct {
 
         bof.is_loaded = true;
 
-        const aligned_file_data = try allocator.alignedAlloc(u8, obj_file_data_alignment, file_data.len);
+        const aligned_file_data = try allocator.alignedAlloc(u8, std.mem.Alignment.fromByteUnits(obj_file_data_alignment), file_data.len);
         defer allocator.free(aligned_file_data);
 
         @memcpy(aligned_file_data, file_data);
@@ -1981,7 +1981,7 @@ export fn bofLauncherAllocateMemory(size: usize) callconv(.C) ?*anyopaque {
 
     const mem = gstate.allocator.?.alignedAlloc(
         u8,
-        mem_alignment,
+        std.mem.Alignment.fromByteUnits(mem_alignment),
         size,
     ) catch return null;
 
