@@ -631,7 +631,11 @@ const Bof = struct {
             {
                 const section_data = all_sections_mem[map_offset..][0..section_size];
 
-                @memcpy(section_data, file_data[section_offset..][0..section_size]);
+                if (section.sh_type == std.elf.SHT_NOBITS) { // .bss
+                    @memset(section_data, 0);
+                } else {
+                    @memcpy(section_data, file_data[section_offset..][0..section_size]);
+                }
 
                 try section_mappings.append(section_data);
 
