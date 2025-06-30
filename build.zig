@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub const supported_zig_version = std.SemanticVersion{ .major = 0, .minor = 14, .patch = 1 };
+pub const supported_zig_version = std.SemanticVersion{ .major = 0, .minor = 15, .patch = 0 };
 
 pub fn build(b: *std.Build) !void {
     ensureZigVersion() catch return;
@@ -219,7 +219,7 @@ fn ensureZigVersion() !void {
     var installed_ver = @import("builtin").zig_version;
     installed_ver.build = null;
 
-    if (installed_ver.order(supported_zig_version) != .eq) {
+    if (installed_ver.order(min_zig_version) == .lt) {
         std.log.err("\n" ++
             \\---------------------------------------------------------------------------
             \\
