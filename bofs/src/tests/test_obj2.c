@@ -1,6 +1,7 @@
 #include "beacon.h"
 
 static int global_number = 0;
+static int num_runs;
 
 int test1(void) {
     return 1;
@@ -18,6 +19,15 @@ int test2(void) {
 
 int test3(void) {
     return 5;
+}
+
+int getNumRuns(void) {
+    return num_runs;
+}
+
+int getNumCalls(void) {
+    static int num;
+    return ++num;
 }
 
 unsigned char go(char* arg_data, int arg_len) {
@@ -55,5 +65,8 @@ unsigned char go(char* arg_data, int arg_len) {
 
     res = res + global_number;
     global_number = 0;
+
+    num_runs += 1;
+
     return (unsigned char)res;
 }

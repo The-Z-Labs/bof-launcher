@@ -941,3 +941,43 @@ test "bof-launcher.nolibc_dynlib" {
     try expect(bofLauncherInit() == 0);
     defer bofLauncherRelease();
 }
+
+test "bof-launcher.bofs.bss" {
+    try bof.initLauncher();
+    defer bof.releaseLauncher();
+
+    const allocator = std.testing.allocator;
+
+    const bof_data = try loadBofFromFile(allocator, bofs_path ++ "test_obj2");
+    defer allocator.free(bof_data);
+
+    for (0..2) |_| {
+        const object = try bof.Object.initFromMemory(bof_data);
+        defer object.release();
+
+        const getNumRuns: *const fn () callconv(.c) i32 = @ptrCast(@alignCast(object.getProcAddress("getNumRuns")));
+        const getNumCalls: *const fn () callconv(.c) i32 = @ptrCast(@alignCast(object.getProcAddress("getNumCalls")));
+
+        try expect(getNumRuns() == 0);
+        try expect(getNumCalls() == 1);
+        try expect(getNumCalls() == 2);
+
+        {
+            const context = try object.run(null);
+            defer context.release();
+            try expect(context.getExitCode() == 15);
+        }
+
+        try expect(getNumRuns() == 1);
+        try expect(getNumCalls() == 3);
+
+        {
+            const context = try object.run(null);
+            defer context.release();
+            try expect(context.getExitCode() == 15);
+        }
+
+        try expect(getNumRuns() == 2);
+        try expect(getNumCalls() == 4);
+    }
+}
