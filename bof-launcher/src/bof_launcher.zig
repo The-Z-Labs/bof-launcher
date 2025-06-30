@@ -199,10 +199,14 @@ const Bof = struct {
             if (section_header.size_of_raw_data > 0) {
                 const section_data = all_sections_mem[section_offset..][0..section_header.size_of_raw_data];
 
-                @memcpy(
-                    section_data,
-                    file_data[section_header.pointer_to_raw_data..][0..section_header.size_of_raw_data],
-                );
+                if (section_header.pointer_to_raw_data == 0) { // .bss
+                    @memset(section_data, 0);
+                } else {
+                    @memcpy(
+                        section_data,
+                        file_data[section_header.pointer_to_raw_data..][0..section_header.size_of_raw_data],
+                    );
+                }
 
                 try section_mappings.append(section_data);
 

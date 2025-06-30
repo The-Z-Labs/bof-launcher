@@ -18,7 +18,23 @@ pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
         .{ name, w32.GetCurrentProcessId(), w32.GetCurrentThreadId() },
     ) catch unreachable;
 
-    _ = w32.MessageBoxA(null, info.ptr, "wProcessInfoMessageBox BOF", w32.MB_SYSTEMMODAL | w32.MB_ICONASTERISK);
+    // Try to find application window
+    _ = w32.EnumWindows(enumWindows, 0);
+
+    _ = w32.MessageBoxA(window, info.ptr, "wProcessInfoMessageBox BOF", w32.MB_SYSTEMMODAL | w32.MB_ICONASTERISK);
 
     return 0;
+}
+
+var window: ?w32.HWND = null;
+
+fn enumWindows(hwnd: w32.HWND, _: w32.LPARAM) callconv(w32.WINAPI) w32.BOOL {
+    var process_id: w32.DWORD = undefined;
+    _ = w32.GetWindowThreadProcessId(hwnd, &process_id);
+
+    if (process_id == w32.GetCurrentProcessId()) {
+        window = hwnd;
+        return w32.FALSE;
+    }
+    return w32.TRUE;
 }

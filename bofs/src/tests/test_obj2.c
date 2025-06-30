@@ -1,6 +1,6 @@
 #include "beacon.h"
 
-static int global_number = 3;
+static int global_number = 0;
 
 int test1(void) {
     return 1;
@@ -12,7 +12,7 @@ int getNumShort(datap* parser) {
 }
 
 int test2(void) {
-    global_number += 2;
+    global_number += 5;
     return 3;
 }
 
@@ -54,6 +54,6 @@ unsigned char go(char* arg_data, int arg_len) {
     res += test3();
 
     res = res + global_number;
-    global_number = 3;
+    global_number = 0;
     return (unsigned char)res;
 }
