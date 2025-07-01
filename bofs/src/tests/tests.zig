@@ -955,7 +955,7 @@ test "bof-launcher.bofs.bss" {
         const object = try bof.Object.initFromMemory(bof_data);
         defer object.release();
 
-        const getNumRuns: *const fn () callconv(.c) i32 = @ptrCast(@alignCast(object.getProcAddress("getNumRuns")));
+        const getNumRuns: *const fn () callconv(.c) i64 = @ptrCast(@alignCast(object.getProcAddress("getNumRuns")));
         const getNumCalls: *const fn () callconv(.c) i32 = @ptrCast(@alignCast(object.getProcAddress("getNumCalls")));
 
         try expect(getNumRuns() == 0);

@@ -1,7 +1,7 @@
 #include "beacon.h"
+#include <stdint.h>
 
 static int global_number = 0;
-static int num_runs;
 
 int test1(void) {
     return 1;
@@ -21,8 +21,13 @@ int test3(void) {
     return 5;
 }
 
-int getNumRuns(void) {
-    return num_runs;
+static struct {
+  char data[113];
+  int64_t num_runs;
+} state;
+
+int64_t getNumRuns(void) {
+    return state.num_runs;
 }
 
 int getNumCalls(void) {
@@ -66,7 +71,11 @@ unsigned char go(char* arg_data, int arg_len) {
     res = res + global_number;
     global_number = 0;
 
-    num_runs += 1;
+    for (int i = 0; i < sizeof(state.data); ++i) {
+      state.data[i] += 1;
+      state.data[i] ^= 0x55;
+    }
+    state.num_runs += 1;
 
     return (unsigned char)res;
 }
