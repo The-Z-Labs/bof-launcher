@@ -16,8 +16,6 @@
 !*.a
 !Makefile
 !LICENSE*
-!bofs/src/tests/helloBof.coff.x64.o
-!bofs/src/tests/helloBof.coff.x86.o
 
 !*.ini
 !*.txt
