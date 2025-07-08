@@ -44,8 +44,10 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
             return 2;
         }
 
+        const filter = "icmp";
+
         // Convert the packet filter epxression into a packet filter binary.
-        if (c.pcap_compile(handle, &bpf, "icmp", 0, netmask) == c.PCAP_ERROR) {
+        if (c.pcap_compile(handle, &bpf, filter, 0, netmask) == c.PCAP_ERROR) {
             //std.debug.print("Error: {s}\n", .{c.pcap_geterr(handle)});
             return 3;
         }
