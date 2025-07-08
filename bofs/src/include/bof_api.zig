@@ -14,6 +14,7 @@ pub fn print(comptime fmt: []const u8, args: anytype) void {
         _ = beacon.printf(0, "%s", str.ptr);
     } else {
         const str = std.fmt.allocPrintZ(bof_allocator, fmt, args) catch @panic("OOM");
+        defer bof_allocator.free(str);
         _ = beacon.printf(0, "%s", str.ptr);
     }
 }
