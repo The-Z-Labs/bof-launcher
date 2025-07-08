@@ -56,7 +56,6 @@ const BofErrors = enum(u8) {
 };
 
 fn changeDir(file_path: [*:0]const u8) !u8 {
-    
     const buf = std.mem.sliceTo(file_path, 0);
     try std.posix.chdir(buf);
 
@@ -67,16 +66,15 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     var parser = beacon.datap{};
     beacon.dataParse(&parser, args, args_len);
 
-    if(beacon.dataExtract(&parser, null)) |file_path| {
+    if (beacon.dataExtract(&parser, null)) |file_path| {
         return changeDir(file_path) catch |err| switch (err) {
-            std.posix.ChangeCurDirError.AccessDenied => return @intFromEnum(BofErrors.AccessDenied),
-            std.posix.ChangeCurDirError.SymLinkLoop => return @intFromEnum(BofErrors.SymLinkLoop),
-            std.posix.ChangeCurDirError.NameTooLong => return @intFromEnum(BofErrors.NameTooLong),
-            std.posix.ChangeCurDirError.FileNotFound => return @intFromEnum(BofErrors.FileNotFound),
-            std.posix.ChangeCurDirError.SystemResources => return @intFromEnum(BofErrors.SystemResources),
-            std.posix.ChangeCurDirError.NotDir => return @intFromEnum(BofErrors.NotDir),
-            else => return @intFromEnum(BofErrors.UnknownError),
+            error.AccessDenied => @intFromEnum(BofErrors.AccessDenied),
+            error.SymLinkLoop => @intFromEnum(BofErrors.SymLinkLoop),
+            error.NameTooLong => @intFromEnum(BofErrors.NameTooLong),
+            error.FileNotFound => @intFromEnum(BofErrors.FileNotFound),
+            error.SystemResources => @intFromEnum(BofErrors.SystemResources),
+            error.NotDir => @intFromEnum(BofErrors.NotDir),
+            else => @intFromEnum(BofErrors.UnknownError),
         };
-    } else
-        return @intFromEnum(BofErrors.DirNotProvided);
+    } else return @intFromEnum(BofErrors.DirNotProvided);
 }

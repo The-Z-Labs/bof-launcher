@@ -1,6 +1,6 @@
-const bof_api = @import("bof_api");
-const beacon = bof_api.beacon;
-const w32 = bof_api.win32;
+const bofapi = @import("bof_api");
+const beacon = bofapi.beacon;
+const w32 = bofapi.win32;
 
 extern fn @"kernel32$VirtualFree"(
     lpAddress: ?w32.LPVOID,
@@ -28,7 +28,7 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
         _ = beacon.printf(0, "GetCurrentThread() returned: 0x%x\n", @intFromPtr(w32.GetCurrentThread()));
 
         for (0..2) |_| {
-            const allocator = bof_api.bof_allocator;
+            const allocator = bofapi.generic_allocator;
 
             const mem = allocator.alloc(u8, 123) catch return 123;
             defer allocator.free(mem);

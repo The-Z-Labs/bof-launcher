@@ -22,8 +22,9 @@
 ///  code: 0x4
 ///  message: "Unknown error"
 const std = @import("std");
-const beacon = @import("bof_api").beacon;
 const posix = @import("std").posix;
+const bofapi = @import("bof_api");
+const beacon = bofapi.beacon;
 
 // BOF-specific error codes
 const BofErrors = enum(u8) {
@@ -35,17 +36,15 @@ const BofErrors = enum(u8) {
 
 fn getCwd() !u8 {
     var buf: [4096]u8 = undefined;
-    _ = try std.posix.getcwd(buf[0..buf.len]);
-    _ = beacon.printf(0, "%s", &buf);
-
+    const str = try std.posix.getcwd(buf[0..]);
+    bofapi.print("{s}", .{str});
     return 0;
 }
 
 pub export fn go() callconv(.C) u8 {
-
     return getCwd() catch |err| switch (err) {
-        std.posix.GetCwdError.NameTooLong => return @intFromEnum(BofErrors.NameTooLong),
-        std.posix.GetCwdError.CurrentWorkingDirectoryUnlinked => return @intFromEnum(BofErrors.CwdUnlinked),
-        else => return @intFromEnum(BofErrors.UnknownError),
+        error.NameTooLong => @intFromEnum(BofErrors.NameTooLong),
+        error.CurrentWorkingDirectoryUnlinked => @intFromEnum(BofErrors.CwdUnlinked),
+        else => @intFromEnum(BofErrors.UnknownError),
     };
 }

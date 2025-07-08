@@ -231,8 +231,8 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
 
     if (beacon.dataExtract(&parser, null)) |dir_path| {
         return listDirContent(dir_path) catch |err| switch (err) {
-            std.fs.File.OpenError.FileNotFound => return @intFromEnum(BofErrors.FileNotFound),
-            else => return @intFromEnum(BofErrors.UnknownError),
+            error.FileNotFound => @intFromEnum(BofErrors.FileNotFound),
+            else => @intFromEnum(BofErrors.UnknownError),
         };
     } else return @intFromEnum(BofErrors.DirNotProvided);
 }

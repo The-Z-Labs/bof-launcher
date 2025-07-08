@@ -1,13 +1,13 @@
-const bof_api = @import("bof_api");
-const beacon = bof_api.beacon;
-const w32 = bof_api.win32;
 const std = @import("std");
+const bofapi = @import("bof_api");
+const beacon = bofapi.beacon;
+const w32 = bofapi.win32;
 
 pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
     _ = beacon.printf(0, "--- test_long_running.zig ---\n");
 
     if (@import("builtin").os.tag == .windows) {
-        const allocator = bof_api.bof_allocator;
+        const allocator = bofapi.generic_allocator;
 
         var allocs1 = std.ArrayList([]u8).init(allocator);
         defer {

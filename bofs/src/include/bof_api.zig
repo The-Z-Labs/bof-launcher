@@ -13,17 +13,17 @@ pub fn print(comptime fmt: []const u8, args: anytype) void {
         const str = std.fmt.bufPrintZ(buf[0..], fmt, args) catch unreachable;
         _ = beacon.printf(0, "%s", str.ptr);
     } else {
-        const str = std.fmt.allocPrintZ(bof_allocator, fmt, args) catch @panic("OOM");
-        defer bof_allocator.free(str);
+        const str = std.fmt.allocPrintZ(generic_allocator, fmt, args) catch @panic("OOM");
+        defer generic_allocator.free(str);
         _ = beacon.printf(0, "%s", str.ptr);
     }
 }
 
-pub const bof_allocator = std.mem.Allocator{
+pub const generic_allocator = std.mem.Allocator{
     .ptr = undefined,
-    .vtable = &bof_allocator_vtable,
+    .vtable = &generic_allocator_vtable,
 };
-const bof_allocator_vtable = std.mem.Allocator.VTable{
+const generic_allocator_vtable = std.mem.Allocator.VTable{
     .alloc = bofAlloc,
     .resize = bofResize,
     .remap = bofRemap,

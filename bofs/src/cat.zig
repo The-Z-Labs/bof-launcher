@@ -27,12 +27,16 @@
 ///- name: FileNotProvided
 ///  code: 0x4
 ///  message: "No file provided"
-///- name: UnknownError
+///- name: StreamTooLong
 ///  code: 0x5
+///  message: "File is very large"
+///- name: UnknownError
+///  code: 0x6
 ///  message: "Unknown error"
 const std = @import("std");
-const beacon = @import("bof_api").beacon;
-const posix = @import("bof_api").posix;
+const bofapi = @import("bof_api");
+const beacon = bofapi.beacon;
+const posix = bofapi.posix;
 
 // BOF-specific error codes
 const BofErrors = enum(u8) {
@@ -40,21 +44,19 @@ const BofErrors = enum(u8) {
     FileNotFound,
     AntivirusInterference,
     FileNotProvided,
+    StreamTooLong,
     UnknownError,
 };
 
 fn getFileContent(file_path: [*:0]u8) !u8 {
-
     const file = try std.fs.openFileAbsoluteZ(file_path, .{});
     defer file.close();
-    
-    var aBuf = [_]u8{0} ** 4097;
-    const buf = aBuf[0 .. aBuf.len - 1];
 
-    while(try file.read(buf) != 0) {
-        _ = beacon.printf(0, "%s", buf.ptr);
-    }
-    
+    const content = try file.reader().readAllAlloc(bofapi.generic_allocator, 4 * 1024 * 1024);
+    defer bofapi.generic_allocator.free(content);
+
+    bofapi.print("{s}", .{content});
+
     return 0;
 }
 
@@ -62,13 +64,13 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     var parser = beacon.datap{};
     beacon.dataParse(&parser, args, args_len);
 
-    if(beacon.dataExtract(&parser, null)) |file_path| {
+    if (beacon.dataExtract(&parser, null)) |file_path| {
         return getFileContent(file_path) catch |err| switch (err) {
-            std.fs.File.OpenError.AccessDenied => return @intFromEnum(BofErrors.AccessDenied),
-            std.fs.File.OpenError.FileNotFound => return @intFromEnum(BofErrors.FileNotFound),
-            std.fs.File.OpenError.AntivirusInterference => return @intFromEnum(BofErrors.AntivirusInterference),
-            else => return @intFromEnum(BofErrors.UnknownError),
+            error.AccessDenied => @intFromEnum(BofErrors.AccessDenied),
+            error.FileNotFound => @intFromEnum(BofErrors.FileNotFound),
+            error.AntivirusInterference => @intFromEnum(BofErrors.AntivirusInterference),
+            error.StreamTooLong => @intFromEnum(BofErrors.StreamTooLong),
+            else => @intFromEnum(BofErrors.UnknownError),
         };
-    } else
-        return @intFromEnum(BofErrors.FileNotProvided);
+    } else return @intFromEnum(BofErrors.FileNotProvided);
 }
