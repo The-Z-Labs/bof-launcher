@@ -6,6 +6,18 @@ pub const kerberos = @import("kerberos.zig");
 
 const std = @import("std");
 
+pub fn print(comptime fmt: []const u8, args: anytype) void {
+    const len = std.fmt.count(fmt, args);
+    if (len < 4096) {
+        var buf: [4096]u8 = undefined;
+        const str = std.fmt.bufPrintZ(buf[0..], fmt, args) catch unreachable;
+        _ = beacon.printf(0, "%s", str.ptr);
+    } else {
+        const str = std.fmt.allocPrintZ(bof_allocator, fmt, args) catch @panic("OOM");
+        _ = beacon.printf(0, "%s", str.ptr);
+    }
+}
+
 pub const bof_allocator = std.mem.Allocator{
     .ptr = undefined,
     .vtable = &bof_allocator_vtable,

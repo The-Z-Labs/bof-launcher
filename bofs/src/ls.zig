@@ -32,8 +32,9 @@
 ///  message: "Unknown error"
 const std = @import("std");
 const linux = std.os.linux;
-const posix = @import("bof_api").posix;
-const beacon = @import("bof_api").beacon;
+const bofapi = @import("bof_api");
+const posix = bofapi.posix;
+const beacon = bofapi.beacon;
 
 // BOF-specific error codes
 const BofErrors = enum(u8) {
@@ -204,12 +205,7 @@ fn listDirContent(dir_path: [*:0]u8) !u8 {
         }
 
         // print file name
-        {
-            var filename: [4096:0]u8 = undefined;
-            @memcpy(filename[0..entry.name.len], entry.name);
-            filename[entry.name.len] = 0;
-            _ = beacon.printf(0, "\t%s", &filename);
-        }
+        bofapi.print("\t{s}", .{entry.name});
 
         // additional prints (based on entry type)
         if (entry.kind == .directory)
