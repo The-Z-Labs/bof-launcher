@@ -56,9 +56,7 @@ const BofErrors = enum(u8) {
 };
 
 fn changeDir(file_path: [*:0]const u8) !u8 {
-    const buf = std.mem.sliceTo(file_path, 0);
-    try std.posix.chdir(buf);
-
+    try std.posix.chdir(std.mem.span(file_path));
     return 0;
 }
 
