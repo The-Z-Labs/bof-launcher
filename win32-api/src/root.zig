@@ -605,8 +605,16 @@ pub extern "kernel32" fn CreateRemoteThread(
     lpThreadId: ?*DWORD,
 ) callconv(WINAPI) ?HANDLE;
 
-// ntdll
-pub const RtlGetVersion = windows.ntdll.RtlGetVersion;
+//
+// NTDLL functions
+//
+const ntdll = if (@import("options").bof) "NTDLL$" else ""; // BOFs need LIBNAME$ prefix
+
+pub const RtlGetVersion = @extern(PFN_RtlGetVersion, .{ .name = ntdll ++ "RtlGetVersion" });
+pub const PFN_RtlGetVersion = *const fn (
+    lpVersionInformation: *RTL_OSVERSIONINFOW,
+) callconv(.winapi) NTSTATUS;
+
 pub const NtQueryInformationProcess = windows.ntdll.NtQueryInformationProcess;
 
 pub fn NtCurrentProcess() HANDLE {
