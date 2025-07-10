@@ -349,389 +349,6 @@ pub const JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000;
 
 pub const WAIT_OBJECT_0 = 0;
 
-//
-// KERNEL32 functions
-//
-const kernel32 = if (@import("options").bof) "KERNEL32$" else ""; // BOFs need LIBNAME$ prefix
-
-pub const VirtualAlloc = @extern(PFN_VirtualAlloc, .{ .name = kernel32 ++ "VirtualAlloc" });
-pub const PFN_VirtualAlloc = *const fn (
-    lpAddress: ?LPVOID,
-    dwSize: SIZE_T,
-    flAllocationType: DWORD,
-    flProtect: DWORD,
-) callconv(.winapi) ?LPVOID;
-
-pub const VirtualQuery = @extern(PFN_VirtualQuery, .{ .name = kernel32 ++ "VirtualQuery" });
-pub const PFN_VirtualQuery = *const fn (
-    lpAddress: ?LPVOID,
-    lpBuffer: PMEMORY_BASIC_INFORMATION,
-    dwLength: SIZE_T,
-) callconv(.winapi) SIZE_T;
-
-pub const VirtualProtect = @extern(PFN_VirtualProtect, .{ .name = kernel32 ++ "VirtualProtect" });
-pub const PFN_VirtualProtect = *const fn (
-    lpAddress: LPVOID,
-    dwSize: SIZE_T,
-    flNewProtect: DWORD,
-    lpflOldProtect: *DWORD,
-) callconv(.winapi) BOOL;
-
-pub const VirtualFree = @extern(PFN_VirtualFree, .{ .name = kernel32 ++ "VirtualFree" });
-pub const PFN_VirtualFree = *const fn (
-    lpAddress: ?LPVOID,
-    dwSize: SIZE_T,
-    dwFreeType: DWORD,
-) callconv(.winapi) BOOL;
-
-pub const GetLastError = @extern(PFN_GetLastError, .{ .name = kernel32 ++ "GetLastError" });
-pub const PFN_GetLastError = *const fn () callconv(.winapi) Win32Error;
-
-pub const Sleep = @extern(PFN_Sleep, .{ .name = kernel32 ++ "Sleep" });
-pub const PFN_Sleep = *const fn (dwMilliseconds: DWORD) callconv(.winapi) void;
-
-pub const ExitProcess = @extern(PFN_ExitProcess, .{ .name = kernel32 ++ "ExitProcess" });
-pub const PFN_ExitProcess = *const fn (uExitCode: UINT) callconv(.winapi) noreturn;
-
-pub const GetCurrentProcess = @extern(PFN_GetCurrentProcess, .{ .name = kernel32 ++ "GetCurrentProcess" });
-pub const PFN_GetCurrentProcess = *const fn () callconv(.winapi) HANDLE;
-
-pub const WaitForSingleObject = @extern(PFN_WaitForSingleObject, .{ .name = kernel32 ++ "WaitForSingleObject" });
-pub const PFN_WaitForSingleObject = *const fn (
-    hHandle: HANDLE,
-    dwMilliseconds: DWORD,
-) callconv(.winapi) DWORD;
-
-pub const ReadFile = @extern(PFN_ReadFile, .{ .name = kernel32 ++ "ReadFile" });
-pub const PFN_ReadFile = *const fn (
-    hFile: HANDLE,
-    lpBuffer: LPVOID,
-    nNumberOfBytesToRead: DWORD,
-    lpNumberOfBytesRead: ?*DWORD,
-    lpOverlapped: ?*OVERLAPPED,
-) callconv(.winapi) BOOL;
-
-pub const WriteFile = @extern(PFN_WriteFile, .{ .name = kernel32 ++ "WriteFile" });
-pub const PFN_WriteFile = *const fn (
-    in_hFile: HANDLE,
-    in_lpBuffer: [*]const u8,
-    in_nNumberOfBytesToWrite: DWORD,
-    out_lpNumberOfBytesWritten: ?*DWORD,
-    in_out_lpOverlapped: ?*OVERLAPPED,
-) callconv(.winapi) BOOL;
-
-pub const DuplicateHandle = @extern(PFN_DuplicateHandle, .{ .name = kernel32 ++ "DuplicateHandle" });
-pub const PFN_DuplicateHandle = *const fn (
-    hSourceProcessHandle: HANDLE,
-    hSourceHandle: HANDLE,
-    hTargetProcessHandle: HANDLE,
-    lpTargetHandle: *HANDLE,
-    dwDesiredAccess: DWORD,
-    bInheritHandle: BOOL,
-    dwOptions: DWORD,
-) callconv(.winapi) BOOL;
-
-pub const GetCurrentThreadId = @extern(PFN_GetCurrentThreadId, .{ .name = kernel32 ++ "GetCurrentThreadId" });
-pub const PFN_GetCurrentThreadId = *const fn () callconv(.winapi) DWORD;
-
-pub const FreeLibrary = @extern(PFN_FreeLibrary, .{ .name = kernel32 ++ "FreeLibrary" });
-pub const PFN_FreeLibrary = *const fn (hModule: HMODULE) callconv(.winapi) BOOL;
-
-pub const CreateThread = @extern(PFN_CreateThread, .{ .name = kernel32 ++ "CreateThread" });
-pub const PFN_CreateThread = *const fn (
-    lpThreadAttributes: ?*SECURITY_ATTRIBUTES,
-    dwStackSize: SIZE_T,
-    lpStartAddress: LPTHREAD_START_ROUTINE,
-    lpParameter: ?LPVOID,
-    dwCreationFlags: DWORD,
-    lpThreadId: ?*DWORD,
-) callconv(.winapi) ?HANDLE;
-
-pub const GetSystemInfo = @extern(PFN_GetSystemInfo, .{ .name = kernel32 ++ "GetSystemInfo" });
-pub const PFN_GetSystemInfo = *const fn (lpSystemInfo: *SYSTEM_INFO) callconv(.winapi) void;
-
-pub const VirtualFreeEx = @extern(PFN_VirtualFreeEx, .{ .name = kernel32 ++ "VirtualFreeEx" });
-pub const PFN_VirtualFreeEx = *const fn (
-    hProcess: HANDLE,
-    lpAddress: ?LPVOID,
-    dwSize: SIZE_T,
-    dwFreeType: DWORD,
-) callconv(WINAPI) BOOL;
-
-pub extern "kernel32" fn GetModuleFileNameA(
-    hModule: ?HMODULE,
-    lpFilename: LPSTR,
-    nSize: DWORD,
-) callconv(.winapi) DWORD;
-
-pub extern "kernel32" fn GetCurrentProcessId() callconv(WINAPI) DWORD;
-
-pub extern "kernel32" fn GetProcessId(hProcess: HANDLE) callconv(WINAPI) DWORD;
-
-pub extern "kernel32" fn GetCurrentThread() callconv(WINAPI) HANDLE;
-
-pub extern "kernel32" fn CloseHandle(hObject: HANDLE) callconv(WINAPI) BOOL;
-
-pub extern "kernel32" fn FlushInstructionCache(
-    hProcess: HANDLE,
-    lpBaseAddress: ?LPCVOID,
-    dwSize: SIZE_T,
-) callconv(WINAPI) BOOL;
-
-pub extern "kernel32" fn FreeConsole() callconv(WINAPI) BOOL;
-
-pub extern "kernel32" fn AttachConsole(
-    dwProcessId: DWORD,
-) callconv(WINAPI) BOOL;
-
-pub extern "kernel32" fn IsWow64Process(
-    hProcess: HANDLE,
-    Wow64Process: *BOOL,
-) callconv(WINAPI) BOOL;
-
-pub extern "kernel32" fn GetExitCodeProcess(
-    hProcess: HANDLE,
-    lpExitCode: *DWORD,
-) callconv(WINAPI) BOOL;
-
-pub extern "kernel32" fn GetModuleHandleA(
-    lpModuleName: ?LPCSTR,
-) callconv(WINAPI) ?HMODULE;
-
-pub extern "kernel32" fn LoadLibraryA(
-    lpLibFileName: LPCSTR,
-) callconv(WINAPI) ?HMODULE;
-
-pub extern "kernel32" fn GetProcAddress(
-    hModule: HMODULE,
-    lpProcName: LPCSTR,
-) callconv(WINAPI) ?FARPROC;
-
-pub extern "kernel32" fn CreatePipe(
-    hReadPipe: *HANDLE,
-    hWritePipe: *HANDLE,
-    lpPipeAttributes: ?*SECURITY_ATTRIBUTES,
-    nSize: DWORD,
-) callconv(WINAPI) BOOL;
-
-pub extern "kernel32" fn ResumeThread(
-    hThread: HANDLE,
-) callconv(WINAPI) DWORD;
-
-pub extern "kernel32" fn VirtualAllocEx(
-    hProcess: HANDLE,
-    lpAddress: ?LPVOID,
-    dwSize: SIZE_T,
-    flAllocationType: DWORD,
-    flProtect: DWORD,
-) callconv(WINAPI) ?LPVOID;
-
-pub extern "kernel32" fn VirtualProtectEx(
-    hProcess: HANDLE,
-    lpAddress: LPVOID,
-    dwSize: SIZE_T,
-    flNewProtect: DWORD,
-    lpflOldProtect: *DWORD,
-) callconv(WINAPI) BOOL;
-
-pub extern "kernel32" fn CreateFileMappingA(
-    hFile: HANDLE,
-    lpFileMappingAttributes: ?*SECURITY_ATTRIBUTES,
-    flProtect: DWORD,
-    dwMaximumSizeHigh: DWORD,
-    dwMaximumSizeLow: DWORD,
-    lpName: ?LPCSTR,
-) callconv(WINAPI) ?HANDLE;
-
-pub extern "kernel32" fn GetThreadContext(
-    hThread: HANDLE,
-    lpContext: *CONTEXT,
-) callconv(WINAPI) BOOL;
-
-pub extern "kernel32" fn GetThreadId(
-    hThread: HANDLE,
-) callconv(WINAPI) DWORD;
-
-pub extern "kernel32" fn SetThreadContext(
-    hThread: HANDLE,
-    lpContext: *const CONTEXT,
-) callconv(WINAPI) BOOL;
-
-pub extern "kernel32" fn MapViewOfFile(
-    hFileMappingObject: HANDLE,
-    dwDesiredAccess: DWORD,
-    dwFileOffsetHigh: DWORD,
-    dwFileOffsetLow: DWORD,
-    dwNumberOfBytesToMap: SIZE_T,
-) callconv(WINAPI) LPVOID;
-
-pub extern "kernel32" fn UnmapViewOfFile(lpBaseAddress: LPCVOID) callconv(WINAPI) BOOL;
-
-pub extern "kernel32" fn OpenProcess(
-    dwDesiredAccess: DWORD,
-    bInheritHandle: BOOL,
-    dwProcessId: DWORD,
-) callconv(WINAPI) ?HANDLE;
-
-pub extern "kernel32" fn OpenThread(
-    dwDesiredAccess: DWORD,
-    bInheritHandle: BOOL,
-    dwThreadId: DWORD,
-) callconv(WINAPI) ?HANDLE;
-
-pub extern "kernel32" fn WriteProcessMemory(
-    hProcess: HANDLE,
-    lpBaseAddress: LPVOID,
-    lpBuffer: LPCVOID,
-    nSize: SIZE_T,
-    lpNumberOfBytesWritten: ?*SIZE_T,
-) callconv(WINAPI) BOOL;
-
-pub extern "kernel32" fn ReadProcessMemory(
-    hProcess: HANDLE,
-    lpBaseAddress: LPCVOID,
-    lpBuffer: LPVOID,
-    nSize: SIZE_T,
-    lpNumberOfBytesRead: ?*SIZE_T,
-) callconv(WINAPI) BOOL;
-
-pub extern "kernel32" fn CreateRemoteThread(
-    hProcess: HANDLE,
-    lpThreadAttributes: ?*SECURITY_ATTRIBUTES,
-    dwStackSize: SIZE_T,
-    lpStartAddress: LPTHREAD_START_ROUTINE,
-    lpParameter: ?LPVOID,
-    dwCreationFlags: DWORD,
-    lpThreadId: ?*DWORD,
-) callconv(WINAPI) ?HANDLE;
-
-//
-// NTDLL functions
-//
-const ntdll = if (@import("options").bof) "NTDLL$" else ""; // BOFs need LIBNAME$ prefix
-
-pub const RtlGetVersion = @extern(PFN_RtlGetVersion, .{ .name = ntdll ++ "RtlGetVersion" });
-pub const PFN_RtlGetVersion = *const fn (
-    lpVersionInformation: *RTL_OSVERSIONINFOW,
-) callconv(.winapi) NTSTATUS;
-
-pub const NtQueryInformationProcess = windows.ntdll.NtQueryInformationProcess;
-
-pub fn NtCurrentProcess() HANDLE {
-    return @ptrFromInt(@as(usize, @bitCast(@as(isize, -1))));
-}
-pub fn NtCurrentThread() HANDLE {
-    return @ptrFromInt(@as(usize, @bitCast(@as(isize, -2))));
-}
-pub fn NtCurrentSession() HANDLE {
-    return @ptrFromInt(@as(usize, @bitCast(@as(isize, -3))));
-}
-
-pub extern "ntdll" fn RtlCloneUserProcess(
-    ProcessFlags: ULONG,
-    ProcessSecurityDescriptor: ?PSECURITY_DESCRIPTOR,
-    ThreadSecurityDescriptor: ?PSECURITY_DESCRIPTOR,
-    DebugPort: ?HANDLE,
-    ProcessInformation: *RTL_USER_PROCESS_INFORMATION,
-) callconv(WINAPI) NTSTATUS;
-
-pub extern "ntdll" fn NtResumeThread(
-    ThreadHandle: HANDLE,
-    PreviousSuspendCount: ?*ULONG,
-) callconv(WINAPI) NTSTATUS;
-
-pub extern "ntdll" fn NtSuspendThread(
-    ThreadHandle: HANDLE,
-    PreviousSuspendCount: ?*ULONG,
-) callconv(WINAPI) NTSTATUS;
-
-pub extern "ntdll" fn NtTerminateThread(
-    ThreadHandle: ?HANDLE,
-    ExitStatus: NTSTATUS,
-) callconv(WINAPI) NTSTATUS;
-
-pub extern "ntdll" fn NtTerminateProcess(
-    ProcessHandle: ?HANDLE,
-    ExitStatus: NTSTATUS,
-) callconv(WINAPI) NTSTATUS;
-
-pub extern "ntdll" fn NtOpenProcess(
-    ProcessHandle: *HANDLE,
-    DesiredAccess: ACCESS_MASK,
-    ObjectAttributes: *OBJECT_ATTRIBUTES,
-    ClientId: ?*CLIENT_ID,
-) callconv(WINAPI) NTSTATUS;
-
-pub extern "ntdll" fn NtResumeProcess(
-    ProcessHandle: HANDLE,
-) callconv(WINAPI) NTSTATUS;
-
-pub extern "ntdll" fn NtSuspendProcess(
-    ProcessHandle: HANDLE,
-) callconv(WINAPI) NTSTATUS;
-
-pub extern "ntdll" fn NtCreateJobObject(
-    JobHandle: *HANDLE,
-    DesiredAccess: ACCESS_MASK,
-    ObjectAttributes: ?*OBJECT_ATTRIBUTES,
-) callconv(WINAPI) NTSTATUS;
-
-pub extern "ntdll" fn NtAssignProcessToJobObject(
-    JobHandle: HANDLE,
-    ProcessHandle: HANDLE,
-) callconv(WINAPI) NTSTATUS;
-
-pub extern "ntdll" fn NtTerminateJobObject(
-    JobHandle: HANDLE,
-    ExitStatus: NTSTATUS,
-) callconv(WINAPI) NTSTATUS;
-
-pub extern "ntdll" fn NtIsProcessInJob(
-    ProcessHandle: HANDLE,
-    JobHandle: ?HANDLE,
-) callconv(WINAPI) NTSTATUS;
-
-pub extern "ntdll" fn NtSetInformationJobObject(
-    JobHandle: HANDLE,
-    JobObjectInformationClass: JOBOBJECTINFOCLASS,
-    JobObjectInformation: PVOID,
-    JobObjectInformationLength: ULONG,
-) callconv(WINAPI) NTSTATUS;
-
-pub extern "ntdll" fn NtClose(
-    Handle: HANDLE,
-) callconv(WINAPI) NTSTATUS;
-
-pub extern "ntdll" fn RtlWow64EnableFsRedirection(
-    Wow64FsEnableRedirection: BOOLEAN,
-) callconv(WINAPI) NTSTATUS;
-
-pub extern "ntdll" fn NtAllocateVirtualMemory(
-    ProcessHandle: HANDLE,
-    BaseAddress: *PVOID,
-    ZeroBits: ULONG_PTR,
-    RegionSize: *SIZE_T,
-    AllocationType: ULONG,
-    Protect: ULONG,
-) callconv(WINAPI) NTSTATUS;
-
-pub const NtWriteVirtualMemory = windows.ntdll.NtWriteVirtualMemory;
-pub const NtProtectVirtualMemory = windows.ntdll.NtProtectVirtualMemory;
-
-pub extern "ntdll" fn NtCreateThreadEx(
-    ThreadHandle: *HANDLE,
-    DesiredAccess: ACCESS_MASK,
-    ObjectAttributes: ?*OBJECT_ATTRIBUTES,
-    ProcessHandle: HANDLE,
-    StartRoutine: PVOID,
-    Argument: ?PVOID,
-    CreateFlags: ULONG,
-    ZeroBits: SIZE_T,
-    StackSize: SIZE_T,
-    MaximumStackSize: SIZE_T,
-    AttributeList: ?*anyopaque, // TODO: ?*PS_ATTRIBUTE_LIST,
-) callconv(WINAPI) NTSTATUS;
-
 pub const PS_CREATE_STATE = enum(u32) {
     InitialState,
     FailOnFileOpen,
@@ -797,60 +414,9 @@ pub const PS_CREATE_INFO = extern struct {
     },
 };
 
-pub extern "ntdll" fn NtCreateUserProcess(
-    ProcessHandle: *HANDLE,
-    ThreadHandle: *HANDLE,
-    ProcessDesiredAccess: ACCESS_MASK,
-    ThreadDesiredAccess: ACCESS_MASK,
-    ProcessObjectAttributes: ?*OBJECT_ATTRIBUTES,
-    ThreadObjectAttributes: ?*OBJECT_ATTRIBUTES,
-    ProcessFlags: ULONG,
-    ThreadFlags: ULONG,
-    ProcessParameters: ?PVOID,
-    CreateInfo: *PS_CREATE_INFO,
-    AttributeList: ?*anyopaque, // TODO: ?*PS_ATTRIBUTE_LIST,
-) callconv(WINAPI) NTSTATUS;
-
-// advapi32
-pub extern "advapi32" fn OpenProcessToken(
-    ProcessHandle: HANDLE,
-    DesiredAccess: DWORD,
-    TokenHandle: *HANDLE,
-) callconv(WINAPI) BOOL;
-
-pub extern "advapi32" fn GetTokenInformation(
-    TokenHandle: HANDLE,
-    TokenInformationClass: TOKEN_INFORMATION_CLASS,
-    TokenInformation: ?*anyopaque,
-    TokenInformationLength: DWORD,
-    ReturnLength: *DWORD,
-) callconv(WINAPI) BOOL;
-
-// user32
 pub const MB_ICONEXCLAMATION = 0x00000030;
 pub const MB_ICONASTERISK = 0x00000040;
 pub const MB_SYSTEMMODAL = 0x00001000;
-
-pub extern "user32" fn MessageBoxA(?HWND, ?LPCSTR, ?LPCSTR, UINT) callconv(WINAPI) c_int;
-pub extern "user32" fn EnumWindows(lpEnumFunc: WNDENUMPROC, lParam: LPARAM) callconv(WINAPI) BOOL;
-pub extern "user32" fn GetWindowThreadProcessId(hWnd: HWND, lpdwProcessId: ?*DWORD) callconv(WINAPI) DWORD;
-pub extern "user32" fn SetForegroundWindow(hWnd: HWND) callconv(WINAPI) BOOL;
-pub extern "user32" fn GetForegroundWindow() callconv(WINAPI) ?HWND;
-
-// ole32
-pub extern "ole32" fn CoInitializeEx(pvReserved: ?LPVOID, dwCoInit: DWORD) callconv(WINAPI) HRESULT;
-pub extern "ole32" fn CoUninitialize() callconv(WINAPI) void;
-pub extern "ole32" fn CoTaskMemAlloc(size: SIZE_T) callconv(WINAPI) ?LPVOID;
-pub extern "ole32" fn CoTaskMemFree(pv: LPVOID) callconv(WINAPI) void;
-pub extern "ole32" fn CoGetCurrentProcess() callconv(WINAPI) DWORD;
-pub extern "ole32" fn CoGetCallerTID(lpdwTID: *DWORD) callconv(WINAPI) HRESULT;
-
-// ws2_32
-pub const WSAStartup = windows.ws2_32.WSAStartup;
-pub const WSACleanup = windows.ws2_32.WSACleanup;
-pub const WSASocketW = windows.ws2_32.WSASocketW;
-pub const WSAGetLastError = windows.ws2_32.WSAGetLastError;
-pub const closesocket = windows.ws2_32.closesocket;
 
 pub const IMAGE_DOS_HEADER = extern struct {
     e_magic: u16,
@@ -1011,3 +577,447 @@ comptime {
 }
 
 pub const IMAGE_DIRECTORY_ENTRY_EXPORT = 0;
+
+//
+// KERNEL32 functions
+//
+pub const PFN_VirtualAlloc = *const fn (
+    lpAddress: ?LPVOID,
+    dwSize: SIZE_T,
+    flAllocationType: DWORD,
+    flProtect: DWORD,
+) callconv(.winapi) ?LPVOID;
+
+pub const PFN_VirtualQuery = *const fn (
+    lpAddress: ?LPVOID,
+    lpBuffer: PMEMORY_BASIC_INFORMATION,
+    dwLength: SIZE_T,
+) callconv(.winapi) SIZE_T;
+
+pub const PFN_VirtualProtect = *const fn (
+    lpAddress: LPVOID,
+    dwSize: SIZE_T,
+    flNewProtect: DWORD,
+    lpflOldProtect: *DWORD,
+) callconv(.winapi) BOOL;
+
+pub const PFN_VirtualFree = *const fn (
+    lpAddress: ?LPVOID,
+    dwSize: SIZE_T,
+    dwFreeType: DWORD,
+) callconv(.winapi) BOOL;
+
+pub const PFN_GetLastError = *const fn () callconv(.winapi) Win32Error;
+
+pub const PFN_Sleep = *const fn (dwMilliseconds: DWORD) callconv(.winapi) void;
+
+pub const PFN_ExitProcess = *const fn (uExitCode: UINT) callconv(.winapi) noreturn;
+
+pub const PFN_GetCurrentProcess = *const fn () callconv(.winapi) HANDLE;
+
+pub const PFN_WaitForSingleObject = *const fn (
+    hHandle: HANDLE,
+    dwMilliseconds: DWORD,
+) callconv(.winapi) DWORD;
+
+pub const PFN_ReadFile = *const fn (
+    hFile: HANDLE,
+    lpBuffer: LPVOID,
+    nNumberOfBytesToRead: DWORD,
+    lpNumberOfBytesRead: ?*DWORD,
+    lpOverlapped: ?*OVERLAPPED,
+) callconv(.winapi) BOOL;
+
+pub const PFN_WriteFile = *const fn (
+    in_hFile: HANDLE,
+    in_lpBuffer: [*]const u8,
+    in_nNumberOfBytesToWrite: DWORD,
+    out_lpNumberOfBytesWritten: ?*DWORD,
+    in_out_lpOverlapped: ?*OVERLAPPED,
+) callconv(.winapi) BOOL;
+
+pub const PFN_DuplicateHandle = *const fn (
+    hSourceProcessHandle: HANDLE,
+    hSourceHandle: HANDLE,
+    hTargetProcessHandle: HANDLE,
+    lpTargetHandle: *HANDLE,
+    dwDesiredAccess: DWORD,
+    bInheritHandle: BOOL,
+    dwOptions: DWORD,
+) callconv(.winapi) BOOL;
+
+pub const PFN_GetCurrentThreadId = *const fn () callconv(.winapi) DWORD;
+
+pub const PFN_FreeLibrary = *const fn (hModule: HMODULE) callconv(.winapi) BOOL;
+
+pub const PFN_CreateThread = *const fn (
+    lpThreadAttributes: ?*SECURITY_ATTRIBUTES,
+    dwStackSize: SIZE_T,
+    lpStartAddress: LPTHREAD_START_ROUTINE,
+    lpParameter: ?LPVOID,
+    dwCreationFlags: DWORD,
+    lpThreadId: ?*DWORD,
+) callconv(.winapi) ?HANDLE;
+
+pub const PFN_GetSystemInfo = *const fn (lpSystemInfo: *SYSTEM_INFO) callconv(.winapi) void;
+
+pub const PFN_VirtualFreeEx = *const fn (
+    hProcess: HANDLE,
+    lpAddress: ?LPVOID,
+    dwSize: SIZE_T,
+    dwFreeType: DWORD,
+) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn GetModuleFileNameA(
+    hModule: ?HMODULE,
+    lpFilename: LPSTR,
+    nSize: DWORD,
+) callconv(.winapi) DWORD;
+
+pub extern "kernel32" fn GetCurrentProcessId() callconv(WINAPI) DWORD;
+
+pub extern "kernel32" fn GetProcessId(hProcess: HANDLE) callconv(WINAPI) DWORD;
+
+pub extern "kernel32" fn GetCurrentThread() callconv(WINAPI) HANDLE;
+
+pub extern "kernel32" fn CloseHandle(hObject: HANDLE) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn FlushInstructionCache(
+    hProcess: HANDLE,
+    lpBaseAddress: ?LPCVOID,
+    dwSize: SIZE_T,
+) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn FreeConsole() callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn AttachConsole(
+    dwProcessId: DWORD,
+) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn IsWow64Process(
+    hProcess: HANDLE,
+    Wow64Process: *BOOL,
+) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn GetExitCodeProcess(
+    hProcess: HANDLE,
+    lpExitCode: *DWORD,
+) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn GetModuleHandleA(
+    lpModuleName: ?LPCSTR,
+) callconv(WINAPI) ?HMODULE;
+
+pub extern "kernel32" fn LoadLibraryA(
+    lpLibFileName: LPCSTR,
+) callconv(WINAPI) ?HMODULE;
+
+pub extern "kernel32" fn GetProcAddress(
+    hModule: HMODULE,
+    lpProcName: LPCSTR,
+) callconv(WINAPI) ?FARPROC;
+
+pub extern "kernel32" fn CreatePipe(
+    hReadPipe: *HANDLE,
+    hWritePipe: *HANDLE,
+    lpPipeAttributes: ?*SECURITY_ATTRIBUTES,
+    nSize: DWORD,
+) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn ResumeThread(
+    hThread: HANDLE,
+) callconv(WINAPI) DWORD;
+
+pub extern "kernel32" fn VirtualAllocEx(
+    hProcess: HANDLE,
+    lpAddress: ?LPVOID,
+    dwSize: SIZE_T,
+    flAllocationType: DWORD,
+    flProtect: DWORD,
+) callconv(WINAPI) ?LPVOID;
+
+pub extern "kernel32" fn VirtualProtectEx(
+    hProcess: HANDLE,
+    lpAddress: LPVOID,
+    dwSize: SIZE_T,
+    flNewProtect: DWORD,
+    lpflOldProtect: *DWORD,
+) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn CreateFileMappingA(
+    hFile: HANDLE,
+    lpFileMappingAttributes: ?*SECURITY_ATTRIBUTES,
+    flProtect: DWORD,
+    dwMaximumSizeHigh: DWORD,
+    dwMaximumSizeLow: DWORD,
+    lpName: ?LPCSTR,
+) callconv(WINAPI) ?HANDLE;
+
+pub extern "kernel32" fn GetThreadContext(
+    hThread: HANDLE,
+    lpContext: *CONTEXT,
+) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn GetThreadId(
+    hThread: HANDLE,
+) callconv(WINAPI) DWORD;
+
+pub extern "kernel32" fn SetThreadContext(
+    hThread: HANDLE,
+    lpContext: *const CONTEXT,
+) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn MapViewOfFile(
+    hFileMappingObject: HANDLE,
+    dwDesiredAccess: DWORD,
+    dwFileOffsetHigh: DWORD,
+    dwFileOffsetLow: DWORD,
+    dwNumberOfBytesToMap: SIZE_T,
+) callconv(WINAPI) LPVOID;
+
+pub extern "kernel32" fn UnmapViewOfFile(lpBaseAddress: LPCVOID) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn OpenProcess(
+    dwDesiredAccess: DWORD,
+    bInheritHandle: BOOL,
+    dwProcessId: DWORD,
+) callconv(WINAPI) ?HANDLE;
+
+pub extern "kernel32" fn OpenThread(
+    dwDesiredAccess: DWORD,
+    bInheritHandle: BOOL,
+    dwThreadId: DWORD,
+) callconv(WINAPI) ?HANDLE;
+
+pub extern "kernel32" fn WriteProcessMemory(
+    hProcess: HANDLE,
+    lpBaseAddress: LPVOID,
+    lpBuffer: LPCVOID,
+    nSize: SIZE_T,
+    lpNumberOfBytesWritten: ?*SIZE_T,
+) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn ReadProcessMemory(
+    hProcess: HANDLE,
+    lpBaseAddress: LPCVOID,
+    lpBuffer: LPVOID,
+    nSize: SIZE_T,
+    lpNumberOfBytesRead: ?*SIZE_T,
+) callconv(WINAPI) BOOL;
+
+pub extern "kernel32" fn CreateRemoteThread(
+    hProcess: HANDLE,
+    lpThreadAttributes: ?*SECURITY_ATTRIBUTES,
+    dwStackSize: SIZE_T,
+    lpStartAddress: LPTHREAD_START_ROUTINE,
+    lpParameter: ?LPVOID,
+    dwCreationFlags: DWORD,
+    lpThreadId: ?*DWORD,
+) callconv(WINAPI) ?HANDLE;
+
+const kernel32 = if (@import("options").bof) "KERNEL32$" else ""; // BOFs need LIBNAME$ prefix
+
+pub const VirtualAlloc = @extern(PFN_VirtualAlloc, .{ .name = kernel32 ++ "VirtualAlloc" });
+pub const VirtualQuery = @extern(PFN_VirtualQuery, .{ .name = kernel32 ++ "VirtualQuery" });
+pub const VirtualProtect = @extern(PFN_VirtualProtect, .{ .name = kernel32 ++ "VirtualProtect" });
+pub const VirtualFree = @extern(PFN_VirtualFree, .{ .name = kernel32 ++ "VirtualFree" });
+pub const GetLastError = @extern(PFN_GetLastError, .{ .name = kernel32 ++ "GetLastError" });
+pub const Sleep = @extern(PFN_Sleep, .{ .name = kernel32 ++ "Sleep" });
+pub const ExitProcess = @extern(PFN_ExitProcess, .{ .name = kernel32 ++ "ExitProcess" });
+pub const GetCurrentProcess = @extern(PFN_GetCurrentProcess, .{ .name = kernel32 ++ "GetCurrentProcess" });
+pub const GetCurrentThreadId = @extern(PFN_GetCurrentThreadId, .{ .name = kernel32 ++ "GetCurrentThreadId" });
+pub const FreeLibrary = @extern(PFN_FreeLibrary, .{ .name = kernel32 ++ "FreeLibrary" });
+pub const CreateThread = @extern(PFN_CreateThread, .{ .name = kernel32 ++ "CreateThread" });
+pub const GetSystemInfo = @extern(PFN_GetSystemInfo, .{ .name = kernel32 ++ "GetSystemInfo" });
+pub const VirtualFreeEx = @extern(PFN_VirtualFreeEx, .{ .name = kernel32 ++ "VirtualFreeEx" });
+pub const WriteFile = @extern(PFN_WriteFile, .{ .name = kernel32 ++ "WriteFile" });
+pub const DuplicateHandle = @extern(PFN_DuplicateHandle, .{ .name = kernel32 ++ "DuplicateHandle" });
+pub const ReadFile = @extern(PFN_ReadFile, .{ .name = kernel32 ++ "ReadFile" });
+pub const WaitForSingleObject = @extern(PFN_WaitForSingleObject, .{ .name = kernel32 ++ "WaitForSingleObject" });
+
+//
+// NTDLL functions
+//
+pub const PFN_RtlGetVersion = *const fn (
+    lpVersionInformation: *RTL_OSVERSIONINFOW,
+) callconv(.winapi) NTSTATUS;
+
+pub const NtQueryInformationProcess = windows.ntdll.NtQueryInformationProcess;
+
+pub fn NtCurrentProcess() HANDLE {
+    return @ptrFromInt(@as(usize, @bitCast(@as(isize, -1))));
+}
+pub fn NtCurrentThread() HANDLE {
+    return @ptrFromInt(@as(usize, @bitCast(@as(isize, -2))));
+}
+pub fn NtCurrentSession() HANDLE {
+    return @ptrFromInt(@as(usize, @bitCast(@as(isize, -3))));
+}
+
+pub extern "ntdll" fn RtlCloneUserProcess(
+    ProcessFlags: ULONG,
+    ProcessSecurityDescriptor: ?PSECURITY_DESCRIPTOR,
+    ThreadSecurityDescriptor: ?PSECURITY_DESCRIPTOR,
+    DebugPort: ?HANDLE,
+    ProcessInformation: *RTL_USER_PROCESS_INFORMATION,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtResumeThread(
+    ThreadHandle: HANDLE,
+    PreviousSuspendCount: ?*ULONG,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtSuspendThread(
+    ThreadHandle: HANDLE,
+    PreviousSuspendCount: ?*ULONG,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtTerminateThread(
+    ThreadHandle: ?HANDLE,
+    ExitStatus: NTSTATUS,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtTerminateProcess(
+    ProcessHandle: ?HANDLE,
+    ExitStatus: NTSTATUS,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtOpenProcess(
+    ProcessHandle: *HANDLE,
+    DesiredAccess: ACCESS_MASK,
+    ObjectAttributes: *OBJECT_ATTRIBUTES,
+    ClientId: ?*CLIENT_ID,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtResumeProcess(
+    ProcessHandle: HANDLE,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtSuspendProcess(
+    ProcessHandle: HANDLE,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtCreateJobObject(
+    JobHandle: *HANDLE,
+    DesiredAccess: ACCESS_MASK,
+    ObjectAttributes: ?*OBJECT_ATTRIBUTES,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtAssignProcessToJobObject(
+    JobHandle: HANDLE,
+    ProcessHandle: HANDLE,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtTerminateJobObject(
+    JobHandle: HANDLE,
+    ExitStatus: NTSTATUS,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtIsProcessInJob(
+    ProcessHandle: HANDLE,
+    JobHandle: ?HANDLE,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtSetInformationJobObject(
+    JobHandle: HANDLE,
+    JobObjectInformationClass: JOBOBJECTINFOCLASS,
+    JobObjectInformation: PVOID,
+    JobObjectInformationLength: ULONG,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtClose(
+    Handle: HANDLE,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn RtlWow64EnableFsRedirection(
+    Wow64FsEnableRedirection: BOOLEAN,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtAllocateVirtualMemory(
+    ProcessHandle: HANDLE,
+    BaseAddress: *PVOID,
+    ZeroBits: ULONG_PTR,
+    RegionSize: *SIZE_T,
+    AllocationType: ULONG,
+    Protect: ULONG,
+) callconv(WINAPI) NTSTATUS;
+
+pub const NtWriteVirtualMemory = windows.ntdll.NtWriteVirtualMemory;
+pub const NtProtectVirtualMemory = windows.ntdll.NtProtectVirtualMemory;
+
+pub extern "ntdll" fn NtCreateThreadEx(
+    ThreadHandle: *HANDLE,
+    DesiredAccess: ACCESS_MASK,
+    ObjectAttributes: ?*OBJECT_ATTRIBUTES,
+    ProcessHandle: HANDLE,
+    StartRoutine: PVOID,
+    Argument: ?PVOID,
+    CreateFlags: ULONG,
+    ZeroBits: SIZE_T,
+    StackSize: SIZE_T,
+    MaximumStackSize: SIZE_T,
+    AttributeList: ?*anyopaque, // TODO: ?*PS_ATTRIBUTE_LIST,
+) callconv(WINAPI) NTSTATUS;
+
+pub extern "ntdll" fn NtCreateUserProcess(
+    ProcessHandle: *HANDLE,
+    ThreadHandle: *HANDLE,
+    ProcessDesiredAccess: ACCESS_MASK,
+    ThreadDesiredAccess: ACCESS_MASK,
+    ProcessObjectAttributes: ?*OBJECT_ATTRIBUTES,
+    ThreadObjectAttributes: ?*OBJECT_ATTRIBUTES,
+    ProcessFlags: ULONG,
+    ThreadFlags: ULONG,
+    ProcessParameters: ?PVOID,
+    CreateInfo: *PS_CREATE_INFO,
+    AttributeList: ?*anyopaque, // TODO: ?*PS_ATTRIBUTE_LIST,
+) callconv(WINAPI) NTSTATUS;
+
+const ntdll = if (@import("options").bof) "NTDLL$" else ""; // BOFs need LIBNAME$ prefix
+
+pub const RtlGetVersion = @extern(PFN_RtlGetVersion, .{ .name = ntdll ++ "RtlGetVersion" });
+
+//
+// ADVAPI32 functions
+//
+pub extern "advapi32" fn OpenProcessToken(
+    ProcessHandle: HANDLE,
+    DesiredAccess: DWORD,
+    TokenHandle: *HANDLE,
+) callconv(WINAPI) BOOL;
+
+pub extern "advapi32" fn GetTokenInformation(
+    TokenHandle: HANDLE,
+    TokenInformationClass: TOKEN_INFORMATION_CLASS,
+    TokenInformation: ?*anyopaque,
+    TokenInformationLength: DWORD,
+    ReturnLength: *DWORD,
+) callconv(WINAPI) BOOL;
+
+//
+// USER32 functions
+//
+pub extern "user32" fn MessageBoxA(?HWND, ?LPCSTR, ?LPCSTR, UINT) callconv(WINAPI) c_int;
+pub extern "user32" fn EnumWindows(lpEnumFunc: WNDENUMPROC, lParam: LPARAM) callconv(WINAPI) BOOL;
+pub extern "user32" fn GetWindowThreadProcessId(hWnd: HWND, lpdwProcessId: ?*DWORD) callconv(WINAPI) DWORD;
+pub extern "user32" fn SetForegroundWindow(hWnd: HWND) callconv(WINAPI) BOOL;
+pub extern "user32" fn GetForegroundWindow() callconv(WINAPI) ?HWND;
+
+//
+// OLE32 functions
+//
+pub extern "ole32" fn CoInitializeEx(pvReserved: ?LPVOID, dwCoInit: DWORD) callconv(WINAPI) HRESULT;
+pub extern "ole32" fn CoUninitialize() callconv(WINAPI) void;
+pub extern "ole32" fn CoTaskMemAlloc(size: SIZE_T) callconv(WINAPI) ?LPVOID;
+pub extern "ole32" fn CoTaskMemFree(pv: LPVOID) callconv(WINAPI) void;
+pub extern "ole32" fn CoGetCurrentProcess() callconv(WINAPI) DWORD;
+pub extern "ole32" fn CoGetCallerTID(lpdwTID: *DWORD) callconv(WINAPI) HRESULT;
+
+//
+// WS2_32 functions
+//
+pub const WSAStartup = windows.ws2_32.WSAStartup;
+pub const WSACleanup = windows.ws2_32.WSACleanup;
+pub const WSASocketW = windows.ws2_32.WSASocketW;
+pub const WSAGetLastError = windows.ws2_32.WSAGetLastError;
+pub const closesocket = windows.ws2_32.closesocket;
