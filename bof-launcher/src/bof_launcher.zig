@@ -2674,12 +2674,7 @@ var zgateFlushInstructionCachePtr: *const fn (
     w32.SIZE_T,
 ) callconv(w32.WINAPI) w32.BOOL linksection(zgate_dsection) = undefined;
 
-var zgateVirtualAllocPtr: *const fn (
-    ?w32.LPVOID,
-    w32.SIZE_T,
-    w32.DWORD,
-    w32.DWORD,
-) callconv(w32.WINAPI) ?w32.LPVOID linksection(zgate_dsection) = undefined;
+var zgateVirtualAllocPtr: w32.PFN_VirtualAlloc linksection(zgate_dsection) = undefined;
 
 var zgateVirtualAllocExPtr: *const fn (
     w32.HANDLE,
@@ -2695,18 +2690,8 @@ var zgateVirtualFreePtr: *const fn (
     w32.DWORD,
 ) callconv(w32.WINAPI) w32.BOOL linksection(zgate_dsection) = undefined;
 
-var zgateVirtualQueryPtr: *const fn (
-    ?w32.LPVOID,
-    w32.PMEMORY_BASIC_INFORMATION,
-    w32.SIZE_T,
-) callconv(w32.WINAPI) w32.SIZE_T linksection(zgate_dsection) = undefined;
-
-var zgateVirtualProtectPtr: *const fn (
-    w32.LPVOID,
-    w32.SIZE_T,
-    w32.DWORD,
-    *w32.DWORD,
-) callconv(w32.WINAPI) w32.BOOL linksection(zgate_dsection) = undefined;
+var zgateVirtualQueryPtr: w32.PFN_VirtualQuery linksection(zgate_dsection) = undefined;
+var zgateVirtualProtectPtr: w32.PFN_VirtualProtect linksection(zgate_dsection) = undefined;
 
 var zgateVirtualProtectExPtr: *const fn (
     w32.HANDLE,

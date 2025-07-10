@@ -83,16 +83,6 @@ pub fn build(b: *std.Build) !void {
 
     bofs_to_build = genBofList(b, optimize);
 
-    const win32_dep = b.dependency("bof_launcher_win32", .{});
-
-    const bof_api_module = b.addModule("bof_api", .{
-        .root_source_file = b.path("src/include/bof_api.zig"),
-    });
-    bof_api_module.addAnonymousImport(
-        "bof_launcher_win32",
-        .{ .root_source_file = win32_dep.path("src/win32.zig") },
-    );
-
     try generateBofCollectionYaml(b);
 
     for (bofs_to_build) |bof| {
@@ -111,6 +101,13 @@ pub fn build(b: *std.Build) !void {
         const full_name = bof.fullName(b.allocator);
 
         if (bof.optimize == .Debug) {
+            const win32_dep = b.dependency("bof_launcher_win32", .{ .bof = false });
+            const win32_module = win32_dep.module("bof_launcher_win32");
+            const bof_api_module = b.addModule("bof_api", .{
+                .root_source_file = b.path("src/include/bof_api.zig"),
+            });
+            bof_api_module.addImport("bof_launcher_win32", win32_module);
+
             const debug_obj = try addBofObj(
                 b,
                 bof,
@@ -134,6 +131,13 @@ pub fn build(b: *std.Build) !void {
             debug_exe.addObject(debug_obj);
             b.installArtifact(debug_exe);
         } else {
+            const win32_dep = b.dependency("bof_launcher_win32", .{ .bof = true });
+            const win32_module = win32_dep.module("bof_launcher_win32");
+            const bof_api_module = b.addModule("bof_api", .{
+                .root_source_file = b.path("src/include/bof_api.zig"),
+            });
+            bof_api_module.addImport("bof_launcher_win32", win32_module);
+
             const obj = try addBofObj(
                 b,
                 bof,

@@ -46,6 +46,8 @@ pub const PMEMORY_BASIC_INFORMATION = windows.PMEMORY_BASIC_INFORMATION;
 pub const SYSTEM_INFO = windows.SYSTEM_INFO;
 pub const LPARAM = windows.LPARAM;
 pub const WNDENUMPROC = *const fn (HWND, LPARAM) callconv(WINAPI) BOOL;
+pub const FILE_BOTH_DIR_INFORMATION = windows.FILE_BOTH_DIR_INFORMATION;
+pub const FILE_BOTH_DIRECTORY_INFORMATION = windows.FILE_BOTH_DIRECTORY_INFORMATION;
 
 pub const INFINITE = windows.INFINITE;
 pub const WAIT_FAILED = windows.WAIT_FAILED;
@@ -344,21 +346,45 @@ pub const JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION = 0x00000400;
 pub const JOB_OBJECT_LIMIT_BREAKAWAY_OK = 0x00000800;
 pub const JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000;
 
-// kernel32
-pub const VirtualAlloc = windows.kernel32.VirtualAlloc;
-pub const VirtualQuery = windows.kernel32.VirtualQuery;
+pub const WAIT_OBJECT_0 = 0;
 
-pub extern "kernel32" fn VirtualProtect(
+//
+// kernel32 functions
+//
+const kernel32 = if (@import("options").bof) "KERNEL32$" else ""; // BOFs need LIBNAME$ prefix
+
+pub const VirtualAlloc = @extern(PFN_VirtualAlloc, .{ .name = kernel32 ++ "VirtualAlloc" });
+pub const PFN_VirtualAlloc = *const fn (
+    lpAddress: ?LPVOID,
+    dwSize: SIZE_T,
+    flAllocationType: DWORD,
+    flProtect: DWORD,
+) callconv(.winapi) ?LPVOID;
+
+pub const VirtualQuery = @extern(PFN_VirtualQuery, .{ .name = kernel32 ++ "VirtualQuery" });
+pub const PFN_VirtualQuery = *const fn (
+    lpAddress: ?LPVOID,
+    lpBuffer: PMEMORY_BASIC_INFORMATION,
+    dwLength: SIZE_T,
+) callconv(.winapi) SIZE_T;
+
+pub const VirtualProtect = @extern(PFN_VirtualProtect, .{ .name = kernel32 ++ "VirtualProtect" });
+pub const PFN_VirtualProtect = *const fn (
     lpAddress: LPVOID,
     dwSize: SIZE_T,
     flNewProtect: DWORD,
     lpflOldProtect: *DWORD,
-) callconv(WINAPI) BOOL;
+) callconv(.winapi) BOOL;
 
-pub const WAIT_OBJECT_0 = 0;
+pub const VirtualFree = @extern(PFN_VirtualFree, .{ .name = kernel32 ++ "VirtualFree" });
+pub const PFN_VirtualFree = *const fn (
+    lpAddress: ?LPVOID,
+    dwSize: SIZE_T,
+    dwFreeType: DWORD,
+) callconv(.winapi) BOOL;
 
-pub const VirtualFree = windows.kernel32.VirtualFree;
 pub const GetLastError = windows.kernel32.GetLastError;
+
 pub const Sleep = windows.kernel32.Sleep;
 pub const ExitProcess = windows.kernel32.ExitProcess;
 pub const GetCurrentProcess = windows.kernel32.GetCurrentProcess;
@@ -382,7 +408,7 @@ pub extern "kernel32" fn GetModuleFileNameA(
     hModule: ?HMODULE,
     lpFilename: LPSTR,
     nSize: DWORD,
-) callconv(WINAPI) DWORD;
+) callconv(.winapi) DWORD;
 
 pub extern "kernel32" fn GetCurrentProcessId() callconv(WINAPI) DWORD;
 
