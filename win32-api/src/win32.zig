@@ -349,7 +349,7 @@ pub const JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000;
 pub const WAIT_OBJECT_0 = 0;
 
 //
-// kernel32 functions
+// KERNEL32 functions
 //
 const kernel32 = if (@import("options").bof) "KERNEL32$" else ""; // BOFs need LIBNAME$ prefix
 
