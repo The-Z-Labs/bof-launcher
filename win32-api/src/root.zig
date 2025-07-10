@@ -383,13 +383,24 @@ pub const PFN_VirtualFree = *const fn (
     dwFreeType: DWORD,
 ) callconv(.winapi) BOOL;
 
-pub const GetLastError = windows.kernel32.GetLastError;
+pub const GetLastError = @extern(PFN_GetLastError, .{ .name = kernel32 ++ "GetLastError" });
+pub const PFN_GetLastError = *const fn () callconv(.winapi) Win32Error;
 
-pub const Sleep = windows.kernel32.Sleep;
+pub const Sleep = @extern(PFN_Sleep, .{ .name = kernel32 ++ "Sleep" });
+pub const PFN_Sleep = *const fn (dwMilliseconds: DWORD) callconv(.winapi) void;
 
-pub const ExitProcess = windows.kernel32.ExitProcess;
-pub const GetCurrentProcess = windows.kernel32.GetCurrentProcess;
-pub const WaitForSingleObject = windows.kernel32.WaitForSingleObject;
+pub const ExitProcess = @extern(PFN_ExitProcess, .{ .name = kernel32 ++ "ExitProcess" });
+pub const PFN_ExitProcess = *const fn (uExitCode: UINT) callconv(.winapi) noreturn;
+
+pub const GetCurrentProcess = @extern(PFN_GetCurrentProcess, .{ .name = kernel32 ++ "GetCurrentProcess" });
+pub const PFN_GetCurrentProcess = *const fn () callconv(.winapi) HANDLE;
+
+pub const WaitForSingleObject = @extern(PFN_WaitForSingleObject, .{ .name = kernel32 ++ "WaitForSingleObject" });
+pub const PFN_WaitForSingleObject = *const fn (
+    hHandle: HANDLE,
+    dwMilliseconds: DWORD,
+) callconv(.winapi) DWORD;
+
 pub const ReadFile = windows.kernel32.ReadFile;
 pub const WriteFile = windows.kernel32.WriteFile;
 pub const DuplicateHandle = windows.kernel32.DuplicateHandle;

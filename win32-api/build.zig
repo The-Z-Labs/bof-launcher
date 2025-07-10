@@ -9,7 +9,7 @@ pub fn build(b: *std.Build) void {
     );
 
     const module = b.addModule("bof_launcher_win32", .{
-        .root_source_file = b.path("src/win32.zig"),
+        .root_source_file = b.path("src/root.zig"),
     });
     module.addOptions("options", options);
 }
