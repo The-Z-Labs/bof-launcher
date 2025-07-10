@@ -3,6 +3,7 @@ const windows = std.os.windows;
 
 pub const ATTACH_PARENT_PROCESS = 0xffff_ffff;
 
+pub const OVERLAPPED = windows.OVERLAPPED;
 pub const Win32Error = windows.Win32Error;
 pub const ULONG = windows.ULONG;
 pub const WCHAR = windows.WCHAR;
@@ -401,15 +402,56 @@ pub const PFN_WaitForSingleObject = *const fn (
     dwMilliseconds: DWORD,
 ) callconv(.winapi) DWORD;
 
-pub const ReadFile = windows.kernel32.ReadFile;
-pub const WriteFile = windows.kernel32.WriteFile;
-pub const DuplicateHandle = windows.kernel32.DuplicateHandle;
-pub const GetCurrentThreadId = windows.kernel32.GetCurrentThreadId;
-pub const FreeLibrary = windows.kernel32.FreeLibrary;
-pub const CreateThread = windows.kernel32.CreateThread;
-pub const GetSystemInfo = windows.kernel32.GetSystemInfo;
+pub const ReadFile = @extern(PFN_ReadFile, .{ .name = kernel32 ++ "ReadFile" });
+pub const PFN_ReadFile = *const fn (
+    hFile: HANDLE,
+    lpBuffer: LPVOID,
+    nNumberOfBytesToRead: DWORD,
+    lpNumberOfBytesRead: ?*DWORD,
+    lpOverlapped: ?*OVERLAPPED,
+) callconv(.winapi) BOOL;
 
-pub extern fn VirtualFreeEx(
+pub const WriteFile = @extern(PFN_WriteFile, .{ .name = kernel32 ++ "WriteFile" });
+pub const PFN_WriteFile = *const fn (
+    in_hFile: HANDLE,
+    in_lpBuffer: [*]const u8,
+    in_nNumberOfBytesToWrite: DWORD,
+    out_lpNumberOfBytesWritten: ?*DWORD,
+    in_out_lpOverlapped: ?*OVERLAPPED,
+) callconv(.winapi) BOOL;
+
+pub const DuplicateHandle = @extern(PFN_DuplicateHandle, .{ .name = kernel32 ++ "DuplicateHandle" });
+pub const PFN_DuplicateHandle = *const fn (
+    hSourceProcessHandle: HANDLE,
+    hSourceHandle: HANDLE,
+    hTargetProcessHandle: HANDLE,
+    lpTargetHandle: *HANDLE,
+    dwDesiredAccess: DWORD,
+    bInheritHandle: BOOL,
+    dwOptions: DWORD,
+) callconv(.winapi) BOOL;
+
+pub const GetCurrentThreadId = @extern(PFN_GetCurrentThreadId, .{ .name = kernel32 ++ "GetCurrentThreadId" });
+pub const PFN_GetCurrentThreadId = *const fn () callconv(.winapi) DWORD;
+
+pub const FreeLibrary = @extern(PFN_FreeLibrary, .{ .name = kernel32 ++ "FreeLibrary" });
+pub const PFN_FreeLibrary = *const fn (hModule: HMODULE) callconv(.winapi) BOOL;
+
+pub const CreateThread = @extern(PFN_CreateThread, .{ .name = kernel32 ++ "CreateThread" });
+pub const PFN_CreateThread = *const fn (
+    lpThreadAttributes: ?*SECURITY_ATTRIBUTES,
+    dwStackSize: SIZE_T,
+    lpStartAddress: LPTHREAD_START_ROUTINE,
+    lpParameter: ?LPVOID,
+    dwCreationFlags: DWORD,
+    lpThreadId: ?*DWORD,
+) callconv(.winapi) ?HANDLE;
+
+pub const GetSystemInfo = @extern(PFN_GetSystemInfo, .{ .name = kernel32 ++ "GetSystemInfo" });
+pub const PFN_GetSystemInfo = *const fn (lpSystemInfo: *SYSTEM_INFO) callconv(.winapi) void;
+
+pub const VirtualFreeEx = @extern(PFN_VirtualFreeEx, .{ .name = kernel32 ++ "VirtualFreeEx" });
+pub const PFN_VirtualFreeEx = *const fn (
     hProcess: HANDLE,
     lpAddress: ?LPVOID,
     dwSize: SIZE_T,
