@@ -629,11 +629,11 @@ pub const PFN_ReadFile = *const fn (
 ) callconv(.winapi) BOOL;
 
 pub const PFN_WriteFile = *const fn (
-    in_hFile: HANDLE,
-    in_lpBuffer: [*]const u8,
-    in_nNumberOfBytesToWrite: DWORD,
-    out_lpNumberOfBytesWritten: ?*DWORD,
-    in_out_lpOverlapped: ?*OVERLAPPED,
+    hFile: HANDLE,
+    lpBuffer: LPCVOID,
+    nNumberOfBytesToWrite: DWORD,
+    lpNumberOfBytesWritten: ?*DWORD,
+    lpOverlapped: ?*OVERLAPPED,
 ) callconv(.winapi) BOOL;
 
 pub const PFN_DuplicateHandle = *const fn (
@@ -690,9 +690,7 @@ pub const PFN_FlushInstructionCache = *const fn (
 
 pub const PFN_FreeConsole = *const fn () callconv(.winapi) BOOL;
 
-pub const PFN_AttachConsole = *const fn (
-    dwProcessId: DWORD,
-) callconv(.winapi) BOOL;
+pub const PFN_AttachConsole = *const fn (dwProcessId: DWORD) callconv(.winapi) BOOL;
 
 pub const PFN_IsWow64Process = *const fn (
     hProcess: HANDLE,
@@ -704,13 +702,9 @@ pub const PFN_GetExitCodeProcess = *const fn (
     lpExitCode: *DWORD,
 ) callconv(.winapi) BOOL;
 
-pub const PFN_GetModuleHandleA = *const fn (
-    lpModuleName: ?LPCSTR,
-) callconv(.winapi) ?HMODULE;
+pub const PFN_GetModuleHandleA = *const fn (lpModuleName: ?LPCSTR) callconv(.winapi) ?HMODULE;
 
-pub const PFN_LoadLibraryA = *const fn (
-    lpLibFileName: LPCSTR,
-) callconv(.winapi) ?HMODULE;
+pub const PFN_LoadLibraryA = *const fn (lpLibFileName: LPCSTR) callconv(.winapi) ?HMODULE;
 
 pub const PFN_GetProcAddress = *const fn (
     hModule: HMODULE,
@@ -724,9 +718,7 @@ pub const PFN_CreatePipe = *const fn (
     nSize: DWORD,
 ) callconv(.winapi) BOOL;
 
-pub const PFN_ResumeThread = *const fn (
-    hThread: HANDLE,
-) callconv(.winapi) DWORD;
+pub const PFN_ResumeThread = *const fn (hThread: HANDLE) callconv(.winapi) DWORD;
 
 pub const PFN_VirtualAllocEx = *const fn (
     hProcess: HANDLE,
@@ -758,9 +750,7 @@ pub const PFN_GetThreadContext = *const fn (
     lpContext: *CONTEXT,
 ) callconv(.winapi) BOOL;
 
-pub const PFN_GetThreadId = *const fn (
-    hThread: HANDLE,
-) callconv(.winapi) DWORD;
+pub const PFN_GetThreadId = *const fn (hThread: HANDLE) callconv(.winapi) DWORD;
 
 pub const PFN_SetThreadContext = *const fn (
     hThread: HANDLE,
@@ -1049,8 +1039,6 @@ pub const CreateRemoteThread = def(PFN_CreateRemoteThread, "CreateRemoteThread",
 //
 const ntdll = if (@import("options").bof) "NTDLL$" else ""; // BOFs need LIBNAME$ prefix
 
-pub const RtlGetVersion = def(PFN_RtlGetVersion, "RtlGetVersion", ntdll);
-pub const RtlCloneUserProcess = def(PFN_RtlCloneUserProcess, "RtlCloneUserProcess", ntdll);
 pub const NtResumeThread = def(PFN_NtResumeThread, "NtResumeThread", ntdll);
 pub const NtSuspendThread = def(PFN_NtSuspendThread, "NtSuspendThread", ntdll);
 pub const NtTerminateThread = def(PFN_NtTerminateThread, "NtTerminateThread", ntdll);
@@ -1064,12 +1052,14 @@ pub const NtTerminateJobObject = def(PFN_NtTerminateJobObject, "NtTerminateJobOb
 pub const NtIsProcessInJob = def(PFN_NtIsProcessInJob, "NtIsProcessInJob", ntdll);
 pub const NtSetInformationJobObject = def(PFN_NtSetInformationJobObject, "NtSetInformationJobObject", ntdll);
 pub const NtClose = def(PFN_NtClose, "NtClose", ntdll);
-pub const RtlWow64EnableFsRedirection = def(PFN_RtlWow64EnableFsRedirection, "RtlWow64EnableFsRedirection", ntdll);
 pub const NtAllocateVirtualMemory = def(PFN_NtAllocateVirtualMemory, "NtAllocateVirtualMemory", ntdll);
 pub const NtWriteVirtualMemory = def(PFN_NtWriteVirtualMemory, "NtWriteVirtualMemory", ntdll);
 pub const NtProtectVirtualMemory = def(PFN_NtProtectVirtualMemory, "NtProtectVirtualMemory", ntdll);
 pub const NtCreateThreadEx = def(PFN_NtCreateThreadEx, "NtCreateThreadEx", ntdll);
 pub const NtCreateUserProcess = def(PFN_NtCreateUserProcess, "NtCreateUserProcess", ntdll);
+pub const RtlGetVersion = def(PFN_RtlGetVersion, "RtlGetVersion", ntdll);
+pub const RtlCloneUserProcess = def(PFN_RtlCloneUserProcess, "RtlCloneUserProcess", ntdll);
+pub const RtlWow64EnableFsRedirection = def(PFN_RtlWow64EnableFsRedirection, "RtlWow64EnableFsRedirection", ntdll);
 
 pub fn NtCurrentProcess() HANDLE {
     return @ptrFromInt(@as(usize, @bitCast(@as(isize, -1))));
