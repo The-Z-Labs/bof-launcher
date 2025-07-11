@@ -668,7 +668,7 @@ pub const PFN_VirtualFreeEx = *const fn (
     dwFreeType: DWORD,
 ) callconv(WINAPI) BOOL;
 
-pub extern "kernel32" fn GetModuleFileNameA(
+pub const PFN_GetModuleFileNameA = *const fn (
     hModule: ?HMODULE,
     lpFilename: LPSTR,
     nSize: DWORD,
@@ -815,25 +815,30 @@ pub extern "kernel32" fn CreateRemoteThread(
     lpThreadId: ?*DWORD,
 ) callconv(WINAPI) ?HANDLE;
 
+fn def(comptime T: type, name: []const u8, prefix: []const u8) if (@import("options").define_functions) T else void {
+    return if (@import("options").define_functions) @extern(T, .{ .name = prefix ++ name }) else {};
+}
+
 const kernel32 = if (@import("options").bof) "KERNEL32$" else ""; // BOFs need LIBNAME$ prefix
 
-pub const VirtualAlloc = @extern(PFN_VirtualAlloc, .{ .name = kernel32 ++ "VirtualAlloc" });
-pub const VirtualQuery = @extern(PFN_VirtualQuery, .{ .name = kernel32 ++ "VirtualQuery" });
-pub const VirtualProtect = @extern(PFN_VirtualProtect, .{ .name = kernel32 ++ "VirtualProtect" });
-pub const VirtualFree = @extern(PFN_VirtualFree, .{ .name = kernel32 ++ "VirtualFree" });
-pub const GetLastError = @extern(PFN_GetLastError, .{ .name = kernel32 ++ "GetLastError" });
-pub const Sleep = @extern(PFN_Sleep, .{ .name = kernel32 ++ "Sleep" });
-pub const ExitProcess = @extern(PFN_ExitProcess, .{ .name = kernel32 ++ "ExitProcess" });
-pub const GetCurrentProcess = @extern(PFN_GetCurrentProcess, .{ .name = kernel32 ++ "GetCurrentProcess" });
-pub const GetCurrentThreadId = @extern(PFN_GetCurrentThreadId, .{ .name = kernel32 ++ "GetCurrentThreadId" });
-pub const FreeLibrary = @extern(PFN_FreeLibrary, .{ .name = kernel32 ++ "FreeLibrary" });
-pub const CreateThread = @extern(PFN_CreateThread, .{ .name = kernel32 ++ "CreateThread" });
-pub const GetSystemInfo = @extern(PFN_GetSystemInfo, .{ .name = kernel32 ++ "GetSystemInfo" });
-pub const VirtualFreeEx = @extern(PFN_VirtualFreeEx, .{ .name = kernel32 ++ "VirtualFreeEx" });
-pub const WriteFile = @extern(PFN_WriteFile, .{ .name = kernel32 ++ "WriteFile" });
-pub const DuplicateHandle = @extern(PFN_DuplicateHandle, .{ .name = kernel32 ++ "DuplicateHandle" });
-pub const ReadFile = @extern(PFN_ReadFile, .{ .name = kernel32 ++ "ReadFile" });
-pub const WaitForSingleObject = @extern(PFN_WaitForSingleObject, .{ .name = kernel32 ++ "WaitForSingleObject" });
+pub const VirtualAlloc = def(PFN_VirtualAlloc, "VirtualAlloc", kernel32);
+pub const VirtualQuery = def(PFN_VirtualQuery, "VirtualQuery", kernel32);
+pub const VirtualProtect = def(PFN_VirtualProtect, "VirtualProtect", kernel32);
+pub const VirtualFree = def(PFN_VirtualFree, "VirtualFree", kernel32);
+pub const GetLastError = def(PFN_GetLastError, "GetLastError", kernel32);
+pub const Sleep = def(PFN_Sleep, "Sleep", kernel32);
+pub const ExitProcess = def(PFN_ExitProcess, "ExitProcess", kernel32);
+pub const GetCurrentProcess = def(PFN_GetCurrentProcess, "GetCurrentProcess", kernel32);
+pub const GetCurrentThreadId = def(PFN_GetCurrentThreadId, "GetCurrentThreadId", kernel32);
+pub const FreeLibrary = def(PFN_FreeLibrary, "FreeLibrary", kernel32);
+pub const CreateThread = def(PFN_CreateThread, "CreateThread", kernel32);
+pub const GetSystemInfo = def(PFN_GetSystemInfo, "GetSystemInfo", kernel32);
+pub const VirtualFreeEx = def(PFN_VirtualFreeEx, "VirtualFreeEx", kernel32);
+pub const WriteFile = def(PFN_WriteFile, "WriteFile", kernel32);
+pub const DuplicateHandle = def(PFN_DuplicateHandle, "DuplicateHandle", kernel32);
+pub const ReadFile = def(PFN_ReadFile, "ReadFile", kernel32);
+pub const WaitForSingleObject = def(PFN_WaitForSingleObject, "WaitForSingleObject", kernel32);
+pub const GetModuleFileNameA = def(PFN_GetModuleFileNameA, "GetModuleFileNameA", kernel32);
 
 //
 // NTDLL functions
@@ -975,7 +980,7 @@ pub extern "ntdll" fn NtCreateUserProcess(
 
 const ntdll = if (@import("options").bof) "NTDLL$" else ""; // BOFs need LIBNAME$ prefix
 
-pub const RtlGetVersion = @extern(PFN_RtlGetVersion, .{ .name = ntdll ++ "RtlGetVersion" });
+pub const RtlGetVersion = def(PFN_RtlGetVersion, "RtlGetVersion", ntdll);
 
 //
 // ADVAPI32 functions
