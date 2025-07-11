@@ -977,12 +977,20 @@ pub const PFN_GetForegroundWindow = *const fn () callconv(.winapi) ?HWND;
 //
 // OLE32 function types
 //
-pub extern "ole32" fn CoInitializeEx(pvReserved: ?LPVOID, dwCoInit: DWORD) callconv(.winapi) HRESULT;
-pub extern "ole32" fn CoUninitialize() callconv(.winapi) void;
-pub extern "ole32" fn CoTaskMemAlloc(size: SIZE_T) callconv(.winapi) ?LPVOID;
-pub extern "ole32" fn CoTaskMemFree(pv: LPVOID) callconv(.winapi) void;
-pub extern "ole32" fn CoGetCurrentProcess() callconv(.winapi) DWORD;
-pub extern "ole32" fn CoGetCallerTID(lpdwTID: *DWORD) callconv(.winapi) HRESULT;
+pub const PFN_CoInitializeEx = *const fn (
+    pvReserved: ?LPVOID,
+    dwCoInit: DWORD,
+) callconv(.winapi) HRESULT;
+
+pub const PFN_CoUninitialize = *const fn () callconv(.winapi) void;
+
+pub const PFN_CoTaskMemAlloc = *const fn (size: SIZE_T) callconv(.winapi) ?LPVOID;
+
+pub const PFN_CoTaskMemFree = *const fn (pv: LPVOID) callconv(.winapi) void;
+
+pub const PFN_CoGetCurrentProcess = *const fn () callconv(.winapi) DWORD;
+
+pub const PFN_CoGetCallerTID = *const fn (lpdwTID: *DWORD) callconv(.winapi) HRESULT;
 
 //
 // WS2_32 functions
@@ -1095,3 +1103,15 @@ pub const EnumWindows = def(PFN_EnumWindows, "EnumWindows", user32);
 pub const GetWindowThreadProcessId = def(PFN_GetWindowThreadProcessId, "GetWindowThreadProcessId", user32);
 pub const SetForegroundWindow = def(PFN_SetForegroundWindow, "SetForegroundWindow", user32);
 pub const GetForegroundWindow = def(PFN_GetForegroundWindow, "GetForegroundWindow", user32);
+
+//
+// OLE32 function definitions
+//
+const ole32 = if (@import("options").bof) "OLE32$" else ""; // BOFs need LIBNAME$ prefix
+
+pub const CoInitializeEx = def(PFN_CoInitializeEx, "CoInitializeEx", ole32);
+pub const CoUninitialize = def(PFN_CoUninitialize, "CoUninitialize", ole32);
+pub const CoTaskMemAlloc = def(PFN_CoTaskMemAlloc, "CoTaskMemAlloc", ole32);
+pub const CoTaskMemFree = def(PFN_CoTaskMemFree, "CoTaskMemFree", ole32);
+pub const CoGetCurrentProcess = def(PFN_CoGetCurrentProcess, "CoGetCurrentProcess", ole32);
+pub const CoGetCallerTID = def(PFN_CoGetCallerTID, "CoGetCallerTID", ole32);
