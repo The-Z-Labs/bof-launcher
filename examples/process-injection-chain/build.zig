@@ -14,12 +14,9 @@ pub fn build(b: *std.Build) void {
     );
 
     const bofs_dep = b.dependency("bof_launcher_bofs", .{ .optimize = optimize });
-    const bof_api_module = bofs_dep.module("bof_api");
 
-    const shared_module = b.addModule("shared", .{
-        .root_source_file = bofs_dep.path("src/process-injection-chain/wInjectionChainShared.zig"),
-    });
-    shared_module.addImport("bof_api", bof_api_module);
+    const win32_dep = b.dependency("bof_launcher_win32", .{});
+    const win32_module = win32_dep.module("bof_launcher_win32");
 
     const exe = b.addExecutable(.{
         .name = b.fmt(
@@ -35,8 +32,11 @@ pub fn build(b: *std.Build) void {
     });
     exe.linkLibrary(bof_launcher_lib);
     exe.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
-    exe.root_module.addImport("bof_api", bof_api_module);
-    exe.root_module.addImport("shared", shared_module);
+    exe.root_module.addImport("bof_launcher_win32", win32_module);
+    exe.root_module.addAnonymousImport(
+        "shared",
+        .{ .root_source_file = bofs_dep.path("src/process-injection-chain/wInjectionChainShared.zig") },
+    );
 
     b.installArtifact(exe);
 }

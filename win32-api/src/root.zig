@@ -1016,86 +1016,91 @@ pub const PFN_WSASocketW = *const fn (
 pub const PFN_closesocket = *const fn (s: SOCKET) callconv(.winapi) i32;
 
 //
-// KERNEL32 function definitions
+// Define WIN32 function
 //
-fn def(comptime T: type, name: []const u8, prefix: []const u8) if (@import("options").define_functions) T else void {
-    return if (@import("options").define_functions) @extern(T, .{ .name = prefix ++ name }) else {};
+pub fn def(
+    comptime T: type,
+    funcname: []const u8,
+    libname: []const u8,
+) if (@import("options").define_functions) T else void {
+    return if (@import("options").define_functions)
+        @extern(T, .{ .name = if (@import("options").bof) libname ++ "$" ++ funcname else funcname })
+    else {};
 }
 
-const kernel32 = if (@import("options").bof) "KERNEL32$" else ""; // BOFs need LIBNAME$ prefix
-
-pub const VirtualAlloc = def(PFN_VirtualAlloc, "VirtualAlloc", kernel32);
-pub const VirtualQuery = def(PFN_VirtualQuery, "VirtualQuery", kernel32);
-pub const VirtualProtect = def(PFN_VirtualProtect, "VirtualProtect", kernel32);
-pub const VirtualFree = def(PFN_VirtualFree, "VirtualFree", kernel32);
-pub const GetLastError = def(PFN_GetLastError, "GetLastError", kernel32);
-pub const Sleep = def(PFN_Sleep, "Sleep", kernel32);
-pub const ExitProcess = def(PFN_ExitProcess, "ExitProcess", kernel32);
-pub const GetCurrentProcess = def(PFN_GetCurrentProcess, "GetCurrentProcess", kernel32);
-pub const GetCurrentThreadId = def(PFN_GetCurrentThreadId, "GetCurrentThreadId", kernel32);
-pub const FreeLibrary = def(PFN_FreeLibrary, "FreeLibrary", kernel32);
-pub const CreateThread = def(PFN_CreateThread, "CreateThread", kernel32);
-pub const GetSystemInfo = def(PFN_GetSystemInfo, "GetSystemInfo", kernel32);
-pub const VirtualFreeEx = def(PFN_VirtualFreeEx, "VirtualFreeEx", kernel32);
-pub const WriteFile = def(PFN_WriteFile, "WriteFile", kernel32);
-pub const DuplicateHandle = def(PFN_DuplicateHandle, "DuplicateHandle", kernel32);
-pub const ReadFile = def(PFN_ReadFile, "ReadFile", kernel32);
-pub const WaitForSingleObject = def(PFN_WaitForSingleObject, "WaitForSingleObject", kernel32);
-pub const GetModuleFileNameA = def(PFN_GetModuleFileNameA, "GetModuleFileNameA", kernel32);
-pub const GetCurrentProcessId = def(PFN_GetCurrentProcessId, "GetCurrentProcessId", kernel32);
-pub const GetProcessId = def(PFN_GetProcessId, "GetProcessId", kernel32);
-pub const GetCurrentThread = def(PFN_GetCurrentThread, "GetCurrentThread", kernel32);
-pub const CloseHandle = def(PFN_CloseHandle, "CloseHandle", kernel32);
-pub const FlushInstructionCache = def(PFN_FlushInstructionCache, "FlushInstructionCache", kernel32);
-pub const FreeConsole = def(PFN_FreeConsole, "FreeConsole", kernel32);
-pub const AttachConsole = def(PFN_AttachConsole, "AttachConsole", kernel32);
-pub const IsWow64Process = def(PFN_IsWow64Process, "IsWow64Process", kernel32);
-pub const GetExitCodeProcess = def(PFN_GetExitCodeProcess, "GetExitCodeProcess", kernel32);
-pub const GetModuleHandleA = def(PFN_GetModuleHandleA, "GetModuleHandleA", kernel32);
-pub const LoadLibraryA = def(PFN_LoadLibraryA, "LoadLibraryA", kernel32);
-pub const GetProcAddress = def(PFN_GetProcAddress, "GetProcAddress", kernel32);
-pub const CreatePipe = def(PFN_CreatePipe, "CreatePipe", kernel32);
-pub const ResumeThread = def(PFN_ResumeThread, "ResumeThread", kernel32);
-pub const VirtualAllocEx = def(PFN_VirtualAllocEx, "VirtualAllocEx", kernel32);
-pub const VirtualProtectEx = def(PFN_VirtualProtectEx, "VirtualProtectEx", kernel32);
-pub const CreateFileMappingA = def(PFN_CreateFileMappingA, "CreateFileMappingA", kernel32);
-pub const GetThreadContext = def(PFN_GetThreadContext, "GetThreadContext", kernel32);
-pub const GetThreadId = def(PFN_GetThreadId, "GetThreadId", kernel32);
-pub const SetThreadContext = def(PFN_SetThreadContext, "SetThreadContext", kernel32);
-pub const MapViewOfFile = def(PFN_MapViewOfFile, "MapViewOfFile", kernel32);
-pub const UnmapViewOfFile = def(PFN_UnmapViewOfFile, "UnmapViewOfFile", kernel32);
-pub const OpenProcess = def(PFN_OpenProcess, "OpenProcess", kernel32);
-pub const OpenThread = def(PFN_OpenThread, "OpenThread", kernel32);
-pub const WriteProcessMemory = def(PFN_WriteProcessMemory, "WriteProcessMemory", kernel32);
-pub const ReadProcessMemory = def(PFN_ReadProcessMemory, "ReadProcessMemory", kernel32);
-pub const CreateRemoteThread = def(PFN_CreateRemoteThread, "CreateRemoteThread", kernel32);
+//
+// KERNEL32 function definitions
+//
+pub const VirtualAlloc = def(PFN_VirtualAlloc, "VirtualAlloc", "kernel32");
+pub const VirtualQuery = def(PFN_VirtualQuery, "VirtualQuery", "kernel32");
+pub const VirtualProtect = def(PFN_VirtualProtect, "VirtualProtect", "kernel32");
+pub const VirtualFree = def(PFN_VirtualFree, "VirtualFree", "kernel32");
+pub const GetLastError = def(PFN_GetLastError, "GetLastError", "kernel32");
+pub const Sleep = def(PFN_Sleep, "Sleep", "kernel32");
+pub const ExitProcess = def(PFN_ExitProcess, "ExitProcess", "kernel32");
+pub const GetCurrentProcess = def(PFN_GetCurrentProcess, "GetCurrentProcess", "kernel32");
+pub const GetCurrentThreadId = def(PFN_GetCurrentThreadId, "GetCurrentThreadId", "kernel32");
+pub const FreeLibrary = def(PFN_FreeLibrary, "FreeLibrary", "kernel32");
+pub const CreateThread = def(PFN_CreateThread, "CreateThread", "kernel32");
+pub const GetSystemInfo = def(PFN_GetSystemInfo, "GetSystemInfo", "kernel32");
+pub const VirtualFreeEx = def(PFN_VirtualFreeEx, "VirtualFreeEx", "kernel32");
+pub const WriteFile = def(PFN_WriteFile, "WriteFile", "kernel32");
+pub const DuplicateHandle = def(PFN_DuplicateHandle, "DuplicateHandle", "kernel32");
+pub const ReadFile = def(PFN_ReadFile, "ReadFile", "kernel32");
+pub const WaitForSingleObject = def(PFN_WaitForSingleObject, "WaitForSingleObject", "kernel32");
+pub const GetModuleFileNameA = def(PFN_GetModuleFileNameA, "GetModuleFileNameA", "kernel32");
+pub const GetCurrentProcessId = def(PFN_GetCurrentProcessId, "GetCurrentProcessId", "kernel32");
+pub const GetProcessId = def(PFN_GetProcessId, "GetProcessId", "kernel32");
+pub const GetCurrentThread = def(PFN_GetCurrentThread, "GetCurrentThread", "kernel32");
+pub const CloseHandle = def(PFN_CloseHandle, "CloseHandle", "kernel32");
+pub const FlushInstructionCache = def(PFN_FlushInstructionCache, "FlushInstructionCache", "kernel32");
+pub const FreeConsole = def(PFN_FreeConsole, "FreeConsole", "kernel32");
+pub const AttachConsole = def(PFN_AttachConsole, "AttachConsole", "kernel32");
+pub const IsWow64Process = def(PFN_IsWow64Process, "IsWow64Process", "kernel32");
+pub const GetExitCodeProcess = def(PFN_GetExitCodeProcess, "GetExitCodeProcess", "kernel32");
+pub const GetModuleHandleA = def(PFN_GetModuleHandleA, "GetModuleHandleA", "kernel32");
+pub const LoadLibraryA = def(PFN_LoadLibraryA, "LoadLibraryA", "kernel32");
+pub const GetProcAddress = def(PFN_GetProcAddress, "GetProcAddress", "kernel32");
+pub const CreatePipe = def(PFN_CreatePipe, "CreatePipe", "kernel32");
+pub const ResumeThread = def(PFN_ResumeThread, "ResumeThread", "kernel32");
+pub const VirtualAllocEx = def(PFN_VirtualAllocEx, "VirtualAllocEx", "kernel32");
+pub const VirtualProtectEx = def(PFN_VirtualProtectEx, "VirtualProtectEx", "kernel32");
+pub const CreateFileMappingA = def(PFN_CreateFileMappingA, "CreateFileMappingA", "kernel32");
+pub const GetThreadContext = def(PFN_GetThreadContext, "GetThreadContext", "kernel32");
+pub const GetThreadId = def(PFN_GetThreadId, "GetThreadId", "kernel32");
+pub const SetThreadContext = def(PFN_SetThreadContext, "SetThreadContext", "kernel32");
+pub const MapViewOfFile = def(PFN_MapViewOfFile, "MapViewOfFile", "kernel32");
+pub const UnmapViewOfFile = def(PFN_UnmapViewOfFile, "UnmapViewOfFile", "kernel32");
+pub const OpenProcess = def(PFN_OpenProcess, "OpenProcess", "kernel32");
+pub const OpenThread = def(PFN_OpenThread, "OpenThread", "kernel32");
+pub const WriteProcessMemory = def(PFN_WriteProcessMemory, "WriteProcessMemory", "kernel32");
+pub const ReadProcessMemory = def(PFN_ReadProcessMemory, "ReadProcessMemory", "kernel32");
+pub const CreateRemoteThread = def(PFN_CreateRemoteThread, "CreateRemoteThread", "kernel32");
 
 //
 // NTDLL function definitions
 //
-const ntdll = if (@import("options").bof) "NTDLL$" else ""; // BOFs need LIBNAME$ prefix
-
-pub const NtResumeThread = def(PFN_NtResumeThread, "NtResumeThread", ntdll);
-pub const NtSuspendThread = def(PFN_NtSuspendThread, "NtSuspendThread", ntdll);
-pub const NtTerminateThread = def(PFN_NtTerminateThread, "NtTerminateThread", ntdll);
-pub const NtTerminateProcess = def(PFN_NtTerminateProcess, "NtTerminateProcess", ntdll);
-pub const NtOpenProcess = def(PFN_NtOpenProcess, "NtOpenProcess", ntdll);
-pub const NtResumeProcess = def(PFN_NtResumeProcess, "NtResumeProcess", ntdll);
-pub const NtSuspendProcess = def(PFN_NtSuspendProcess, "NtSuspendProcess", ntdll);
-pub const NtCreateJobObject = def(PFN_NtCreateJobObject, "NtCreateJobObject", ntdll);
-pub const NtAssignProcessToJobObject = def(PFN_NtAssignProcessToJobObject, "NtAssignProcessToJobObject", ntdll);
-pub const NtTerminateJobObject = def(PFN_NtTerminateJobObject, "NtTerminateJobObject", ntdll);
-pub const NtIsProcessInJob = def(PFN_NtIsProcessInJob, "NtIsProcessInJob", ntdll);
-pub const NtSetInformationJobObject = def(PFN_NtSetInformationJobObject, "NtSetInformationJobObject", ntdll);
-pub const NtClose = def(PFN_NtClose, "NtClose", ntdll);
-pub const NtAllocateVirtualMemory = def(PFN_NtAllocateVirtualMemory, "NtAllocateVirtualMemory", ntdll);
-pub const NtWriteVirtualMemory = def(PFN_NtWriteVirtualMemory, "NtWriteVirtualMemory", ntdll);
-pub const NtProtectVirtualMemory = def(PFN_NtProtectVirtualMemory, "NtProtectVirtualMemory", ntdll);
-pub const NtCreateThreadEx = def(PFN_NtCreateThreadEx, "NtCreateThreadEx", ntdll);
-pub const NtCreateUserProcess = def(PFN_NtCreateUserProcess, "NtCreateUserProcess", ntdll);
-pub const RtlGetVersion = def(PFN_RtlGetVersion, "RtlGetVersion", ntdll);
-pub const RtlCloneUserProcess = def(PFN_RtlCloneUserProcess, "RtlCloneUserProcess", ntdll);
-pub const RtlWow64EnableFsRedirection = def(PFN_RtlWow64EnableFsRedirection, "RtlWow64EnableFsRedirection", ntdll);
+pub const NtResumeThread = def(PFN_NtResumeThread, "NtResumeThread", "ntdll");
+pub const NtSuspendThread = def(PFN_NtSuspendThread, "NtSuspendThread", "ntdll");
+pub const NtTerminateThread = def(PFN_NtTerminateThread, "NtTerminateThread", "ntdll");
+pub const NtTerminateProcess = def(PFN_NtTerminateProcess, "NtTerminateProcess", "ntdll");
+pub const NtOpenProcess = def(PFN_NtOpenProcess, "NtOpenProcess", "ntdll");
+pub const NtResumeProcess = def(PFN_NtResumeProcess, "NtResumeProcess", "ntdll");
+pub const NtSuspendProcess = def(PFN_NtSuspendProcess, "NtSuspendProcess", "ntdll");
+pub const NtCreateJobObject = def(PFN_NtCreateJobObject, "NtCreateJobObject", "ntdll");
+pub const NtAssignProcessToJobObject = def(PFN_NtAssignProcessToJobObject, "NtAssignProcessToJobObject", "ntdll");
+pub const NtTerminateJobObject = def(PFN_NtTerminateJobObject, "NtTerminateJobObject", "ntdll");
+pub const NtIsProcessInJob = def(PFN_NtIsProcessInJob, "NtIsProcessInJob", "ntdll");
+pub const NtSetInformationJobObject = def(PFN_NtSetInformationJobObject, "NtSetInformationJobObject", "ntdll");
+pub const NtClose = def(PFN_NtClose, "NtClose", "ntdll");
+pub const NtAllocateVirtualMemory = def(PFN_NtAllocateVirtualMemory, "NtAllocateVirtualMemory", "ntdll");
+pub const NtWriteVirtualMemory = def(PFN_NtWriteVirtualMemory, "NtWriteVirtualMemory", "ntdll");
+pub const NtProtectVirtualMemory = def(PFN_NtProtectVirtualMemory, "NtProtectVirtualMemory", "ntdll");
+pub const NtCreateThreadEx = def(PFN_NtCreateThreadEx, "NtCreateThreadEx", "ntdll");
+pub const NtCreateUserProcess = def(PFN_NtCreateUserProcess, "NtCreateUserProcess", "ntdll");
+pub const RtlGetVersion = def(PFN_RtlGetVersion, "RtlGetVersion", "ntdll");
+pub const RtlCloneUserProcess = def(PFN_RtlCloneUserProcess, "RtlCloneUserProcess", "ntdll");
+pub const RtlWow64EnableFsRedirection = def(PFN_RtlWow64EnableFsRedirection, "RtlWow64EnableFsRedirection", "ntdll");
 
 pub fn NtCurrentProcess() HANDLE {
     return @ptrFromInt(@as(usize, @bitCast(@as(isize, -1))));
@@ -1110,41 +1115,33 @@ pub fn NtCurrentSession() HANDLE {
 //
 // USER32 function definitions
 //
-const user32 = if (@import("options").bof) "USER32$" else ""; // BOFs need LIBNAME$ prefix
-
-pub const MessageBoxA = def(PFN_MessageBoxA, "MessageBoxA", user32);
-pub const EnumWindows = def(PFN_EnumWindows, "EnumWindows", user32);
-pub const GetWindowThreadProcessId = def(PFN_GetWindowThreadProcessId, "GetWindowThreadProcessId", user32);
-pub const SetForegroundWindow = def(PFN_SetForegroundWindow, "SetForegroundWindow", user32);
-pub const GetForegroundWindow = def(PFN_GetForegroundWindow, "GetForegroundWindow", user32);
+pub const MessageBoxA = def(PFN_MessageBoxA, "MessageBoxA", "user32");
+pub const EnumWindows = def(PFN_EnumWindows, "EnumWindows", "user32");
+pub const GetWindowThreadProcessId = def(PFN_GetWindowThreadProcessId, "GetWindowThreadProcessId", "user32");
+pub const SetForegroundWindow = def(PFN_SetForegroundWindow, "SetForegroundWindow", "user32");
+pub const GetForegroundWindow = def(PFN_GetForegroundWindow, "GetForegroundWindow", "user32");
 
 //
 // OLE32 function definitions
 //
-const ole32 = if (@import("options").bof) "OLE32$" else ""; // BOFs need LIBNAME$ prefix
-
-pub const CoInitializeEx = def(PFN_CoInitializeEx, "CoInitializeEx", ole32);
-pub const CoUninitialize = def(PFN_CoUninitialize, "CoUninitialize", ole32);
-pub const CoTaskMemAlloc = def(PFN_CoTaskMemAlloc, "CoTaskMemAlloc", ole32);
-pub const CoTaskMemFree = def(PFN_CoTaskMemFree, "CoTaskMemFree", ole32);
-pub const CoGetCurrentProcess = def(PFN_CoGetCurrentProcess, "CoGetCurrentProcess", ole32);
-pub const CoGetCallerTID = def(PFN_CoGetCallerTID, "CoGetCallerTID", ole32);
+pub const CoInitializeEx = def(PFN_CoInitializeEx, "CoInitializeEx", "ole32");
+pub const CoUninitialize = def(PFN_CoUninitialize, "CoUninitialize", "ole32");
+pub const CoTaskMemAlloc = def(PFN_CoTaskMemAlloc, "CoTaskMemAlloc", "ole32");
+pub const CoTaskMemFree = def(PFN_CoTaskMemFree, "CoTaskMemFree", "ole32");
+pub const CoGetCurrentProcess = def(PFN_CoGetCurrentProcess, "CoGetCurrentProcess", "ole32");
+pub const CoGetCallerTID = def(PFN_CoGetCallerTID, "CoGetCallerTID", "ole32");
 
 //
 // ADVAPI32 function definitions
 //
-const advapi32 = if (@import("options").bof) "ADVAPI32$" else ""; // BOFs need LIBNAME$ prefix
-
-pub const OpenProcessToken = def(PFN_OpenProcessToken, "OpenProcessToken", advapi32);
-pub const GetTokenInformation = def(PFN_GetTokenInformation, "GetTokenInformation", advapi32);
+pub const OpenProcessToken = def(PFN_OpenProcessToken, "OpenProcessToken", "advapi32");
+pub const GetTokenInformation = def(PFN_GetTokenInformation, "GetTokenInformation", "advapi32");
 
 //
 // WS2_32 function definitions
 //
-const ws2_32 = if (@import("options").bof) "WS2_32$" else ""; // BOFs need LIBNAME$ prefix
-
-pub const WSAStartup = def(PFN_WSAStartup, "WSAStartup", ws2_32);
-pub const WSACleanup = def(PFN_WSACleanup, "WSACleanup", ws2_32);
-pub const WSAGetLastError = def(PFN_WSAGetLastError, "WSAGetLastError", ws2_32);
-pub const WSASocketW = def(PFN_WSASocketW, "WSASocketW", ws2_32);
-pub const closesocket = def(PFN_closesocket, "closesocket", ws2_32);
+pub const WSAStartup = def(PFN_WSAStartup, "WSAStartup", "ws2_32");
+pub const WSACleanup = def(PFN_WSACleanup, "WSACleanup", "ws2_32");
+pub const WSAGetLastError = def(PFN_WSAGetLastError, "WSAGetLastError", "ws2_32");
+pub const WSASocketW = def(PFN_WSASocketW, "WSASocketW", "ws2_32");
+pub const closesocket = def(PFN_closesocket, "closesocket", "ws2_32");

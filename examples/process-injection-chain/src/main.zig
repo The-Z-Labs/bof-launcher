@@ -1,7 +1,7 @@
 const std = @import("std");
 const assert = std.debug.assert;
 const bof = @import("bof_launcher_api");
-const w32 = @import("bof_api").win32;
+const w32 = @import("bof_launcher_win32");
 const shared = @import("shared");
 
 pub const std_options = std.Options{
