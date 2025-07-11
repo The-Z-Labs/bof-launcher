@@ -818,13 +818,9 @@ pub const PFN_CreateRemoteThread = *const fn (
 //
 // NTDLL function types
 //
-pub const PFN_RtlGetVersion = *const fn (
-    lpVersionInformation: *RTL_OSVERSIONINFOW,
-) callconv(.winapi) NTSTATUS;
+pub const PFN_RtlGetVersion = *const fn (lpVersionInformation: *RTL_OSVERSIONINFOW) callconv(.winapi) NTSTATUS;
 
-pub const NtQueryInformationProcess = windows.ntdll.NtQueryInformationProcess;
-
-pub extern "ntdll" fn RtlCloneUserProcess(
+pub const PFN_RtlCloneUserProcess = *const fn (
     ProcessFlags: ULONG,
     ProcessSecurityDescriptor: ?PSECURITY_DESCRIPTOR,
     ThreadSecurityDescriptor: ?PSECURITY_DESCRIPTOR,
@@ -832,78 +828,70 @@ pub extern "ntdll" fn RtlCloneUserProcess(
     ProcessInformation: *RTL_USER_PROCESS_INFORMATION,
 ) callconv(.winapi) NTSTATUS;
 
-pub extern "ntdll" fn NtResumeThread(
+pub const PFN_NtResumeThread = *const fn (
     ThreadHandle: HANDLE,
     PreviousSuspendCount: ?*ULONG,
 ) callconv(.winapi) NTSTATUS;
 
-pub extern "ntdll" fn NtSuspendThread(
+pub const PFN_NtSuspendThread = *const fn (
     ThreadHandle: HANDLE,
     PreviousSuspendCount: ?*ULONG,
 ) callconv(.winapi) NTSTATUS;
 
-pub extern "ntdll" fn NtTerminateThread(
+pub const PFN_NtTerminateThread = *const fn (
     ThreadHandle: ?HANDLE,
     ExitStatus: NTSTATUS,
 ) callconv(.winapi) NTSTATUS;
 
-pub extern "ntdll" fn NtTerminateProcess(
+pub const PFN_NtTerminateProcess = *const fn (
     ProcessHandle: ?HANDLE,
     ExitStatus: NTSTATUS,
 ) callconv(.winapi) NTSTATUS;
 
-pub extern "ntdll" fn NtOpenProcess(
+pub const PFN_NtOpenProcess = *const fn (
     ProcessHandle: *HANDLE,
     DesiredAccess: ACCESS_MASK,
     ObjectAttributes: *OBJECT_ATTRIBUTES,
     ClientId: ?*CLIENT_ID,
 ) callconv(.winapi) NTSTATUS;
 
-pub extern "ntdll" fn NtResumeProcess(
-    ProcessHandle: HANDLE,
-) callconv(.winapi) NTSTATUS;
+pub const PFN_NtResumeProcess = *const fn (ProcessHandle: HANDLE) callconv(.winapi) NTSTATUS;
 
-pub extern "ntdll" fn NtSuspendProcess(
-    ProcessHandle: HANDLE,
-) callconv(.winapi) NTSTATUS;
+pub const PFN_NtSuspendProcess = *const fn (ProcessHandle: HANDLE) callconv(.winapi) NTSTATUS;
 
-pub extern "ntdll" fn NtCreateJobObject(
+pub const PFN_NtCreateJobObject = *const fn (
     JobHandle: *HANDLE,
     DesiredAccess: ACCESS_MASK,
     ObjectAttributes: ?*OBJECT_ATTRIBUTES,
 ) callconv(.winapi) NTSTATUS;
 
-pub extern "ntdll" fn NtAssignProcessToJobObject(
+pub const PFN_NtAssignProcessToJobObject = *const fn (
     JobHandle: HANDLE,
     ProcessHandle: HANDLE,
 ) callconv(.winapi) NTSTATUS;
 
-pub extern "ntdll" fn NtTerminateJobObject(
+pub const PFN_NtTerminateJobObject = *const fn (
     JobHandle: HANDLE,
     ExitStatus: NTSTATUS,
 ) callconv(.winapi) NTSTATUS;
 
-pub extern "ntdll" fn NtIsProcessInJob(
+pub const PFN_NtIsProcessInJob = *const fn (
     ProcessHandle: HANDLE,
     JobHandle: ?HANDLE,
 ) callconv(.winapi) NTSTATUS;
 
-pub extern "ntdll" fn NtSetInformationJobObject(
+pub const PFN_NtSetInformationJobObject = *const fn (
     JobHandle: HANDLE,
     JobObjectInformationClass: JOBOBJECTINFOCLASS,
     JobObjectInformation: PVOID,
     JobObjectInformationLength: ULONG,
 ) callconv(.winapi) NTSTATUS;
 
-pub extern "ntdll" fn NtClose(
-    Handle: HANDLE,
-) callconv(.winapi) NTSTATUS;
+pub const PFN_NtClose = *const fn (Handle: HANDLE) callconv(.winapi) NTSTATUS;
 
-pub extern "ntdll" fn RtlWow64EnableFsRedirection(
-    Wow64FsEnableRedirection: BOOLEAN,
-) callconv(.winapi) NTSTATUS;
+pub const PFN_RtlWow64EnableFsRedirection = *const fn (Wow64FsEnableRedirection: BOOLEAN) callconv(.winapi) NTSTATUS;
 
-pub extern "ntdll" fn NtAllocateVirtualMemory(
+pub const PFN_NtAllocateVirtualMemory = *const fn (
     ProcessHandle: HANDLE,
     BaseAddress: *PVOID,
     ZeroBits: ULONG_PTR,
@@ -912,10 +900,23 @@ pub extern "ntdll" fn NtAllocateVirtualMemory(
     Protect: ULONG,
 ) callconv(.winapi) NTSTATUS;
 
-pub const NtWriteVirtualMemory = windows.ntdll.NtWriteVirtualMemory;
-pub const NtProtectVirtualMemory = windows.ntdll.NtProtectVirtualMemory;
+pub const PFN_NtWriteVirtualMemory = *const fn (
+    ProcessHandle: HANDLE,
+    BaseAddress: ?PVOID,
+    Buffer: LPCVOID,
+    NumberOfBytesToWrite: SIZE_T,
+    NumberOfBytesWritten: ?*SIZE_T,
+) callconv(.winapi) NTSTATUS;
 
-pub extern "ntdll" fn NtCreateThreadEx(
+pub const PFN_NtProtectVirtualMemory = *const fn (
+    ProcessHandle: HANDLE,
+    BaseAddress: *?PVOID,
+    NumberOfBytesToProtect: *SIZE_T,
+    NewAccessProtection: ULONG,
+    OldAccessProtection: *ULONG,
+) callconv(.winapi) NTSTATUS;
+
+pub const PFN_NtCreateThreadEx = *const fn (
     ThreadHandle: *HANDLE,
     DesiredAccess: ACCESS_MASK,
     ObjectAttributes: ?*OBJECT_ATTRIBUTES,
@@ -929,7 +930,7 @@ pub extern "ntdll" fn NtCreateThreadEx(
     AttributeList: ?*anyopaque, // TODO: ?*PS_ATTRIBUTE_LIST,
 ) callconv(.winapi) NTSTATUS;
 
-pub extern "ntdll" fn NtCreateUserProcess(
+pub const PFN_NtCreateUserProcess = *const fn (
     ProcessHandle: *HANDLE,
     ThreadHandle: *HANDLE,
     ProcessDesiredAccess: ACCESS_MASK,
@@ -1049,6 +1050,26 @@ pub const CreateRemoteThread = def(PFN_CreateRemoteThread, "CreateRemoteThread",
 const ntdll = if (@import("options").bof) "NTDLL$" else ""; // BOFs need LIBNAME$ prefix
 
 pub const RtlGetVersion = def(PFN_RtlGetVersion, "RtlGetVersion", ntdll);
+pub const RtlCloneUserProcess = def(PFN_RtlCloneUserProcess, "RtlCloneUserProcess", ntdll);
+pub const NtResumeThread = def(PFN_NtResumeThread, "NtResumeThread", ntdll);
+pub const NtSuspendThread = def(PFN_NtSuspendThread, "NtSuspendThread", ntdll);
+pub const NtTerminateThread = def(PFN_NtTerminateThread, "NtTerminateThread", ntdll);
+pub const NtTerminateProcess = def(PFN_NtTerminateProcess, "NtTerminateProcess", ntdll);
+pub const NtOpenProcess = def(PFN_NtOpenProcess, "NtOpenProcess", ntdll);
+pub const NtResumeProcess = def(PFN_NtResumeProcess, "NtResumeProcess", ntdll);
+pub const NtSuspendProcess = def(PFN_NtSuspendProcess, "NtSuspendProcess", ntdll);
+pub const NtCreateJobObject = def(PFN_NtCreateJobObject, "NtCreateJobObject", ntdll);
+pub const NtAssignProcessToJobObject = def(PFN_NtAssignProcessToJobObject, "NtAssignProcessToJobObject", ntdll);
+pub const NtTerminateJobObject = def(PFN_NtTerminateJobObject, "NtTerminateJobObject", ntdll);
+pub const NtIsProcessInJob = def(PFN_NtIsProcessInJob, "NtIsProcessInJob", ntdll);
+pub const NtSetInformationJobObject = def(PFN_NtSetInformationJobObject, "NtSetInformationJobObject", ntdll);
+pub const NtClose = def(PFN_NtClose, "NtClose", ntdll);
+pub const RtlWow64EnableFsRedirection = def(PFN_RtlWow64EnableFsRedirection, "RtlWow64EnableFsRedirection", ntdll);
+pub const NtAllocateVirtualMemory = def(PFN_NtAllocateVirtualMemory, "NtAllocateVirtualMemory", ntdll);
+pub const NtWriteVirtualMemory = def(PFN_NtWriteVirtualMemory, "NtWriteVirtualMemory", ntdll);
+pub const NtProtectVirtualMemory = def(PFN_NtProtectVirtualMemory, "NtProtectVirtualMemory", ntdll);
+pub const NtCreateThreadEx = def(PFN_NtCreateThreadEx, "NtCreateThreadEx", ntdll);
+pub const NtCreateUserProcess = def(PFN_NtCreateUserProcess, "NtCreateUserProcess", ntdll);
 
 pub fn NtCurrentProcess() HANDLE {
     return @ptrFromInt(@as(usize, @bitCast(@as(isize, -1))));
