@@ -954,11 +954,25 @@ pub extern "advapi32" fn GetTokenInformation(
 //
 // USER32 function types
 //
-pub extern "user32" fn MessageBoxA(?HWND, ?LPCSTR, ?LPCSTR, UINT) callconv(.winapi) c_int;
-pub extern "user32" fn EnumWindows(lpEnumFunc: WNDENUMPROC, lParam: LPARAM) callconv(.winapi) BOOL;
-pub extern "user32" fn GetWindowThreadProcessId(hWnd: HWND, lpdwProcessId: ?*DWORD) callconv(.winapi) DWORD;
-pub extern "user32" fn SetForegroundWindow(hWnd: HWND) callconv(.winapi) BOOL;
-pub extern "user32" fn GetForegroundWindow() callconv(.winapi) ?HWND;
+pub const PFN_MessageBoxA = *const fn (
+    hWnd: ?HWND,
+    lpText: ?LPCSTR,
+    lpCaption: ?LPCSTR,
+    uType: UINT,
+) callconv(.winapi) c_int;
+
+pub const PFN_EnumWindows = *const fn (
+    lpEnumFunc: WNDENUMPROC,
+    lParam: LPARAM,
+) callconv(.winapi) BOOL;
+
+pub const PFN_GetWindowThreadProcessId = *const fn (
+    hWnd: HWND,
+    lpdwProcessId: ?*DWORD,
+) callconv(.winapi) DWORD;
+
+pub const PFN_SetForegroundWindow = *const fn (hWnd: HWND) callconv(.winapi) BOOL;
+pub const PFN_GetForegroundWindow = *const fn () callconv(.winapi) ?HWND;
 
 //
 // OLE32 function types
@@ -1070,3 +1084,14 @@ pub fn NtCurrentThread() HANDLE {
 pub fn NtCurrentSession() HANDLE {
     return @ptrFromInt(@as(usize, @bitCast(@as(isize, -3))));
 }
+
+//
+// USER32 function definitions
+//
+const user32 = if (@import("options").bof) "USER32$" else ""; // BOFs need LIBNAME$ prefix
+
+pub const MessageBoxA = def(PFN_MessageBoxA, "MessageBoxA", user32);
+pub const EnumWindows = def(PFN_EnumWindows, "EnumWindows", user32);
+pub const GetWindowThreadProcessId = def(PFN_GetWindowThreadProcessId, "GetWindowThreadProcessId", user32);
+pub const SetForegroundWindow = def(PFN_SetForegroundWindow, "SetForegroundWindow", user32);
+pub const GetForegroundWindow = def(PFN_GetForegroundWindow, "GetForegroundWindow", user32);
