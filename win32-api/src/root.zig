@@ -14,6 +14,7 @@ pub const HMODULE = windows.HMODULE;
 pub const HINSTANCE = windows.HINSTANCE;
 pub const FARPROC = windows.FARPROC;
 pub const HANDLE = windows.HANDLE;
+pub const WORD = windows.WORD;
 pub const DWORD = windows.DWORD;
 pub const BOOL = windows.BOOL;
 pub const TRUE = windows.TRUE;
@@ -49,6 +50,9 @@ pub const LPARAM = windows.LPARAM;
 pub const WNDENUMPROC = *const fn (HWND, LPARAM) callconv(.winapi) BOOL;
 pub const FILE_BOTH_DIR_INFORMATION = windows.FILE_BOTH_DIR_INFORMATION;
 pub const FILE_BOTH_DIRECTORY_INFORMATION = windows.FILE_BOTH_DIRECTORY_INFORMATION;
+pub const WinsockError = windows.ws2_32.WinsockError;
+pub const WSAPROTOCOL_INFOW = windows.ws2_32.WSAPROTOCOL_INFOW;
+pub const SOCKET = windows.ws2_32.SOCKET;
 
 pub const INFINITE = windows.INFINITE;
 pub const WAIT_FAILED = windows.WAIT_FAILED;
@@ -937,13 +941,13 @@ pub const PFN_NtCreateUserProcess = *const fn (
 //
 // ADVAPI32 function types
 //
-pub extern "advapi32" fn OpenProcessToken(
+pub const PFN_OpenProcessToken = *const fn (
     ProcessHandle: HANDLE,
     DesiredAccess: DWORD,
     TokenHandle: *HANDLE,
 ) callconv(.winapi) BOOL;
 
-pub extern "advapi32" fn GetTokenInformation(
+pub const PFN_GetTokenInformation = *const fn (
     TokenHandle: HANDLE,
     TokenInformationClass: TOKEN_INFORMATION_CLASS,
     TokenInformation: ?*anyopaque,
@@ -959,7 +963,7 @@ pub const PFN_MessageBoxA = *const fn (
     lpText: ?LPCSTR,
     lpCaption: ?LPCSTR,
     uType: UINT,
-) callconv(.winapi) c_int;
+) callconv(.winapi) i32;
 
 pub const PFN_EnumWindows = *const fn (
     lpEnumFunc: WNDENUMPROC,
@@ -983,23 +987,33 @@ pub const PFN_CoInitializeEx = *const fn (
 ) callconv(.winapi) HRESULT;
 
 pub const PFN_CoUninitialize = *const fn () callconv(.winapi) void;
-
 pub const PFN_CoTaskMemAlloc = *const fn (size: SIZE_T) callconv(.winapi) ?LPVOID;
-
 pub const PFN_CoTaskMemFree = *const fn (pv: LPVOID) callconv(.winapi) void;
-
 pub const PFN_CoGetCurrentProcess = *const fn () callconv(.winapi) DWORD;
-
 pub const PFN_CoGetCallerTID = *const fn (lpdwTID: *DWORD) callconv(.winapi) HRESULT;
 
 //
-// WS2_32 functions
+// WS2_32 function types
 //
-pub const WSAStartup = windows.ws2_32.WSAStartup;
-pub const WSACleanup = windows.ws2_32.WSACleanup;
-pub const WSASocketW = windows.ws2_32.WSASocketW;
-pub const WSAGetLastError = windows.ws2_32.WSAGetLastError;
-pub const closesocket = windows.ws2_32.closesocket;
+pub const PFN_WSAStartup = *const fn (
+    wVersionRequired: WORD,
+    lpWSAData: *WSADATA,
+) callconv(.winapi) i32;
+
+pub const PFN_WSACleanup = *const fn () callconv(.winapi) i32;
+
+pub const PFN_WSAGetLastError = *const fn () callconv(.winapi) WinsockError;
+
+pub const PFN_WSASocketW = *const fn (
+    af: i32,
+    @"type": i32,
+    protocol: i32,
+    lpProtocolInfo: ?*WSAPROTOCOL_INFOW,
+    g: u32,
+    dwFlags: u32,
+) callconv(.winapi) SOCKET;
+
+pub const PFN_closesocket = *const fn (s: SOCKET) callconv(.winapi) i32;
 
 //
 // KERNEL32 function definitions
@@ -1115,3 +1129,22 @@ pub const CoTaskMemAlloc = def(PFN_CoTaskMemAlloc, "CoTaskMemAlloc", ole32);
 pub const CoTaskMemFree = def(PFN_CoTaskMemFree, "CoTaskMemFree", ole32);
 pub const CoGetCurrentProcess = def(PFN_CoGetCurrentProcess, "CoGetCurrentProcess", ole32);
 pub const CoGetCallerTID = def(PFN_CoGetCallerTID, "CoGetCallerTID", ole32);
+
+//
+// ADVAPI32 function definitions
+//
+const advapi32 = if (@import("options").bof) "ADVAPI32$" else ""; // BOFs need LIBNAME$ prefix
+
+pub const OpenProcessToken = def(PFN_OpenProcessToken, "OpenProcessToken", advapi32);
+pub const GetTokenInformation = def(PFN_GetTokenInformation, "GetTokenInformation", advapi32);
+
+//
+// WS2_32 function definitions
+//
+const ws2_32 = if (@import("options").bof) "WS2_32$" else ""; // BOFs need LIBNAME$ prefix
+
+pub const WSAStartup = def(PFN_WSAStartup, "WSAStartup", ws2_32);
+pub const WSACleanup = def(PFN_WSACleanup, "WSACleanup", ws2_32);
+pub const WSAGetLastError = def(PFN_WSAGetLastError, "WSAGetLastError", ws2_32);
+pub const WSASocketW = def(PFN_WSASocketW, "WSASocketW", ws2_32);
+pub const closesocket = def(PFN_closesocket, "closesocket", ws2_32);
