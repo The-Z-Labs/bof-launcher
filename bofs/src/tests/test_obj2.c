@@ -55,12 +55,6 @@ unsigned char go(char* arg_data, int arg_len) {
         BeaconPrintf(0, "number (short): (from go): %d\n", num_short);
     }
 
-    char** env = getEnviron();
-    if (env && env[0]) {
-        BeaconPrintf(0, "environ[0]: '%s'\n", env[0]);
-    }
-    BeaconPrintf(0, "OS name: '%s'\n", getOSName());
-
     global_number += 1;
 
     int res = 0;

@@ -193,7 +193,7 @@ fn extractIPs(allocator: mem.Allocator, ip_spec: []const u8) ![][]const u8 {
 
 pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     if (args_len == 0) {
-        _ = beacon.printf(0, "Usage: udpScanner str:IPSpec[:portSpec] [int:BUF_LEN str:BUF_MEMORY_ADDR]\n");
+        _ = beacon.printf.?(0, "Usage: udpScanner str:IPSpec[:portSpec] [int:BUF_LEN str:BUF_MEMORY_ADDR]\n");
         return 1;
     }
 
@@ -205,17 +205,17 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     debugPrint("parser: {any}\n", .{parser});
 
     // parse 1st (mandatory) argument:
-    beacon.dataParse(&parser, args, args_len);
-    const targets_spec = beacon.dataExtract(&parser, &opt_len);
+    beacon.dataParse.?(&parser, args, args_len);
+    const targets_spec = beacon.dataExtract.?(&parser, &opt_len);
     const sTargets_spec = targets_spec.?[0..@intCast(opt_len - 1)];
 
     debugPrint("args_len: {d}; opt_len: {d}\n", .{ args_len, opt_len });
 
     // verify if additional (optional) arguments are provided and if so process it:
     if (args_len - 8 > opt_len) {
-        const buf_len = beacon.dataInt(&parser);
+        const buf_len = beacon.dataInt.?(&parser);
 
-        const buf_ptr = beacon.dataExtract(&parser, &opt_len);
+        const buf_ptr = beacon.dataExtract.?(&parser, &opt_len);
         const sBuf_ptr = buf_ptr.?[0..@intCast(opt_len - 1)];
 
         payloads_buf = @as([*]u8, @ptrFromInt(mem.readInt(usize, sBuf_ptr[0..@sizeOf(usize)], .little)))[0..@intCast(buf_len)];
@@ -324,7 +324,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
                 const scanned_addr = net.Address.parseIp(IP, port) catch continue;
                 if (sa.eql(scanned_addr)) {
                     debugPrint("Host: {s}\tPort: {d}\tState: open\n", .{ IP, port });
-                    _ = beacon.printf(0, "Host: %s\tPort: %d\tState: open\n", IP.ptr, port);
+                    _ = beacon.printf.?(0, "Host: %s\tPort: %d\tState: open\n", IP.ptr, port);
                 }
             }
         }
@@ -336,7 +336,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
 
 pub fn closeSocket(sock: std.posix.socket_t) void {
     if (@import("builtin").os.tag == .windows) {
-        _ = @import("bof_api").win32.closesocket(sock);
+        _ = @import("bof_api").win32.closesocket.?(sock);
     } else {
         std.posix.close(sock);
     }

@@ -53,6 +53,12 @@ pub const FILE_BOTH_DIRECTORY_INFORMATION = windows.FILE_BOTH_DIRECTORY_INFORMAT
 pub const WinsockError = windows.ws2_32.WinsockError;
 pub const WSAPROTOCOL_INFOW = windows.ws2_32.WSAPROTOCOL_INFOW;
 pub const SOCKET = windows.ws2_32.SOCKET;
+pub const addrinfo = windows.ws2_32.addrinfo;
+pub const addrinfoa = windows.ws2_32.addrinfoa;
+pub const sockaddr = windows.ws2_32.sockaddr;
+pub const WSABUF = windows.ws2_32.WSABUF;
+pub const LPWSAOVERLAPPED_COMPLETION_ROUTINE = windows.ws2_32.LPWSAOVERLAPPED_COMPLETION_ROUTINE;
+pub const WSAPOLLFD = windows.ws2_32.WSAPOLLFD;
 
 pub const INFINITE = windows.INFINITE;
 pub const WAIT_FAILED = windows.WAIT_FAILED;
@@ -881,7 +887,7 @@ pub const PFN_NtSetInformationJobObject = *const fn (
     JobObjectInformationLength: ULONG,
 ) callconv(.winapi) NTSTATUS;
 
-pub const PFN_NtClose = *const fn (Handle: HANDLE) callconv(.winapi) NTSTATUS;
+pub const PFN_NtClose = *const fn (hHandle: HANDLE) callconv(.winapi) NTSTATUS;
 
 pub const PFN_RtlWow64EnableFsRedirection = *const fn (Wow64FsEnableRedirection: BOOLEAN) callconv(.winapi) NTSTATUS;
 
@@ -1013,94 +1019,172 @@ pub const PFN_WSASocketW = *const fn (
     dwFlags: u32,
 ) callconv(.winapi) SOCKET;
 
+pub const PFN_WSAPoll = *const fn (
+    fdArray: [*]WSAPOLLFD,
+    fds: u32,
+    timeout: i32,
+) callconv(.winapi) i32;
+
+pub const PFN_WSASendTo = *const fn (
+    s: SOCKET,
+    lpBuffers: [*]WSABUF,
+    dwBufferCount: u32,
+    lpNumberOfBytesSent: ?*u32,
+    dwFlags: u32,
+    lpTo: ?*const sockaddr,
+    iToLen: i32,
+    lpOverlapped: ?*OVERLAPPED,
+    lpCompletionRounte: ?LPWSAOVERLAPPED_COMPLETION_ROUTINE,
+) callconv(.winapi) i32;
+
+pub const PFN_WSARecvFrom = *const fn (
+    s: SOCKET,
+    lpBuffers: [*]WSABUF,
+    dwBuffercount: u32,
+    lpNumberOfBytesRecvd: ?*u32,
+    lpFlags: *u32,
+    lpFrom: ?*sockaddr,
+    lpFromlen: ?*i32,
+    lpOverlapped: ?*OVERLAPPED,
+    lpCompletionRoutine: ?LPWSAOVERLAPPED_COMPLETION_ROUTINE,
+) callconv(.winapi) i32;
+
 pub const PFN_closesocket = *const fn (s: SOCKET) callconv(.winapi) i32;
+
+pub const PFN_getaddrinfo = *const fn (
+    pNodeName: ?[*:0]const u8,
+    pServiceName: ?[*:0]const u8,
+    pHints: ?*const addrinfoa,
+    ppResult: *?*addrinfoa,
+) callconv(.winapi) i32;
+
+pub const PFN_freeaddrinfo = *const fn (pAddrInfo: ?*addrinfoa) callconv(.winapi) void;
+
+pub const PFN_bind = *const fn (
+    s: SOCKET,
+    name: *const sockaddr,
+    namelen: i32,
+) callconv(.winapi) i32;
+
+pub const PFN_connect = *const fn (
+    s: SOCKET,
+    name: *const sockaddr,
+    namelen: i32,
+) callconv(.winapi) i32;
+
+pub const PFN_ioctlsocket = *const fn (
+    s: SOCKET,
+    cmd: i32,
+    argp: *u32,
+) callconv(.winapi) i32;
+
+pub const PFN_getsockopt = *const fn (
+    s: SOCKET,
+    level: i32,
+    optname: i32,
+    optval: [*]u8,
+    optlen: *i32,
+) callconv(.winapi) i32;
+
+pub const PFN_setsockopt = *const fn (
+    s: SOCKET,
+    level: i32,
+    optname: i32,
+    optval: ?[*]const u8,
+    optlen: i32,
+) callconv(.winapi) i32;
 
 //
 // Define WIN32 function
 //
+pub const bof = @import("options").bof;
+
 pub fn def(
     comptime T: type,
-    funcname: []const u8,
-    libname: []const u8,
+    comptime funcname: []const u8,
+    comptime libname: []const u8,
 ) if (@import("options").define_functions) T else void {
     return if (@import("options").define_functions)
-        @extern(T, .{ .name = if (@import("options").bof) libname ++ "$" ++ funcname else funcname })
+        @extern(T, .{
+            .name = if (bof) libname ++ "$" ++ funcname else funcname,
+            .is_dll_import = true,
+        })
     else {};
 }
 
 //
 // KERNEL32 function definitions
 //
-pub const VirtualAlloc = def(PFN_VirtualAlloc, "VirtualAlloc", "kernel32");
-pub const VirtualQuery = def(PFN_VirtualQuery, "VirtualQuery", "kernel32");
-pub const VirtualProtect = def(PFN_VirtualProtect, "VirtualProtect", "kernel32");
-pub const VirtualFree = def(PFN_VirtualFree, "VirtualFree", "kernel32");
-pub const GetLastError = def(PFN_GetLastError, "GetLastError", "kernel32");
-pub const Sleep = def(PFN_Sleep, "Sleep", "kernel32");
-pub const ExitProcess = def(PFN_ExitProcess, "ExitProcess", "kernel32");
-pub const GetCurrentProcess = def(PFN_GetCurrentProcess, "GetCurrentProcess", "kernel32");
-pub const GetCurrentThreadId = def(PFN_GetCurrentThreadId, "GetCurrentThreadId", "kernel32");
-pub const FreeLibrary = def(PFN_FreeLibrary, "FreeLibrary", "kernel32");
-pub const CreateThread = def(PFN_CreateThread, "CreateThread", "kernel32");
-pub const GetSystemInfo = def(PFN_GetSystemInfo, "GetSystemInfo", "kernel32");
-pub const VirtualFreeEx = def(PFN_VirtualFreeEx, "VirtualFreeEx", "kernel32");
-pub const WriteFile = def(PFN_WriteFile, "WriteFile", "kernel32");
-pub const DuplicateHandle = def(PFN_DuplicateHandle, "DuplicateHandle", "kernel32");
-pub const ReadFile = def(PFN_ReadFile, "ReadFile", "kernel32");
-pub const WaitForSingleObject = def(PFN_WaitForSingleObject, "WaitForSingleObject", "kernel32");
-pub const GetModuleFileNameA = def(PFN_GetModuleFileNameA, "GetModuleFileNameA", "kernel32");
-pub const GetCurrentProcessId = def(PFN_GetCurrentProcessId, "GetCurrentProcessId", "kernel32");
-pub const GetProcessId = def(PFN_GetProcessId, "GetProcessId", "kernel32");
-pub const GetCurrentThread = def(PFN_GetCurrentThread, "GetCurrentThread", "kernel32");
-pub const CloseHandle = def(PFN_CloseHandle, "CloseHandle", "kernel32");
-pub const FlushInstructionCache = def(PFN_FlushInstructionCache, "FlushInstructionCache", "kernel32");
-pub const FreeConsole = def(PFN_FreeConsole, "FreeConsole", "kernel32");
-pub const AttachConsole = def(PFN_AttachConsole, "AttachConsole", "kernel32");
-pub const IsWow64Process = def(PFN_IsWow64Process, "IsWow64Process", "kernel32");
-pub const GetExitCodeProcess = def(PFN_GetExitCodeProcess, "GetExitCodeProcess", "kernel32");
-pub const GetModuleHandleA = def(PFN_GetModuleHandleA, "GetModuleHandleA", "kernel32");
-pub const LoadLibraryA = def(PFN_LoadLibraryA, "LoadLibraryA", "kernel32");
-pub const GetProcAddress = def(PFN_GetProcAddress, "GetProcAddress", "kernel32");
-pub const CreatePipe = def(PFN_CreatePipe, "CreatePipe", "kernel32");
-pub const ResumeThread = def(PFN_ResumeThread, "ResumeThread", "kernel32");
-pub const VirtualAllocEx = def(PFN_VirtualAllocEx, "VirtualAllocEx", "kernel32");
-pub const VirtualProtectEx = def(PFN_VirtualProtectEx, "VirtualProtectEx", "kernel32");
-pub const CreateFileMappingA = def(PFN_CreateFileMappingA, "CreateFileMappingA", "kernel32");
-pub const GetThreadContext = def(PFN_GetThreadContext, "GetThreadContext", "kernel32");
-pub const GetThreadId = def(PFN_GetThreadId, "GetThreadId", "kernel32");
-pub const SetThreadContext = def(PFN_SetThreadContext, "SetThreadContext", "kernel32");
-pub const MapViewOfFile = def(PFN_MapViewOfFile, "MapViewOfFile", "kernel32");
-pub const UnmapViewOfFile = def(PFN_UnmapViewOfFile, "UnmapViewOfFile", "kernel32");
-pub const OpenProcess = def(PFN_OpenProcess, "OpenProcess", "kernel32");
-pub const OpenThread = def(PFN_OpenThread, "OpenThread", "kernel32");
-pub const WriteProcessMemory = def(PFN_WriteProcessMemory, "WriteProcessMemory", "kernel32");
-pub const ReadProcessMemory = def(PFN_ReadProcessMemory, "ReadProcessMemory", "kernel32");
-pub const CreateRemoteThread = def(PFN_CreateRemoteThread, "CreateRemoteThread", "kernel32");
+pub const VirtualAlloc = def(?PFN_VirtualAlloc, "VirtualAlloc", "kernel32");
+pub const VirtualQuery = def(?PFN_VirtualQuery, "VirtualQuery", "kernel32");
+pub const VirtualProtect = def(?PFN_VirtualProtect, "VirtualProtect", "kernel32");
+pub const VirtualFree = def(?PFN_VirtualFree, "VirtualFree", "kernel32");
+pub const GetLastError = def(?PFN_GetLastError, "GetLastError", "kernel32");
+pub const Sleep = def(?PFN_Sleep, "Sleep", "kernel32");
+pub const ExitProcess = def(?PFN_ExitProcess, "ExitProcess", "kernel32");
+pub const GetCurrentProcess = def(?PFN_GetCurrentProcess, "GetCurrentProcess", "kernel32");
+pub const GetCurrentThreadId = def(?PFN_GetCurrentThreadId, "GetCurrentThreadId", "kernel32");
+pub const FreeLibrary = def(?PFN_FreeLibrary, "FreeLibrary", "kernel32");
+pub const CreateThread = def(?PFN_CreateThread, "CreateThread", "kernel32");
+pub const GetSystemInfo = def(?PFN_GetSystemInfo, "GetSystemInfo", "kernel32");
+pub const VirtualFreeEx = def(?PFN_VirtualFreeEx, "VirtualFreeEx", "kernel32");
+pub const WriteFile = def(?PFN_WriteFile, "WriteFile", "kernel32");
+pub const DuplicateHandle = def(?PFN_DuplicateHandle, "DuplicateHandle", "kernel32");
+pub const ReadFile = def(?PFN_ReadFile, "ReadFile", "kernel32");
+pub const WaitForSingleObject = def(?PFN_WaitForSingleObject, "WaitForSingleObject", "kernel32");
+pub const GetModuleFileNameA = def(?PFN_GetModuleFileNameA, "GetModuleFileNameA", "kernel32");
+pub const GetCurrentProcessId = def(?PFN_GetCurrentProcessId, "GetCurrentProcessId", "kernel32");
+pub const GetProcessId = def(?PFN_GetProcessId, "GetProcessId", "kernel32");
+pub const GetCurrentThread = def(?PFN_GetCurrentThread, "GetCurrentThread", "kernel32");
+pub const CloseHandle = def(?PFN_CloseHandle, "CloseHandle", "kernel32");
+pub const FlushInstructionCache = def(?PFN_FlushInstructionCache, "FlushInstructionCache", "kernel32");
+pub const FreeConsole = def(?PFN_FreeConsole, "FreeConsole", "kernel32");
+pub const AttachConsole = def(?PFN_AttachConsole, "AttachConsole", "kernel32");
+pub const IsWow64Process = def(?PFN_IsWow64Process, "IsWow64Process", "kernel32");
+pub const GetExitCodeProcess = def(?PFN_GetExitCodeProcess, "GetExitCodeProcess", "kernel32");
+pub const GetModuleHandleA = def(?PFN_GetModuleHandleA, "GetModuleHandleA", "kernel32");
+pub const LoadLibraryA = def(?PFN_LoadLibraryA, "LoadLibraryA", "kernel32");
+pub const GetProcAddress = def(?PFN_GetProcAddress, "GetProcAddress", "kernel32");
+pub const CreatePipe = def(?PFN_CreatePipe, "CreatePipe", "kernel32");
+pub const ResumeThread = def(?PFN_ResumeThread, "ResumeThread", "kernel32");
+pub const VirtualAllocEx = def(?PFN_VirtualAllocEx, "VirtualAllocEx", "kernel32");
+pub const VirtualProtectEx = def(?PFN_VirtualProtectEx, "VirtualProtectEx", "kernel32");
+pub const CreateFileMappingA = def(?PFN_CreateFileMappingA, "CreateFileMappingA", "kernel32");
+pub const GetThreadContext = def(?PFN_GetThreadContext, "GetThreadContext", "kernel32");
+pub const GetThreadId = def(?PFN_GetThreadId, "GetThreadId", "kernel32");
+pub const SetThreadContext = def(?PFN_SetThreadContext, "SetThreadContext", "kernel32");
+pub const MapViewOfFile = def(?PFN_MapViewOfFile, "MapViewOfFile", "kernel32");
+pub const UnmapViewOfFile = def(?PFN_UnmapViewOfFile, "UnmapViewOfFile", "kernel32");
+pub const OpenProcess = def(?PFN_OpenProcess, "OpenProcess", "kernel32");
+pub const OpenThread = def(?PFN_OpenThread, "OpenThread", "kernel32");
+pub const WriteProcessMemory = def(?PFN_WriteProcessMemory, "WriteProcessMemory", "kernel32");
+pub const ReadProcessMemory = def(?PFN_ReadProcessMemory, "ReadProcessMemory", "kernel32");
+pub const CreateRemoteThread = def(?PFN_CreateRemoteThread, "CreateRemoteThread", "kernel32");
 
 //
 // NTDLL function definitions
 //
-pub const NtResumeThread = def(PFN_NtResumeThread, "NtResumeThread", "ntdll");
-pub const NtSuspendThread = def(PFN_NtSuspendThread, "NtSuspendThread", "ntdll");
-pub const NtTerminateThread = def(PFN_NtTerminateThread, "NtTerminateThread", "ntdll");
-pub const NtTerminateProcess = def(PFN_NtTerminateProcess, "NtTerminateProcess", "ntdll");
-pub const NtOpenProcess = def(PFN_NtOpenProcess, "NtOpenProcess", "ntdll");
-pub const NtResumeProcess = def(PFN_NtResumeProcess, "NtResumeProcess", "ntdll");
-pub const NtSuspendProcess = def(PFN_NtSuspendProcess, "NtSuspendProcess", "ntdll");
-pub const NtCreateJobObject = def(PFN_NtCreateJobObject, "NtCreateJobObject", "ntdll");
-pub const NtAssignProcessToJobObject = def(PFN_NtAssignProcessToJobObject, "NtAssignProcessToJobObject", "ntdll");
-pub const NtTerminateJobObject = def(PFN_NtTerminateJobObject, "NtTerminateJobObject", "ntdll");
-pub const NtIsProcessInJob = def(PFN_NtIsProcessInJob, "NtIsProcessInJob", "ntdll");
-pub const NtSetInformationJobObject = def(PFN_NtSetInformationJobObject, "NtSetInformationJobObject", "ntdll");
-pub const NtClose = def(PFN_NtClose, "NtClose", "ntdll");
-pub const NtAllocateVirtualMemory = def(PFN_NtAllocateVirtualMemory, "NtAllocateVirtualMemory", "ntdll");
-pub const NtWriteVirtualMemory = def(PFN_NtWriteVirtualMemory, "NtWriteVirtualMemory", "ntdll");
-pub const NtProtectVirtualMemory = def(PFN_NtProtectVirtualMemory, "NtProtectVirtualMemory", "ntdll");
-pub const NtCreateThreadEx = def(PFN_NtCreateThreadEx, "NtCreateThreadEx", "ntdll");
-pub const NtCreateUserProcess = def(PFN_NtCreateUserProcess, "NtCreateUserProcess", "ntdll");
-pub const RtlGetVersion = def(PFN_RtlGetVersion, "RtlGetVersion", "ntdll");
-pub const RtlCloneUserProcess = def(PFN_RtlCloneUserProcess, "RtlCloneUserProcess", "ntdll");
-pub const RtlWow64EnableFsRedirection = def(PFN_RtlWow64EnableFsRedirection, "RtlWow64EnableFsRedirection", "ntdll");
+pub const NtResumeThread = def(?PFN_NtResumeThread, "NtResumeThread", "ntdll");
+pub const NtSuspendThread = def(?PFN_NtSuspendThread, "NtSuspendThread", "ntdll");
+pub const NtTerminateThread = def(?PFN_NtTerminateThread, "NtTerminateThread", "ntdll");
+pub const NtTerminateProcess = def(?PFN_NtTerminateProcess, "NtTerminateProcess", "ntdll");
+pub const NtOpenProcess = def(?PFN_NtOpenProcess, "NtOpenProcess", "ntdll");
+pub const NtResumeProcess = def(?PFN_NtResumeProcess, "NtResumeProcess", "ntdll");
+pub const NtSuspendProcess = def(?PFN_NtSuspendProcess, "NtSuspendProcess", "ntdll");
+pub const NtCreateJobObject = def(?PFN_NtCreateJobObject, "NtCreateJobObject", "ntdll");
+pub const NtAssignProcessToJobObject = def(?PFN_NtAssignProcessToJobObject, "NtAssignProcessToJobObject", "ntdll");
+pub const NtTerminateJobObject = def(?PFN_NtTerminateJobObject, "NtTerminateJobObject", "ntdll");
+pub const NtIsProcessInJob = def(?PFN_NtIsProcessInJob, "NtIsProcessInJob", "ntdll");
+pub const NtSetInformationJobObject = def(?PFN_NtSetInformationJobObject, "NtSetInformationJobObject", "ntdll");
+pub const NtClose = def(?PFN_NtClose, "NtClose", "ntdll");
+pub const NtAllocateVirtualMemory = def(?PFN_NtAllocateVirtualMemory, "NtAllocateVirtualMemory", "ntdll");
+pub const NtWriteVirtualMemory = def(?PFN_NtWriteVirtualMemory, "NtWriteVirtualMemory", "ntdll");
+pub const NtProtectVirtualMemory = def(?PFN_NtProtectVirtualMemory, "NtProtectVirtualMemory", "ntdll");
+pub const NtCreateThreadEx = def(?PFN_NtCreateThreadEx, "NtCreateThreadEx", "ntdll");
+pub const NtCreateUserProcess = def(?PFN_NtCreateUserProcess, "NtCreateUserProcess", "ntdll");
+pub const RtlGetVersion = def(?PFN_RtlGetVersion, "RtlGetVersion", "ntdll");
+pub const RtlCloneUserProcess = def(?PFN_RtlCloneUserProcess, "RtlCloneUserProcess", "ntdll");
+pub const RtlWow64EnableFsRedirection = def(?PFN_RtlWow64EnableFsRedirection, "RtlWow64EnableFsRedirection", "ntdll");
 
 pub fn NtCurrentProcess() HANDLE {
     return @ptrFromInt(@as(usize, @bitCast(@as(isize, -1))));
@@ -1115,33 +1199,225 @@ pub fn NtCurrentSession() HANDLE {
 //
 // USER32 function definitions
 //
-pub const MessageBoxA = def(PFN_MessageBoxA, "MessageBoxA", "user32");
-pub const EnumWindows = def(PFN_EnumWindows, "EnumWindows", "user32");
-pub const GetWindowThreadProcessId = def(PFN_GetWindowThreadProcessId, "GetWindowThreadProcessId", "user32");
-pub const SetForegroundWindow = def(PFN_SetForegroundWindow, "SetForegroundWindow", "user32");
-pub const GetForegroundWindow = def(PFN_GetForegroundWindow, "GetForegroundWindow", "user32");
+pub const MessageBoxA = def(?PFN_MessageBoxA, "MessageBoxA", "user32");
+pub const EnumWindows = def(?PFN_EnumWindows, "EnumWindows", "user32");
+pub const GetWindowThreadProcessId = def(?PFN_GetWindowThreadProcessId, "GetWindowThreadProcessId", "user32");
+pub const SetForegroundWindow = def(?PFN_SetForegroundWindow, "SetForegroundWindow", "user32");
+pub const GetForegroundWindow = def(?PFN_GetForegroundWindow, "GetForegroundWindow", "user32");
 
 //
 // OLE32 function definitions
 //
-pub const CoInitializeEx = def(PFN_CoInitializeEx, "CoInitializeEx", "ole32");
-pub const CoUninitialize = def(PFN_CoUninitialize, "CoUninitialize", "ole32");
-pub const CoTaskMemAlloc = def(PFN_CoTaskMemAlloc, "CoTaskMemAlloc", "ole32");
-pub const CoTaskMemFree = def(PFN_CoTaskMemFree, "CoTaskMemFree", "ole32");
-pub const CoGetCurrentProcess = def(PFN_CoGetCurrentProcess, "CoGetCurrentProcess", "ole32");
-pub const CoGetCallerTID = def(PFN_CoGetCallerTID, "CoGetCallerTID", "ole32");
+pub const CoInitializeEx = def(?PFN_CoInitializeEx, "CoInitializeEx", "ole32");
+pub const CoUninitialize = def(?PFN_CoUninitialize, "CoUninitialize", "ole32");
+pub const CoTaskMemAlloc = def(?PFN_CoTaskMemAlloc, "CoTaskMemAlloc", "ole32");
+pub const CoTaskMemFree = def(?PFN_CoTaskMemFree, "CoTaskMemFree", "ole32");
+pub const CoGetCurrentProcess = def(?PFN_CoGetCurrentProcess, "CoGetCurrentProcess", "ole32");
+pub const CoGetCallerTID = def(?PFN_CoGetCallerTID, "CoGetCallerTID", "ole32");
 
 //
 // ADVAPI32 function definitions
 //
-pub const OpenProcessToken = def(PFN_OpenProcessToken, "OpenProcessToken", "advapi32");
-pub const GetTokenInformation = def(PFN_GetTokenInformation, "GetTokenInformation", "advapi32");
+pub const OpenProcessToken = def(?PFN_OpenProcessToken, "OpenProcessToken", "advapi32");
+pub const GetTokenInformation = def(?PFN_GetTokenInformation, "GetTokenInformation", "advapi32");
 
 //
 // WS2_32 function definitions
 //
-pub const WSAStartup = def(PFN_WSAStartup, "WSAStartup", "ws2_32");
-pub const WSACleanup = def(PFN_WSACleanup, "WSACleanup", "ws2_32");
-pub const WSAGetLastError = def(PFN_WSAGetLastError, "WSAGetLastError", "ws2_32");
-pub const WSASocketW = def(PFN_WSASocketW, "WSASocketW", "ws2_32");
-pub const closesocket = def(PFN_closesocket, "closesocket", "ws2_32");
+pub const WSAStartup = def(?PFN_WSAStartup, "WSAStartup", "ws2_32");
+pub const WSACleanup = def(?PFN_WSACleanup, "WSACleanup", "ws2_32");
+pub const WSAGetLastError = def(?PFN_WSAGetLastError, "WSAGetLastError", "ws2_32");
+pub const WSASocketW = def(?PFN_WSASocketW, "WSASocketW", "ws2_32");
+pub const WSAPoll = def(?PFN_WSAPoll, "WSAPoll", "ws2_32");
+pub const WSASendTo = def(?PFN_WSASendTo, "WSASendTo", "ws2_32");
+pub const WSARecvFrom = def(?PFN_WSARecvFrom, "WSARecvFrom", "ws2_32");
+pub const closesocket = def(?PFN_closesocket, "closesocket", "ws2_32");
+pub const getaddrinfo = def(?PFN_getaddrinfo, "getaddrinfo", "ws2_32");
+pub const freeaddrinfo = def(?PFN_freeaddrinfo, "freeaddrinfo", "ws2_32");
+pub const bind = def(?PFN_bind, "bind", "ws2_32");
+pub const connect = def(?PFN_connect, "connect", "ws2_32");
+pub const ioctlsocket = def(?PFN_ioctlsocket, "ioctlsocket", "ws2_32");
+pub const getsockopt = def(?PFN_getsockopt, "getsockopt", "ws2_32");
+pub const setsockopt = def(?PFN_setsockopt, "setsockopt", "ws2_32");
+
+//
+// Redirectors (for Cobalt Strike compat)
+//
+comptime {
+    if (@import("builtin").mode != .Debug and @import("builtin").os.tag == .windows and bof) {
+        @export(&RE_WriteFile, .{ .name = "WriteFile", .linkage = .strong });
+        @export(&RE_ReadFile, .{ .name = "ReadFile", .linkage = .strong });
+        @export(&RE_Sleep, .{ .name = "Sleep", .linkage = .strong });
+        @export(&RE_VirtualAlloc, .{ .name = "VirtualAlloc", .linkage = .strong });
+        @export(&RE_VirtualFree, .{ .name = "VirtualFree", .linkage = .strong });
+        @export(&RE_ExitProcess, .{ .name = "ExitProcess", .linkage = .strong });
+        @export(&RE_WSAStartup, .{ .name = "WSAStartup", .linkage = .strong });
+        @export(&RE_WSACleanup, .{ .name = "WSACleanup", .linkage = .strong });
+        @export(&RE_WSAGetLastError, .{ .name = "WSAGetLastError", .linkage = .strong });
+        @export(&RE_WSASocketW, .{ .name = "WSASocketW", .linkage = .strong });
+        @export(&RE_WSAPoll, .{ .name = "WSAPoll", .linkage = .strong });
+        @export(&RE_WSASendTo, .{ .name = "WSASendTo", .linkage = .strong });
+        @export(&RE_WSARecvFrom, .{ .name = "WSARecvFrom", .linkage = .strong });
+        @export(&RE_closesocket, .{ .name = "closesocket", .linkage = .strong });
+        @export(&RE_getaddrinfo, .{ .name = "getaddrinfo", .linkage = .strong });
+        @export(&RE_freeaddrinfo, .{ .name = "freeaddrinfo", .linkage = .strong });
+        @export(&RE_bind, .{ .name = "bind", .linkage = .strong });
+        @export(&RE_connect, .{ .name = "connect", .linkage = .strong });
+        @export(&RE_ioctlsocket, .{ .name = "ioctlsocket", .linkage = .strong });
+        @export(&RE_getsockopt, .{ .name = "getsockopt", .linkage = .strong });
+        @export(&RE_setsockopt, .{ .name = "setsockopt", .linkage = .strong });
+        @export(&RE_NtClose, .{ .name = "NtClose", .linkage = .strong });
+    }
+}
+const re_section = ".text";
+
+fn RE_WriteFile(
+    hFile: HANDLE,
+    lpBuffer: LPCVOID,
+    nNumberOfBytesToWrite: DWORD,
+    lpNumberOfBytesWritten: ?*DWORD,
+    lpOverlapped: ?*OVERLAPPED,
+) linksection(re_section) callconv(.winapi) BOOL {
+    return WriteFile.?(hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped);
+}
+fn RE_ReadFile(
+    hFile: HANDLE,
+    lpBuffer: LPVOID,
+    nNumberOfBytesToRead: DWORD,
+    lpNumberOfBytesRead: ?*DWORD,
+    lpOverlapped: ?*OVERLAPPED,
+) linksection(re_section) callconv(.winapi) BOOL {
+    return ReadFile.?(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
+}
+fn RE_Sleep(dwMilliseconds: DWORD) linksection(re_section) callconv(.winapi) void {
+    Sleep.?(dwMilliseconds);
+}
+fn RE_VirtualAlloc(
+    lpAddress: ?LPVOID,
+    dwSize: SIZE_T,
+    flAllocationType: DWORD,
+    flProtect: DWORD,
+) linksection(re_section) callconv(.winapi) ?LPVOID {
+    return VirtualAlloc.?(lpAddress, dwSize, flAllocationType, flProtect);
+}
+fn RE_VirtualFree(
+    lpAddress: ?LPVOID,
+    dwSize: SIZE_T,
+    dwFreeType: DWORD,
+) linksection(re_section) callconv(.winapi) BOOL {
+    return VirtualFree.?(lpAddress, dwSize, dwFreeType);
+}
+fn RE_ExitProcess(uExitCode: UINT) linksection(re_section) callconv(.winapi) noreturn {
+    ExitProcess.?(uExitCode);
+}
+fn RE_WSAStartup(
+    wVersionRequired: WORD,
+    lpWSAData: *WSADATA,
+) linksection(re_section) callconv(.winapi) i32 {
+    return WSAStartup.?(wVersionRequired, lpWSAData);
+}
+fn RE_WSACleanup() linksection(re_section) callconv(.winapi) i32 {
+    return WSACleanup.?();
+}
+fn RE_WSAGetLastError() linksection(re_section) callconv(.winapi) WinsockError {
+    return WSAGetLastError.?();
+}
+fn RE_WSASocketW(
+    af: i32,
+    @"type": i32,
+    protocol: i32,
+    lpProtocolInfo: ?*WSAPROTOCOL_INFOW,
+    g: u32,
+    dwFlags: u32,
+) linksection(re_section) callconv(.winapi) SOCKET {
+    return WSASocketW.?(af, @"type", protocol, lpProtocolInfo, g, dwFlags);
+}
+fn RE_WSAPoll(
+    fdArray: [*]WSAPOLLFD,
+    fds: u32,
+    timeout: i32,
+) linksection(re_section) callconv(.winapi) i32 {
+    return WSAPoll.?(fdArray, fds, timeout);
+}
+fn RE_WSASendTo(
+    s: SOCKET,
+    lpBuffers: [*]WSABUF,
+    dwBufferCount: u32,
+    lpNumberOfBytesSent: ?*u32,
+    dwFlags: u32,
+    lpTo: ?*const sockaddr,
+    iToLen: i32,
+    lpOverlapped: ?*OVERLAPPED,
+    lpCompletionRounte: ?LPWSAOVERLAPPED_COMPLETION_ROUTINE,
+) linksection(re_section) callconv(.winapi) i32 {
+    return WSASendTo.?(s, lpBuffers, dwBufferCount, lpNumberOfBytesSent, dwFlags, lpTo, iToLen, lpOverlapped, lpCompletionRounte);
+}
+fn RE_WSARecvFrom(
+    s: SOCKET,
+    lpBuffers: [*]WSABUF,
+    dwBufferCount: u32,
+    lpNumberOfBytesRecvd: ?*u32,
+    lpFlags: *u32,
+    lpFrom: ?*sockaddr,
+    lpFromLen: ?*i32,
+    lpOverlapped: ?*OVERLAPPED,
+    lpCompletionRoutine: ?LPWSAOVERLAPPED_COMPLETION_ROUTINE,
+) linksection(re_section) callconv(.winapi) i32 {
+    return WSARecvFrom.?(s, lpBuffers, dwBufferCount, lpNumberOfBytesRecvd, lpFlags, lpFrom, lpFromLen, lpOverlapped, lpCompletionRoutine);
+}
+fn RE_closesocket(s: SOCKET) linksection(re_section) callconv(.winapi) i32 {
+    return closesocket.?(s);
+}
+fn RE_getaddrinfo(
+    pNodeName: ?[*:0]const u8,
+    pServiceName: ?[*:0]const u8,
+    pHints: ?*const addrinfoa,
+    ppResult: *?*addrinfoa,
+) linksection(re_section) callconv(.winapi) i32 {
+    return getaddrinfo.?(pNodeName, pServiceName, pHints, ppResult);
+}
+fn RE_freeaddrinfo(pAddrInfo: ?*addrinfoa) linksection(re_section) callconv(.winapi) void {
+    freeaddrinfo.?(pAddrInfo);
+}
+fn RE_bind(
+    s: SOCKET,
+    name: *const sockaddr,
+    namelen: i32,
+) linksection(re_section) callconv(.winapi) i32 {
+    return bind.?(s, name, namelen);
+}
+fn RE_connect(
+    s: SOCKET,
+    name: *const sockaddr,
+    namelen: i32,
+) linksection(re_section) callconv(.winapi) i32 {
+    return connect.?(s, name, namelen);
+}
+fn RE_ioctlsocket(
+    s: SOCKET,
+    cmd: i32,
+    argp: *u32,
+) linksection(re_section) callconv(.winapi) i32 {
+    return ioctlsocket.?(s, cmd, argp);
+}
+fn RE_getsockopt(
+    s: SOCKET,
+    level: i32,
+    optname: i32,
+    optval: [*]u8,
+    optlen: *i32,
+) linksection(re_section) callconv(.winapi) i32 {
+    return getsockopt.?(s, level, optname, optval, optlen);
+}
+fn RE_setsockopt(
+    s: SOCKET,
+    level: i32,
+    optname: i32,
+    optval: ?[*]const u8,
+    optlen: i32,
+) linksection(re_section) callconv(.winapi) i32 {
+    return setsockopt.?(s, level, optname, optval, optlen);
+}
+fn RE_NtClose(hHandle: HANDLE) linksection(re_section) callconv(.winapi) NTSTATUS {
+    return NtClose.?(hHandle);
+}

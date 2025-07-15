@@ -9,6 +9,12 @@
 #ifndef BEACON_API_H_
 #define BEACON_API_H_
 
+#ifndef _DEBUG
+#define DECLSPEC_IMPORT __declspec(dllimport)
+#else
+#define DECLSPEC_IMPORT
+#endif
+
 #ifndef NULL
 #define NULL 0
 #endif
@@ -20,11 +26,11 @@ typedef struct {
     int    size;     /* total size of this buffer */
 } datap;
 
-void    BeaconDataParse(datap * parser, char * buffer, int size);
-int     BeaconDataInt(datap * parser);
-short   BeaconDataShort(datap * parser);
-int     BeaconDataLength(datap * parser);
-char *  BeaconDataExtract(datap * parser, int * size);
+DECLSPEC_IMPORT void    BeaconDataParse(datap * parser, char * buffer, int size);
+DECLSPEC_IMPORT int     BeaconDataInt(datap * parser);
+DECLSPEC_IMPORT short   BeaconDataShort(datap * parser);
+DECLSPEC_IMPORT int     BeaconDataLength(datap * parser);
+DECLSPEC_IMPORT char *  BeaconDataExtract(datap * parser, int * size);
 
 typedef struct {
     char * original; /* the original buffer [so we can free it] */
@@ -33,23 +39,20 @@ typedef struct {
     int    size;     /* total size of this buffer */
 } formatp;
 
-void    BeaconFormatAlloc(formatp * format, int maxsz);
-void    BeaconFormatReset(formatp * format);
-void    BeaconFormatAppend(formatp * format, char * text, int len);
-void    BeaconFormatPrintf(formatp * format, char * fmt, ...);
-char *  BeaconFormatToString(formatp * format, int * size);
-void    BeaconFormatFree(formatp * format);
-void    BeaconFormatInt(formatp * format, int value);
+DECLSPEC_IMPORT void    BeaconFormatAlloc(formatp * format, int maxsz);
+DECLSPEC_IMPORT void    BeaconFormatReset(formatp * format);
+DECLSPEC_IMPORT void    BeaconFormatAppend(formatp * format, char * text, int len);
+DECLSPEC_IMPORT void    BeaconFormatPrintf(formatp * format, char * fmt, ...);
+DECLSPEC_IMPORT char *  BeaconFormatToString(formatp * format, int * size);
+DECLSPEC_IMPORT void    BeaconFormatFree(formatp * format);
+DECLSPEC_IMPORT void    BeaconFormatInt(formatp * format, int value);
 
 #define CALLBACK_OUTPUT      0x0
 #define CALLBACK_OUTPUT_OEM  0x1e
 #define CALLBACK_ERROR       0x0d
 #define CALLBACK_OUTPUT_UTF8 0x20
 
-void BeaconPrintf(int type, char * fmt, ...);
-void BeaconOutput(int type, char * data, int len);
-
-char * getOSName(void);
-char ** getEnviron(void);
+DECLSPEC_IMPORT void BeaconPrintf(int type, char * fmt, ...);
+DECLSPEC_IMPORT void BeaconOutput(int type, char * data, int len);
 
 #endif

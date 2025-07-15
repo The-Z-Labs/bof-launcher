@@ -128,7 +128,7 @@ pub fn main() !void {
     }
 
     var thread_handle: w32.HANDLE = undefined;
-    state.nt_status = w32.NtCreateThreadEx(
+    state.nt_status = w32.NtCreateThreadEx.?(
         &thread_handle,
         0x1fffff,
         null,
@@ -144,7 +144,7 @@ pub fn main() !void {
 
     std.debug.print("nt status: {d}\n", .{state.nt_status});
 
-    _ = w32.NtClose(thread_handle);
+    _ = w32.NtClose.?(thread_handle);
 }
 
 fn loadBofFromFile(allocator: std.mem.Allocator, bof_name: [:0]const u8) ![]const u8 {

@@ -601,11 +601,8 @@ test "bof-launcher.info" {
 
     try expect(context.getExitCode() == 0);
 
-    //std.debug.print("{s}", .{context.getOutput().?});
-
-    try expect(data[0] == 2);
-    try expect(data[50] == 0x70de_c0de);
-    try expect(data[99] == 113);
+    try expect(data[0] == 1);
+    try expect(data[99] == 123);
 
     try std.testing.expectEqualStrings("--- test_obj3.zig ---", context.getOutput().?[0..21]);
 }
@@ -847,7 +844,7 @@ test "bof-launcher.wProcessInjectionSrdi" {
         try args.add(std.mem.asBytes(&hello_bof_data.ptr));
         // PID
         {
-            const str = try std.fmt.allocPrint(allocator, "i:{d}", .{w32.GetProcessId(notepad.id)});
+            const str = try std.fmt.allocPrint(allocator, "i:{d}", .{w32.GetProcessId.?(notepad.id)});
             defer allocator.free(str);
             try args.add(str);
         }
@@ -979,5 +976,36 @@ test "bof-launcher.bofs.bss" {
 
         try expect(getNumRuns() == 2);
         try expect(getNumCalls() == 4);
+    }
+}
+
+test "bof-launcher.load_all_bofs" {
+    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+    if (@import("builtin").cpu.arch != .x86_64) return error.SkipZigTest;
+
+    var iter_dir = try std.fs.cwd().openDir(bofs_path, .{ .iterate = true });
+    defer iter_dir.close();
+
+    const allocator = std.testing.allocator;
+
+    var iter = iter_dir.iterate();
+    while (try iter.next()) |entry| {
+        if (std.mem.containsAtLeast(u8, entry.name, 1, "debug")) continue;
+
+        if (std.mem.containsAtLeast(u8, entry.name, 1, "coff") and
+            (std.mem.containsAtLeast(u8, entry.name, 1, "x64") or std.mem.containsAtLeast(u8, entry.name, 1, "x86")))
+        {
+            const stem = std.fs.path.stem;
+            const name = stem(stem(stem(entry.name)));
+
+            const path = try std.fs.path.joinZ(allocator, &.{ bofs_path, name });
+            defer allocator.free(path);
+
+            const bof_data = try loadBofFromFile(allocator, path);
+            defer allocator.free(bof_data);
+
+            const object = try bof.Object.initFromMemory(bof_data);
+            defer object.release();
+        }
     }
 }

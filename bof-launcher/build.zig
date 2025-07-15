@@ -56,7 +56,7 @@ fn buildLib(
     }
     lib.addCSourceFile(.{
         .file = b.path("src/beacon/beacon_impl.c"),
-        .flags = &.{"-std=c99"},
+        .flags = &.{ "-std=c99", "-fdeclspec" },
     });
     lib.addCSourceFile(.{
         .file = b.path("src/beacon/stb_sprintf.c"),

@@ -11,11 +11,11 @@ pub fn print(comptime fmt: []const u8, args: anytype) void {
     if (len < 4096) {
         var buf: [4096]u8 = undefined;
         const str = std.fmt.bufPrintZ(buf[0..], fmt, args) catch unreachable;
-        _ = beacon.printf(0, "%s", str.ptr);
+        _ = beacon.printf.?(0, "%s", str.ptr);
     } else {
-        const str = std.fmt.allocPrintZ(generic_allocator, fmt, args) catch @panic("OOM");
+        const str = std.fmt.allocPrintZ(generic_allocator, fmt, args) catch unreachable;
         defer generic_allocator.free(str);
-        _ = beacon.printf(0, "%s", str.ptr);
+        _ = beacon.printf.?(0, "%s", str.ptr);
     }
 }
 
@@ -46,3 +46,33 @@ fn bofFree(_: *anyopaque, buf: []u8, _: std.mem.Alignment, _: usize) void {
 
 extern fn bofLauncherAllocateMemory(size: usize) callconv(.C) ?*anyopaque;
 extern fn bofLauncherFreeMemory(maybe_ptr: ?*anyopaque) callconv(.C) void;
+
+//
+// Redirectors (for Cobalt Strike compat)
+//
+comptime {
+    if (@import("builtin").mode != .Debug and @import("builtin").os.tag == .windows and win32.bof) {
+        @export(&RE_memcpy, .{ .name = "memcpy", .linkage = .strong });
+        @export(&RE_memset, .{ .name = "memset", .linkage = .strong });
+    }
+}
+
+fn RE_memcpy(noalias dest: ?[*]u8, noalias src: ?[*]const u8, len: usize) callconv(.c) ?[*]u8 {
+    @setRuntimeSafety(false);
+
+    for (0..len) |i| {
+        dest.?[i] = src.?[i];
+    }
+
+    return dest;
+}
+
+fn RE_memset(dest: ?[*]u8, c: u8, len: usize) callconv(.c) ?[*]u8 {
+    @setRuntimeSafety(false);
+
+    for (0..len) |i| {
+        dest.?[i] = c;
+    }
+
+    return dest;
+}

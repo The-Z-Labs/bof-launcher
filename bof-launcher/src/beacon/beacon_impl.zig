@@ -22,19 +22,6 @@ pub extern fn BeaconPrintf(typ: i32, fmt: [*:0]const u8, ...) callconv(.C) i32;
 pub extern fn BeaconOutput(typ: i32, data: ?[*]u8, len: i32) callconv(.C) void;
 pub extern fn BeaconFormatPrintf(parser: ?*formatp, fmt: [*:0]const u8, ...) callconv(.C) i32;
 
-pub extern fn getEnviron() callconv(.C) [*:null]?[*:0]const u8;
-
-pub export fn getOSName() callconv(.C) [*:0]const u8 {
-    return switch (@import("builtin").os.tag) {
-        .windows => "windows",
-        .freebsd => "freebsd",
-        .macos => "apple",
-        .openbsd => "openbsd",
-        .linux => "lin",
-        else => "unk",
-    };
-}
-
 pub export fn BeaconDataParse(parser: ?*datap, buffer: ?[*]u8, size: i32) callconv(.C) void {
     if (parser == null)
         return;
@@ -69,18 +56,6 @@ pub export fn BeaconDataShort(parser: *datap) callconv(.C) i16 {
     parser.buffer += 2;
     parser.length -= 2;
     return twobyteint;
-}
-
-pub export fn BeaconDataUSize(parser: *datap) callconv(.C) usize {
-    var data: usize = 0;
-    if (parser.length < @sizeOf(usize)) {
-        return 0;
-    }
-    @memcpy(std.mem.asBytes(&data), parser.buffer[0..@sizeOf(usize)]);
-
-    parser.buffer += @sizeOf(usize);
-    parser.length -= @sizeOf(usize);
-    return data;
 }
 
 pub export fn BeaconDataLength(parser: *datap) callconv(.C) i32 {

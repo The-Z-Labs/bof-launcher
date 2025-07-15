@@ -27,6 +27,8 @@ pub extern fn getgrouplist(user: [*:0]const u8, group: c.gid_t, groups: [*]c.gid
 const NGROUPS_MAX = 32;
 
 pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
+    const printf = beacon.printf.?;
+
     var ruid: c.uid_t = undefined;
     var rgid: c.gid_t = undefined;
     var euid: c.gid_t = undefined;
@@ -58,8 +60,8 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
         ngroups = posix.getgroups(NGROUPS_MAX, &groups_gids);
     } else {
         var parser = beacon.datap{};
-        beacon.dataParse(&parser, args, args_len);
-        const name = beacon.dataExtract(&parser, null);
+        beacon.dataParse.?(&parser, args, args_len);
+        const name = beacon.dataExtract.?(&parser, null);
 
         if (name) |n| {
             pwd = posix.getpwnam(@as([*:0]u8, @ptrCast(n)));
@@ -88,46 +90,46 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
         return 1;
     }
 
-    _ = beacon.printf(0, "uid=%d", ruid);
+    _ = printf(0, "uid=%d", ruid);
     if (pwd) |p|
-        _ = beacon.printf(0, "(%s)", p.name);
+        _ = printf(0, "(%s)", p.name);
 
-    _ = beacon.printf(0, " gid=%d", rgid);
+    _ = printf(0, " gid=%d", rgid);
     grp = posix.getgrgid(rgid);
     if (grp) |gr|
-        _ = beacon.printf(0, "(%s)", gr.gr_name);
+        _ = printf(0, "(%s)", gr.gr_name);
 
     if (args_len == 0) {
         if (euid != ruid) {
-            _ = beacon.printf(0, " euid=%d", euid);
+            _ = printf(0, " euid=%d", euid);
             pwd = posix.getpwuid(euid);
             if (pwd) |p| {
-                _ = beacon.printf(0, "(%s)", p.name);
+                _ = printf(0, "(%s)", p.name);
             }
         }
 
         if (egid != rgid) {
-            _ = beacon.printf(0, " egid=%d", egid);
+            _ = printf(0, " egid=%d", egid);
             grp = posix.getgrgid(egid);
             if (grp) |g| {
-                _ = beacon.printf(0, "(%s)", g.gr_name);
+                _ = printf(0, "(%s)", g.gr_name);
             }
         }
     }
 
-    _ = beacon.printf(0, " groups=");
+    _ = printf(0, " groups=");
 
     var i: usize = 0;
     for (groups_names.items) |name| {
-        _ = beacon.printf(0, "%d(%s)", groups_gids[i], name.ptr);
+        _ = printf(0, "%d(%s)", groups_gids[i], name.ptr);
 
         if (i != groups_names.items.len - 1)
-            _ = beacon.printf(0, ",");
+            _ = printf(0, ",");
 
         i = i + 1;
         allocator.free(name);
     }
-    _ = beacon.printf(0, "\n");
+    _ = printf(0, "\n");
 
     return 0;
 }

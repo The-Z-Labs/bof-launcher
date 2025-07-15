@@ -62,9 +62,9 @@ fn getFileContent(file_path: [*:0]u8) !u8 {
 
 pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     var parser = beacon.datap{};
-    beacon.dataParse(&parser, args, args_len);
+    beacon.dataParse.?(&parser, args, args_len);
 
-    if (beacon.dataExtract(&parser, null)) |file_path| {
+    if (beacon.dataExtract.?(&parser, null)) |file_path| {
         return getFileContent(file_path) catch |err| switch (err) {
             error.AccessDenied => @intFromEnum(BofErrors.AccessDenied),
             error.FileNotFound => @intFromEnum(BofErrors.FileNotFound),

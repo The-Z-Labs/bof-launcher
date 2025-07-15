@@ -5,12 +5,12 @@ NTSYSAPI NTSTATUS NTAPI
 #ifdef _DEBUG
 RtlGetVersion
 #else
-NTDLL$RtlGetVersion
+ntdll$RtlGetVersion
 #endif
 (OSVERSIONINFOW* lpVersionInformation);
 
 #ifndef _DEBUG
-#define RtlGetVersion NTDLL$RtlGetVersion
+#define RtlGetVersion ntdll$RtlGetVersion
 #endif
 
 unsigned char go(unsigned char* arg_data, int arg_len) {

@@ -9,7 +9,7 @@
 /// lskmod
 ///'
 ///errors:
-///- name: FaileOpenFailure 
+///- name: FaileOpenFailure
 ///  code: 0x1
 ///  message: "Failed to open '/proc/modules' file"
 ///- name: UnknownError
@@ -22,7 +22,7 @@ const posix = @import("bof_api").posix;
 fn getModulesList(allocator: std.mem.Allocator) !u8 {
     const fd = try std.posix.openZ("/proc/modules", .{ .ACCMODE = .RDONLY, .CLOEXEC = true }, 0);
     defer std.posix.close(fd);
-    
+
     if (fd == -1)
         return 1;
 
@@ -33,7 +33,6 @@ fn getModulesList(allocator: std.mem.Allocator) !u8 {
     var line_iter = std.mem.splitScalar(u8, file_content, 0);
 
     while (line_iter.next()) |line| {
-
         var iter = std.mem.tokenizeScalar(u8, line, ' ');
         const mod_name = iter.next() orelse return error.BadData;
         const mod_size = iter.next() orelse return error.BadData;
@@ -47,10 +46,10 @@ fn getModulesList(allocator: std.mem.Allocator) !u8 {
             mod_usedby,
         });
 
-        _ = beacon.printf(0, "%s\n", mod_entry.ptr);
+        _ = beacon.printf.?(0, "%s\n", mod_entry.ptr);
         allocator.free(mod_entry);
     }
-    
+
     allocator.free(file_content);
     return 0;
 }

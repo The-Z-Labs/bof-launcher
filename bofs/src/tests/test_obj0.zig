@@ -3,19 +3,19 @@ const beacon = @import("bof_api").beacon;
 const krb = @import("bof_api").kerberos;
 
 pub export fn func(msg: [*:0]const u8) callconv(.C) u8 {
-    _ = beacon.printf(0, "func() %s\n", msg);
+    _ = beacon.printf.?(0, "func() %s\n", msg);
     return 0;
 }
 
 export fn func123(msg: [*:0]const u8) callconv(.C) u8 {
-    _ = beacon.printf(0, "func123() %s\n", msg);
+    _ = beacon.printf.?(0, "func123() %s\n", msg);
     return 123;
 }
 
 pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     _ = arg_data;
     _ = arg_len;
-    _ = beacon.printf(0, "--- test_obj0.zig ---\n");
+    _ = beacon.printf.?(0, "--- test_obj0.zig ---\n");
 
     var buf: [512]u8 = undefined;
     const packet = krb.encodeAsReq(buf[0..], "aaaaaaaa", "bbbbbbbb") catch unreachable;
@@ -26,7 +26,7 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     fbs.writer().print("Hello, {s}!\n", .{"go"}) catch unreachable;
     fbs.writer().writeByte(0) catch unreachable;
 
-    _ = beacon.printf(0, "%s", &buf);
+    _ = beacon.printf.?(0, "%s", &buf);
 
     return @call(.never_inline, func, .{"it"});
 }

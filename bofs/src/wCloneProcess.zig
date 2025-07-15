@@ -9,7 +9,7 @@ pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
     @memset(std.mem.asBytes(&create_info), 0);
     create_info.Size = @sizeOf(w32.PS_CREATE_INFO);
 
-    const nt_status = w32.NtCreateUserProcess(
+    const nt_status = w32.NtCreateUserProcess.?(
         &process_handle,
         &thread_handle,
         w32.PROCESS_ALL_ACCESS,

@@ -213,6 +213,31 @@ pub fn build(b: *std.Build) !void {
 
         test_step.dependOn(&run_step.step);
     }
+
+    const boflint_step = b.step("boflint", "Run boflint.py");
+
+    for (@import("bof_launcher_bofs").bofs_to_build) |bof| {
+        const full_name = bof.fullName(b.allocator);
+
+        if (std.mem.containsAtLeast(u8, full_name, 1, "debug")) continue;
+
+        if (std.mem.containsAtLeast(u8, full_name, 1, "coff") and
+            (std.mem.containsAtLeast(u8, full_name, 1, "x64") or std.mem.containsAtLeast(u8, full_name, 1, "x86")))
+        {
+            const run_step = b.addSystemCommand(&.{
+                "python",
+                "utils/boflint.py",
+                "--logformat",
+                "vs",
+                "--loader",
+                "cs",
+                b.fmt("zig-out/bin/bofs/{s}.o", .{full_name}),
+            });
+            run_step.step.dependOn(b.getInstallStep());
+
+            boflint_step.dependOn(&run_step.step);
+        }
+    }
 }
 
 fn ensureZigVersion() !void {

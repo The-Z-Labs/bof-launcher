@@ -10,12 +10,12 @@ const c = @cImport({
     @cInclude("stdio.h");
 });
 
-fn packetHandler(args: [*c]u8, packet_header: [*c]const c.pcap_pkthdr, packet_body: [*c] const u8) callconv(.c) void {
+fn packetHandler(args: [*c]u8, packet_header: [*c]const c.pcap_pkthdr, packet_body: [*c]const u8) callconv(.c) void {
     _ = args;
     _ = packet_body;
 
-    _ = c.printf( "Packet capture length: %d\n", packet_header.*.caplen);
-    _ = c.printf( "Packet total length %d\n", packet_header.*.len);
+    _ = c.printf("Packet capture length: %d\n", packet_header.*.caplen);
+    _ = c.printf("Packet total length %d\n", packet_header.*.len);
 }
 
 pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
@@ -25,9 +25,9 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     var bpf: c.bpf_program = undefined;
 
     var parser = beacon.datap{};
-    beacon.dataParse(&parser, args, args_len);
+    beacon.dataParse.?(&parser, args, args_len);
 
-    if(beacon.dataExtract(&parser, null)) |interface| {
+    if (beacon.dataExtract.?(&parser, null)) |interface| {
 
         // Get network device source IP address and netmask.
         if (c.pcap_lookupnet(interface, &srcip, &netmask, &errbuf) == c.PCAP_ERROR) {
@@ -35,7 +35,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
             return 1;
         }
 
-        _ = beacon.printf(0, "ip: %d %d\n", srcip, netmask);
+        _ = beacon.printf.?(0, "ip: %d %d\n", srcip, netmask);
 
         // Open the network interface for packet capture
         const handle = c.pcap_open_live(interface, 65535, 1, 1000, &errbuf);

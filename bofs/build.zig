@@ -323,7 +323,15 @@ fn addBofObj(
                     .link_libc = true,
                 }),
             });
-            const flags = if (bof.custom_build_fn) |customBuild| customBuild(b, obj, bof) else &.{};
+            const std_flags = [_][]const u8{"-fdeclspec"};
+            const custom_flags = if (bof.custom_build_fn) |customBuild| customBuild(b, obj, bof) else &.{};
+
+            const flags = try b.allocator.alloc([]const u8, custom_flags.len + std_flags.len);
+            defer b.allocator.free(flags);
+
+            for (0..std_flags.len) |i| flags[i] = std_flags[i];
+            for (0..custom_flags.len) |i| flags[i + std_flags.len] = custom_flags[i];
+
             obj.root_module.addCSourceFile(.{
                 .file = b.path(bof.source_file_path),
                 .flags = flags,
@@ -337,13 +345,13 @@ fn addBofObj(
     obj.root_module.strip = if (bof.optimize == .Debug) false else true;
     obj.root_module.unwind_tables = .none;
     if (bof.optimize != .Debug) {
-        // TODO: Consider this.
-        //obj.root_module.stack_protector = false;
-        //obj.root_module.stack_check = false;
+        obj.root_module.stack_protector = false;
+        obj.root_module.stack_check = false;
     }
 
     if (bof.lang != .@"asm") {
         obj.root_module.addIncludePath(b.path("src/include"));
+        obj.root_module.addIncludePath(bof_launcher_dep.path("src/beacon"));
         obj.root_module.addImport("bof_api", bof_api_module);
         // Needed for BOFs that launch other BOFs
         obj.root_module.addAnonymousImport(

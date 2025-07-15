@@ -132,6 +132,8 @@ fn paddingTwoDigits(buf: *[2]u8, value: u8) void {
 // end of RFC3339 implementation
 
 fn listDirContent(dir_path: [*:0]u8) !u8 {
+    const printf = beacon.printf.?;
+
     var iter_dir = try std.fs.openDirAbsoluteZ(dir_path, .{ .iterate = true });
     defer iter_dir.close();
 
@@ -140,16 +142,16 @@ fn listDirContent(dir_path: [*:0]u8) !u8 {
 
         // print entry type
         if (entry.kind == .directory) {
-            _ = beacon.printf(0, "d");
+            _ = printf(0, "d");
         } else if (entry.kind == .sym_link) {
-            _ = beacon.printf(0, "l");
+            _ = printf(0, "l");
         } else if (entry.kind == .block_device) {
-            _ = beacon.printf(0, "b");
+            _ = printf(0, "b");
         } else if (entry.kind == .character_device) {
-            _ = beacon.printf(0, "c");
+            _ = printf(0, "c");
         } else if (entry.kind == .unix_domain_socket) {
-            _ = beacon.printf(0, "u");
-        } else _ = beacon.printf(0, "-");
+            _ = printf(0, "u");
+        } else _ = printf(0, "-");
 
         if (@import("builtin").os.tag == .linux) {
             var statx: std.os.linux.Statx = undefined;
@@ -162,46 +164,46 @@ fn listDirContent(dir_path: [*:0]u8) !u8 {
                 std.os.linux.STATX_SIZE, &statx);
 
             // print permissions
-            if ((statx.mode & std.os.linux.S.IRUSR) != 0) _ = beacon.printf(0, "r") else _ = beacon.printf(0, "-");
-            if ((statx.mode & std.os.linux.S.IWUSR) != 0) _ = beacon.printf(0, "w") else _ = beacon.printf(0, "-");
+            if ((statx.mode & std.os.linux.S.IRUSR) != 0) _ = printf(0, "r") else _ = printf(0, "-");
+            if ((statx.mode & std.os.linux.S.IWUSR) != 0) _ = printf(0, "w") else _ = printf(0, "-");
             if ((statx.mode & std.os.linux.S.IXUSR) != 0) {
                 if ((statx.mode & std.os.linux.S.ISUID) != 0) {
-                    _ = beacon.printf(0, "s");
-                } else _ = beacon.printf(0, "x");
-            } else _ = beacon.printf(0, "-");
+                    _ = printf(0, "s");
+                } else _ = printf(0, "x");
+            } else _ = printf(0, "-");
 
-            if ((statx.mode & std.os.linux.S.IRGRP) != 0) _ = beacon.printf(0, "r") else _ = beacon.printf(0, "-");
-            if ((statx.mode & std.os.linux.S.IWGRP) != 0) _ = beacon.printf(0, "w") else _ = beacon.printf(0, "-");
+            if ((statx.mode & std.os.linux.S.IRGRP) != 0) _ = printf(0, "r") else _ = printf(0, "-");
+            if ((statx.mode & std.os.linux.S.IWGRP) != 0) _ = printf(0, "w") else _ = printf(0, "-");
             if ((statx.mode & std.os.linux.S.IXGRP) != 0) {
                 if ((statx.mode & std.os.linux.S.ISGID) != 0) {
-                    _ = beacon.printf(0, "s");
-                } else _ = beacon.printf(0, "x");
-            } else _ = beacon.printf(0, "-");
+                    _ = printf(0, "s");
+                } else _ = printf(0, "x");
+            } else _ = printf(0, "-");
 
-            if ((statx.mode & std.os.linux.S.IROTH) != 0) _ = beacon.printf(0, "r") else _ = beacon.printf(0, "-");
-            if ((statx.mode & std.os.linux.S.IWOTH) != 0) _ = beacon.printf(0, "w") else _ = beacon.printf(0, "-");
+            if ((statx.mode & std.os.linux.S.IROTH) != 0) _ = printf(0, "r") else _ = printf(0, "-");
+            if ((statx.mode & std.os.linux.S.IWOTH) != 0) _ = printf(0, "w") else _ = printf(0, "-");
 
             if ((statx.mode & std.os.linux.S.ISVTX) != 0) {
-                _ = beacon.printf(0, "t");
+                _ = printf(0, "t");
             } else if ((statx.mode & std.os.linux.S.IXOTH) != 0) {
-                _ = beacon.printf(0, "x");
-            } else _ = beacon.printf(0, "-");
+                _ = printf(0, "x");
+            } else _ = printf(0, "-");
 
             // print file ownership
             if (posix.getpwuid(statx.uid)) |pwd| {
-                _ = beacon.printf(0, "\t%s", pwd.name);
+                _ = printf(0, "\t%s", pwd.name);
             }
             if (posix.getgrgid(statx.gid)) |grp| {
-                _ = beacon.printf(0, " %s", grp.gr_name);
+                _ = printf(0, " %s", grp.gr_name);
             }
 
             // print file size
-            _ = beacon.printf(0, "\t%9d", statx.size);
+            _ = printf(0, "\t%9d", statx.size);
 
             // print last modification time
             const dt = fromTimestamp(@intCast(statx.mtime.sec));
             const timeStr = toRFC3339(dt);
-            _ = beacon.printf(0, " %s", &timeStr);
+            _ = printf(0, " %s", &timeStr);
         }
 
         // print file name
@@ -209,17 +211,17 @@ fn listDirContent(dir_path: [*:0]u8) !u8 {
 
         // additional prints (based on entry type)
         if (entry.kind == .directory)
-            _ = beacon.printf(0, "/");
+            _ = printf(0, "/");
 
         if (entry.kind == .sym_link) {
             var buf: [4096:0]u8 = undefined;
             const link = try std.posix.readlinkat(iter_dir.fd, entry.name, buf[0..]);
             buf[link.len] = 0;
-            _ = beacon.printf(0, " -> %s", &buf);
+            _ = printf(0, " -> %s", &buf);
         }
 
         // end of line
-        _ = beacon.printf(0, "\n");
+        _ = printf(0, "\n");
     }
 
     return 0;
@@ -227,9 +229,9 @@ fn listDirContent(dir_path: [*:0]u8) !u8 {
 
 pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     var parser = beacon.datap{};
-    beacon.dataParse(&parser, args, args_len);
+    beacon.dataParse.?(&parser, args, args_len);
 
-    if (beacon.dataExtract(&parser, null)) |dir_path| {
+    if (beacon.dataExtract.?(&parser, null)) |dir_path| {
         return listDirContent(dir_path) catch |err| switch (err) {
             error.FileNotFound => @intFromEnum(BofErrors.FileNotFound),
             else => @intFromEnum(BofErrors.UnknownError),
