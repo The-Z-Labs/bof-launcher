@@ -1271,9 +1271,9 @@ comptime {
 }
 
 // This section can be removed from BOF:
-// llvm-strip.exe --remove-section=.redirectors --no-strip-all <BOF>
-// TODO: Automate this
-const re_section = ".redirectors";
+// llvm-strip.exe --remove-section=section_name --no-strip-all <BOF>
+// TODO: Automate this?
+const re_section = ".text";
 
 fn RE_WriteFile(
     hFile: HANDLE,
