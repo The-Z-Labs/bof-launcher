@@ -36,7 +36,7 @@ int getNumCalls(void) {
 }
 
 unsigned char go(char* arg_data, int arg_len) {
-    BeaconPrintf(0, "--- test_obj2.c ---\n%s\n", "bof");
+    BeaconPrintf(CALLBACK_OUTPUT, "--- test_obj2.c ---\n%s\n", "bof");
 
     datap parser = {0};
     BeaconDataParse(&parser, arg_data, arg_len);
@@ -47,12 +47,12 @@ unsigned char go(char* arg_data, int arg_len) {
     int num_short = getNumShort(&parser);
 
     if (arg_len > 0) {
-        BeaconPrintf(0, "arg_len (from go): %d\n", arg_len);
-        BeaconPrintf(0, "Length: (from go): %d\n", len);
-        BeaconPrintf(0, "permissions: (from go): %s\n", permissions);
-        BeaconPrintf(0, "path: (from go): %s\n", path);
-        BeaconPrintf(0, "number (int): (from go): %d\n", num);
-        BeaconPrintf(0, "number (short): (from go): %d\n", num_short);
+        BeaconPrintf(CALLBACK_OUTPUT, "arg_len (from go): %d\n", arg_len);
+        BeaconPrintf(CALLBACK_OUTPUT, "Length: (from go): %d\n", len);
+        BeaconPrintf(CALLBACK_OUTPUT, "permissions: (from go): %s\n", permissions);
+        BeaconPrintf(CALLBACK_OUTPUT, "path: (from go): %s\n", path);
+        BeaconPrintf(CALLBACK_OUTPUT, "number (int): (from go): %d\n", num);
+        BeaconPrintf(CALLBACK_OUTPUT, "number (short): (from go): %d\n", num_short);
     }
 
     global_number += 1;

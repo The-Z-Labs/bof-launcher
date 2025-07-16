@@ -142,16 +142,16 @@ fn listDirContent(dir_path: [*:0]u8) !u8 {
 
         // print entry type
         if (entry.kind == .directory) {
-            _ = printf(0, "d");
+            _ = printf(.output, "d");
         } else if (entry.kind == .sym_link) {
-            _ = printf(0, "l");
+            _ = printf(.output, "l");
         } else if (entry.kind == .block_device) {
-            _ = printf(0, "b");
+            _ = printf(.output, "b");
         } else if (entry.kind == .character_device) {
-            _ = printf(0, "c");
+            _ = printf(.output, "c");
         } else if (entry.kind == .unix_domain_socket) {
-            _ = printf(0, "u");
-        } else _ = printf(0, "-");
+            _ = printf(.output, "u");
+        } else _ = printf(.output, "-");
 
         if (@import("builtin").os.tag == .linux) {
             var statx: std.os.linux.Statx = undefined;
@@ -164,64 +164,64 @@ fn listDirContent(dir_path: [*:0]u8) !u8 {
                 std.os.linux.STATX_SIZE, &statx);
 
             // print permissions
-            if ((statx.mode & std.os.linux.S.IRUSR) != 0) _ = printf(0, "r") else _ = printf(0, "-");
-            if ((statx.mode & std.os.linux.S.IWUSR) != 0) _ = printf(0, "w") else _ = printf(0, "-");
+            if ((statx.mode & std.os.linux.S.IRUSR) != 0) _ = printf(.output, "r") else _ = printf(.output, "-");
+            if ((statx.mode & std.os.linux.S.IWUSR) != 0) _ = printf(.output, "w") else _ = printf(.output, "-");
             if ((statx.mode & std.os.linux.S.IXUSR) != 0) {
                 if ((statx.mode & std.os.linux.S.ISUID) != 0) {
-                    _ = printf(0, "s");
-                } else _ = printf(0, "x");
-            } else _ = printf(0, "-");
+                    _ = printf(.output, "s");
+                } else _ = printf(.output, "x");
+            } else _ = printf(.output, "-");
 
-            if ((statx.mode & std.os.linux.S.IRGRP) != 0) _ = printf(0, "r") else _ = printf(0, "-");
-            if ((statx.mode & std.os.linux.S.IWGRP) != 0) _ = printf(0, "w") else _ = printf(0, "-");
+            if ((statx.mode & std.os.linux.S.IRGRP) != 0) _ = printf(.output, "r") else _ = printf(.output, "-");
+            if ((statx.mode & std.os.linux.S.IWGRP) != 0) _ = printf(.output, "w") else _ = printf(.output, "-");
             if ((statx.mode & std.os.linux.S.IXGRP) != 0) {
                 if ((statx.mode & std.os.linux.S.ISGID) != 0) {
-                    _ = printf(0, "s");
-                } else _ = printf(0, "x");
-            } else _ = printf(0, "-");
+                    _ = printf(.output, "s");
+                } else _ = printf(.output, "x");
+            } else _ = printf(.output, "-");
 
-            if ((statx.mode & std.os.linux.S.IROTH) != 0) _ = printf(0, "r") else _ = printf(0, "-");
-            if ((statx.mode & std.os.linux.S.IWOTH) != 0) _ = printf(0, "w") else _ = printf(0, "-");
+            if ((statx.mode & std.os.linux.S.IROTH) != 0) _ = printf(.output, "r") else _ = printf(.output, "-");
+            if ((statx.mode & std.os.linux.S.IWOTH) != 0) _ = printf(.output, "w") else _ = printf(.output, "-");
 
             if ((statx.mode & std.os.linux.S.ISVTX) != 0) {
-                _ = printf(0, "t");
+                _ = printf(.output, "t");
             } else if ((statx.mode & std.os.linux.S.IXOTH) != 0) {
-                _ = printf(0, "x");
-            } else _ = printf(0, "-");
+                _ = printf(.output, "x");
+            } else _ = printf(.output, "-");
 
             // print file ownership
             if (posix.getpwuid(statx.uid)) |pwd| {
-                _ = printf(0, "\t%s", pwd.name);
+                _ = printf(.output, "\t%s", pwd.name);
             }
             if (posix.getgrgid(statx.gid)) |grp| {
-                _ = printf(0, " %s", grp.gr_name);
+                _ = printf(.output, " %s", grp.gr_name);
             }
 
             // print file size
-            _ = printf(0, "\t%9d", statx.size);
+            _ = printf(.output, "\t%9d", statx.size);
 
             // print last modification time
             const dt = fromTimestamp(@intCast(statx.mtime.sec));
             const timeStr = toRFC3339(dt);
-            _ = printf(0, " %s", &timeStr);
+            _ = printf(.output, " %s", &timeStr);
         }
 
         // print file name
-        bofapi.print("\t{s}", .{entry.name});
+        bofapi.print(.output, "\t{s}", .{entry.name});
 
         // additional prints (based on entry type)
         if (entry.kind == .directory)
-            _ = printf(0, "/");
+            _ = printf(.output, "/");
 
         if (entry.kind == .sym_link) {
             var buf: [4096:0]u8 = undefined;
             const link = try std.posix.readlinkat(iter_dir.fd, entry.name, buf[0..]);
             buf[link.len] = 0;
-            _ = printf(0, " -> %s", &buf);
+            _ = printf(.output, " -> %s", &buf);
         }
 
         // end of line
-        _ = printf(0, "\n");
+        _ = printf(.output, "\n");
     }
 
     return 0;

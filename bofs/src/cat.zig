@@ -55,7 +55,7 @@ fn getFileContent(file_path: [*:0]u8) !u8 {
     const content = try file.reader().readAllAlloc(bofapi.generic_allocator, 4 * 1024 * 1024);
     defer bofapi.generic_allocator.free(content);
 
-    bofapi.print("{s}", .{content});
+    bofapi.print(.output, "{s}", .{content});
 
     return 0;
 }

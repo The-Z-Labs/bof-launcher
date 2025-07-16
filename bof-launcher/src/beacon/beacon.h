@@ -9,7 +9,7 @@
 #ifndef BEACON_API_H_
 #define BEACON_API_H_
 
-#ifndef _DEBUG
+#if !defined(_DEBUG) && defined(_WIN32)
 #define DECLSPEC_IMPORT __declspec(dllimport)
 #else
 #define DECLSPEC_IMPORT
@@ -49,8 +49,10 @@ DECLSPEC_IMPORT void    BeaconFormatInt(formatp * format, int value);
 
 #define CALLBACK_OUTPUT      0x0
 #define CALLBACK_OUTPUT_OEM  0x1e
-#define CALLBACK_ERROR       0x0d
 #define CALLBACK_OUTPUT_UTF8 0x20
+#define CALLBACK_ERROR       0x0d
+#define CALLBACK_CUSTOM      0x1000
+#define CALLBACK_CUSTOM_LAST 0x13ff
 
 DECLSPEC_IMPORT void BeaconPrintf(int type, char * fmt, ...);
 DECLSPEC_IMPORT void BeaconOutput(int type, char * data, int len);

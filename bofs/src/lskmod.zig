@@ -46,7 +46,7 @@ fn getModulesList(allocator: std.mem.Allocator) !u8 {
             mod_usedby,
         });
 
-        _ = beacon.printf.?(0, "%s\n", mod_entry.ptr);
+        _ = beacon.printf.?(.output, "%s\n", mod_entry.ptr);
         allocator.free(mod_entry);
     }
 

@@ -20,7 +20,7 @@ pub export fn go() callconv(.C) u8 {
     if (ret != 0)
         return 1;
 
-    _ = beacon.printf.?(0, "%s\n", &name);
+    _ = beacon.printf.?(.output, "%s\n", &name);
 
     return 0;
 }

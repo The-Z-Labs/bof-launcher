@@ -6,16 +6,16 @@ pub const kerberos = @import("kerberos.zig");
 
 const std = @import("std");
 
-pub fn print(comptime fmt: []const u8, args: anytype) void {
+pub fn print(@"type": beacon.CallbackType, comptime fmt: []const u8, args: anytype) void {
     const len = std.fmt.count(fmt, args);
     if (len < 4096) {
         var buf: [4096]u8 = undefined;
         const str = std.fmt.bufPrintZ(buf[0..], fmt, args) catch unreachable;
-        _ = beacon.printf.?(0, "%s", str.ptr);
+        _ = beacon.printf.?(@"type", "%s", str.ptr);
     } else {
         const str = std.fmt.allocPrintZ(generic_allocator, fmt, args) catch unreachable;
         defer generic_allocator.free(str);
-        _ = beacon.printf.?(0, "%s", str.ptr);
+        _ = beacon.printf.?(@"type", "%s", str.ptr);
     }
 }
 

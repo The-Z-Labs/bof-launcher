@@ -33,8 +33,17 @@ fn def(comptime T: type, comptime funcname: []const u8) T {
     return @extern(T, .{ .name = funcname, .is_dll_import = @import("builtin").mode != .Debug });
 }
 
-const PFN_BeaconPrintf = *const fn (typ: i32, fmt: [*:0]const u8, ...) callconv(.c) i32;
-const PFN_BeaconOutput = *const fn (typ: i32, data: ?[*]u8, len: i32) callconv(.c) void;
+pub const CallbackType = enum(i32) {
+    output = 0x0,
+    output_oem = 0x1e,
+    output_utf8 = 0x20,
+    err = 0x0d,
+    custom = 0x1000,
+    custom_last = 0x13ff,
+};
+
+const PFN_BeaconPrintf = *const fn (@"type": CallbackType, fmt: [*:0]const u8, ...) callconv(.c) i32;
+const PFN_BeaconOutput = *const fn (@"type": CallbackType, data: ?[*]u8, len: i32) callconv(.c) void;
 
 const PFN_BeaconDataParse = *const fn (parser: ?*datap, buffer: ?[*]u8, size: i32) callconv(.c) void;
 const PFN_BeaconDataExtract = *const fn (parser: ?*datap, size: ?*i32) callconv(.c) ?[*:0]u8;

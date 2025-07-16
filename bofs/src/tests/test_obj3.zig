@@ -7,15 +7,15 @@ extern fn free(?*anyopaque) callconv(.C) void;
 
 pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     const printf = beacon.printf.?;
-    _ = printf(0, "--- test_obj3.zig ---\n");
+    _ = printf(.output, "--- test_obj3.zig ---\n");
 
     if (@import("builtin").os.tag == .windows) {
         w32.Sleep.?(0);
-        _ = printf(0, "CoGetCurrentProcess() returned: %d\n", w32.CoGetCurrentProcess.?());
-        _ = printf(0, "GetCurrentProcessId() returned: %d\n", w32.GetCurrentProcessId.?());
-        _ = printf(0, "GetCurrentProcess() returned: 0x%x\n", @intFromPtr(w32.GetCurrentProcess.?()));
-        _ = printf(0, "GetCurrentThreadId() returned: %d\n", w32.GetCurrentThreadId.?());
-        _ = printf(0, "GetCurrentThread() returned: 0x%x\n", @intFromPtr(w32.GetCurrentThread.?()));
+        _ = printf(.output, "CoGetCurrentProcess() returned: %d\n", w32.CoGetCurrentProcess.?());
+        _ = printf(.output, "GetCurrentProcessId() returned: %d\n", w32.GetCurrentProcessId.?());
+        _ = printf(.output, "GetCurrentProcess() returned: 0x%x\n", @intFromPtr(w32.GetCurrentProcess.?()));
+        _ = printf(.output, "GetCurrentThreadId() returned: %d\n", w32.GetCurrentThreadId.?());
+        _ = printf(.output, "GetCurrentThread() returned: 0x%x\n", @intFromPtr(w32.GetCurrentThread.?()));
 
         for (0..2) |_| {
             const allocator = bofapi.generic_allocator;
@@ -25,7 +25,7 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
 
             @memset(mem, 0);
 
-            _ = printf(0, "bof_api.bof_allocator.alloc() returned: 0x%x\n", @intFromPtr(mem.ptr));
+            _ = printf(.output, "bof_api.bof_allocator.alloc() returned: 0x%x\n", @intFromPtr(mem.ptr));
 
             mem[100] = 123;
 
@@ -52,7 +52,7 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
 
             @memset(mem.?[0..100], 0);
 
-            _ = printf(0, "malloc() returned: 0x%x\n", @intFromPtr(mem));
+            _ = printf(.output, "malloc() returned: 0x%x\n", @intFromPtr(mem));
 
             mem.?[10] = 1;
             mem.?[20] = 2;
@@ -84,24 +84,24 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
 
         var tid: w32.DWORD = 123;
         _ = w32.CoGetCallerTID.?(&tid);
-        _ = printf(0, "CoGetCallerTID() returned: %d\n", tid);
+        _ = printf(.output, "CoGetCallerTID() returned: %d\n", tid);
 
         const i: *u32 = @ptrCast(@alignCast(w32.CoTaskMemAlloc.?(4)));
         i.* = 0xc0dec0de;
-        _ = printf(0, "CoTaskMemAlloc(): 0x%x\n", i.*);
+        _ = printf(.output, "CoTaskMemAlloc(): 0x%x\n", i.*);
         w32.CoTaskMemFree.?(i);
     }
 
     switch (@import("builtin").cpu.arch) {
-        .x86 => _ = printf(0, "cpu.arch is x86\n"),
-        .x86_64 => _ = printf(0, "cpu.arch is x86_64\n"),
-        else => _ = printf(0, "cpu.arch is unknown\n"),
+        .x86 => _ = printf(.output, "cpu.arch is x86\n"),
+        .x86_64 => _ = printf(.output, "cpu.arch is x86_64\n"),
+        else => _ = printf(.output, "cpu.arch is unknown\n"),
     }
 
     switch (@import("builtin").os.tag) {
-        .windows => _ = printf(0, "os.tag is windows\n"),
-        .linux => _ = printf(0, "os.tag is linux\n"),
-        else => _ = printf(0, "os.tag is unknown\n"),
+        .windows => _ = printf(.output, "os.tag is windows\n"),
+        .linux => _ = printf(.output, "os.tag is linux\n"),
+        else => _ = printf(.output, "os.tag is unknown\n"),
     }
 
     var parser: beacon.datap = .{};

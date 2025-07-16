@@ -32,29 +32,29 @@ fn getUptimeLinux() !u8 {
     const SECONDS_PER_DAY = 86400;
     const uptimeSec = try std.fmt.parseInt(u64, uptimeStr, 10);
 
-    _ = printf(0, "up: ");
+    _ = printf(.output, "up: ");
 
     const days: u8 = @intCast(uptimeSec / SECONDS_PER_DAY);
     const hours: u8 = @intCast(uptimeSec % SECONDS_PER_DAY / 3600);
     const minutes: u8 = @intCast(uptimeSec % SECONDS_PER_DAY % 3600 / 60);
 
     if (days > 0) {
-        _ = printf(0, "%d ", days);
+        _ = printf(.output, "%d ", days);
         if (days == 1) {
-            _ = printf(0, "day ");
-        } else _ = printf(0, "days ");
+            _ = printf(.output, "day ");
+        } else _ = printf(.output, "days ");
     }
     if (hours > 0) {
-        _ = printf(0, "%d ", hours);
+        _ = printf(.output, "%d ", hours);
         if (hours == 1) {
-            _ = printf(0, "hour ");
-        } else _ = printf(0, "hours ");
+            _ = printf(.output, "hour ");
+        } else _ = printf(.output, "hours ");
     }
     if (minutes > 0) {
-        _ = printf(0, "%d ", minutes);
+        _ = printf(.output, "%d ", minutes);
         if (minutes == 1) {
-            _ = printf(0, "minute ");
-        } else _ = printf(0, "minutes ");
+            _ = printf(.output, "minute ");
+        } else _ = printf(.output, "minutes ");
     }
 
     // get number of users on the system
@@ -70,9 +70,9 @@ fn getUptimeLinux() !u8 {
         ut_entry = posix.getutxent();
     }
     _ = posix.endutxent();
-    _ = printf(0, " users: %d", nuser);
+    _ = printf(.output, " users: %d", nuser);
 
-    _ = printf(0, "\n");
+    _ = printf(.output, "\n");
 
     return 0;
 }

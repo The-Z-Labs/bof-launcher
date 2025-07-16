@@ -31,7 +31,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     const utsn: std.posix.utsname = std.posix.uname();
 
     if (args_len == 0) {
-        _ = printf(0, "%s\n", &utsn.sysname);
+        _ = printf(.output, "%s\n", &utsn.sysname);
         return 0;
     }
 
@@ -46,17 +46,17 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     //const optS = std.mem.sliceTo(opt, 0);
 
     if (std.mem.eql(u8, optS, "-a")) {
-        _ = printf(0, "%s %s %s %s %s\n", &utsn.sysname, &utsn.nodename, &utsn.release, &utsn.version, &utsn.machine);
+        _ = printf(.output, "%s %s %s %s %s\n", &utsn.sysname, &utsn.nodename, &utsn.release, &utsn.version, &utsn.machine);
     } else if (std.mem.eql(u8, optS, "-s")) {
-        _ = printf(0, "%s\n", &utsn.sysname);
+        _ = printf(.output, "%s\n", &utsn.sysname);
     } else if (std.mem.eql(u8, optS, "-n")) {
-        _ = printf(0, "%s\n", &utsn.nodename);
+        _ = printf(.output, "%s\n", &utsn.nodename);
     } else if (std.mem.eql(u8, optS, "-r")) {
-        _ = printf(0, "%s\n", &utsn.release);
+        _ = printf(.output, "%s\n", &utsn.release);
     } else if (std.mem.eql(u8, optS, "-v")) {
-        _ = printf(0, "%s\n", &utsn.version);
+        _ = printf(.output, "%s\n", &utsn.version);
     } else if (std.mem.eql(u8, optS, "-m")) {
-        _ = printf(0, "%s\n", &utsn.machine);
+        _ = printf(.output, "%s\n", &utsn.machine);
     } else {
         return 1;
     }

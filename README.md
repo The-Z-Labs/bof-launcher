@@ -104,7 +104,7 @@ pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
         return 1;
 
     _ = beacon.printf.?(
-        0,
+        .output,
         "Windows version: %d.%d, OS build number: %d\n",
         version_info.dwMajorVersion,
         version_info.dwMinorVersion,
@@ -127,7 +127,7 @@ unsigned char go(unsigned char* arg_data, int arg_len) {
         return 1;
 
     BeaconPrintf(
-        0,
+        CALLBACK_OUTPUT,
         "Windows version: %d.%d, OS build number: %d\n",
         version_info.dwMajorVersion,
         version_info.dwMinorVersion,

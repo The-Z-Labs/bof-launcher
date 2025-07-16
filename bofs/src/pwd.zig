@@ -37,7 +37,7 @@ const BofErrors = enum(u8) {
 fn getCwd() !u8 {
     var buf: [4096]u8 = undefined;
     const str = try std.posix.getcwd(buf[0..]);
-    bofapi.print("{s}", .{str});
+    bofapi.print(.output, "{s}", .{str});
     return 0;
 }
 

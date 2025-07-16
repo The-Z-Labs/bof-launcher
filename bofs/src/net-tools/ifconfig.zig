@@ -93,36 +93,36 @@ pub const sockaddr_ll = extern struct {
 
 fn flagsDisplay(flags: u32) void {
     const printf = beacon.printf.?;
-    _ = printf(0, "flags=%u<", flags);
+    _ = printf(.output, "flags=%u<", flags);
 
     if (flags & IFF_UP != 0) {
-        _ = printf(0, "UP");
-    } else _ = printf(0, "DOWN");
+        _ = printf(.output, "UP");
+    } else _ = printf(.output, "DOWN");
     if (flags & IFF_BROADCAST != 0)
-        _ = printf(0, ",BROADCAST");
+        _ = printf(.output, ",BROADCAST");
     if (flags & IFF_DEBUG != 0)
-        _ = printf(0, ",DEBUG");
+        _ = printf(.output, ",DEBUG");
     if (flags & IFF_LOOPBACK != 0)
-        _ = printf(0, ",LOOPBACK");
+        _ = printf(.output, ",LOOPBACK");
     if (flags & IFF_POINTOPOINT != 0)
-        _ = printf(0, ",POINT-TO-POINT");
+        _ = printf(.output, ",POINT-TO-POINT");
     if (flags & IFF_RUNNING != 0)
-        _ = printf(0, ",RUNNING");
+        _ = printf(.output, ",RUNNING");
     if (flags & IFF_NOARP != 0)
-        _ = printf(0, ",NOARP");
+        _ = printf(.output, ",NOARP");
     if (flags & IFF_PROMISC != 0)
-        _ = printf(0, ",PROMISC");
+        _ = printf(.output, ",PROMISC");
     if (flags & IFF_NOTRAILERS != 0)
-        _ = printf(0, ",NOTRAILERS");
+        _ = printf(.output, ",NOTRAILERS");
     if (flags & IFF_ALLMULTI != 0)
-        _ = printf(0, ",ALLMULTI");
+        _ = printf(.output, ",ALLMULTI");
     if (flags & IFF_MASTER != 0)
-        _ = printf(0, ",MASTER");
+        _ = printf(.output, ",MASTER");
     if (flags & IFF_SLAVE != 0)
-        _ = printf(0, ",SLAVE");
+        _ = printf(.output, ",SLAVE");
     if (flags & IFF_MULTICAST != 0)
-        _ = printf(0, ",MULTICAST");
-    _ = printf(0, ">");
+        _ = printf(.output, ",MULTICAST");
+    _ = printf(.output, ">");
 }
 
 fn flagsParseOption(flags: std.os.linux.IFF, opt: []u8) std.os.linux.IFF {
@@ -178,7 +178,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
 
     var list: *ifaddrs = undefined;
     if (getifaddrs(&list) == -1) {
-        _ = printf(0, "getifaddrs failed. Aborted.\n");
+        _ = printf(.output, "getifaddrs failed. Aborted.\n");
         return 1;
     }
 
@@ -215,21 +215,21 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
 
                     if (flags & IFF_BROADCAST != 0) {
                         _ = getnameinfo(iter.?.ifa_ifu.ifu_broadaddr.?, @sizeOf(std.posix.sockaddr.in), &aux, NI_MAXHOST, null, 0, NI_NUMERICHOST);
-                        _ = printf(0, "\tinet %s netmask=%s broadcast=%s\n", &host, &netmask, &aux);
+                        _ = printf(.output, "\tinet %s netmask=%s broadcast=%s\n", &host, &netmask, &aux);
                     } else {
                         _ = getnameinfo(iter.?.ifa_ifu.ifu_dstaddr.?, @sizeOf(std.posix.sockaddr.in), &aux, NI_MAXHOST, null, 0, NI_NUMERICHOST);
-                        _ = printf(0, "\tinet %s netmask=%s point2point=%s\n", &host, &netmask, &aux);
+                        _ = printf(.output, "\tinet %s netmask=%s point2point=%s\n", &host, &netmask, &aux);
                     }
                 }
                 if (family == std.os.linux.AF.INET6) {
                     _ = getnameinfo(iter.?.ifa_addr.?, @sizeOf(std.posix.sockaddr.in6), &host, NI_MAXHOST, null, 0, NI_NUMERICHOST);
                     _ = getnameinfo(iter.?.ifa_netmask.?, @sizeOf(std.posix.sockaddr.in6), &netmask, NI_MAXHOST, null, 0, NI_NUMERICHOST);
-                    _ = printf(0, "\tinet %s netmask=%s\n", &host, &netmask);
+                    _ = printf(.output, "\tinet %s netmask=%s\n", &host, &netmask);
                 }
                 if (family == std.os.linux.AF.PACKET) {
-                    _ = printf(0, "%s: ", iface.ptr);
+                    _ = printf(.output, "%s: ", iface.ptr);
                     flagsDisplay(flags);
-                    _ = printf(0, "\n");
+                    _ = printf(.output, "\n");
 
                     // display HW address
                     if (!std.mem.eql(u8, iface, "lo")) {
@@ -237,13 +237,13 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
                             const s = @as(*sockaddr_ll, @ptrCast(@alignCast(addr)));
                             var i: u32 = 0;
 
-                            _ = printf(0, "\tether ");
+                            _ = printf(.output, "\tether ");
                             while (i < s.sll_halen) : (i += 1) {
-                                _ = printf(0, "%x", s.sll_addr[i]);
+                                _ = printf(.output, "%x", s.sll_addr[i]);
                                 if (i + 1 != s.sll_halen) {
-                                    _ = printf(0, ":");
+                                    _ = printf(.output, ":");
                                 } else {
-                                    _ = printf(0, "\n");
+                                    _ = printf(.output, "\n");
                                 }
                             }
                         }
@@ -251,17 +251,17 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
 
                     if (iter.?.ifa_data != null) {
                         const stats = @as(*std.os.linux.rtnl_link_stats, @ptrCast(@alignCast(iter.?.ifa_data)));
-                        _ = printf(0, "\tRX packets %d bytes %d\n", stats.rx_packets, stats.rx_bytes);
-                        _ = printf(0, "\tRX errors %d dropped %d overruns %d frame %d\n", stats.rx_errors, stats.rx_dropped, stats.rx_fifo_errors, stats.rx_frame_errors);
-                        _ = printf(0, "\tTX packets %d bytes %d\n", stats.tx_packets, stats.tx_bytes);
-                        _ = printf(0, "\tTX errors %d dropped %d overruns %d carrier %d collisions %d\n", stats.tx_errors, stats.tx_dropped, stats.tx_fifo_errors, stats.tx_carrier_errors, stats.collisions);
+                        _ = printf(.output, "\tRX packets %d bytes %d\n", stats.rx_packets, stats.rx_bytes);
+                        _ = printf(.output, "\tRX errors %d dropped %d overruns %d frame %d\n", stats.rx_errors, stats.rx_dropped, stats.rx_fifo_errors, stats.rx_frame_errors);
+                        _ = printf(.output, "\tTX packets %d bytes %d\n", stats.tx_packets, stats.tx_bytes);
+                        _ = printf(.output, "\tTX errors %d dropped %d overruns %d carrier %d collisions %d\n", stats.tx_errors, stats.tx_dropped, stats.tx_fifo_errors, stats.tx_carrier_errors, stats.collisions);
                     }
                 }
             }
 
             //std.debug.print("{any}\n\n\n", .{iter.?.*});
         }
-        _ = printf(0, "\n");
+        _ = printf(.output, "\n");
     }
 
     freeifaddrs(list);

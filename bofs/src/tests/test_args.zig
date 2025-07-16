@@ -2,7 +2,7 @@ const std = @import("std");
 const beacon = @import("bof_api").beacon;
 
 pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
-    _ = beacon.printf.?(0, "--- test_args.zig ---\n");
+    _ = beacon.printf.?(.output, "--- test_args.zig ---\n");
 
     if (arg_data == null) return 1;
 

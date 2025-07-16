@@ -35,7 +35,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
             return 1;
         }
 
-        _ = beacon.printf.?(0, "ip: %d %d\n", srcip, netmask);
+        _ = beacon.printf.?(.output, "ip: %d %d\n", srcip, netmask);
 
         // Open the network interface for packet capture
         const handle = c.pcap_open_live(interface, 65535, 1, 1000, &errbuf);

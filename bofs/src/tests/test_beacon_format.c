@@ -10,7 +10,7 @@ unsigned char go(char * args, int alen) {
     char *  bufferString;
     int     bufferStringLen;
 
-    BeaconPrintf(0, "--- testBeaconFormat.c ---\n");
+    BeaconPrintf(CALLBACK_OUTPUT, "--- testBeaconFormat.c ---\n");
 
     if (args == NULL) return 0;
 

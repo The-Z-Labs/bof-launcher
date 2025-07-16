@@ -9,11 +9,8 @@ pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
     if (w32.RtlGetVersion.?(&version_info) != .SUCCESS)
         return 1;
 
-    // TODO: CS compat
-    std.debug.print("AAAAAAAAAAAAAAAAAAAAA\n", .{});
-
     _ = beacon.printf.?(
-        0,
+        .output,
         "Windows version: %d.%d, OS build number: %d\n",
         version_info.dwMajorVersion,
         version_info.dwMinorVersion,

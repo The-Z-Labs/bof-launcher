@@ -167,11 +167,11 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
 
     // scanning
     for (sIPs) |IP| {
-        _ = printf(0, "IP: %s\n", IP.ptr);
+        _ = printf(.output, "IP: %s\n", IP.ptr);
         var dest_addr = net.Address.parseIp(IP, @as(u16, @intCast(0))) catch return 1;
 
         for (sPorts) |port| {
-            _ = printf(0, "port: %d\n", port);
+            _ = printf(.output, "port: %d\n", port);
             // creating socket
             const sockfd = std.posix.socket(
                 std.posix.AF.INET,
@@ -205,19 +205,19 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
 
             // use this on Windows: https://github.com/ziglang/zig/blob/956f53beb09c07925970453d4c178c6feb53ba70/lib/std/os/windows.zig#L1687
             const nevents = posix.poll(&pfd, POLL_TIMEOUT) catch 0;
-            _ = printf(0, "nevents: %d\n", nevents);
+            _ = printf(.output, "nevents: %d\n", nevents);
 
             if ((pfd[0].revents & std.posix.POLL.OUT) != 0) {
                 // use this on Windows: https://ziglang.org/documentation/master/std/#std.os.windows.ws2_32.getsockopt
                 const rc = posix.getsockoptError(sockfd);
                 if (rc == error.ConnectionRefused) {
-                    _ = printf(0, "Port %d closed on host %s\n", port, IP.ptr);
-                } else _ = printf(0, "Port %d opened on host %s\n", port, IP.ptr);
+                    _ = printf(.output, "Port %d closed on host %s\n", port, IP.ptr);
+                } else _ = printf(.output, "Port %d opened on host %s\n", port, IP.ptr);
             } else {
-                _ = printf(0, "Port %d filtered on host %s\n", port, IP.ptr);
+                _ = printf(.output, "Port %d filtered on host %s\n", port, IP.ptr);
             }
         }
-        _ = printf(0, "\n");
+        _ = printf(.output, "\n");
     }
 
     return 0;

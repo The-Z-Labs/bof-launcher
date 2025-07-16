@@ -193,7 +193,7 @@ fn extractIPs(allocator: mem.Allocator, ip_spec: []const u8) ![][]const u8 {
 
 pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     if (args_len == 0) {
-        _ = beacon.printf.?(0, "Usage: udpScanner str:IPSpec[:portSpec] [int:BUF_LEN str:BUF_MEMORY_ADDR]\n");
+        _ = beacon.printf.?(.output, "Usage: udpScanner str:IPSpec[:portSpec] [int:BUF_LEN str:BUF_MEMORY_ADDR]\n");
         return 1;
     }
 
@@ -324,7 +324,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
                 const scanned_addr = net.Address.parseIp(IP, port) catch continue;
                 if (sa.eql(scanned_addr)) {
                     debugPrint("Host: {s}\tPort: {d}\tState: open\n", .{ IP, port });
-                    _ = beacon.printf.?(0, "Host: %s\tPort: %d\tState: open\n", IP.ptr, port);
+                    _ = beacon.printf.?(.output, "Host: %s\tPort: %d\tState: open\n", IP.ptr, port);
                 }
             }
         }
