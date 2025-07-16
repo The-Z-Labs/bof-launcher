@@ -54,6 +54,11 @@ comptime {
     if (@import("builtin").mode != .Debug and @import("builtin").os.tag == .windows and win32.bof) {
         @export(&RE_memcpy, .{ .name = "memcpy", .linkage = .strong });
         @export(&RE_memset, .{ .name = "memset", .linkage = .strong });
+        if (arch == .x86) {
+            @export(&RE_chkstk, .{ .name = "_alloca", .linkage = .strong });
+        } else if (arch == .x86_64) {
+            @export(&RE___chkstk_ms, .{ .name = "___chkstk_ms", .linkage = .strong });
+        }
     }
 }
 
@@ -75,4 +80,121 @@ fn RE_memset(dest: ?[*]u8, c: u8, len: usize) callconv(.c) ?[*]u8 {
     }
 
     return dest;
+}
+
+fn RE_chkstk() callconv(.Naked) void {
+    @setRuntimeSafety(false);
+    @call(.always_inline, win_probe_stack_adjust_sp, .{});
+}
+fn RE___chkstk_ms() callconv(.Naked) void {
+    @setRuntimeSafety(false);
+    @call(.always_inline, win_probe_stack_only, .{});
+}
+
+const arch = @import("builtin").cpu.arch;
+
+fn win_probe_stack_adjust_sp() void {
+    @setRuntimeSafety(false);
+
+    switch (arch) {
+        .x86_64 => {
+            asm volatile (
+                \\         push   %%rcx
+                \\         cmp    $0x1000,%%rax
+                \\         lea    16(%%rsp),%%rcx
+                \\         jb     1f
+                \\ 2:
+                \\         sub    $0x1000,%%rcx
+                \\         test   %%rcx,(%%rcx)
+                \\         sub    $0x1000,%%rax
+                \\         cmp    $0x1000,%%rax
+                \\         ja     2b
+                \\ 1:
+                \\         sub    %%rax,%%rcx
+                \\         test   %%rcx,(%%rcx)
+                \\
+                \\         lea    8(%%rsp),%%rax
+                \\         mov    %%rcx,%%rsp
+                \\         mov    -8(%%rax),%%rcx
+                \\         push   (%%rax)
+                \\         sub    %%rsp,%%rax
+                \\         ret
+            );
+        },
+        .x86 => {
+            asm volatile (
+                \\         push   %%ecx
+                \\         cmp    $0x1000,%%eax
+                \\         lea    8(%%esp),%%ecx
+                \\         jb     1f
+                \\ 2:
+                \\         sub    $0x1000,%%ecx
+                \\         test   %%ecx,(%%ecx)
+                \\         sub    $0x1000,%%eax
+                \\         cmp    $0x1000,%%eax
+                \\         ja     2b
+                \\ 1:
+                \\         sub    %%eax,%%ecx
+                \\         test   %%ecx,(%%ecx)
+                \\
+                \\         lea    4(%%esp),%%eax
+                \\         mov    %%ecx,%%esp
+                \\         mov    -4(%%eax),%%ecx
+                \\         push   (%%eax)
+                \\         sub    %%esp,%%eax
+                \\         ret
+            );
+        },
+        else => unreachable,
+    }
+}
+
+fn win_probe_stack_only() void {
+    @setRuntimeSafety(false);
+
+    switch (arch) {
+        .x86_64 => {
+            asm volatile (
+                \\         push   %%rcx
+                \\         push   %%rax
+                \\         cmp    $0x1000,%%rax
+                \\         lea    24(%%rsp),%%rcx
+                \\         jb     1f
+                \\ 2:
+                \\         sub    $0x1000,%%rcx
+                \\         test   %%rcx,(%%rcx)
+                \\         sub    $0x1000,%%rax
+                \\         cmp    $0x1000,%%rax
+                \\         ja     2b
+                \\ 1:
+                \\         sub    %%rax,%%rcx
+                \\         test   %%rcx,(%%rcx)
+                \\         pop    %%rax
+                \\         pop    %%rcx
+                \\         ret
+            );
+        },
+        .x86 => {
+            asm volatile (
+                \\         push   %%ecx
+                \\         push   %%eax
+                \\         cmp    $0x1000,%%eax
+                \\         lea    12(%%esp),%%ecx
+                \\         jb     1f
+                \\ 2:
+                \\         sub    $0x1000,%%ecx
+                \\         test   %%ecx,(%%ecx)
+                \\         sub    $0x1000,%%eax
+                \\         cmp    $0x1000,%%eax
+                \\         ja     2b
+                \\ 1:
+                \\         sub    %%eax,%%ecx
+                \\         test   %%ecx,(%%ecx)
+                \\         pop    %%eax
+                \\         pop    %%ecx
+                \\         ret
+            );
+        },
+        else => unreachable,
+    }
 }

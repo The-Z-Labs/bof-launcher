@@ -2,7 +2,7 @@ const std = @import("std");
 const w32 = @import("bof_api").win32;
 const beacon = @import("bof_api").beacon;
 
-pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
+pub export fn go(_: ?[*]u8, _: i32) callconv(.c) u8 {
     var version_info: w32.OSVERSIONINFOW = undefined;
     version_info.dwOSVersionInfoSize = @sizeOf(@TypeOf(version_info));
 

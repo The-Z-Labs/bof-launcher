@@ -1978,9 +1978,6 @@ extern fn __aeabi_llsl(a: i64, b: i32) callconv(.AAPCS) i64;
 extern fn __aeabi_uidiv(n: u32, d: u32) callconv(.AAPCS) u32;
 extern fn __aeabi_uldivmod() callconv(.Naked) void;
 extern fn __aeabi_ldivmod() callconv(.Naked) void;
-extern fn ___chkstk_ms() callconv(.Naked) void;
-extern fn __zig_probe_stack() callconv(.Naked) void;
-extern fn _alloca() callconv(.Naked) void;
 
 export fn bofLauncherAllocateMemory(size: usize) callconv(.C) ?*anyopaque {
     gstate.allocator_mutex.lock();
@@ -2322,13 +2319,6 @@ fn initLauncher() !void {
             zgateOutputDebugStringAPtr = @ptrCast(w32.GetProcAddress.?(dll, "OutputDebugStringA").?);
             zgateExitProcessPtr = @ptrCast(w32.GetProcAddress.?(dll, "ExitProcess").?);
             zgateFlushInstructionCachePtr = @ptrCast(w32.GetProcAddress.?(dll, "FlushInstructionCache").?);
-        }
-
-        // TODO: CS compat
-        if (@import("builtin").cpu.arch == .x86_64) {
-            try gstate.func_lookup.put("___chkstk_ms", @intFromPtr(&__zig_probe_stack));
-        } else {
-            try gstate.func_lookup.put("__alloca", @intFromPtr(&_alloca));
         }
 
         try gstate.func_lookup.put("LoadLibraryA", @intFromPtr(&w32.LoadLibraryA.?));
