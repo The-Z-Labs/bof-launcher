@@ -980,8 +980,9 @@ test "bof-launcher.bofs.bss" {
 }
 
 test "bof-launcher.load_all_bofs" {
-    if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
     if (@import("builtin").cpu.arch != .x86_64) return error.SkipZigTest;
+
+    const os = @import("builtin").os.tag;
 
     var iter_dir = try std.fs.cwd().openDir(bofs_path, .{ .iterate = true });
     defer iter_dir.close();
@@ -992,9 +993,12 @@ test "bof-launcher.load_all_bofs" {
     while (try iter.next()) |entry| {
         if (std.mem.containsAtLeast(u8, entry.name, 1, "debug")) continue;
 
-        if (std.mem.containsAtLeast(u8, entry.name, 1, "coff") and
+        if (std.mem.containsAtLeast(u8, entry.name, 1, if (os == .windows) "coff" else "elf") and
             (std.mem.containsAtLeast(u8, entry.name, 1, "x64") or std.mem.containsAtLeast(u8, entry.name, 1, "x86")))
         {
+            if (std.mem.containsAtLeast(u8, entry.name, 1, "sniffer")) continue;
+            if (std.mem.containsAtLeast(u8, entry.name, 1, "snifferBOF")) continue;
+
             const stem = std.fs.path.stem;
             const name = stem(stem(stem(entry.name)));
 
@@ -1006,6 +1010,15 @@ test "bof-launcher.load_all_bofs" {
 
             const object = try bof.Object.initFromMemory(bof_data);
             defer object.release();
+
+            if (std.mem.containsAtLeast(u8, entry.name, 1, "z-beac0n")) continue;
+            if (std.mem.containsAtLeast(u8, entry.name, 1, "wProcessInjectionSrdi")) continue;
+            if (std.mem.containsAtLeast(u8, entry.name, 1, "wProcessInfoMessageBox")) continue;
+            if (std.mem.containsAtLeast(u8, entry.name, 1, "wInjectionChain")) continue;
+            if (std.mem.containsAtLeast(u8, entry.name, 1, "wCloneProcess")) continue;
+
+            const context = try object.run(null);
+            defer context.release();
         }
     }
 }

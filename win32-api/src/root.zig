@@ -1269,7 +1269,11 @@ comptime {
         @export(&RE_NtClose, .{ .name = "NtClose", .linkage = .strong });
     }
 }
-const re_section = ".text";
+
+// This section can be removed from BOF:
+// llvm-strip.exe --remove-section=.redirectors --no-strip-all <BOF>
+// TODO: Automate this
+const re_section = ".redirectors";
 
 fn RE_WriteFile(
     hFile: HANDLE,
