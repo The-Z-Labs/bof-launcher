@@ -59,6 +59,7 @@ pub const sockaddr = windows.ws2_32.sockaddr;
 pub const WSABUF = windows.ws2_32.WSABUF;
 pub const LPWSAOVERLAPPED_COMPLETION_ROUTINE = windows.ws2_32.LPWSAOVERLAPPED_COMPLETION_ROUTINE;
 pub const WSAPOLLFD = windows.ws2_32.WSAPOLLFD;
+pub const IO_STATUS_BLOCK = windows.IO_STATUS_BLOCK;
 
 pub const INFINITE = windows.INFINITE;
 pub const WAIT_FAILED = windows.WAIT_FAILED;
@@ -944,6 +945,20 @@ pub const PFN_NtCreateUserProcess = *const fn (
     AttributeList: ?*anyopaque, // TODO: ?*PS_ATTRIBUTE_LIST,
 ) callconv(.winapi) NTSTATUS;
 
+pub const PFN_NtCreateFile = *const fn (
+    FileHandle: *HANDLE,
+    DesiredAccess: ACCESS_MASK,
+    ObjectAttributes: *OBJECT_ATTRIBUTES,
+    IoStatusBlock: *IO_STATUS_BLOCK,
+    AllocationSize: ?*LARGE_INTEGER,
+    FileAttributes: ULONG,
+    ShareAccess: ULONG,
+    CreateDisposition: ULONG,
+    CreateOptions: ULONG,
+    EaBuffer: ?*anyopaque,
+    EaLength: ULONG,
+) callconv(.winapi) NTSTATUS;
+
 //
 // ADVAPI32 function types
 //
@@ -1185,6 +1200,7 @@ pub const NtCreateUserProcess = def(?PFN_NtCreateUserProcess, "NtCreateUserProce
 pub const RtlGetVersion = def(?PFN_RtlGetVersion, "RtlGetVersion", "ntdll");
 pub const RtlCloneUserProcess = def(?PFN_RtlCloneUserProcess, "RtlCloneUserProcess", "ntdll");
 pub const RtlWow64EnableFsRedirection = def(?PFN_RtlWow64EnableFsRedirection, "RtlWow64EnableFsRedirection", "ntdll");
+pub const NtCreateFile = def(?PFN_NtCreateFile, "NtCreateFile", "ntdll");
 
 pub fn NtCurrentProcess() HANDLE {
     return @ptrFromInt(@as(usize, @bitCast(@as(isize, -1))));
@@ -1267,6 +1283,7 @@ comptime {
         @export(&RE_getsockopt, .{ .name = "getsockopt", .linkage = .strong });
         @export(&RE_setsockopt, .{ .name = "setsockopt", .linkage = .strong });
         @export(&RE_NtClose, .{ .name = "NtClose", .linkage = .strong });
+        @export(&RE_NtCreateFile, .{ .name = "NtCreateFile", .linkage = .strong });
     }
 }
 
@@ -1424,4 +1441,19 @@ fn RE_setsockopt(
 }
 fn RE_NtClose(hHandle: HANDLE) linksection(re_section) callconv(.winapi) NTSTATUS {
     return NtClose.?(hHandle);
+}
+fn RE_NtCreateFile(
+    FileHandle: *HANDLE,
+    DesiredAccess: ACCESS_MASK,
+    ObjectAttributes: *OBJECT_ATTRIBUTES,
+    IoStatusBlock: *IO_STATUS_BLOCK,
+    AllocationSize: ?*LARGE_INTEGER,
+    FileAttributes: ULONG,
+    ShareAccess: ULONG,
+    CreateDisposition: ULONG,
+    CreateOptions: ULONG,
+    EaBuffer: ?*anyopaque,
+    EaLength: ULONG,
+) linksection(re_section) callconv(.winapi) NTSTATUS {
+    return NtCreateFile.?(FileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, AllocationSize, FileAttributes, ShareAccess, CreateDisposition, CreateOptions, EaBuffer, EaLength);
 }

@@ -1,4 +1,3 @@
-const std = @import("std");
 const w32 = @import("bof_api").win32;
 const beacon = @import("bof_api").beacon;
 
