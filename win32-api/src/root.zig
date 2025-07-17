@@ -60,6 +60,9 @@ pub const WSABUF = windows.ws2_32.WSABUF;
 pub const LPWSAOVERLAPPED_COMPLETION_ROUTINE = windows.ws2_32.LPWSAOVERLAPPED_COMPLETION_ROUTINE;
 pub const WSAPOLLFD = windows.ws2_32.WSAPOLLFD;
 pub const IO_STATUS_BLOCK = windows.IO_STATUS_BLOCK;
+pub const IO_APC_ROUTINE = windows.IO_APC_ROUTINE;
+pub const FILE_INFORMATION_CLASS = windows.FILE_INFORMATION_CLASS;
+pub const OBJECT_INFORMATION_CLASS = windows.OBJECT_INFORMATION_CLASS;
 
 pub const INFINITE = windows.INFINITE;
 pub const WAIT_FAILED = windows.WAIT_FAILED;
@@ -816,6 +819,11 @@ pub const PFN_CreateRemoteThread = *const fn (
     lpThreadId: ?*DWORD,
 ) callconv(.winapi) ?HANDLE;
 
+pub const PFN_GetCurrentDirectoryW = *const fn (
+    nBufferLength: DWORD,
+    lpBuffer: ?[*]WCHAR,
+) callconv(.winapi) DWORD;
+
 //
 // NTDLL function types
 //
@@ -957,6 +965,78 @@ pub const PFN_NtCreateFile = *const fn (
     CreateOptions: ULONG,
     EaBuffer: ?*anyopaque,
     EaLength: ULONG,
+) callconv(.winapi) NTSTATUS;
+
+pub const PFN_RtlSetCurrentDirectory_U = *const fn (PathName: *UNICODE_STRING) callconv(.winapi) NTSTATUS;
+
+pub const PFN_RtlGetSystemTimePrecise = *const fn () callconv(.winapi) LARGE_INTEGER;
+
+pub const PFN_RtlGetFullPathName_U = *const fn (
+    FileName: [*:0]const u16,
+    BufferByteLength: ULONG,
+    Buffer: [*]u16,
+    ShortName: ?*[*:0]const u16,
+) callconv(.winapi) ULONG;
+
+pub const PFN_NtQueryDirectoryFile = *const fn (
+    FileHandle: HANDLE,
+    Event: ?HANDLE,
+    ApcRoutine: ?IO_APC_ROUTINE,
+    ApcContext: ?*anyopaque,
+    IoStatusBlock: *IO_STATUS_BLOCK,
+    FileInformation: *anyopaque,
+    Length: ULONG,
+    FileInformationClass: FILE_INFORMATION_CLASS,
+    ReturnSingleEntry: BOOLEAN,
+    FileName: ?*UNICODE_STRING,
+    RestartScan: BOOLEAN,
+) callconv(.winapi) NTSTATUS;
+
+pub const PFN_NtQueryObject = *const fn (
+    Handle: HANDLE,
+    ObjectInformationClass: OBJECT_INFORMATION_CLASS,
+    ObjectInformation: PVOID,
+    ObjectInformationLength: ULONG,
+    ReturnLength: ?*ULONG,
+) callconv(.winapi) NTSTATUS;
+
+pub const PFN_NtLockFile = *const fn (
+    FileHandle: HANDLE,
+    Event: ?HANDLE,
+    ApcRoutine: ?*IO_APC_ROUTINE,
+    ApcContext: ?*anyopaque,
+    IoStatusBlock: *IO_STATUS_BLOCK,
+    ByteOffset: *const LARGE_INTEGER,
+    Length: *const LARGE_INTEGER,
+    Key: ?*ULONG,
+    FailImmediately: BOOLEAN,
+    ExclusiveLock: BOOLEAN,
+) callconv(.winapi) NTSTATUS;
+
+pub const PFN_NtDeviceIoControlFile = *const fn (
+    FileHandle: HANDLE,
+    Event: ?HANDLE,
+    ApcRoutine: ?IO_APC_ROUTINE,
+    ApcContext: ?*anyopaque,
+    IoStatusBlock: *IO_STATUS_BLOCK,
+    IoControlCode: ULONG,
+    InputBuffer: ?*const anyopaque,
+    InputBufferLength: ULONG,
+    OutputBuffer: ?PVOID,
+    OutputBufferLength: ULONG,
+) callconv(.winapi) NTSTATUS;
+
+pub const PFN_NtFsControlFile = *const fn (
+    FileHandle: HANDLE,
+    Event: ?HANDLE,
+    ApcRoutine: ?IO_APC_ROUTINE,
+    ApcContext: ?*anyopaque,
+    IoStatusBlock: *IO_STATUS_BLOCK,
+    FsControlCode: ULONG,
+    InputBuffer: ?*const anyopaque,
+    InputBufferLength: ULONG,
+    OutputBuffer: ?PVOID,
+    OutputBufferLength: ULONG,
 ) callconv(.winapi) NTSTATUS;
 
 //
@@ -1175,6 +1255,7 @@ pub const OpenThread = def(?PFN_OpenThread, "OpenThread", "kernel32");
 pub const WriteProcessMemory = def(?PFN_WriteProcessMemory, "WriteProcessMemory", "kernel32");
 pub const ReadProcessMemory = def(?PFN_ReadProcessMemory, "ReadProcessMemory", "kernel32");
 pub const CreateRemoteThread = def(?PFN_CreateRemoteThread, "CreateRemoteThread", "kernel32");
+pub const GetCurrentDirectoryW = def(?PFN_GetCurrentDirectoryW, "GetCurrentDirectoryW", "kernel32");
 
 //
 // NTDLL function definitions
@@ -1201,6 +1282,14 @@ pub const RtlGetVersion = def(?PFN_RtlGetVersion, "RtlGetVersion", "ntdll");
 pub const RtlCloneUserProcess = def(?PFN_RtlCloneUserProcess, "RtlCloneUserProcess", "ntdll");
 pub const RtlWow64EnableFsRedirection = def(?PFN_RtlWow64EnableFsRedirection, "RtlWow64EnableFsRedirection", "ntdll");
 pub const NtCreateFile = def(?PFN_NtCreateFile, "NtCreateFile", "ntdll");
+pub const RtlSetCurrentDirectory_U = def(?PFN_RtlSetCurrentDirectory_U, "RtlSetCurrentDirectory_U", "ntdll");
+pub const RtlGetSystemTimePrecise = def(?PFN_RtlGetSystemTimePrecise, "RtlGetSystemTimePrecise", "ntdll");
+pub const RtlGetFullPathName_U = def(?PFN_RtlGetFullPathName_U, "RtlGetFullPathName_U", "ntdll");
+pub const NtQueryDirectoryFile = def(?PFN_NtQueryDirectoryFile, "NtQueryDirectoryFile", "ntdll");
+pub const NtQueryObject = def(?PFN_NtQueryObject, "NtQueryObject", "ntdll");
+pub const NtLockFile = def(?PFN_NtLockFile, "NtLockFile", "ntdll");
+pub const NtDeviceIoControlFile = def(?PFN_NtDeviceIoControlFile, "NtDeviceIoControlFile", "ntdll");
+pub const NtFsControlFile = def(?PFN_NtFsControlFile, "NtFsControlFile", "ntdll");
 
 pub fn NtCurrentProcess() HANDLE {
     return @ptrFromInt(@as(usize, @bitCast(@as(isize, -1))));
@@ -1284,6 +1373,15 @@ comptime {
         @export(&RE_setsockopt, .{ .name = "setsockopt", .linkage = .strong });
         @export(&RE_NtClose, .{ .name = "NtClose", .linkage = .strong });
         @export(&RE_NtCreateFile, .{ .name = "NtCreateFile", .linkage = .strong });
+        @export(&RE_RtlSetCurrentDirectory_U, .{ .name = "RtlSetCurrentDirectory_U", .linkage = .strong });
+        @export(&RE_RtlGetSystemTimePrecise, .{ .name = "RtlGetSystemTimePrecise", .linkage = .strong });
+        @export(&RE_RtlGetFullPathName_U, .{ .name = "RtlGetFullPathName_U", .linkage = .strong });
+        @export(&RE_NtQueryDirectoryFile, .{ .name = "NtQueryDirectoryFile", .linkage = .strong });
+        @export(&RE_NtQueryObject, .{ .name = "NtQueryObject", .linkage = .strong });
+        @export(&RE_NtLockFile, .{ .name = "NtLockFile", .linkage = .strong });
+        @export(&RE_NtDeviceIoControlFile, .{ .name = "NtDeviceIoControlFile", .linkage = .strong });
+        @export(&RE_NtFsControlFile, .{ .name = "NtFsControlFile", .linkage = .strong });
+        @export(&RE_GetCurrentDirectoryW, .{ .name = "GetCurrentDirectoryW", .linkage = .strong });
     }
 }
 
@@ -1456,4 +1554,90 @@ fn RE_NtCreateFile(
     EaLength: ULONG,
 ) linksection(re_section) callconv(.winapi) NTSTATUS {
     return NtCreateFile.?(FileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, AllocationSize, FileAttributes, ShareAccess, CreateDisposition, CreateOptions, EaBuffer, EaLength);
+}
+fn RE_RtlSetCurrentDirectory_U(PathName: *UNICODE_STRING) linksection(re_section) callconv(.winapi) NTSTATUS {
+    return RtlSetCurrentDirectory_U.?(PathName);
+}
+fn RE_RtlGetSystemTimePrecise() linksection(re_section) callconv(.winapi) LARGE_INTEGER {
+    return RtlGetSystemTimePrecise.?();
+}
+fn RE_RtlGetFullPathName_U(
+    FileName: [*:0]const u16,
+    BufferByteLength: ULONG,
+    Buffer: [*]u16,
+    ShortName: ?*[*:0]const u16,
+) linksection(re_section) callconv(.winapi) ULONG {
+    return RtlGetFullPathName_U.?(FileName, BufferByteLength, Buffer, ShortName);
+}
+fn RE_NtQueryDirectoryFile(
+    FileHandle: HANDLE,
+    Event: ?HANDLE,
+    ApcRoutine: ?IO_APC_ROUTINE,
+    ApcContext: ?*anyopaque,
+    IoStatusBlock: *IO_STATUS_BLOCK,
+    FileInformation: *anyopaque,
+    Length: ULONG,
+    FileInformationClass: FILE_INFORMATION_CLASS,
+    ReturnSingleEntry: BOOLEAN,
+    FileName: ?*UNICODE_STRING,
+    RestartScan: BOOLEAN,
+) linksection(re_section) callconv(.winapi) NTSTATUS {
+    return NtQueryDirectoryFile.?(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, FileInformation, Length, FileInformationClass, ReturnSingleEntry, FileName, RestartScan);
+}
+fn RE_NtQueryObject(
+    Handle: HANDLE,
+    ObjectInformationClass: OBJECT_INFORMATION_CLASS,
+    ObjectInformation: PVOID,
+    ObjectInformationLength: ULONG,
+    ReturnLength: ?*ULONG,
+) linksection(re_section) callconv(.winapi) NTSTATUS {
+    return NtQueryObject.?(Handle, ObjectInformationClass, ObjectInformation, ObjectInformationLength, ReturnLength);
+}
+fn RE_NtLockFile(
+    FileHandle: HANDLE,
+    Event: ?HANDLE,
+    ApcRoutine: ?*IO_APC_ROUTINE,
+    ApcContext: ?*anyopaque,
+    IoStatusBlock: *IO_STATUS_BLOCK,
+    ByteOffset: *const LARGE_INTEGER,
+    Length: *const LARGE_INTEGER,
+    Key: ?*ULONG,
+    FailImmediately: BOOLEAN,
+    ExclusiveLock: BOOLEAN,
+) linksection(re_section) callconv(.winapi) NTSTATUS {
+    return NtLockFile.?(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, ByteOffset, Length, Key, FailImmediately, ExclusiveLock);
+}
+fn RE_NtDeviceIoControlFile(
+    FileHandle: HANDLE,
+    Event: ?HANDLE,
+    ApcRoutine: ?IO_APC_ROUTINE,
+    ApcContext: ?*anyopaque,
+    IoStatusBlock: *IO_STATUS_BLOCK,
+    IoControlCode: ULONG,
+    InputBuffer: ?*const anyopaque,
+    InputBufferLength: ULONG,
+    OutputBuffer: ?PVOID,
+    OutputBufferLength: ULONG,
+) linksection(re_section) callconv(.winapi) NTSTATUS {
+    return NtDeviceIoControlFile.?(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, IoControlCode, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength);
+}
+fn RE_NtFsControlFile(
+    FileHandle: HANDLE,
+    Event: ?HANDLE,
+    ApcRoutine: ?IO_APC_ROUTINE,
+    ApcContext: ?*anyopaque,
+    IoStatusBlock: *IO_STATUS_BLOCK,
+    FsControlCode: ULONG,
+    InputBuffer: ?*const anyopaque,
+    InputBufferLength: ULONG,
+    OutputBuffer: ?PVOID,
+    OutputBufferLength: ULONG,
+) linksection(re_section) callconv(.winapi) NTSTATUS {
+    return NtFsControlFile.?(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, FsControlCode, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength);
+}
+fn RE_GetCurrentDirectoryW(
+    nBufferLength: DWORD,
+    lpBuffer: ?[*]WCHAR,
+) linksection(re_section) callconv(.winapi) DWORD {
+    return GetCurrentDirectoryW.?(nBufferLength, lpBuffer);
 }
