@@ -25,6 +25,11 @@ const fmt = std.fmt;
 const mem = std.mem;
 const net = std.net;
 
+comptime {
+    @import("bof_api").includeFunctionCode("memcpy");
+    @import("bof_api").includeFunctionCode("memset");
+}
+
 const POLL_TIMEOUT = 300;
 
 pub const linger = extern struct {

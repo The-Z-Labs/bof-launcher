@@ -3,6 +3,12 @@ const assert = std.debug.assert;
 const bof = @import("bof_launcher_api");
 const beacon = @import("bof_api").beacon;
 
+comptime {
+    @import("bof_api").includeFunctionCode("memcpy");
+    @import("bof_api").includeFunctionCode("memset");
+    @import("bof_api").includeStackProbeCode();
+}
+
 pub const std_options = std.Options{
     .http_disable_tls = true,
     .log_level = .info,
@@ -870,9 +876,4 @@ pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
 
         std.time.sleep(state.jitter * @as(u64, 1e9));
     }
-}
-
-comptime {
-    // This is needed to enable our "redirectors", "call FuncName" -> "call [__imp_FuncName]"
-    if (@import("builtin").os.tag == .windows) _ = @import("bof_api").win32;
 }

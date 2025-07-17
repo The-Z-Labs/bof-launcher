@@ -48,21 +48,35 @@ extern fn bofLauncherAllocateMemory(size: usize) callconv(.C) ?*anyopaque;
 extern fn bofLauncherFreeMemory(maybe_ptr: ?*anyopaque) callconv(.C) void;
 
 //
-// Redirectors (for Cobalt Strike compat)
+// Functions that can be generated implicitly by the compiler
 //
-comptime {
-    if (@import("builtin").mode != .Debug and @import("builtin").os.tag == .windows and win32.bof) {
-        @export(&RE_memcpy, .{ .name = "memcpy", .linkage = .strong });
-        @export(&RE_memset, .{ .name = "memset", .linkage = .strong });
-        if (arch == .x86) {
-            @export(&RE_chkstk, .{ .name = "_alloca", .linkage = .strong });
-        } else if (arch == .x86_64) {
-            @export(&RE___chkstk_ms, .{ .name = "___chkstk_ms", .linkage = .strong });
+pub fn includeFunctionCode(name: []const u8) void {
+    comptime {
+        if (@import("builtin").mode != .Debug) {
+            if (std.mem.eql(u8, name, "memcpy")) {
+                @export(&memcpy, .{ .name = "memcpy", .linkage = .strong });
+            } else if (std.mem.eql(u8, name, "memset")) {
+                @export(&memset, .{ .name = "memset", .linkage = .strong });
+            } else {
+                unreachable;
+            }
         }
     }
 }
 
-fn RE_memcpy(noalias dest: ?[*]u8, noalias src: ?[*]const u8, len: usize) callconv(.c) ?[*]u8 {
+pub fn includeStackProbeCode() void {
+    comptime {
+        if (@import("builtin").mode != .Debug and @import("builtin").os.tag == .windows) {
+            if (@import("builtin").cpu.arch == .x86) {
+                @export(&_alloca, .{ .name = "_alloca", .linkage = .strong });
+            } else if (@import("builtin").cpu.arch == .x86_64) {
+                @export(&___chkstk_ms, .{ .name = "___chkstk_ms", .linkage = .strong });
+            }
+        }
+    }
+}
+
+fn memcpy(noalias dest: ?[*]u8, noalias src: ?[*]const u8, len: usize) callconv(.c) ?[*]u8 {
     @setRuntimeSafety(false);
 
     for (0..len) |i| {
@@ -72,7 +86,7 @@ fn RE_memcpy(noalias dest: ?[*]u8, noalias src: ?[*]const u8, len: usize) callco
     return dest;
 }
 
-fn RE_memset(dest: ?[*]u8, c: u8, len: usize) callconv(.c) ?[*]u8 {
+fn memset(dest: ?[*]u8, c: u8, len: usize) callconv(.c) ?[*]u8 {
     @setRuntimeSafety(false);
 
     for (0..len) |i| {
@@ -82,11 +96,12 @@ fn RE_memset(dest: ?[*]u8, c: u8, len: usize) callconv(.c) ?[*]u8 {
     return dest;
 }
 
-fn RE_chkstk() callconv(.Naked) void {
+fn _alloca() callconv(.naked) void {
     @setRuntimeSafety(false);
     @call(.always_inline, win_probe_stack_adjust_sp, .{});
 }
-fn RE___chkstk_ms() callconv(.Naked) void {
+
+fn ___chkstk_ms() callconv(.naked) void {
     @setRuntimeSafety(false);
     @call(.always_inline, win_probe_stack_only, .{});
 }
@@ -196,5 +211,11 @@ fn win_probe_stack_only() void {
             );
         },
         else => unreachable,
+    }
+}
+
+comptime {
+    if (@import("builtin").mode != .Debug and @import("builtin").os.tag == .windows) {
+        _ = win32;
     }
 }

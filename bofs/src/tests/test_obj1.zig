@@ -2,6 +2,11 @@ const std = @import("std");
 const fmt = std.fmt;
 const beacon = @import("bof_api").beacon;
 
+comptime {
+    @import("bof_api").includeFunctionCode("memcpy");
+    @import("bof_api").includeFunctionCode("memset");
+}
+
 var global_var: i32 = 3;
 
 fn func() !void {

@@ -38,6 +38,12 @@ const bofapi = @import("bof_api");
 const beacon = bofapi.beacon;
 const posix = bofapi.posix;
 
+comptime {
+    @import("bof_api").includeFunctionCode("memcpy");
+    @import("bof_api").includeFunctionCode("memset");
+    @import("bof_api").includeStackProbeCode();
+}
+
 // BOF-specific error codes
 const BofErrors = enum(u8) {
     AccessDenied = 0x1,

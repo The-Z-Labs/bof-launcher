@@ -30,10 +30,15 @@
 ///  code: 0xff
 ///  message: "Unknown error"
 const std = @import("std");
-const bof_api = @import("bof_api");
-const beacon = bof_api.beacon;
-const w32 = bof_api.win32;
+const beacon = @import("bof_api").beacon;
+const w32 = @import("bof_api").win32;
 const bof_launcher = @import("bof_launcher_api");
+
+comptime {
+    @import("bof_api").includeFunctionCode("memcpy");
+    @import("bof_api").includeFunctionCode("memset");
+    @import("bof_api").includeStackProbeCode();
+}
 
 pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.c) u8 {
     var parser = beacon.datap{};

@@ -1192,7 +1192,7 @@ pub const PFN_setsockopt = *const fn (
 //
 // Define WIN32 function
 //
-pub const bof = @import("options").bof;
+const bof = @import("options").bof;
 
 pub fn def(
     comptime T: type,

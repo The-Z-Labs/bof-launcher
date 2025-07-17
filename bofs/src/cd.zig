@@ -76,3 +76,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
         };
     } else return @intFromEnum(BofErrors.DirNotProvided);
 }
+
+comptime {
+    @import("bof_api").includeStackProbeCode();
+}

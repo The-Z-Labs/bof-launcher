@@ -26,6 +26,11 @@ const posix = @import("std").posix;
 const bofapi = @import("bof_api");
 const beacon = bofapi.beacon;
 
+comptime {
+    @import("bof_api").includeFunctionCode("memcpy");
+    @import("bof_api").includeStackProbeCode();
+}
+
 // BOF-specific error codes
 const BofErrors = enum(u8) {
     AccesDenied = 0x1,

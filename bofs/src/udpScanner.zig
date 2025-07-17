@@ -50,6 +50,12 @@ const fmt = std.fmt;
 const mem = std.mem;
 const net = std.net;
 
+comptime {
+    @import("bof_api").includeFunctionCode("memcpy");
+    @import("bof_api").includeFunctionCode("memset");
+    @import("bof_api").includeStackProbeCode();
+}
+
 const Payload = struct {
     ports: []u16,
     service_name: []u8,

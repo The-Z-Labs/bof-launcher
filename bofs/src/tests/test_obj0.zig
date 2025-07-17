@@ -2,6 +2,10 @@ const std = @import("std");
 const beacon = @import("bof_api").beacon;
 const krb = @import("bof_api").kerberos;
 
+comptime {
+    @import("bof_api").includeFunctionCode("memcpy");
+}
+
 pub export fn func(msg: [*:0]const u8) callconv(.C) u8 {
     _ = beacon.printf.?(.output, "func() %s\n", msg);
     return 0;
