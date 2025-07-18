@@ -3,8 +3,10 @@ const fmt = std.fmt;
 const beacon = @import("bof_api").beacon;
 
 comptime {
-    @import("bof_api").includeFunctionCode("memcpy");
-    @import("bof_api").includeFunctionCode("memset");
+    @import("bof_api").embedFunctionCode("memcpy");
+    @import("bof_api").embedFunctionCode("memset");
+    if (@import("builtin").cpu.arch == .x86) @import("bof_api").embedFunctionCode("__udivdi3");
+    if (@import("builtin").cpu.arch == .x86) @import("bof_api").embedFunctionCode("__ashldi3");
 }
 
 var global_var: i32 = 3;

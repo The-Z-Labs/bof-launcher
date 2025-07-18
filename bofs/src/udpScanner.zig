@@ -51,9 +51,17 @@ const mem = std.mem;
 const net = std.net;
 
 comptime {
-    @import("bof_api").includeFunctionCode("memcpy");
-    @import("bof_api").includeFunctionCode("memset");
-    @import("bof_api").includeStackProbeCode();
+    @import("bof_api").embedFunctionCode("__stackprobe__");
+    @import("bof_api").embedFunctionCode("memcpy");
+    @import("bof_api").embedFunctionCode("memset");
+    @import("bof_api").embedFunctionCode("__divdi3");
+    @import("bof_api").embedFunctionCode("__divti3");
+    @import("bof_api").embedFunctionCode("__udivdi3");
+    @import("bof_api").embedFunctionCode("__modti3");
+    @import("bof_api").embedFunctionCode("__umoddi3");
+    @import("bof_api").embedFunctionCode("__ashldi3");
+    @import("bof_api").embedFunctionCode("__ashlti3");
+    @import("bof_api").embedFunctionCode("__lshrdi3");
 }
 
 const Payload = struct {

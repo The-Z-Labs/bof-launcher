@@ -50,13 +50,47 @@ extern fn bofLauncherFreeMemory(maybe_ptr: ?*anyopaque) callconv(.C) void;
 //
 // Functions that can be generated implicitly by the compiler
 //
-pub fn includeFunctionCode(name: []const u8) void {
+pub fn embedFunctionCode(name: []const u8) void {
     comptime {
+        const want_windows_v2u64_abi = @import("compiler_rt/common.zig").want_windows_v2u64_abi;
+
         if (@import("builtin").mode != .Debug) {
-            if (std.mem.eql(u8, name, "memcpy")) {
-                @export(&memcpy, .{ .name = "memcpy", .linkage = .strong });
+            if (std.mem.eql(u8, name, "__stackprobe__")) {
+                if (@import("builtin").os.tag == .windows) {
+                    if (@import("builtin").cpu.arch == .x86) {
+                        xexport(&@import("compiler_rt/stack_probe.zig")._chkstk, "_alloca");
+                    } else if (@import("builtin").cpu.arch == .x86_64) {
+                        xexport(&@import("compiler_rt/stack_probe.zig").___chkstk_ms, "___chkstk_ms");
+                    }
+                }
+            } else if (std.mem.eql(u8, name, "memcpy")) {
+                xexport(&memcpy, "memcpy");
             } else if (std.mem.eql(u8, name, "memset")) {
-                @export(&memset, .{ .name = "memset", .linkage = .strong });
+                xexport(&memset, "memset");
+            } else if (std.mem.eql(u8, name, "__udivdi3")) {
+                xexport(&@import("compiler_rt/int.zig").__udivdi3, "__udivdi3");
+            } else if (std.mem.eql(u8, name, "__divdi3")) {
+                xexport(&@import("compiler_rt/int.zig").__divdi3, "__divdi3");
+            } else if (std.mem.eql(u8, name, "__modti3")) {
+                if (want_windows_v2u64_abi) {
+                    xexport(&@import("compiler_rt/modti3.zig").__modti3_windows_x86_64, "__modti3");
+                } else {
+                    xexport(&@import("compiler_rt/modti3.zig").__modti3, "__modti3");
+                }
+            } else if (std.mem.eql(u8, name, "__umoddi3")) {
+                xexport(&@import("compiler_rt/int.zig").__umoddi3, "__umoddi3");
+            } else if (std.mem.eql(u8, name, "__divti3")) {
+                if (want_windows_v2u64_abi) {
+                    xexport(&@import("compiler_rt/divti3.zig").__divti3_windows_x86_64, "__divti3");
+                } else {
+                    xexport(&@import("compiler_rt/divti3.zig").__divti3, "__divti3");
+                }
+            } else if (std.mem.eql(u8, name, "__ashlti3")) {
+                xexport(&@import("compiler_rt/shift.zig").__ashlti3, "__ashlti3");
+            } else if (std.mem.eql(u8, name, "__ashldi3")) {
+                xexport(&@import("compiler_rt/shift.zig").__ashldi3, "__ashldi3");
+            } else if (std.mem.eql(u8, name, "__lshrdi3")) {
+                xexport(&@import("compiler_rt/shift.zig").__lshrdi3, "__lshrdi3");
             } else {
                 unreachable;
             }
@@ -64,16 +98,8 @@ pub fn includeFunctionCode(name: []const u8) void {
     }
 }
 
-pub fn includeStackProbeCode() void {
-    comptime {
-        if (@import("builtin").mode != .Debug and @import("builtin").os.tag == .windows) {
-            if (@import("builtin").cpu.arch == .x86) {
-                @export(&_alloca, .{ .name = "_alloca", .linkage = .strong });
-            } else if (@import("builtin").cpu.arch == .x86_64) {
-                @export(&___chkstk_ms, .{ .name = "___chkstk_ms", .linkage = .strong });
-            }
-        }
-    }
+fn xexport(comptime ptr: *const anyopaque, name: []const u8) void {
+    @export(ptr, .{ .name = name, .linkage = .strong });
 }
 
 fn memcpy(noalias dest: ?[*]u8, noalias src: ?[*]const u8, len: usize) callconv(.c) ?[*]u8 {
@@ -94,124 +120,6 @@ fn memset(dest: ?[*]u8, c: u8, len: usize) callconv(.c) ?[*]u8 {
     }
 
     return dest;
-}
-
-fn _alloca() callconv(.naked) void {
-    @setRuntimeSafety(false);
-    @call(.always_inline, win_probe_stack_adjust_sp, .{});
-}
-
-fn ___chkstk_ms() callconv(.naked) void {
-    @setRuntimeSafety(false);
-    @call(.always_inline, win_probe_stack_only, .{});
-}
-
-const arch = @import("builtin").cpu.arch;
-
-fn win_probe_stack_adjust_sp() void {
-    @setRuntimeSafety(false);
-
-    switch (arch) {
-        .x86_64 => {
-            asm volatile (
-                \\         push   %%rcx
-                \\         cmp    $0x1000,%%rax
-                \\         lea    16(%%rsp),%%rcx
-                \\         jb     1f
-                \\ 2:
-                \\         sub    $0x1000,%%rcx
-                \\         test   %%rcx,(%%rcx)
-                \\         sub    $0x1000,%%rax
-                \\         cmp    $0x1000,%%rax
-                \\         ja     2b
-                \\ 1:
-                \\         sub    %%rax,%%rcx
-                \\         test   %%rcx,(%%rcx)
-                \\
-                \\         lea    8(%%rsp),%%rax
-                \\         mov    %%rcx,%%rsp
-                \\         mov    -8(%%rax),%%rcx
-                \\         push   (%%rax)
-                \\         sub    %%rsp,%%rax
-                \\         ret
-            );
-        },
-        .x86 => {
-            asm volatile (
-                \\         push   %%ecx
-                \\         cmp    $0x1000,%%eax
-                \\         lea    8(%%esp),%%ecx
-                \\         jb     1f
-                \\ 2:
-                \\         sub    $0x1000,%%ecx
-                \\         test   %%ecx,(%%ecx)
-                \\         sub    $0x1000,%%eax
-                \\         cmp    $0x1000,%%eax
-                \\         ja     2b
-                \\ 1:
-                \\         sub    %%eax,%%ecx
-                \\         test   %%ecx,(%%ecx)
-                \\
-                \\         lea    4(%%esp),%%eax
-                \\         mov    %%ecx,%%esp
-                \\         mov    -4(%%eax),%%ecx
-                \\         push   (%%eax)
-                \\         sub    %%esp,%%eax
-                \\         ret
-            );
-        },
-        else => unreachable,
-    }
-}
-
-fn win_probe_stack_only() void {
-    @setRuntimeSafety(false);
-
-    switch (arch) {
-        .x86_64 => {
-            asm volatile (
-                \\         push   %%rcx
-                \\         push   %%rax
-                \\         cmp    $0x1000,%%rax
-                \\         lea    24(%%rsp),%%rcx
-                \\         jb     1f
-                \\ 2:
-                \\         sub    $0x1000,%%rcx
-                \\         test   %%rcx,(%%rcx)
-                \\         sub    $0x1000,%%rax
-                \\         cmp    $0x1000,%%rax
-                \\         ja     2b
-                \\ 1:
-                \\         sub    %%rax,%%rcx
-                \\         test   %%rcx,(%%rcx)
-                \\         pop    %%rax
-                \\         pop    %%rcx
-                \\         ret
-            );
-        },
-        .x86 => {
-            asm volatile (
-                \\         push   %%ecx
-                \\         push   %%eax
-                \\         cmp    $0x1000,%%eax
-                \\         lea    12(%%esp),%%ecx
-                \\         jb     1f
-                \\ 2:
-                \\         sub    $0x1000,%%ecx
-                \\         test   %%ecx,(%%ecx)
-                \\         sub    $0x1000,%%eax
-                \\         cmp    $0x1000,%%eax
-                \\         ja     2b
-                \\ 1:
-                \\         sub    %%eax,%%ecx
-                \\         test   %%ecx,(%%ecx)
-                \\         pop    %%eax
-                \\         pop    %%ecx
-                \\         ret
-            );
-        },
-        else => unreachable,
-    }
 }
 
 comptime {

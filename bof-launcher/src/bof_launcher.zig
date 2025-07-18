@@ -366,7 +366,10 @@ const Bof = struct {
                 }
 
                 if (maybe_func_addr == null and @intFromEnum(sym.symbol.section_number) == 0) {
-                    std.log.err("SYMBOL NAME: {s} NOT FOUND!", .{sym_name});
+                    std.log.err(
+                        "\nSYMBOL NAME: {s} NOT FOUND ({s})!",
+                        .{ p_sym_name, @tagName(@import("builtin").cpu.arch) },
+                    );
                     return error.UnknownFunction;
                 }
 
@@ -735,23 +738,26 @@ const Bof = struct {
                         const func_name = reloc_str[0..std.mem.len(reloc_str)];
                         var maybe_func_ptr = gstate.func_lookup.get(func_name);
 
-                        if (maybe_func_ptr) |func_ptr| {
-                            std.log.debug("\t\tNot defined in the obj: {s} 0x{x}", .{ func_name, func_ptr });
-                        } else {
+                        if (maybe_func_ptr == null and with_libc) {
                             const func_name_z = try std.mem.concatWithSentinel(arena, u8, &.{func_name[0..]}, 0);
                             defer arena.free(func_name_z);
 
-                            if (with_libc and gstate.libc == null) {
+                            if (gstate.libc == null) {
                                 gstate.libc = std.DynLib.open("libc.so.6") catch null;
                             }
-                            if (with_libc and gstate.libc != null) {
-                                maybe_func_ptr = @intFromPtr(gstate.libc.?.lookup(*anyopaque, func_name_z));
-                            }
-                            if (maybe_func_ptr == null) {
-                                std.log.err("\t\tFailed to find function {s}", .{func_name});
-                                return error.UnknownFunction;
+                            if (gstate.libc != null) {
+                                maybe_func_ptr = if (gstate.libc.?.lookup(*anyopaque, func_name_z)) |ptr| @intFromPtr(ptr) else null;
                             }
                         }
+
+                        if (maybe_func_ptr == null) {
+                            std.log.err(
+                                "\nSYMBOL NAME: {s} NOT FOUND ({s})!",
+                                .{ func_name, @tagName(@import("builtin").cpu.arch) },
+                            );
+                            return error.UnknownFunction;
+                        }
+
                         const func_ptr = maybe_func_ptr.?;
 
                         const got_entry = if (func_addr_to_got_entry.get(func_ptr)) |entry| entry else blk: {
@@ -1968,12 +1974,6 @@ const R_ARM_JUMP24 = 29;
 const R_ARM_NONE = 0;
 const R_ARM_PREL31 = 42;
 
-extern fn __ashlti3(a: i128, b: i32) callconv(.C) i128;
-extern fn __ashldi3(a: i64, b: i32) callconv(.C) i64;
-extern fn __udivdi3(a: u64, b: u64) callconv(.C) u64;
-extern fn __divti3(a: i128, b: i128) callconv(.C) i128;
-extern fn __divdi3(a: i64, b: i64) callconv(.C) i64;
-extern fn __modti3(a: i128, b: i128) callconv(.C) i128;
 extern fn __aeabi_llsl(a: i64, b: i32) callconv(.AAPCS) i64;
 extern fn __aeabi_uidiv(n: u32, d: u32) callconv(.AAPCS) u32;
 extern fn __aeabi_uldivmod() callconv(.Naked) void;
@@ -2206,16 +2206,6 @@ fn initLauncher() !void {
         if (is32w) "_bofLauncherFreeMemory" else "bofLauncherFreeMemory",
         @intFromPtr(&bofLauncherFreeMemory),
     );
-
-    // TODO: CS compat
-    try gstate.func_lookup.put(if (is32w) "___ashlti3" else "__ashlti3", @intFromPtr(&__ashlti3));
-    if (@import("builtin").cpu.arch != .arm) {
-        try gstate.func_lookup.put(if (is32w) "___ashldi3" else "__ashldi3", @intFromPtr(&__ashldi3));
-    }
-    try gstate.func_lookup.put(if (is32w) "___udivdi3" else "__udivdi3", @intFromPtr(&__udivdi3));
-    try gstate.func_lookup.put(if (is32w) "___divti3" else "__divti3", @intFromPtr(&__divti3));
-    try gstate.func_lookup.put(if (is32w) "___divdi3" else "__divdi3", @intFromPtr(&__divdi3));
-    try gstate.func_lookup.put(if (is32w) "___modti3" else "__modti3", @intFromPtr(&__modti3));
 
     try gstate.func_lookup.put(if (is32w) "_calloc" else "calloc", @intFromPtr(&bofLauncherAllocateAndZeroMemory));
     try gstate.func_lookup.put(if (is32w) "_malloc" else "malloc", @intFromPtr(&bofLauncherAllocateMemory));

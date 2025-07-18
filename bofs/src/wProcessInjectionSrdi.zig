@@ -35,9 +35,9 @@ const w32 = @import("bof_api").win32;
 const bof_launcher = @import("bof_launcher_api");
 
 comptime {
-    @import("bof_api").includeFunctionCode("memcpy");
-    @import("bof_api").includeFunctionCode("memset");
-    @import("bof_api").includeStackProbeCode();
+    @import("bof_api").embedFunctionCode("memcpy");
+    @import("bof_api").embedFunctionCode("memset");
+    @import("bof_api").embedFunctionCode("__stackprobe__");
 }
 
 pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.c) u8 {

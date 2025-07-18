@@ -3,7 +3,7 @@ const beacon = @import("bof_api").beacon;
 const krb = @import("bof_api").kerberos;
 
 comptime {
-    @import("bof_api").includeFunctionCode("memcpy");
+    @import("bof_api").embedFunctionCode("memcpy");
 }
 
 pub export fn func(msg: [*:0]const u8) callconv(.C) u8 {

@@ -26,8 +26,8 @@ const mem = std.mem;
 const net = std.net;
 
 comptime {
-    @import("bof_api").includeFunctionCode("memcpy");
-    @import("bof_api").includeFunctionCode("memset");
+    @import("bof_api").embedFunctionCode("memcpy");
+    @import("bof_api").embedFunctionCode("memset");
 }
 
 const POLL_TIMEOUT = 300;

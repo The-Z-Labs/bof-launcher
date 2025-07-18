@@ -194,7 +194,7 @@ pub fn build(b: *std.Build) !void {
             .root_source_file = bofs_dep.path("src/tests/tests.zig"),
             .target = target,
             .optimize = optimize,
-            //.filter = "load_all_bofs",
+            //.filter = "udpScanner",
         });
         tests.addIncludePath(bof_launcher_dep.path("src"));
         tests.linkLibrary(bof_launcher_lib);

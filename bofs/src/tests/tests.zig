@@ -1008,7 +1008,10 @@ test "bof-launcher.load_all_bofs" {
             const bof_data = try loadBofFromFile(allocator, path);
             defer allocator.free(bof_data);
 
-            const object = try bof.Object.initFromMemory(bof_data);
+            const object = bof.Object.initFromMemory(bof_data) catch |err| {
+                std.debug.print("BOF {s} failed to load.\n", .{entry.name});
+                return err;
+            };
             defer object.release();
 
             if (std.mem.containsAtLeast(u8, entry.name, 1, "z-beac0n")) continue;

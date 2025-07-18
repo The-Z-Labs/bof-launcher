@@ -2,7 +2,7 @@ const std = @import("std");
 const w32 = @import("bof_api").win32;
 
 comptime {
-    @import("bof_api").includeFunctionCode("memcpy");
+    @import("bof_api").embedFunctionCode("memcpy");
 }
 
 pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {

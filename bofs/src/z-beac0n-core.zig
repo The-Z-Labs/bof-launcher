@@ -4,9 +4,12 @@ const bof = @import("bof_launcher_api");
 const beacon = @import("bof_api").beacon;
 
 comptime {
-    @import("bof_api").includeFunctionCode("memcpy");
-    @import("bof_api").includeFunctionCode("memset");
-    @import("bof_api").includeStackProbeCode();
+    @import("bof_api").embedFunctionCode("__stackprobe__");
+    @import("bof_api").embedFunctionCode("memcpy");
+    @import("bof_api").embedFunctionCode("memset");
+    @import("bof_api").embedFunctionCode("__udivdi3");
+    @import("bof_api").embedFunctionCode("__divti3");
+    @import("bof_api").embedFunctionCode("__ashlti3");
 }
 
 pub const std_options = std.Options{

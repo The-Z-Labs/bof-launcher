@@ -43,6 +43,10 @@ const std = @import("std");
 const beacon = @import("bof_api").beacon;
 const posix = @import("bof_api").posix;
 
+comptime {
+    @import("bof_api").embedFunctionCode("__stackprobe__");
+}
+
 // BOF-specific error codes
 const BofErrors = enum(u8) {
     AccessDenied = 0x1,
@@ -75,8 +79,4 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
             else => @intFromEnum(BofErrors.UnknownError),
         };
     } else return @intFromEnum(BofErrors.DirNotProvided);
-}
-
-comptime {
-    @import("bof_api").includeStackProbeCode();
 }

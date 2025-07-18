@@ -3,7 +3,7 @@ const beacon = bofapi.beacon;
 const w32 = bofapi.win32;
 
 comptime {
-    @import("bof_api").includeFunctionCode("memset");
+    @import("bof_api").embedFunctionCode("memset");
 }
 
 extern fn malloc(usize) callconv(.C) ?*anyopaque;

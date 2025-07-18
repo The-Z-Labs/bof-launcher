@@ -39,9 +39,9 @@ const beacon = bofapi.beacon;
 const posix = bofapi.posix;
 
 comptime {
-    @import("bof_api").includeFunctionCode("memcpy");
-    @import("bof_api").includeFunctionCode("memset");
-    @import("bof_api").includeStackProbeCode();
+    @import("bof_api").embedFunctionCode("memcpy");
+    @import("bof_api").embedFunctionCode("memset");
+    @import("bof_api").embedFunctionCode("__stackprobe__");
 }
 
 // BOF-specific error codes
