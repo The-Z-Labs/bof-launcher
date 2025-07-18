@@ -983,9 +983,6 @@ test "bof-launcher.load_all_bofs" {
     const os = @import("builtin").os.tag;
     const arch = @import("builtin").cpu.arch;
 
-    // Skip x86 because we run both x86 and x64 BOFs on x64 arch.
-    if (arch == .x86) return error.SkipZigTest;
-
     var iter_dir = try std.fs.cwd().openDir(bofs_path, .{ .iterate = true });
     defer iter_dir.close();
 
@@ -996,19 +993,30 @@ test "bof-launcher.load_all_bofs" {
         if (std.mem.containsAtLeast(u8, entry.name, 1, "debug")) continue;
         if (std.mem.containsAtLeast(u8, entry.name, 1, if (os == .windows) "elf" else "coff")) continue;
 
-        if (arch == .x86_64) {
-            if (std.mem.containsAtLeast(u8, entry.name, 1, "arm")) continue;
-            if (std.mem.containsAtLeast(u8, entry.name, 1, "aarch64")) continue;
-        } else if (arch == .arm) {
-            if (std.mem.containsAtLeast(u8, entry.name, 1, "x86")) continue;
-            if (std.mem.containsAtLeast(u8, entry.name, 1, "x64")) continue;
-            if (std.mem.containsAtLeast(u8, entry.name, 1, "aarch64")) continue;
-        } else if (arch == .aarch64) {
-            if (std.mem.containsAtLeast(u8, entry.name, 1, "x86")) continue;
-            if (std.mem.containsAtLeast(u8, entry.name, 1, "x64")) continue;
-            if (std.mem.containsAtLeast(u8, entry.name, 1, "arm")) continue;
-        } else {
-            unreachable;
+        switch (arch) {
+            .x86 => {
+                if (std.mem.containsAtLeast(u8, entry.name, 1, "x64")) continue;
+                if (std.mem.containsAtLeast(u8, entry.name, 1, "arm")) continue;
+                if (std.mem.containsAtLeast(u8, entry.name, 1, "aarch64")) continue;
+            },
+            .x86_64 => {
+                if (std.mem.containsAtLeast(u8, entry.name, 1, "x86")) continue;
+                if (std.mem.containsAtLeast(u8, entry.name, 1, "arm")) continue;
+                if (std.mem.containsAtLeast(u8, entry.name, 1, "aarch64")) continue;
+            },
+            .arm => {
+                if (std.mem.containsAtLeast(u8, entry.name, 1, "x86")) continue;
+                if (std.mem.containsAtLeast(u8, entry.name, 1, "x64")) continue;
+                if (std.mem.containsAtLeast(u8, entry.name, 1, "aarch64")) continue;
+            },
+            .aarch64 => {
+                if (std.mem.containsAtLeast(u8, entry.name, 1, "x86")) continue;
+                if (std.mem.containsAtLeast(u8, entry.name, 1, "x64")) continue;
+                if (std.mem.containsAtLeast(u8, entry.name, 1, "arm")) continue;
+            },
+            else => {
+                unreachable;
+            },
         }
 
         if (std.mem.containsAtLeast(u8, entry.name, 1, "sniffer")) continue;
@@ -1038,6 +1046,8 @@ test "bof-launcher.load_all_bofs" {
             // TODO: Running this BOF crashes on Arm.
             if (std.mem.containsAtLeast(u8, entry.name, 1, "pwd")) continue;
         }
+
+        //std.debug.print("{s}\n", .{entry.name});
 
         const context = try object.run(null);
         defer context.release();

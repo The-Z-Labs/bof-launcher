@@ -40,6 +40,8 @@ comptime {
     @import("bof_api").embedFunctionCode("memcpy");
     @import("bof_api").embedFunctionCode("memset");
     @import("bof_api").embedFunctionCode("__stackprobe__");
+    @import("bof_api").embedFunctionCode("__udivdi3");
+    @import("bof_api").embedFunctionCode("__ashldi3");
     @import("bof_api").embedFunctionCode("__aeabi_uldivmod");
     @import("bof_api").embedFunctionCode("__aeabi_uidivmod");
     @import("bof_api").embedFunctionCode("__aeabi_uidiv");

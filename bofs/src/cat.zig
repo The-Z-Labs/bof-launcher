@@ -41,6 +41,10 @@ const posix = bofapi.posix;
 comptime {
     @import("bof_api").embedFunctionCode("memcpy");
     @import("bof_api").embedFunctionCode("memset");
+    @import("bof_api").embedFunctionCode("__aeabi_llsl");
+    @import("bof_api").embedFunctionCode("__aeabi_uidiv");
+    @import("bof_api").embedFunctionCode("__udivdi3");
+    @import("bof_api").embedFunctionCode("__ashldi3");
     @import("bof_api").embedFunctionCode("__stackprobe__");
 }
 

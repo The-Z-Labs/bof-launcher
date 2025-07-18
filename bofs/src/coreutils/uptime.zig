@@ -3,6 +3,8 @@ const beacon = @import("bof_api").beacon;
 const posix = @import("bof_api").posix;
 
 comptime {
+    @import("bof_api").embedFunctionCode("__udivdi3");
+    @import("bof_api").embedFunctionCode("__ashldi3");
     @import("bof_api").embedFunctionCode("__aeabi_uldivmod");
     @import("bof_api").embedFunctionCode("__aeabi_uidiv");
     @import("bof_api").embedFunctionCode("__aeabi_llsl");
