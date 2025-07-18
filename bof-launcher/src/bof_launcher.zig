@@ -1974,11 +1974,6 @@ const R_ARM_JUMP24 = 29;
 const R_ARM_NONE = 0;
 const R_ARM_PREL31 = 42;
 
-extern fn __aeabi_llsl(a: i64, b: i32) callconv(.AAPCS) i64;
-extern fn __aeabi_uidiv(n: u32, d: u32) callconv(.AAPCS) u32;
-extern fn __aeabi_uldivmod() callconv(.Naked) void;
-extern fn __aeabi_ldivmod() callconv(.Naked) void;
-
 export fn bofLauncherAllocateMemory(size: usize) callconv(.C) ?*anyopaque {
     gstate.allocator_mutex.lock();
     defer gstate.allocator_mutex.unlock();
@@ -2314,14 +2309,6 @@ fn initLauncher() !void {
         try gstate.func_lookup.put("LoadLibraryA", @intFromPtr(&w32.LoadLibraryA.?));
         try gstate.func_lookup.put("GetModuleHandleA", @intFromPtr(&w32.GetModuleHandleA.?));
         try gstate.func_lookup.put("GetProcAddress", @intFromPtr(&w32.GetProcAddress.?));
-    }
-
-    if (@import("builtin").cpu.arch == .arm) {
-        // TODO: Add more.
-        try gstate.func_lookup.put("__aeabi_llsl", @intFromPtr(&__aeabi_llsl));
-        try gstate.func_lookup.put("__aeabi_uidiv", @intFromPtr(&__aeabi_uidiv));
-        try gstate.func_lookup.put("__aeabi_uldivmod", @intFromPtr(&__aeabi_uldivmod));
-        try gstate.func_lookup.put("__aeabi_ldivmod", @intFromPtr(&__aeabi_ldivmod));
     }
 
     gstate.contexts = std.ArrayList(*BofContext).init(gstate.allocator.?);

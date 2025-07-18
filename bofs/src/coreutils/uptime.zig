@@ -2,6 +2,12 @@ const std = @import("std");
 const beacon = @import("bof_api").beacon;
 const posix = @import("bof_api").posix;
 
+comptime {
+    @import("bof_api").embedFunctionCode("__aeabi_uldivmod");
+    @import("bof_api").embedFunctionCode("__aeabi_uidiv");
+    @import("bof_api").embedFunctionCode("__aeabi_llsl");
+}
+
 // TODO BOF:
 // https://gitlab.com/procps-ng/procps/-/blob/master/src/w.c
 //

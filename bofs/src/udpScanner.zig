@@ -62,6 +62,11 @@ comptime {
     @import("bof_api").embedFunctionCode("__ashldi3");
     @import("bof_api").embedFunctionCode("__ashlti3");
     @import("bof_api").embedFunctionCode("__lshrdi3");
+    @import("bof_api").embedFunctionCode("__aeabi_llsr");
+    @import("bof_api").embedFunctionCode("__aeabi_llsl");
+    @import("bof_api").embedFunctionCode("__aeabi_ldivmod");
+    @import("bof_api").embedFunctionCode("__aeabi_uldivmod");
+    @import("bof_api").embedFunctionCode("__aeabi_uidiv");
 }
 
 const Payload = struct {

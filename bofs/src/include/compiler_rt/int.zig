@@ -298,7 +298,7 @@ pub fn __udivsi3(n: u32, d: u32) callconv(.C) u32 {
     return div_u32(n, d);
 }
 
-fn __aeabi_uidiv(n: u32, d: u32) callconv(.AAPCS) u32 {
+pub fn __aeabi_uidiv(n: u32, d: u32) callconv(.AAPCS) u32 {
     return div_u32(n, d);
 }
 

@@ -110,7 +110,7 @@ pub fn __lshrsi3(a: i32, b: i32) callconv(.C) i32 {
 pub fn __ashldi3(a: i64, b: i32) callconv(.C) i64 {
     return ashlXi3(i64, a, b);
 }
-fn __aeabi_llsl(a: i64, b: i32) callconv(.AAPCS) i64 {
+pub fn __aeabi_llsl(a: i64, b: i32) callconv(.AAPCS) i64 {
     return ashlXi3(i64, a, b);
 }
 
@@ -132,7 +132,7 @@ pub fn __ashrti3(a: i128, b: i32) callconv(.C) i128 {
 pub fn __lshrdi3(a: i64, b: i32) callconv(.C) i64 {
     return lshrXi3(i64, a, b);
 }
-fn __aeabi_llsr(a: i64, b: i32) callconv(.AAPCS) i64 {
+pub fn __aeabi_llsr(a: i64, b: i32) callconv(.AAPCS) i64 {
     return lshrXi3(i64, a, b);
 }
 

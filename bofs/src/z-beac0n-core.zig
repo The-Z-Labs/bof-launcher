@@ -10,6 +10,12 @@ comptime {
     @import("bof_api").embedFunctionCode("__udivdi3");
     @import("bof_api").embedFunctionCode("__divti3");
     @import("bof_api").embedFunctionCode("__ashlti3");
+    @import("bof_api").embedFunctionCode("__aeabi_ldivmod");
+    @import("bof_api").embedFunctionCode("__aeabi_uldivmod");
+    @import("bof_api").embedFunctionCode("__aeabi_uidivmod");
+    @import("bof_api").embedFunctionCode("__aeabi_uidiv");
+    @import("bof_api").embedFunctionCode("__aeabi_llsl");
+    @import("bof_api").embedFunctionCode("__aeabi_llsr");
 }
 
 pub const std_options = std.Options{

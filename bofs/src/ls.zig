@@ -40,6 +40,10 @@ comptime {
     @import("bof_api").embedFunctionCode("memcpy");
     @import("bof_api").embedFunctionCode("memset");
     @import("bof_api").embedFunctionCode("__stackprobe__");
+    @import("bof_api").embedFunctionCode("__aeabi_uldivmod");
+    @import("bof_api").embedFunctionCode("__aeabi_uidivmod");
+    @import("bof_api").embedFunctionCode("__aeabi_uidiv");
+    @import("bof_api").embedFunctionCode("__aeabi_llsl");
 }
 
 // BOF-specific error codes

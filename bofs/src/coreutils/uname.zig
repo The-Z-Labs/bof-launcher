@@ -25,6 +25,12 @@
 const std = @import("std");
 const beacon = @import("bof_api").beacon;
 
+comptime {
+    @import("bof_api").embedFunctionCode("__aeabi_uldivmod");
+    @import("bof_api").embedFunctionCode("__aeabi_uidiv");
+    @import("bof_api").embedFunctionCode("__aeabi_llsl");
+}
+
 pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     const printf = beacon.printf.?;
 

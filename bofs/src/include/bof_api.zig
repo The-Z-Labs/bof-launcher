@@ -53,6 +53,7 @@ extern fn bofLauncherFreeMemory(maybe_ptr: ?*anyopaque) callconv(.C) void;
 pub fn embedFunctionCode(name: []const u8) void {
     comptime {
         const want_windows_v2u64_abi = @import("compiler_rt/common.zig").want_windows_v2u64_abi;
+        const want_aeabi = @import("compiler_rt/common.zig").want_aeabi;
 
         if (@import("builtin").mode != .Debug) {
             if (std.mem.eql(u8, name, "__stackprobe__")) {
@@ -91,6 +92,18 @@ pub fn embedFunctionCode(name: []const u8) void {
                 xexport(&@import("compiler_rt/shift.zig").__ashldi3, "__ashldi3");
             } else if (std.mem.eql(u8, name, "__lshrdi3")) {
                 xexport(&@import("compiler_rt/shift.zig").__lshrdi3, "__lshrdi3");
+            } else if (std.mem.eql(u8, name, "__aeabi_llsr")) {
+                if (want_aeabi) xexport(&@import("compiler_rt/shift.zig").__aeabi_llsr, "__aeabi_llsr");
+            } else if (std.mem.eql(u8, name, "__aeabi_llsl")) {
+                if (want_aeabi) xexport(&@import("compiler_rt/shift.zig").__aeabi_llsl, "__aeabi_llsl");
+            } else if (std.mem.eql(u8, name, "__aeabi_uldivmod")) {
+                if (want_aeabi) xexport(&@import("compiler_rt/arm.zig").__aeabi_uldivmod, "__aeabi_uldivmod");
+            } else if (std.mem.eql(u8, name, "__aeabi_uidiv")) {
+                if (want_aeabi) xexport(&@import("compiler_rt/int.zig").__aeabi_uidiv, "__aeabi_uidiv");
+            } else if (std.mem.eql(u8, name, "__aeabi_ldivmod")) {
+                if (want_aeabi) xexport(&@import("compiler_rt/arm.zig").__aeabi_ldivmod, "__aeabi_ldivmod");
+            } else if (std.mem.eql(u8, name, "__aeabi_uidivmod")) {
+                if (want_aeabi) xexport(&@import("compiler_rt/arm.zig").__aeabi_uidivmod, "__aeabi_uidivmod");
             } else {
                 unreachable;
             }

@@ -5,8 +5,11 @@ const beacon = @import("bof_api").beacon;
 comptime {
     @import("bof_api").embedFunctionCode("memcpy");
     @import("bof_api").embedFunctionCode("memset");
-    if (@import("builtin").cpu.arch == .x86) @import("bof_api").embedFunctionCode("__udivdi3");
-    if (@import("builtin").cpu.arch == .x86) @import("bof_api").embedFunctionCode("__ashldi3");
+    @import("bof_api").embedFunctionCode("__udivdi3");
+    @import("bof_api").embedFunctionCode("__ashldi3");
+    @import("bof_api").embedFunctionCode("__aeabi_llsl");
+    @import("bof_api").embedFunctionCode("__aeabi_uldivmod");
+    @import("bof_api").embedFunctionCode("__aeabi_uidiv");
 }
 
 var global_var: i32 = 3;

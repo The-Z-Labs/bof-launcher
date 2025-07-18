@@ -21,6 +21,12 @@ const mem = std.mem;
 const beacon = @import("bof_api").beacon;
 const posix = @import("bof_api").posix;
 
+comptime {
+    @import("bof_api").embedFunctionCode("__aeabi_uldivmod");
+    @import("bof_api").embedFunctionCode("__aeabi_uidiv");
+    @import("bof_api").embedFunctionCode("__aeabi_llsl");
+}
+
 // https://man7.org/linux/man-pages/man3/getgrouplist.3.html
 pub extern fn getgrouplist(user: [*:0]const u8, group: c.gid_t, groups: [*]c.gid_t, ngroups: *i32) callconv(.C) i32;
 

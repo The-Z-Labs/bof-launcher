@@ -28,6 +28,7 @@ const net = std.net;
 comptime {
     @import("bof_api").embedFunctionCode("memcpy");
     @import("bof_api").embedFunctionCode("memset");
+    @import("bof_api").embedFunctionCode("__aeabi_uidiv");
 }
 
 const POLL_TIMEOUT = 300;

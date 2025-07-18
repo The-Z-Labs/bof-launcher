@@ -980,9 +980,11 @@ test "bof-launcher.bofs.bss" {
 }
 
 test "bof-launcher.load_all_bofs" {
-    if (@import("builtin").cpu.arch != .x86_64) return error.SkipZigTest;
-
     const os = @import("builtin").os.tag;
+    const arch = @import("builtin").cpu.arch;
+
+    // Skip x86 because we run both x86 and x64 BOFs on x64 arch.
+    if (arch == .x86) return error.SkipZigTest;
 
     var iter_dir = try std.fs.cwd().openDir(bofs_path, .{ .iterate = true });
     defer iter_dir.close();
@@ -992,36 +994,52 @@ test "bof-launcher.load_all_bofs" {
     var iter = iter_dir.iterate();
     while (try iter.next()) |entry| {
         if (std.mem.containsAtLeast(u8, entry.name, 1, "debug")) continue;
+        if (std.mem.containsAtLeast(u8, entry.name, 1, if (os == .windows) "elf" else "coff")) continue;
 
-        if (std.mem.containsAtLeast(u8, entry.name, 1, if (os == .windows) "coff" else "elf") and
-            (std.mem.containsAtLeast(u8, entry.name, 1, "x64") or std.mem.containsAtLeast(u8, entry.name, 1, "x86")))
-        {
-            if (std.mem.containsAtLeast(u8, entry.name, 1, "sniffer")) continue;
-            if (std.mem.containsAtLeast(u8, entry.name, 1, "snifferBOF")) continue;
-
-            const stem = std.fs.path.stem;
-            const name = stem(stem(stem(entry.name)));
-
-            const path = try std.fs.path.joinZ(allocator, &.{ bofs_path, name });
-            defer allocator.free(path);
-
-            const bof_data = try loadBofFromFile(allocator, path);
-            defer allocator.free(bof_data);
-
-            const object = bof.Object.initFromMemory(bof_data) catch |err| {
-                std.debug.print("BOF {s} failed to load.\n", .{entry.name});
-                return err;
-            };
-            defer object.release();
-
-            if (std.mem.containsAtLeast(u8, entry.name, 1, "z-beac0n")) continue;
-            if (std.mem.containsAtLeast(u8, entry.name, 1, "wProcessInjectionSrdi")) continue;
-            if (std.mem.containsAtLeast(u8, entry.name, 1, "wProcessInfoMessageBox")) continue;
-            if (std.mem.containsAtLeast(u8, entry.name, 1, "wInjectionChain")) continue;
-            if (std.mem.containsAtLeast(u8, entry.name, 1, "wCloneProcess")) continue;
-
-            const context = try object.run(null);
-            defer context.release();
+        if (arch == .x86_64) {
+            if (std.mem.containsAtLeast(u8, entry.name, 1, "arm")) continue;
+            if (std.mem.containsAtLeast(u8, entry.name, 1, "aarch64")) continue;
+        } else if (arch == .arm) {
+            if (std.mem.containsAtLeast(u8, entry.name, 1, "x86")) continue;
+            if (std.mem.containsAtLeast(u8, entry.name, 1, "x64")) continue;
+            if (std.mem.containsAtLeast(u8, entry.name, 1, "aarch64")) continue;
+        } else if (arch == .aarch64) {
+            if (std.mem.containsAtLeast(u8, entry.name, 1, "x86")) continue;
+            if (std.mem.containsAtLeast(u8, entry.name, 1, "x64")) continue;
+            if (std.mem.containsAtLeast(u8, entry.name, 1, "arm")) continue;
+        } else {
+            unreachable;
         }
+
+        if (std.mem.containsAtLeast(u8, entry.name, 1, "sniffer")) continue;
+        if (std.mem.containsAtLeast(u8, entry.name, 1, "snifferBOF")) continue;
+
+        const stem = std.fs.path.stem;
+        const name = stem(stem(stem(entry.name)));
+
+        const path = try std.fs.path.joinZ(allocator, &.{ bofs_path, name });
+        defer allocator.free(path);
+
+        const bof_data = try loadBofFromFile(allocator, path);
+        defer allocator.free(bof_data);
+
+        const object = bof.Object.initFromMemory(bof_data) catch |err| {
+            std.debug.print("BOF {s} failed to load.\n", .{entry.name});
+            return err;
+        };
+        defer object.release();
+
+        if (std.mem.containsAtLeast(u8, entry.name, 1, "z-beac0n")) continue;
+        if (std.mem.containsAtLeast(u8, entry.name, 1, "wProcessInjectionSrdi")) continue;
+        if (std.mem.containsAtLeast(u8, entry.name, 1, "wProcessInfoMessageBox")) continue;
+        if (std.mem.containsAtLeast(u8, entry.name, 1, "wInjectionChain")) continue;
+        if (std.mem.containsAtLeast(u8, entry.name, 1, "wCloneProcess")) continue;
+        if (arch == .arm) {
+            // TODO: Running this BOF crashes on Arm.
+            if (std.mem.containsAtLeast(u8, entry.name, 1, "pwd")) continue;
+        }
+
+        const context = try object.run(null);
+        defer context.release();
     }
 }
