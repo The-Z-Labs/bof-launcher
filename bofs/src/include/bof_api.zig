@@ -13,39 +13,13 @@ pub fn print(@"type": beacon.CallbackType, comptime fmt: []const u8, args: anyty
         const str = std.fmt.bufPrintZ(buf[0..], fmt, args) catch unreachable;
         _ = beacon.printf.?(@"type", "%s", str.ptr);
     } else {
-        const str = std.fmt.allocPrintZ(generic_allocator, fmt, args) catch unreachable;
-        defer generic_allocator.free(str);
+        const str = std.fmt.allocPrintZ(std.heap.page_allocator, fmt, args) catch unreachable;
+        defer std.heap.page_allocator.free(str);
         _ = beacon.printf.?(@"type", "%s", str.ptr);
     }
 }
 
-pub const generic_allocator = std.mem.Allocator{
-    .ptr = undefined,
-    .vtable = &generic_allocator_vtable,
-};
-const generic_allocator_vtable = std.mem.Allocator.VTable{
-    .alloc = bofAlloc,
-    .resize = bofResize,
-    .remap = bofRemap,
-    .free = bofFree,
-};
-fn bofAlloc(_: *anyopaque, len: usize, _: std.mem.Alignment, _: usize) ?[*]u8 {
-    return @as(?[*]u8, @ptrCast(bofLauncherAllocateMemory(len)));
-}
-fn bofResize(_: *anyopaque, buf: []u8, _: std.mem.Alignment, new_len: usize, _: usize) bool {
-    if (new_len <= buf.len) return true;
-    return false;
-}
-fn bofRemap(_: *anyopaque, buf: []u8, _: std.mem.Alignment, new_len: usize, _: usize) ?[*]u8 {
-    if (new_len <= buf.len) return buf.ptr;
-    return null;
-}
-fn bofFree(_: *anyopaque, buf: []u8, _: std.mem.Alignment, _: usize) void {
-    bofLauncherFreeMemory(buf.ptr);
-}
-
-extern fn bofLauncherAllocateMemory(size: usize) callconv(.C) ?*anyopaque;
-extern fn bofLauncherFreeMemory(maybe_ptr: ?*anyopaque) callconv(.C) void;
+pub const generic_allocator = std.heap.page_allocator;
 
 //
 // Functions that can be generated implicitly by the compiler

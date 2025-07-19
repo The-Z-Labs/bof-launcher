@@ -221,6 +221,10 @@ pub fn build(b: *std.Build) !void {
 
         if (std.mem.containsAtLeast(u8, full_name, 1, "debug")) continue;
 
+        if (std.mem.containsAtLeast(u8, full_name, 1, "runBofFromBof")) continue;
+        if (std.mem.containsAtLeast(u8, full_name, 1, "z-beac0n")) continue;
+        if (std.mem.containsAtLeast(u8, full_name, 1, "wAsmTest")) continue;
+
         if (std.mem.containsAtLeast(u8, full_name, 1, "coff") and
             (std.mem.containsAtLeast(u8, full_name, 1, "x64") or std.mem.containsAtLeast(u8, full_name, 1, "x86")))
         {
