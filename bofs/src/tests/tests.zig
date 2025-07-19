@@ -1000,7 +1000,6 @@ test "bof-launcher.load_all_bofs" {
                 if (std.mem.containsAtLeast(u8, entry.name, 1, "aarch64")) continue;
             },
             .x86_64 => {
-                if (std.mem.containsAtLeast(u8, entry.name, 1, "x86")) continue;
                 if (std.mem.containsAtLeast(u8, entry.name, 1, "arm")) continue;
                 if (std.mem.containsAtLeast(u8, entry.name, 1, "aarch64")) continue;
             },
@@ -1012,7 +1011,6 @@ test "bof-launcher.load_all_bofs" {
             .aarch64 => {
                 if (std.mem.containsAtLeast(u8, entry.name, 1, "x86")) continue;
                 if (std.mem.containsAtLeast(u8, entry.name, 1, "x64")) continue;
-                if (std.mem.containsAtLeast(u8, entry.name, 1, "arm")) continue;
             },
             else => {
                 unreachable;
