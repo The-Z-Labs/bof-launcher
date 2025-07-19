@@ -319,53 +319,6 @@ const Bof = struct {
                 }
 
                 if (maybe_func_addr == null and @intFromEnum(sym.symbol.section_number) == 0) {
-                    var it = std.mem.splitScalar(u8, sym_name, '@');
-                    const func_name = it.first();
-
-                    const func_name_z = try if (@import("builtin").cpu.arch == .x86)
-                        // Skip the '_' prefix and add '0' at the end
-                        std.mem.concatWithSentinel(arena, u8, &.{func_name[1..]}, 0)
-                    else
-                        // Add '0' at the end
-                        std.mem.concatWithSentinel(arena, u8, &.{func_name[0..]}, 0);
-                    defer arena.free(func_name_z);
-
-                    const static = struct {
-                        const libs = [_][*:0]const u8{
-                            "ntdll.dll",
-                            "kernel32.dll",
-                            "ole32.dll",
-                            "user32.dll",
-                            "secur32.dll",
-                            "advapi32.dll",
-                            "ws2_32.dll",
-                            "version.dll",
-                            "msvcrt.dll",
-                            "shlwapi.dll",
-                        };
-                    };
-                    for (static.libs) |lib| {
-                        const dll = if (w32.GetModuleHandleA.?(lib)) |mod|
-                            mod
-                        else
-                            w32.LoadLibraryA.?(lib).?;
-
-                        maybe_func_addr = if (w32.GetProcAddress.?(dll, func_name_z)) |addr|
-                            @intFromPtr(addr)
-                        else
-                            null;
-                        if (maybe_func_addr != null) break;
-                    }
-
-                    if (maybe_func_addr == null) {
-                        maybe_func_addr = if (w32.GetProcAddress.?(
-                            w32.GetModuleHandleA.?(null).?,
-                            func_name_z,
-                        )) |addr| @intFromPtr(addr) else null;
-                    }
-                }
-
-                if (maybe_func_addr == null and @intFromEnum(sym.symbol.section_number) == 0) {
                     std.log.err(
                         "\nSYMBOL NAME: {s} NOT FOUND ({s})!",
                         .{ p_sym_name, @tagName(@import("builtin").cpu.arch) },
@@ -2201,10 +2154,6 @@ fn initLauncher() !void {
         if (is32w) "_bofLauncherFreeMemory" else "bofLauncherFreeMemory",
         @intFromPtr(&bofLauncherFreeMemory),
     );
-
-    try gstate.func_lookup.put(if (is32w) "_calloc" else "calloc", @intFromPtr(&bofLauncherAllocateAndZeroMemory));
-    try gstate.func_lookup.put(if (is32w) "_malloc" else "malloc", @intFromPtr(&bofLauncherAllocateMemory));
-    try gstate.func_lookup.put(if (is32w) "_free" else "free", @intFromPtr(&bofLauncherFreeMemory));
 
     try gstate.func_lookup.put(if (is32w) "_bofRun" else "bofRun", @intFromPtr(&bofRun));
     try gstate.func_lookup.put(

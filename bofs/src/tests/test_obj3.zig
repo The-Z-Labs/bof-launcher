@@ -6,9 +6,6 @@ comptime {
     @import("bof_api").embedFunctionCode("memset");
 }
 
-extern fn malloc(usize) callconv(.C) ?*anyopaque;
-extern fn free(?*anyopaque) callconv(.C) void;
-
 pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     const printf = beacon.printf.?;
     _ = printf(.output, "--- test_obj3.zig ---\n");
@@ -51,12 +48,12 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
         }
 
         for (0..2) |_| {
-            const mem: ?[*]u8 = @ptrCast(malloc(100));
+            const mem: ?[*]u8 = @ptrCast(w32.HeapAlloc.?(w32.GetProcessHeap.?(), 0, 100));
             if (mem == null) return 253;
 
             @memset(mem.?[0..100], 0);
 
-            _ = printf(.output, "malloc() returned: 0x%x\n", @intFromPtr(mem));
+            _ = printf(.output, "HeapAlloc() returned: 0x%x\n", @intFromPtr(mem));
 
             mem.?[10] = 1;
             mem.?[20] = 2;
@@ -83,7 +80,7 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
             if (mem.?[30] != 3) return 252;
             if (mem.?[90] != 7) return 252;
 
-            free(mem);
+            _ = w32.HeapFree.?(w32.GetProcessHeap.?(), 0, mem);
         }
 
         var tid: w32.DWORD = 123;

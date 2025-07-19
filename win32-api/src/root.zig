@@ -824,6 +824,20 @@ pub const PFN_GetCurrentDirectoryW = *const fn (
     lpBuffer: ?[*]WCHAR,
 ) callconv(.winapi) DWORD;
 
+pub const PFN_HeapAlloc = *const fn (
+    hHeap: ?HANDLE,
+    dwFlags: DWORD,
+    dwBytes: SIZE_T,
+) callconv(.winapi) ?LPVOID;
+
+pub const PFN_HeapFree = *const fn (
+    hHeap: ?HANDLE,
+    dwFlags: DWORD,
+    lpMem: ?LPVOID,
+) callconv(.winapi) BOOL;
+
+pub const PFN_GetProcessHeap = *const fn () callconv(.winapi) ?HANDLE;
+
 //
 // NTDLL function types
 //
@@ -1256,6 +1270,9 @@ pub const WriteProcessMemory = def(?PFN_WriteProcessMemory, "WriteProcessMemory"
 pub const ReadProcessMemory = def(?PFN_ReadProcessMemory, "ReadProcessMemory", "kernel32");
 pub const CreateRemoteThread = def(?PFN_CreateRemoteThread, "CreateRemoteThread", "kernel32");
 pub const GetCurrentDirectoryW = def(?PFN_GetCurrentDirectoryW, "GetCurrentDirectoryW", "kernel32");
+pub const HeapAlloc = def(?PFN_HeapAlloc, "HeapAlloc", "kernel32");
+pub const HeapFree = def(?PFN_HeapFree, "HeapFree", "kernel32");
+pub const GetProcessHeap = def(?PFN_GetProcessHeap, "GetProcessHeap", "kernel32");
 
 //
 // NTDLL function definitions
