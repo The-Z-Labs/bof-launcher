@@ -734,6 +734,8 @@ pub const PFN_CreatePipe = *const fn (
 
 pub const PFN_ResumeThread = *const fn (hThread: HANDLE) callconv(.winapi) DWORD;
 
+pub const PFN_SuspendThread = *const fn (hThread: HANDLE) callconv(.winapi) DWORD;
+
 pub const PFN_VirtualAllocEx = *const fn (
     hProcess: HANDLE,
     lpAddress: ?LPVOID,
@@ -837,6 +839,8 @@ pub const PFN_HeapFree = *const fn (
 ) callconv(.winapi) BOOL;
 
 pub const PFN_GetProcessHeap = *const fn () callconv(.winapi) ?HANDLE;
+
+pub const PFN_OutputDebugStringA = *const fn (LPCSTR) callconv(.winapi) void;
 
 //
 // NTDLL function types
@@ -1216,7 +1220,7 @@ pub fn def(
     return if (@import("options").define_functions)
         @extern(T, .{
             .name = if (bof) libname ++ "$" ++ funcname else funcname,
-            .is_dll_import = true,
+            .is_dll_import = true, // __declspec(dllimport)
         })
     else {};
 }
@@ -1256,6 +1260,7 @@ pub const LoadLibraryA = def(?PFN_LoadLibraryA, "LoadLibraryA", "kernel32");
 pub const GetProcAddress = def(?PFN_GetProcAddress, "GetProcAddress", "kernel32");
 pub const CreatePipe = def(?PFN_CreatePipe, "CreatePipe", "kernel32");
 pub const ResumeThread = def(?PFN_ResumeThread, "ResumeThread", "kernel32");
+pub const SuspendThread = def(?PFN_ResumeThread, "SuspendThread", "kernel32");
 pub const VirtualAllocEx = def(?PFN_VirtualAllocEx, "VirtualAllocEx", "kernel32");
 pub const VirtualProtectEx = def(?PFN_VirtualProtectEx, "VirtualProtectEx", "kernel32");
 pub const CreateFileMappingA = def(?PFN_CreateFileMappingA, "CreateFileMappingA", "kernel32");
@@ -1363,7 +1368,9 @@ pub const getsockopt = def(?PFN_getsockopt, "getsockopt", "ws2_32");
 pub const setsockopt = def(?PFN_setsockopt, "setsockopt", "ws2_32");
 
 //
-// Redirectors (for Cobalt Strike compat)
+// "Redirectors"
+// Transform "call FuncName" to "call [__imp_FuncName]", in other words enable __declspec(dllimport).
+// This is necessary because Zig's libstd does not use __declspec(dllimport).
 //
 comptime {
     if (@import("builtin").mode != .Debug and @import("builtin").os.tag == .windows and bof) {

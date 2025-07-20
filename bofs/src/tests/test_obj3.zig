@@ -18,6 +18,13 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
         _ = printf(.output, "GetCurrentThreadId() returned: %d\n", w32.GetCurrentThreadId.?());
         _ = printf(.output, "GetCurrentThread() returned: 0x%x\n", @intFromPtr(w32.GetCurrentThread.?()));
 
+        {
+            if (w32.GetModuleHandleA.?(null) == null) return 124;
+            const dll = w32.LoadLibraryA.?("kernel32.dll") orelse return 125;
+            const sleep: w32.PFN_Sleep = @ptrCast(w32.GetProcAddress.?(dll, "Sleep") orelse return 126);
+            sleep(0);
+        }
+
         for (0..2) |_| {
             const allocator = bofapi.generic_allocator;
 

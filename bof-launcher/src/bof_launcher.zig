@@ -262,10 +262,7 @@ const Bof = struct {
                 var maybe_func_addr = gstate.func_lookup.get(sym_name);
 
                 if (@import("builtin").cpu.arch == .x86) {
-                    if (maybe_func_addr == null and
-                        @intFromEnum(sym.symbol.section_number) == 0 and
-                        std.mem.indexOfScalar(u8, sym_name, '@') != null)
-                    {
+                    if (maybe_func_addr == null and @intFromEnum(sym.symbol.section_number) == 0) {
                         var it = std.mem.splitScalar(u8, sym_name, '@');
                         const func_name = it.first();
                         maybe_func_addr = gstate.func_lookup.get(func_name[1..]);
@@ -2097,112 +2094,43 @@ fn initLauncher() !void {
     }
 
     const impl = @import("beacon/beacon_impl.zig");
-    const is32w = @import("builtin").cpu.arch == .x86 and @import("builtin").os.tag == .windows;
 
-    try gstate.func_lookup.put(if (is32w) "_BeaconPrintf" else "BeaconPrintf", @intFromPtr(&impl.BeaconPrintf));
-    try gstate.func_lookup.put(if (is32w) "_BeaconOutput" else "BeaconOutput", @intFromPtr(&impl.BeaconOutput));
-    try gstate.func_lookup.put(
-        if (is32w) "_BeaconDataParse" else "BeaconDataParse",
-        @intFromPtr(&impl.BeaconDataParse),
-    );
-    try gstate.func_lookup.put(if (is32w) "_BeaconDataInt" else "BeaconDataInt", @intFromPtr(&impl.BeaconDataInt));
-    try gstate.func_lookup.put(
-        if (is32w) "_BeaconDataShort" else "BeaconDataShort",
-        @intFromPtr(&impl.BeaconDataShort),
-    );
-    try gstate.func_lookup.put(
-        if (is32w) "_BeaconDataExtract" else "BeaconDataExtract",
-        @intFromPtr(&impl.BeaconDataExtract),
-    );
-    try gstate.func_lookup.put(
-        if (is32w) "_BeaconDataLength" else "BeaconDataLength",
-        @intFromPtr(&impl.BeaconDataLength),
-    );
-    try gstate.func_lookup.put(
-        if (is32w) "_BeaconFormatAlloc" else "BeaconFormatAlloc",
-        @intFromPtr(&impl.BeaconFormatAlloc),
-    );
-    try gstate.func_lookup.put(
-        if (is32w) "_BeaconFormatReset" else "BeaconFormatReset",
-        @intFromPtr(&impl.BeaconFormatReset),
-    );
-    try gstate.func_lookup.put(
-        if (is32w) "_BeaconFormatFree" else "BeaconFormatFree",
-        @intFromPtr(&impl.BeaconFormatFree),
-    );
-    try gstate.func_lookup.put(
-        if (is32w) "_BeaconFormatAppend" else "BeaconFormatAppend",
-        @intFromPtr(&impl.BeaconFormatAppend),
-    );
-    try gstate.func_lookup.put(
-        if (is32w) "_BeaconFormatPrintf" else "BeaconFormatPrintf",
-        @intFromPtr(&impl.BeaconFormatPrintf),
-    );
-    try gstate.func_lookup.put(
-        if (is32w) "_BeaconFormatToString" else "BeaconFormatToString",
-        @intFromPtr(&impl.BeaconFormatToString),
-    );
-    try gstate.func_lookup.put(
-        if (is32w) "_BeaconFormatInt" else "BeaconFormatInt",
-        @intFromPtr(&impl.BeaconFormatInt),
-    );
-    try gstate.func_lookup.put(
-        if (is32w) "_bofLauncherAllocateMemory" else "bofLauncherAllocateMemory",
-        @intFromPtr(&bofLauncherAllocateMemory),
-    );
-    try gstate.func_lookup.put(
-        if (is32w) "_bofLauncherFreeMemory" else "bofLauncherFreeMemory",
-        @intFromPtr(&bofLauncherFreeMemory),
-    );
+    try gstate.func_lookup.put("BeaconPrintf", @intFromPtr(&impl.BeaconPrintf));
+    try gstate.func_lookup.put("BeaconOutput", @intFromPtr(&impl.BeaconOutput));
+    try gstate.func_lookup.put("BeaconDataParse", @intFromPtr(&impl.BeaconDataParse));
+    try gstate.func_lookup.put("BeaconDataInt", @intFromPtr(&impl.BeaconDataInt));
+    try gstate.func_lookup.put("BeaconDataShort", @intFromPtr(&impl.BeaconDataShort));
+    try gstate.func_lookup.put("BeaconDataExtract", @intFromPtr(&impl.BeaconDataExtract));
+    try gstate.func_lookup.put("BeaconDataLength", @intFromPtr(&impl.BeaconDataLength));
+    try gstate.func_lookup.put("BeaconFormatAlloc", @intFromPtr(&impl.BeaconFormatAlloc));
+    try gstate.func_lookup.put("BeaconFormatReset", @intFromPtr(&impl.BeaconFormatReset));
+    try gstate.func_lookup.put("BeaconFormatFree", @intFromPtr(&impl.BeaconFormatFree));
+    try gstate.func_lookup.put("BeaconFormatAppend", @intFromPtr(&impl.BeaconFormatAppend));
+    try gstate.func_lookup.put("BeaconFormatPrintf", @intFromPtr(&impl.BeaconFormatPrintf));
+    try gstate.func_lookup.put("BeaconFormatToString", @intFromPtr(&impl.BeaconFormatToString));
+    try gstate.func_lookup.put("BeaconFormatInt", @intFromPtr(&impl.BeaconFormatInt));
 
-    try gstate.func_lookup.put(if (is32w) "_bofRun" else "bofRun", @intFromPtr(&bofRun));
-    try gstate.func_lookup.put(
-        if (is32w) "_bofObjectInitFromMemory" else "bofObjectInitFromMemory",
-        @intFromPtr(&bofObjectInitFromMemory),
-    );
-    try gstate.func_lookup.put(if (is32w) "_bofObjectRun" else "bofObjectRun", @intFromPtr(&bofObjectRun));
-    try gstate.func_lookup.put(if (is32w) "_bofObjectRelease" else "bofObjectRelease", @intFromPtr(&bofObjectRelease));
-    try gstate.func_lookup.put(if (is32w) "_bofObjectIsValid" else "bofObjectIsValid", @intFromPtr(&bofObjectIsValid));
-    try gstate.func_lookup.put(
-        if (is32w) "_bofObjectGetProcAddress" else "bofObjectGetProcAddress",
-        @intFromPtr(&bofObjectGetProcAddress),
-    );
-    try gstate.func_lookup.put(
-        if (is32w) "_bofObjectRunAsyncThread" else "bofObjectRunAsyncThread",
-        @intFromPtr(&bofObjectRunAsyncThread),
-    );
-    try gstate.func_lookup.put(
-        if (is32w) "_bofObjectRunAsyncProcess" else "bofObjectRunAsyncProcess",
-        @intFromPtr(&bofObjectRunAsyncProcess),
-    );
-    try gstate.func_lookup.put(
-        if (is32w) "_bofContextGetOutput" else "bofContextGetOutput",
-        @intFromPtr(&bofContextGetOutput),
-    );
-    try gstate.func_lookup.put(if (is32w) "_bofContextRelease" else "bofContextRelease", @intFromPtr(&bofContextRelease));
-    try gstate.func_lookup.put(
-        if (is32w) "_bofContextIsRunning" else "bofContextIsRunning",
-        @intFromPtr(&bofContextIsRunning),
-    );
-    try gstate.func_lookup.put(if (is32w) "_bofContextWait" else "bofContextWait", @intFromPtr(&bofContextWait));
-    try gstate.func_lookup.put(
-        if (is32w) "_bofContextGetExitCode" else "bofContextGetExitCode",
-        @intFromPtr(&bofContextGetExitCode),
-    );
-    try gstate.func_lookup.put(
-        if (is32w) "_bofContextGetObjectHandle" else "bofContextGetObjectHandle",
-        @intFromPtr(&bofContextGetObjectHandle),
-    );
-    try gstate.func_lookup.put(if (is32w) "_bofArgsInit" else "bofArgsInit", @intFromPtr(&bofArgsInit));
-    try gstate.func_lookup.put(if (is32w) "_bofArgsRelease" else "bofArgsRelease", @intFromPtr(&bofArgsRelease));
-    try gstate.func_lookup.put(if (is32w) "_bofArgsAdd" else "bofArgsAdd", @intFromPtr(&bofArgsAdd));
-    try gstate.func_lookup.put(if (is32w) "_bofArgsBegin" else "bofArgsBegin", @intFromPtr(&bofArgsBegin));
-    try gstate.func_lookup.put(if (is32w) "_bofArgsEnd" else "bofArgsEnd", @intFromPtr(&bofArgsEnd));
-    try gstate.func_lookup.put(if (is32w) "_bofArgsGetBuffer" else "bofArgsGetBuffer", @intFromPtr(&bofArgsGetBuffer));
-    try gstate.func_lookup.put(
-        if (is32w) "_bofArgsGetBufferSize" else "bofArgsGetBufferSize",
-        @intFromPtr(&bofArgsGetBufferSize),
-    );
+    try gstate.func_lookup.put("bofRun", @intFromPtr(&bofRun));
+    try gstate.func_lookup.put("bofObjectInitFromMemory", @intFromPtr(&bofObjectInitFromMemory));
+    try gstate.func_lookup.put("bofObjectRun", @intFromPtr(&bofObjectRun));
+    try gstate.func_lookup.put("bofObjectRelease", @intFromPtr(&bofObjectRelease));
+    try gstate.func_lookup.put("bofObjectIsValid", @intFromPtr(&bofObjectIsValid));
+    try gstate.func_lookup.put("bofObjectGetProcAddress", @intFromPtr(&bofObjectGetProcAddress));
+    try gstate.func_lookup.put("bofObjectRunAsyncThread", @intFromPtr(&bofObjectRunAsyncThread));
+    try gstate.func_lookup.put("bofObjectRunAsyncProcess", @intFromPtr(&bofObjectRunAsyncProcess));
+    try gstate.func_lookup.put("bofContextGetOutput", @intFromPtr(&bofContextGetOutput));
+    try gstate.func_lookup.put("bofContextRelease", @intFromPtr(&bofContextRelease));
+    try gstate.func_lookup.put("bofContextIsRunning", @intFromPtr(&bofContextIsRunning));
+    try gstate.func_lookup.put("bofContextWait", @intFromPtr(&bofContextWait));
+    try gstate.func_lookup.put("bofContextGetExitCode", @intFromPtr(&bofContextGetExitCode));
+    try gstate.func_lookup.put("bofContextGetObjectHandle", @intFromPtr(&bofContextGetObjectHandle));
+    try gstate.func_lookup.put("bofArgsInit", @intFromPtr(&bofArgsInit));
+    try gstate.func_lookup.put("bofArgsRelease", @intFromPtr(&bofArgsRelease));
+    try gstate.func_lookup.put("bofArgsAdd", @intFromPtr(&bofArgsAdd));
+    try gstate.func_lookup.put("bofArgsBegin", @intFromPtr(&bofArgsBegin));
+    try gstate.func_lookup.put("bofArgsEnd", @intFromPtr(&bofArgsEnd));
+    try gstate.func_lookup.put("bofArgsGetBuffer", @intFromPtr(&bofArgsGetBuffer));
+    try gstate.func_lookup.put("bofArgsGetBufferSize", @intFromPtr(&bofArgsGetBufferSize));
 
     if (@import("builtin").os.tag == .windows) {
         try gstate.func_lookup.put("VirtualAlloc", @intFromPtr(&zgateVirtualAlloc));
@@ -2229,6 +2157,10 @@ fn initLauncher() !void {
         {
             const dll = w32.LoadLibraryA.?("kernel32.dll").?;
 
+            try gstate.func_lookup.put("GetModuleHandleA", @intFromPtr(w32.GetProcAddress.?(dll, "GetModuleHandleA").?));
+            try gstate.func_lookup.put("LoadLibraryA", @intFromPtr(w32.GetProcAddress.?(dll, "LoadLibraryA").?));
+            try gstate.func_lookup.put("GetProcAddress", @intFromPtr(w32.GetProcAddress.?(dll, "GetProcAddress").?));
+
             zgateVirtualAllocPtr = @ptrCast(w32.GetProcAddress.?(dll, "VirtualAlloc").?);
             zgateVirtualAllocExPtr = @ptrCast(w32.GetProcAddress.?(dll, "VirtualAllocEx").?);
             zgateVirtualFreePtr = @ptrCast(w32.GetProcAddress.?(dll, "VirtualFree").?);
@@ -2254,10 +2186,6 @@ fn initLauncher() !void {
             zgateExitProcessPtr = @ptrCast(w32.GetProcAddress.?(dll, "ExitProcess").?);
             zgateFlushInstructionCachePtr = @ptrCast(w32.GetProcAddress.?(dll, "FlushInstructionCache").?);
         }
-
-        try gstate.func_lookup.put("LoadLibraryA", @intFromPtr(&w32.LoadLibraryA.?));
-        try gstate.func_lookup.put("GetModuleHandleA", @intFromPtr(&w32.GetModuleHandleA.?));
-        try gstate.func_lookup.put("GetProcAddress", @intFromPtr(&w32.GetProcAddress.?));
     }
 
     gstate.contexts = std.ArrayList(*BofContext).init(gstate.allocator.?);
@@ -2565,133 +2493,30 @@ fn zgateSetCodeProtect(section: []u8, new_protect: w32.DWORD) linksection(zgate_
     }
 }
 
-var zgateExitProcessPtr: *const fn (w32.UINT) callconv(w32.WINAPI) void linksection(zgate_dsection) = undefined;
-var zgateOutputDebugStringAPtr: *const fn (w32.LPCSTR) callconv(w32.WINAPI) void linksection(zgate_dsection) = undefined;
-
-var zgateFlushInstructionCachePtr: *const fn (
-    w32.HANDLE,
-    ?w32.LPCVOID,
-    w32.SIZE_T,
-) callconv(w32.WINAPI) w32.BOOL linksection(zgate_dsection) = undefined;
-
+var zgateOutputDebugStringAPtr: w32.PFN_OutputDebugStringA linksection(zgate_dsection) = undefined;
+var zgateExitProcessPtr: w32.PFN_ExitProcess linksection(zgate_dsection) = undefined;
+var zgateFlushInstructionCachePtr: w32.PFN_FlushInstructionCache linksection(zgate_dsection) = undefined;
 var zgateVirtualAllocPtr: w32.PFN_VirtualAlloc linksection(zgate_dsection) = undefined;
-
-var zgateVirtualAllocExPtr: *const fn (
-    w32.HANDLE,
-    ?w32.LPVOID,
-    w32.SIZE_T,
-    w32.DWORD,
-    w32.DWORD,
-) callconv(w32.WINAPI) ?w32.LPVOID linksection(zgate_dsection) = undefined;
-
-var zgateVirtualFreePtr: *const fn (
-    ?w32.LPVOID,
-    w32.SIZE_T,
-    w32.DWORD,
-) callconv(w32.WINAPI) w32.BOOL linksection(zgate_dsection) = undefined;
-
+var zgateVirtualAllocExPtr: w32.PFN_VirtualAllocEx linksection(zgate_dsection) = undefined;
+var zgateVirtualFreePtr: w32.PFN_VirtualFree linksection(zgate_dsection) = undefined;
 var zgateVirtualQueryPtr: w32.PFN_VirtualQuery linksection(zgate_dsection) = undefined;
 var zgateVirtualProtectPtr: w32.PFN_VirtualProtect linksection(zgate_dsection) = undefined;
-
-var zgateVirtualProtectExPtr: *const fn (
-    w32.HANDLE,
-    w32.LPVOID,
-    w32.SIZE_T,
-    w32.DWORD,
-    *w32.DWORD,
-) callconv(w32.WINAPI) w32.BOOL linksection(zgate_dsection) = undefined;
-
-var zgateCreateFileMappingAPtr: *const fn (
-    w32.HANDLE,
-    ?*w32.SECURITY_ATTRIBUTES,
-    w32.DWORD,
-    w32.DWORD,
-    w32.DWORD,
-    ?w32.LPCSTR,
-) callconv(w32.WINAPI) ?w32.HANDLE linksection(zgate_dsection) = undefined;
-
-var zgateCloseHandlePtr: *const fn (w32.HANDLE) callconv(w32.WINAPI) w32.BOOL linksection(zgate_dsection) = undefined;
-
-var zgateDuplicateHandlePtr: *const fn (
-    w32.HANDLE,
-    w32.HANDLE,
-    w32.HANDLE,
-    *w32.HANDLE,
-    w32.DWORD,
-    w32.BOOL,
-    w32.DWORD,
-) callconv(w32.WINAPI) w32.BOOL linksection(zgate_dsection) = undefined;
-
-var zgateGetThreadContextPtr: *const fn (
-    w32.HANDLE,
-    *w32.CONTEXT,
-) callconv(w32.WINAPI) w32.BOOL linksection(zgate_dsection) = undefined;
-
-var zgateSetThreadContextPtr: *const fn (
-    w32.HANDLE,
-    *const w32.CONTEXT,
-) callconv(w32.WINAPI) w32.BOOL linksection(zgate_dsection) = undefined;
-
-var zgateUnmapViewOfFilePtr: *const fn (w32.LPCVOID) callconv(w32.WINAPI) w32.BOOL linksection(zgate_dsection) = undefined;
-
-var zgateMapViewOfFilePtr: *const fn (
-    w32.HANDLE,
-    w32.DWORD,
-    w32.DWORD,
-    w32.DWORD,
-    w32.SIZE_T,
-) callconv(w32.WINAPI) w32.LPVOID linksection(zgate_dsection) = undefined;
-
-var zgateOpenProcessPtr: *const fn (
-    w32.DWORD,
-    w32.BOOL,
-    w32.DWORD,
-) callconv(w32.WINAPI) ?w32.HANDLE linksection(zgate_dsection) = undefined;
-
-var zgateOpenThreadPtr: *const fn (
-    w32.DWORD,
-    w32.BOOL,
-    w32.DWORD,
-) callconv(w32.WINAPI) ?w32.HANDLE linksection(zgate_dsection) = undefined;
-
-var zgateWriteProcessMemoryPtr: *const fn (
-    w32.HANDLE,
-    w32.LPVOID,
-    w32.LPCVOID,
-    w32.SIZE_T,
-    ?*w32.SIZE_T,
-) callconv(w32.WINAPI) w32.BOOL linksection(zgate_dsection) = undefined;
-
-var zgateReadProcessMemoryPtr: *const fn (
-    w32.HANDLE,
-    w32.LPCVOID,
-    w32.LPVOID,
-    w32.SIZE_T,
-    ?*w32.SIZE_T,
-) callconv(w32.WINAPI) w32.BOOL linksection(zgate_dsection) = undefined;
-
-var zgateResumeThreadPtr: *const fn (w32.HANDLE) callconv(w32.WINAPI) w32.DWORD linksection(zgate_dsection) = undefined;
-
-var zgateSuspendThreadPtr: *const fn (w32.HANDLE) callconv(w32.WINAPI) w32.DWORD linksection(zgate_dsection) = undefined;
-
-var zgateCreateThreadPtr: *const fn (
-    ?*w32.SECURITY_ATTRIBUTES,
-    w32.SIZE_T,
-    w32.LPTHREAD_START_ROUTINE,
-    ?w32.LPVOID,
-    w32.DWORD,
-    ?*w32.DWORD,
-) callconv(w32.WINAPI) ?w32.HANDLE linksection(zgate_dsection) = undefined;
-
-var zgateCreateRemoteThreadPtr: *const fn (
-    w32.HANDLE,
-    ?*w32.SECURITY_ATTRIBUTES,
-    w32.SIZE_T,
-    w32.LPTHREAD_START_ROUTINE,
-    ?w32.LPVOID,
-    w32.DWORD,
-    ?*w32.DWORD,
-) callconv(w32.WINAPI) ?w32.HANDLE linksection(zgate_dsection) = undefined;
+var zgateVirtualProtectExPtr: w32.PFN_VirtualProtectEx linksection(zgate_dsection) = undefined;
+var zgateCreateFileMappingAPtr: w32.PFN_CreateFileMappingA linksection(zgate_dsection) = undefined;
+var zgateCloseHandlePtr: w32.PFN_CloseHandle linksection(zgate_dsection) = undefined;
+var zgateDuplicateHandlePtr: w32.PFN_DuplicateHandle linksection(zgate_dsection) = undefined;
+var zgateGetThreadContextPtr: w32.PFN_GetThreadContext linksection(zgate_dsection) = undefined;
+var zgateSetThreadContextPtr: w32.PFN_SetThreadContext linksection(zgate_dsection) = undefined;
+var zgateUnmapViewOfFilePtr: w32.PFN_UnmapViewOfFile linksection(zgate_dsection) = undefined;
+var zgateMapViewOfFilePtr: w32.PFN_MapViewOfFile linksection(zgate_dsection) = undefined;
+var zgateOpenProcessPtr: w32.PFN_OpenProcess linksection(zgate_dsection) = undefined;
+var zgateOpenThreadPtr: w32.PFN_OpenThread linksection(zgate_dsection) = undefined;
+var zgateWriteProcessMemoryPtr: w32.PFN_WriteProcessMemory linksection(zgate_dsection) = undefined;
+var zgateReadProcessMemoryPtr: w32.PFN_ReadProcessMemory linksection(zgate_dsection) = undefined;
+var zgateResumeThreadPtr: w32.PFN_ResumeThread linksection(zgate_dsection) = undefined;
+var zgateSuspendThreadPtr: w32.PFN_SuspendThread linksection(zgate_dsection) = undefined;
+var zgateCreateThreadPtr: w32.PFN_CreateThread linksection(zgate_dsection) = undefined;
+var zgateCreateRemoteThreadPtr: w32.PFN_CreateRemoteThread linksection(zgate_dsection) = undefined;
 
 fn zgateVirtualAlloc(
     lpAddress: ?w32.LPVOID,
