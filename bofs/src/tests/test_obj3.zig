@@ -1,3 +1,4 @@
+const std = @import("std");
 const bofapi = @import("bof_api");
 const beacon = bofapi.beacon;
 const w32 = bofapi.win32;
@@ -19,14 +20,18 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
         _ = printf(.output, "GetCurrentThread() returned: 0x%x\n", @intFromPtr(w32.GetCurrentThread.?()));
 
         {
+            _ = w32.SetLastError.?(.SUCCESS);
             if (w32.GetModuleHandleA.?(null) == null) return 124;
             const dll = w32.LoadLibraryA.?("kernel32.dll") orelse return 125;
             const sleep: w32.PFN_Sleep = @ptrCast(w32.GetProcAddress.?(dll, "Sleep") orelse return 126);
+            const freeLibrary: w32.PFN_FreeLibrary = @ptrCast(w32.GetProcAddress.?(dll, "FreeLibrary") orelse return 127);
             sleep(0);
+            _ = freeLibrary(dll);
+            if (w32.GetLastError.?() != .SUCCESS) return 128;
         }
 
         for (0..2) |_| {
-            const allocator = bofapi.generic_allocator;
+            const allocator = std.heap.page_allocator;
 
             const mem = allocator.alloc(u8, 123) catch return 123;
             defer allocator.free(mem);

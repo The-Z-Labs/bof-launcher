@@ -623,6 +623,8 @@ pub const PFN_VirtualFree = *const fn (
 
 pub const PFN_GetLastError = *const fn () callconv(.winapi) Win32Error;
 
+pub const PFN_SetLastError = *const fn (dwErrCode: Win32Error) callconv(.winapi) void;
+
 pub const PFN_Sleep = *const fn (dwMilliseconds: DWORD) callconv(.winapi) void;
 
 pub const PFN_ExitProcess = *const fn (uExitCode: UINT) callconv(.winapi) void;
@@ -1233,6 +1235,7 @@ pub const VirtualQuery = def(?PFN_VirtualQuery, "VirtualQuery", "kernel32");
 pub const VirtualProtect = def(?PFN_VirtualProtect, "VirtualProtect", "kernel32");
 pub const VirtualFree = def(?PFN_VirtualFree, "VirtualFree", "kernel32");
 pub const GetLastError = def(?PFN_GetLastError, "GetLastError", "kernel32");
+pub const SetLastError = def(?PFN_SetLastError, "SetLastError", "kernel32");
 pub const Sleep = def(?PFN_Sleep, "Sleep", "kernel32");
 pub const ExitProcess = def(?PFN_ExitProcess, "ExitProcess", "kernel32");
 pub const GetCurrentProcess = def(?PFN_GetCurrentProcess, "GetCurrentProcess", "kernel32");

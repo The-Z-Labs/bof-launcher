@@ -2157,9 +2157,10 @@ fn initLauncher() !void {
         {
             const dll = w32.LoadLibraryA.?("kernel32.dll").?;
 
-            try gstate.func_lookup.put("GetModuleHandleA", @intFromPtr(w32.GetProcAddress.?(dll, "GetModuleHandleA").?));
             try gstate.func_lookup.put("LoadLibraryA", @intFromPtr(w32.GetProcAddress.?(dll, "LoadLibraryA").?));
+            try gstate.func_lookup.put("FreeLibrary", @intFromPtr(w32.GetProcAddress.?(dll, "FreeLibrary").?));
             try gstate.func_lookup.put("GetProcAddress", @intFromPtr(w32.GetProcAddress.?(dll, "GetProcAddress").?));
+            try gstate.func_lookup.put("GetModuleHandleA", @intFromPtr(w32.GetProcAddress.?(dll, "GetModuleHandleA").?));
 
             zgateVirtualAllocPtr = @ptrCast(w32.GetProcAddress.?(dll, "VirtualAlloc").?);
             zgateVirtualAllocExPtr = @ptrCast(w32.GetProcAddress.?(dll, "VirtualAllocEx").?);

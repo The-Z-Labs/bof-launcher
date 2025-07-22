@@ -13,7 +13,7 @@ pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
     _ = printf(.output, "--- test_long_running.zig ---\n");
 
     if (@import("builtin").os.tag == .windows) {
-        const allocator = bofapi.generic_allocator;
+        const allocator = std.heap.page_allocator;
 
         var allocs1 = std.ArrayList([]u8).init(allocator);
         defer {

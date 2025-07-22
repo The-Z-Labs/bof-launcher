@@ -19,8 +19,6 @@ pub fn print(@"type": beacon.CallbackType, comptime fmt: []const u8, args: anyty
     }
 }
 
-pub const generic_allocator = std.heap.page_allocator;
-
 //
 // Functions that can be generated implicitly by the compiler
 //
