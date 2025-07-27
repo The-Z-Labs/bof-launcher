@@ -10,6 +10,6 @@
 * text eol=lf
 
 *.exe binary
+bin/llvm-objcopy binary
 *.o binary
 *.a binary
-bin/fasm binary

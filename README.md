@@ -88,7 +88,7 @@ In an addition to the bof-launcher library itself, we provide [a collection of B
     
 The build system will figure out the file extension and will build it (for all specified architectures) using proper compiler. This way you could also build any 3rd party BOF of choice.
 
-Below you can see one of our BOFs in two versions: one written in Zig and the second one written in C. When compiled, Zig version weights **only 574 bytes**, C version weights 923 bytes.
+Below you can see one of our BOFs in two versions: one written in Zig and the second one written in C. When compiled, Zig version weights 502 bytes, C version weights 562 bytes.
 
 For an example of larger and cross-platform BOF please refer to our [UDP port sweeper](bofs/src/udpScanner.zig) or [TCP port scanner](bofs/src/tcpScanner.zig).
 

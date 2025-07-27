@@ -39,6 +39,7 @@ comptime {
     @import("bof_api").embedFunctionCode("memset");
     @import("bof_api").embedFunctionCode("__stackprobe__");
 }
+pub const panic = std.debug.no_panic;
 
 pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.c) u8 {
     var parser = beacon.datap{};

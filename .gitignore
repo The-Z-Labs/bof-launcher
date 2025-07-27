@@ -22,6 +22,9 @@
 !*.md
 !*.yaml
 
+!bin/llvm-objcopy.exe
+!bin/llvm-objcopy
+
 !.ignore
 !.gitkeep
 !.gitignore

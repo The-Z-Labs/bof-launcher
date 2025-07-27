@@ -31,20 +31,72 @@ pub fn build(b: *std.Build) !void {
     const cpuArchStr = @import("bof_launcher_lib").cpuArchStr;
     const libFileName = @import("bof_launcher_lib").libFileName;
 
+    const has_python = blk: {
+        _ = b.findProgram(&.{"python"}, &.{}) catch break :blk false;
+        break :blk true;
+    };
+
     //
-    // Install BOFs
+    // Install and post-process BOFs
     //
-    const bofs_path = "bin/bofs";
+    const bofs_install_path = "bin/bofs/";
     const bofs_dep = b.dependency("bof_launcher_bofs", .{ .optimize = optimize });
     for (@import("bof_launcher_bofs").bofs_to_build) |bof| {
         const full_name = bof.fullName(b.allocator);
-        b.getInstallStep().dependOn(&b.addInstallArtifact(
+
+        var prev_step = &b.addInstallArtifact(
             bofs_dep.artifact(full_name),
             .{
-                .dest_dir = .{ .override = .{ .custom = bofs_path } },
+                .dest_dir = .{ .override = .{ .custom = bofs_install_path } },
                 .dest_sub_path = if (bof.optimize != .Debug) b.fmt("{s}.o", .{full_name}) else null,
             },
-        ).step);
+        ).step;
+
+        if (@import("builtin").cpu.arch == .x86_64) strip: {
+            // Always skip debug exe
+            if (std.mem.containsAtLeast(u8, full_name, 1, "debug")) break :strip;
+
+            // Blacklist (llvm-objcopy can't remove section for some reason)
+            if (std.mem.containsAtLeast(u8, full_name, 1, "udpScanner")) break :strip;
+            if (std.mem.containsAtLeast(u8, full_name, 1, "tcpScanner")) break :strip;
+
+            if (std.mem.containsAtLeast(u8, full_name, 1, "coff")) {
+                const run = b.addSystemCommand(&.{
+                    "bin/llvm-objcopy",
+                    "--remove-section=.redirectors",
+                    "--strip-unneeded",
+                    b.fmt("zig-out/" ++ bofs_install_path ++ "{s}.o", .{full_name}),
+                });
+                run.step.dependOn(prev_step);
+                prev_step = &run.step;
+            }
+        }
+
+        if (has_python) boflint: {
+            // Always skip debug exe
+            if (std.mem.containsAtLeast(u8, full_name, 1, "debug")) break :boflint;
+
+            // Blacklist (BOFs which use our custom bof*() API)
+            if (std.mem.containsAtLeast(u8, full_name, 1, "runBofFromBof")) break :boflint;
+            if (std.mem.containsAtLeast(u8, full_name, 1, "z-beac0n")) break :boflint;
+            if (std.mem.containsAtLeast(u8, full_name, 1, "wAsmTest")) break :boflint;
+
+            if (std.mem.containsAtLeast(u8, full_name, 1, "coff")) {
+                const run = b.addSystemCommand(&.{
+                    "python",
+                    "utils/boflint.py",
+                    "--logformat",
+                    "vs",
+                    "--loader",
+                    "cs",
+                    b.fmt("zig-out/" ++ bofs_install_path ++ "{s}.o", .{full_name}),
+                });
+                run.step.dependOn(prev_step);
+                prev_step = &run.step;
+            }
+        }
+
+        b.getInstallStep().dependOn(prev_step);
     }
 
     b.getInstallStep().dependOn(&b.addInstallFile(
@@ -207,40 +259,11 @@ pub fn build(b: *std.Build) !void {
         tests.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
         tests.root_module.addImport("bof_launcher_win32", win32_module);
 
-        const run_step = b.addRunArtifact(tests);
-        run_step.skip_foreign_checks = true;
-        run_step.step.dependOn(b.getInstallStep());
+        const run = b.addRunArtifact(tests);
+        run.skip_foreign_checks = true;
+        run.step.dependOn(b.getInstallStep());
 
-        test_step.dependOn(&run_step.step);
-    }
-
-    const boflint_step = b.step("boflint", "Run boflint.py");
-
-    for (@import("bof_launcher_bofs").bofs_to_build) |bof| {
-        const full_name = bof.fullName(b.allocator);
-
-        if (std.mem.containsAtLeast(u8, full_name, 1, "debug")) continue;
-
-        if (std.mem.containsAtLeast(u8, full_name, 1, "runBofFromBof")) continue;
-        if (std.mem.containsAtLeast(u8, full_name, 1, "z-beac0n")) continue;
-        if (std.mem.containsAtLeast(u8, full_name, 1, "wAsmTest")) continue;
-
-        if (std.mem.containsAtLeast(u8, full_name, 1, "coff") and
-            (std.mem.containsAtLeast(u8, full_name, 1, "x64") or std.mem.containsAtLeast(u8, full_name, 1, "x86")))
-        {
-            const run_step = b.addSystemCommand(&.{
-                "python",
-                "utils/boflint.py",
-                "--logformat",
-                "vs",
-                "--loader",
-                "cs",
-                b.fmt("zig-out/bin/bofs/{s}.o", .{full_name}),
-            });
-            run_step.step.dependOn(b.getInstallStep());
-
-            boflint_step.dependOn(&run_step.step);
-        }
+        test_step.dependOn(&run.step);
     }
 }
 

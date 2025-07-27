@@ -2016,12 +2016,6 @@ export fn outputBofData(_: i32, data: [*]u8, len: i32, free_mem: i32) void {
 
 const mem_alignment = 16;
 
-pub fn panic(_: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
-    while (true) {
-        @breakpoint();
-    }
-}
-
 const pthread_t = *opaque {};
 
 const gstate = struct {

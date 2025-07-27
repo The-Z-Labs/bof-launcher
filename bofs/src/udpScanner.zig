@@ -68,6 +68,7 @@ comptime {
     @import("bof_api").embedFunctionCode("__aeabi_uldivmod");
     @import("bof_api").embedFunctionCode("__aeabi_uidiv");
 }
+pub const panic = std.debug.no_panic;
 
 const Payload = struct {
     ports: []u16,

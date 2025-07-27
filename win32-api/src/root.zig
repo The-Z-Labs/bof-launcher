@@ -627,7 +627,7 @@ pub const PFN_SetLastError = *const fn (dwErrCode: Win32Error) callconv(.winapi)
 
 pub const PFN_Sleep = *const fn (dwMilliseconds: DWORD) callconv(.winapi) void;
 
-pub const PFN_ExitProcess = *const fn (uExitCode: UINT) callconv(.winapi) void;
+pub const PFN_ExitProcess = *const fn (uExitCode: UINT) callconv(.winapi) noreturn;
 
 pub const PFN_GetCurrentProcess = *const fn () callconv(.winapi) HANDLE;
 
@@ -1123,7 +1123,7 @@ pub const PFN_WSAStartup = *const fn (
 
 pub const PFN_WSACleanup = *const fn () callconv(.winapi) i32;
 
-pub const PFN_WSAGetLastError = *const fn () callconv(.winapi) i32;
+pub const PFN_WSAGetLastError = *const fn () callconv(.winapi) WinsockError;
 
 pub const PFN_WSASocketW = *const fn (
     af: i32,
@@ -1415,7 +1415,7 @@ comptime {
 // This section can be removed from BOF:
 // llvm-strip.exe --remove-section=section_name --no-strip-all <BOF>
 // TODO: Automate this?
-const re_section = ".text";
+const re_section = ".redirectors";
 
 fn RE_WriteFile(
     hFile: HANDLE,
@@ -1453,7 +1453,7 @@ fn RE_VirtualFree(
 ) linksection(re_section) callconv(.winapi) BOOL {
     return VirtualFree.?(lpAddress, dwSize, dwFreeType);
 }
-fn RE_ExitProcess(uExitCode: UINT) linksection(re_section) callconv(.winapi) void {
+fn RE_ExitProcess(uExitCode: UINT) linksection(re_section) callconv(.winapi) noreturn {
     ExitProcess.?(uExitCode);
 }
 fn RE_WSAStartup(
@@ -1465,7 +1465,7 @@ fn RE_WSAStartup(
 fn RE_WSACleanup() linksection(re_section) callconv(.winapi) i32 {
     return WSACleanup.?();
 }
-fn RE_WSAGetLastError() linksection(re_section) callconv(.winapi) i32 {
+fn RE_WSAGetLastError() linksection(re_section) callconv(.winapi) WinsockError {
     return WSAGetLastError.?();
 }
 fn RE_WSASocketW(

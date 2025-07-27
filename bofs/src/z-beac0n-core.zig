@@ -20,6 +20,7 @@ comptime {
     @import("bof_api").embedFunctionCode("__aeabi_llsl");
     @import("bof_api").embedFunctionCode("__aeabi_llsr");
 }
+pub const panic = std.debug.no_panic;
 
 pub const std_options = std.Options{
     .http_disable_tls = true,
