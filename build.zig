@@ -63,7 +63,7 @@ pub fn build(b: *std.Build) !void {
             if (std.mem.containsAtLeast(u8, full_name, 1, "coff")) {
                 const run = b.addSystemCommand(&.{
                     "bin/llvm-objcopy",
-                    "--remove-section=.redirectors",
+                    "--remove-section=.red",
                     "--strip-unneeded",
                     b.fmt("zig-out/" ++ bofs_install_path ++ "{s}.o", .{full_name}),
                 });

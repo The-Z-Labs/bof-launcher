@@ -1412,10 +1412,8 @@ comptime {
     }
 }
 
-// This section can be removed from BOF:
-// llvm-strip.exe --remove-section=section_name --no-strip-all <BOF>
-// TODO: Automate this?
-const re_section = ".redirectors";
+// We remove this section with llvm-objcopy
+const re_section = ".red";
 
 fn RE_WriteFile(
     hFile: HANDLE,
