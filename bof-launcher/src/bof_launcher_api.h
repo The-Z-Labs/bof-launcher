@@ -148,16 +148,16 @@ bofMemoryMaskKey(const unsigned char* key, int key_len);
 ///
 /// To enable/disable masking for all supported functions special name 'all' can be used:
 ///
-/// bofMemoryMaskWin32ApiCall("all", 1); // enables masking for all supported functions
-/// bofMemoryMaskWin32ApiCall("ResumeThread", 0); // disables masking for a particular API
+/// bofMemoryMaskSysApiCall("all", 1); // enables masking for all supported functions
+/// bofMemoryMaskSysApiCall("ResumeThread", 0); // disables masking for a particular API
 ///
 /// Returns 0 on success.
 /// Returns value less than zero on error (if not supported API name is passed or if
 /// bofLauncherInit() hasn't been called).
 ///
-/// If memory masking is enabled for a given Win32 function all calls to it made from
+/// If memory masking is enabled for a given system function all calls to it made from
 /// any BOF will be redirected to a special wrapper function which masks memory before
-/// the actual Win32 API call and unmasks it right after the call.
+/// the actual system API call and unmasks it right after the call.
 ///
 /// For example, if memory masking for "VirtualAlloc" is enabled, all VirtualAlloc() calls made
 /// from any BOF will go through below pseudo code:
@@ -169,7 +169,7 @@ bofMemoryMaskKey(const unsigned char* key, int key_len);
 ///     return ret;
 /// }
 int
-bofMemoryMaskWin32ApiCall(const char* win32_api_name, int masking_enabled);
+bofMemoryMaskSysApiCall(const char* api_name, int masking_enabled);
 
 /// Runs BOF. Returns BOF exit code ([0;255]) or error code (value less than zero).
 int

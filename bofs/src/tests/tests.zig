@@ -513,7 +513,7 @@ test "bof-launcher.bofs.masking" {
     try bof.initLauncher();
     defer bof.releaseLauncher();
 
-    try bof.memoryMaskWin32ApiCall("all", true);
+    try bof.memoryMaskSysApiCall("all", true);
 
     const allocator = std.testing.allocator;
 

@@ -102,14 +102,14 @@ pub fn memoryMaskKey(key: []const u8) Error!void {
 ///
 /// To enable/disable masking for all supported functions special name 'all' can be used:
 ///
-/// try bof.memoryMaskWin32ApiCall("all", true); // enables masking for all supported functions
-/// try bof.memoryMaskWin32ApiCall("ResumeThread", false); // disables masking for a particular API
+/// try bof.memoryMaskSysApiCall("all", true); // enables masking for all supported functions
+/// try bof.memoryMaskSysApiCall("ResumeThread", false); // disables masking for a particular API
 ///
 /// Returns error if not supported API name is passed or if bof.initLauncher() hasn't been called.
 ///
-/// If memory masking is enabled for a given Win32 function all calls to it made from
+/// If memory masking is enabled for a given system function all calls to it made from
 /// any BOF will be redirected to a special wrapper function which masks memory before
-/// the actual Win32 API call and unmasks it right after the call.
+/// the actual system API call and unmasks it right after the call.
 ///
 /// For example, if memory masking for "VirtualAlloc" is enabled, all VirtualAlloc() calls made
 /// from any BOF will go through below pseudo code:
@@ -120,8 +120,8 @@ pub fn memoryMaskKey(key: []const u8) Error!void {
 ///     unmaskMemory();
 ///     return ret;
 /// }
-pub fn memoryMaskWin32ApiCall(win32_api_name: [:0]const u8, masking_enabled: bool) Error!void {
-    const res = bofMemoryMaskWin32ApiCall(win32_api_name, @intFromBool(masking_enabled));
+pub fn memoryMaskSysApiCall(api_name: [:0]const u8, masking_enabled: bool) Error!void {
+    const res = bofMemoryMaskSysApiCall(api_name, @intFromBool(masking_enabled));
     if (res < 0) return error.Unknown;
 }
 
@@ -414,7 +414,7 @@ pub extern fn bofDebugRun(
 ) callconv(.C) c_int;
 
 extern fn bofMemoryMaskKey(key: [*]const u8, key_len: c_int) callconv(.C) c_int;
-extern fn bofMemoryMaskWin32ApiCall(win32_api_name: [*:0]const u8, masking_enabled: c_int) callconv(.C) c_int;
+extern fn bofMemoryMaskSysApiCall(api_name: [*:0]const u8, masking_enabled: c_int) callconv(.C) c_int;
 
 extern fn bofContextRelease(context: *Context) callconv(.C) void;
 extern fn bofContextIsRunning(context: *Context) callconv(.C) c_int;

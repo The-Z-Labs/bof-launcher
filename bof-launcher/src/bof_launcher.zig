@@ -1762,15 +1762,15 @@ export fn bofMemoryMaskKey(key: [*]const u8, key_len: c_int) callconv(.C) c_int 
     return 0;
 }
 
-export fn bofMemoryMaskWin32ApiCall(win32_api_name: [*:0]const u8, masking_enabled: c_int) callconv(.C) c_int {
+export fn bofMemoryMaskSysApiCall(api_name: [*:0]const u8, masking_enabled: c_int) callconv(.C) c_int {
     if (!gstate.is_valid) return -1;
-    if (std.mem.eql(u8, std.mem.span(win32_api_name), "all")) {
-        inline for (@typeInfo(ZGateWin32ApiCall).@"enum".fields, 0..) |_, i| {
+    if (std.mem.eql(u8, std.mem.span(api_name), "all")) {
+        inline for (@typeInfo(ZGateSysApiCall).@"enum".fields, 0..) |_, i| {
             gstate.mask_win32_api[i] = if (masking_enabled == 0) false else true;
         }
     } else {
-        inline for (@typeInfo(ZGateWin32ApiCall).@"enum".fields, 0..) |field, i| {
-            if (std.mem.eql(u8, std.mem.span(win32_api_name), field.name)) {
+        inline for (@typeInfo(ZGateSysApiCall).@"enum".fields, 0..) |field, i| {
+            if (std.mem.eql(u8, std.mem.span(api_name), field.name)) {
                 gstate.mask_win32_api[i] = if (masking_enabled == 0) false else true;
                 return 0;
             }
@@ -2033,7 +2033,7 @@ const gstate = struct {
 
     var mask_key_data: [32]u8 linksection(zgate_dsection) = undefined;
     var mask_key: []const u8 linksection(zgate_dsection) = mask_key_data[0..13];
-    var mask_win32_api: [@typeInfo(ZGateWin32ApiCall).@"enum".fields.len]bool = undefined;
+    var mask_win32_api: [@typeInfo(ZGateSysApiCall).@"enum".fields.len]bool = undefined;
 
     var process_id: u32 = 0;
     var main_thread_id: u32 = 0;
@@ -2113,6 +2113,16 @@ fn initLauncher() !void {
     try gstate.func_lookup.put("bofArgsEnd", @intFromPtr(&bofArgsEnd));
     try gstate.func_lookup.put("bofArgsGetBuffer", @intFromPtr(&bofArgsGetBuffer));
     try gstate.func_lookup.put("bofArgsGetBufferSize", @intFromPtr(&bofArgsGetBufferSize));
+
+    if (@import("builtin").os.tag == .linux and with_libc) {
+        try gstate.func_lookup.put("memfd_create", @intFromPtr(&zgate_memfd_create));
+
+        gstate.libc = std.DynLib.open("libc.so.6") catch null;
+
+        if (gstate.libc) |*libc| {
+            zgate_memfd_create_ptr = libc.lookup(PFN_memfd_create, "memfd_create").?;
+        }
+    }
 
     if (@import("builtin").os.tag == .windows) {
         try gstate.func_lookup.put("VirtualAlloc", @intFromPtr(&zgateVirtualAlloc));
@@ -2262,7 +2272,7 @@ fn initLauncher() !void {
 
     gstate.is_valid = true;
 
-    try pubapi.memoryMaskWin32ApiCall("all", false);
+    try pubapi.memoryMaskSysApiCall("all", false);
 }
 
 export fn bofLauncherInit() callconv(.C) c_int {
@@ -2320,7 +2330,7 @@ pub fn DllMain(
     return w32.TRUE;
 }
 
-const ZGateWin32ApiCall = enum(u32) {
+const ZGateSysApiCall = enum(u32) {
     CreateRemoteThread = 0,
     CreateThread,
     GetThreadContext,
@@ -2341,12 +2351,14 @@ const ZGateWin32ApiCall = enum(u32) {
     CreateFileMappingA,
     CloseHandle,
     DuplicateHandle,
+
+    memfd_create,
 };
 
 const zgate_csection = ".ztext";
 const zgate_dsection = ".zdata";
 
-fn zgateBegin(func: ZGateWin32ApiCall) linksection(zgate_csection) bool {
+fn zgateBegin(func: ZGateSysApiCall) linksection(zgate_csection) bool {
     if (getCurrentProcessId() == gstate.process_id and getCurrentThreadId() != gstate.main_thread_id) return false;
     if (!gstate.mask_win32_api[@intFromEnum(func)]) return false;
 
@@ -2484,6 +2496,20 @@ var zgateResumeThreadPtr: w32.PFN_ResumeThread linksection(zgate_dsection) = und
 var zgateSuspendThreadPtr: w32.PFN_SuspendThread linksection(zgate_dsection) = undefined;
 var zgateCreateThreadPtr: w32.PFN_CreateThread linksection(zgate_dsection) = undefined;
 var zgateCreateRemoteThreadPtr: w32.PFN_CreateRemoteThread linksection(zgate_dsection) = undefined;
+
+const PFN_memfd_create = *const fn (name: [*:0]const u8, flags: c_uint) callconv(.c) c_int;
+
+var zgate_memfd_create_ptr: PFN_memfd_create linksection(zgate_dsection) = undefined;
+
+fn zgate_memfd_create(
+    name: [*:0]const u8,
+    flags: c_uint,
+) linksection(zgate_csection) callconv(.c) c_int {
+    const do_mask = zgateBegin(.memfd_create);
+    const ret = zgate_memfd_create_ptr(name, flags);
+    if (do_mask) zgateEnd();
+    return ret;
+}
 
 fn zgateVirtualAlloc(
     lpAddress: ?w32.LPVOID,
