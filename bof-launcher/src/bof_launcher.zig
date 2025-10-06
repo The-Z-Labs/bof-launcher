@@ -27,7 +27,6 @@ const Bof = struct {
     is_allocated: bool = false,
     is_loaded: bool = false,
     is_masked: bool = false,
-    api_masking_enabled: bool = true,
 
     sections_mem: ?[]u8 = null,
     sections: [32]BofSection = undefined,
@@ -129,7 +128,6 @@ const Bof = struct {
             bof.user_externals.deinit();
 
             bof.is_masked = false;
-            bof.api_masking_enabled = true;
             bof.sections_mem = null;
             bof.entry_point = null;
             bof.is_loaded = false;
@@ -1328,6 +1326,24 @@ export fn bofObjectGetProcAddress(bof_handle: BofHandle, name: ?[*:0]const u8) c
     return null;
 }
 
+fn maskAllNonRunningBofsExceptThisOne(exception_bof: ?*Bof) void {
+    for_each_bof: for (gstate.bof_pool.bofs) |*ibof| {
+        if (!ibof.is_allocated or !ibof.is_loaded or ibof.is_masked) continue :for_each_bof;
+
+        if (exception_bof) |bof| {
+            if (ibof == bof) continue :for_each_bof;
+        }
+
+        // Check if `ibof` is currently running.
+        for (gstate.contexts.items) |ctx| {
+            if (gstate.bof_pool.getBofPtrIfValid(ctx.handle)) |ctx_bof| {
+                if (ibof == ctx_bof and ctx.done_event.isSet() == false) continue :for_each_bof;
+            }
+        }
+        zgateXorBof(ibof);
+    }
+}
+
 fn run(
     bof_handle: BofHandle,
     arg_data_ptr: ?[*]u8,
@@ -1340,25 +1356,8 @@ fn run(
         context.deinit();
         gstate.allocator.?.destroy(context);
     }
-
     if (gstate.bof_pool.getBofPtrIfValid(bof_handle)) |bof| {
-        // Mask all other BOFs that are not currently running.
-        for_each_bof: for (gstate.bof_pool.bofs) |*ibof| {
-            if (!ibof.is_allocated or !ibof.is_loaded) continue :for_each_bof;
-
-            if (ibof == bof) continue :for_each_bof;
-
-            // Check if `ibof` is currently running.
-            for (gstate.contexts.items) |ctx| {
-                if (gstate.bof_pool.getBofPtrIfValid(ctx.handle)) |ctx_bof| {
-                    if (ibof == ctx_bof and ctx.done_event.isSet() == false) continue :for_each_bof;
-                }
-            }
-
-            zgateXorBof(ibof);
-            assert(ibof.api_masking_enabled == true);
-            ibof.api_masking_enabled = false; // Already masked so don't mask/unmask on API calls.
-        }
+        maskAllNonRunningBofsExceptThisOne(bof);
         bof.run(
             context,
             if (arg_data_ptr) |ptr| ptr[0..@intCast(arg_data_len)] else null,
@@ -1367,8 +1366,6 @@ fn run(
         for (gstate.bof_pool.bofs) |*ibof| {
             if (ibof.is_allocated and ibof.is_loaded and ibof.is_masked) {
                 zgateXorBof(ibof);
-                assert(ibof.api_masking_enabled == false);
-                ibof.api_masking_enabled = true;
             }
         }
         out_context.* = @ptrCast(context);
@@ -1630,8 +1627,6 @@ const BofContext = struct {
     output_ring_num_written_bytes: usize = 0,
     output_mutex: std.Thread.Mutex = .{},
 
-    thread_handle: if (@import("builtin").os.tag == .windows) ?w32.HANDLE else ?pthread_t = null,
-
     fn init(allocator: std.mem.Allocator, handle: BofHandle) BofContext {
         return .{
             .allocator = allocator,
@@ -1646,14 +1641,6 @@ const BofContext = struct {
             if (ctx == context) {
                 _ = gstate.contexts.swapRemove(i);
                 break;
-            }
-        }
-        if (context.thread_handle) |h| {
-            if (@import("builtin").os.tag == .windows) {
-                _ = w32.CloseHandle.?(h);
-            } else {
-                // TODO: Implement.
-                assert(false);
             }
         }
         context.output_ring.deinit(context.allocator);
@@ -1702,7 +1689,8 @@ fn runAsync(
             .run_in_new_process = run_in_new_process,
         };
         if (@import("builtin").os.tag == .windows) {
-            context.thread_handle = w32.CreateThread.?(null, 0, threadFunc, @ptrCast(in), 0, null);
+            const handle = w32.CreateThread.?(null, 0, threadFunc, @ptrCast(in), 0, null);
+            if (handle) |h| _ = w32.CloseHandle.?(h);
         } else {
             // TODO: Handle errors
             var handle: pthread_t = undefined;
@@ -2366,15 +2354,9 @@ fn zgateBegin(func: ZGateWin32ApiCall) linksection(zgate_csection) bool {
 
     gstate.allocator_mutex.lock();
 
-    // suspend threads
-    for (gstate.contexts.items) |ctx| {
-        if (ctx.thread_handle) |thread_handle| {
-            _ = zgateSuspendThreadPtr(thread_handle);
-        }
-    }
-
     zgateXorAllocations();
-    zgateXorBofs();
+
+    maskAllNonRunningBofsExceptThisOne(null);
 
     if (gstate.dll.base_address != 0) {
         for (0..gstate.dll.sections_to_mask_num) |i| {
@@ -2396,15 +2378,13 @@ fn zgateEnd() linksection(zgate_csection) void {
         }
     }
 
-    zgateXorAllocations();
-    zgateXorBofs();
-
-    // resume threads
-    for (gstate.contexts.items) |ctx| {
-        if (ctx.thread_handle) |thread_handle| {
-            _ = zgateResumeThreadPtr(thread_handle);
+    for (gstate.bof_pool.bofs) |*bof| {
+        if (bof.is_allocated and bof.is_loaded and bof.is_masked) {
+            zgateXorBof(bof);
         }
     }
+
+    zgateXorAllocations();
 
     gstate.allocator_mutex.unlock();
 }
@@ -2432,14 +2412,6 @@ fn zgateXorBof(bof: *Bof) linksection(zgate_csection) void {
         }
     }
     bof.is_masked = !bof.is_masked;
-}
-
-fn zgateXorBofs() linksection(zgate_csection) void {
-    for (gstate.bof_pool.bofs) |*bof| {
-        if (bof.is_allocated and bof.is_loaded and bof.api_masking_enabled) {
-            zgateXorBof(bof);
-        }
-    }
 }
 
 fn zgateXorAllocations() linksection(zgate_csection) void {
