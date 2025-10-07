@@ -11,6 +11,12 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
     const printf = beacon.printf.?;
     _ = printf(.output, "--- test_obj3.zig ---\n");
 
+    if (@import("builtin").os.tag == .linux) {
+        const fd = std.c.memfd_create("", std.os.linux.MFD.CLOEXEC);
+        if (fd == -1) return 11;
+        _ = std.c.close(fd);
+    }
+
     if (@import("builtin").os.tag == .windows) {
         w32.Sleep.?(0);
         _ = printf(.output, "CoGetCurrentProcess() returned: %d\n", w32.CoGetCurrentProcess.?());

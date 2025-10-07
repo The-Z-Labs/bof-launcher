@@ -307,7 +307,7 @@ fn addBofObj(
                 .root_source_file = b.path(bof.source_file_path),
                 .target = bof.target,
                 .optimize = bof.optimize,
-                .link_libc = false,
+                .link_libc = bof.target.result.os.tag == .linux,
             });
             if (bof.custom_build_fn) |customBuild| _ = customBuild(b, obj, bof);
             break :blk obj;
