@@ -44,7 +44,7 @@ pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
 
             @memset(mem, 0);
 
-            _ = printf(.output, "bof_api.bof_allocator.alloc() returned: 0x%x\n", @intFromPtr(mem.ptr));
+            _ = printf(.output, "std.heap.page_allocator returned: 0x%x\n", @intFromPtr(mem.ptr));
 
             mem[100] = 123;
 
