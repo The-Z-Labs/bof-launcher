@@ -1327,21 +1327,34 @@ export fn bofObjectGetProcAddress(bof_handle: BofHandle, name: ?[*:0]const u8) c
 }
 
 fn maskAllNonRunningBofsExceptThisOne(exception_bof: ?*Bof) void {
+    var num_bofs: u32 = 0;
+    var num_masked_bofs: u32 = 0;
+
     for_each_bof: for (gstate.bof_pool.bofs) |*ibof| {
-        if (!ibof.is_allocated or !ibof.is_loaded or ibof.is_masked) continue :for_each_bof;
+        if (!ibof.is_allocated or !ibof.is_loaded) continue :for_each_bof;
+
+        num_bofs += 1;
+
+        if (ibof.is_masked) {
+            num_masked_bofs += 1;
+            continue :for_each_bof;
+        }
 
         if (exception_bof) |bof| {
             if (ibof == bof) continue :for_each_bof;
         }
 
         // Check if `ibof` is currently running.
-        for (gstate.contexts.items) |ctx| {
+        for (gstate.async_contexts.items) |ctx| {
             if (gstate.bof_pool.getBofPtrIfValid(ctx.handle)) |ctx_bof| {
-                if (ibof == ctx_bof and ctx.done_event.isSet() == false) continue :for_each_bof;
+                if (ibof == ctx_bof and !ctx.done_event.isSet()) continue :for_each_bof;
             }
         }
         zgateXorBof(ibof);
+        num_masked_bofs += 1;
     }
+
+    if (false) std.debug.print("BOFs masked: {d}/{d}\n", .{ num_masked_bofs, num_bofs });
 }
 
 fn run(
@@ -1369,7 +1382,6 @@ fn run(
             }
         }
         out_context.* = @ptrCast(context);
-        try gstate.contexts.append(context);
         context.done_event.set();
     } else unreachable;
 }
@@ -1637,12 +1649,6 @@ const BofContext = struct {
     }
 
     fn deinit(context: *BofContext) void {
-        for (gstate.contexts.items, 0..) |ctx, i| {
-            if (ctx == context) {
-                _ = gstate.contexts.swapRemove(i);
-                break;
-            }
-        }
         context.output_ring.deinit(context.allocator);
         context.output.deinit();
         context.* = undefined;
@@ -1689,6 +1695,7 @@ fn runAsync(
             .run_in_new_process = run_in_new_process,
         };
         if (@import("builtin").os.tag == .windows) {
+            // TODO: Handle errors
             const handle = w32.CreateThread.?(null, 0, threadFunc, @ptrCast(in), 0, null);
             if (handle) |h| _ = w32.CloseHandle.?(h);
         } else {
@@ -1697,7 +1704,7 @@ fn runAsync(
             _ = gstate.pthread_create(&handle, null, threadFunc, @ptrCast(in));
             _ = gstate.pthread_detach(handle);
         }
-        try gstate.contexts.append(context);
+        try gstate.async_contexts.append(context);
         out_context.* = @ptrCast(context);
     } else unreachable;
 }
@@ -1783,7 +1790,22 @@ export fn bofMemoryMaskSysApiCall(api_name: [*:0]const u8, masking_enabled: c_in
 export fn bofContextRelease(context: *pubapi.Context) callconv(.C) void {
     if (!gstate.is_valid) return;
     const ctx = @as(*BofContext, @ptrCast(@alignCast(context)));
+
+    // TODO: This will block. Is this a good decision? As an alternative we could
+    // mark for deletion and delete later, but when exactly?
+    if (!ctx.done_event.isSet()) {
+        ctx.done_event.wait();
+    }
+
     ctx.deinit();
+
+    for (gstate.async_contexts.items, 0..) |ictx, i| {
+        if (ictx == ctx) {
+            _ = gstate.async_contexts.swapRemove(i);
+            break;
+        }
+    }
+
     gstate.allocator.?.destroy(ctx);
 }
 
@@ -2027,7 +2049,7 @@ const gstate = struct {
     ) callconv(.C) c_int = undefined;
     var pthread_detach: *const fn (pthread_t) callconv(.C) c_int = undefined;
 
-    var contexts: std.ArrayList(*BofContext) = undefined;
+    var async_contexts: std.ArrayList(*BofContext) = undefined;
     var output_contexts: std.AutoHashMap(u32, ?*BofContext) = undefined;
     var output_contexts_mutex: std.Thread.Mutex = .{};
 
@@ -2181,7 +2203,7 @@ fn initLauncher() !void {
         }
     }
 
-    gstate.contexts = std.ArrayList(*BofContext).init(gstate.allocator.?);
+    gstate.async_contexts = std.ArrayList(*BofContext).init(gstate.allocator.?);
     gstate.output_contexts = std.AutoHashMap(u32, ?*BofContext).init(gstate.allocator.?);
     gstate.bof_pool = BofPool.init(gstate.allocator.?);
 
@@ -2301,7 +2323,7 @@ export fn bofLauncherRelease() callconv(.C) void {
     }
 
     gstate.bof_pool.deinit(gstate.allocator.?);
-    gstate.contexts.deinit();
+    gstate.async_contexts.deinit();
     gstate.output_contexts.deinit();
 
     gstate.func_lookup.deinit();
