@@ -430,10 +430,10 @@ const Log2Int = std.math.Log2Int;
 
 fn HalveInt(comptime T: type, comptime signed_half: bool) type {
     return extern union {
-        pub const bits = @divExact(@typeInfo(T).int.bits, 2);
-        pub const HalfTU = std.meta.Int(.unsigned, bits);
-        pub const HalfTS = std.meta.Int(.signed, bits);
-        pub const HalfT = if (signed_half) HalfTS else HalfTU;
+        const bits = @divExact(@typeInfo(T).int.bits, 2);
+        const HalfTU = std.meta.Int(.unsigned, bits);
+        const HalfTS = std.meta.Int(.signed, bits);
+        const HalfT = if (signed_half) HalfTS else HalfTU;
 
         all: T,
         s: if (native_endian == .little)
