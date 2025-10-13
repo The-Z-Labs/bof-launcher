@@ -4,7 +4,7 @@ const bof_launcher = @import("bof_launcher_api");
 
 fn runBof1(bof_bytes: []const u8) !void {
     const bof_exit_code = try bof_launcher.run(bof_bytes);
-    _ = beacon.printf.?(.output, "[1] Child BOF exit code: %d\n", bof_exit_code);
+    _ = beacon.printf(.output, "[1] Child BOF exit code: %d\n", bof_exit_code);
 }
 
 fn runBof2(bof_bytes: []const u8) !void {
@@ -14,13 +14,15 @@ fn runBof2(bof_bytes: []const u8) !void {
     const bof_context = try bof_object.run(null);
     defer bof_context.release();
 
-    _ = beacon.printf.?(.output, "[2] Child BOF exit code: %d\n", bof_context.getExitCode());
+    _ = beacon.printf(.output, "[2] Child BOF exit code: %d\n", bof_context.getExitCode());
     if (bof_context.getOutput()) |output| {
-        _ = beacon.printf.?(.output, "[2] Child BOF output: \n%s", output.ptr);
+        _ = beacon.printf(.output, "[2] Child BOF output: \n%s", output.ptr);
     }
 }
 
-pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
+pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
+    @import("bof_api").init(adata, alen, .{});
+
     const bof_bytes = if (@import("builtin").cpu.arch == .x86) bof_coff_x86 else bof_coff_x64;
 
     runBof1(&bof_bytes) catch return 1;

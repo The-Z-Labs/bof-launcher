@@ -23,10 +23,11 @@ const beacon = @import("bof_api").beacon;
 // Including POSIX functions:
 //const posix = @import("bof_api").posix;
 
-pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
+pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
+    @import("bof_api").init(adata, alen, .{});
 
     // calling BeaconPrintf function from Beacon's internal API:
-    _ = beacon.printf.?(.output, "hello, bof!\n");
+    _ = beacon.printf(.output, "hello, bof!\n");
 
     return 123; // BOF exit code (usually 0 if no error occurs)
 }

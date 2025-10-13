@@ -85,7 +85,7 @@ const builtin_payloads: []const u8 =
 ;
 
 fn parseRawPayloads(allocator: mem.Allocator, payloads_buf: []const u8) ![]Payload {
-    var list = std.ArrayList(Payload).init(allocator);
+    var list = std.array_list.Managed(Payload).init(allocator);
     defer list.deinit();
 
     var line_iter = mem.splitScalar(u8, mem.trimRight(u8, payloads_buf, "\n"), '\n');
@@ -122,7 +122,7 @@ fn parseRawPayloads(allocator: mem.Allocator, payloads_buf: []const u8) ![]Paylo
 }
 
 fn extractPorts(allocator: mem.Allocator, port_spec: []const u8) ![]u16 {
-    var list = std.ArrayList(u16).init(allocator);
+    var list = std.array_list.Managed(u16).init(allocator);
     defer list.deinit();
 
     var iter = mem.tokenizeScalar(u8, port_spec, ',');
@@ -161,7 +161,7 @@ fn extractPorts(allocator: mem.Allocator, port_spec: []const u8) ![]u16 {
 }
 
 fn extractIPs(allocator: mem.Allocator, ip_spec: []const u8) ![][]const u8 {
-    var list = std.ArrayList([]const u8).init(allocator);
+    var list = std.array_list.Managed([]const u8).init(allocator);
     defer list.deinit();
 
     // ip_spec contains only single IP - add it to the list and return
@@ -211,9 +211,11 @@ fn extractIPs(allocator: mem.Allocator, ip_spec: []const u8) ![][]const u8 {
     return list.toOwnedSlice();
 }
 
-pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
-    if (args_len == 0) {
-        _ = beacon.printf.?(.output, "Usage: udpScanner str:IPSpec[:portSpec] [int:BUF_LEN str:BUF_MEMORY_ADDR]\n");
+pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
+    @import("bof_api").init(adata, alen, .{});
+
+    if (alen == 0) {
+        _ = beacon.printf(.output, "Usage: udpScanner str:IPSpec[:portSpec] [int:BUF_LEN str:BUF_MEMORY_ADDR]\n");
         return 1;
     }
 
@@ -225,17 +227,17 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     debugPrint("parser: {any}\n", .{parser});
 
     // parse 1st (mandatory) argument:
-    beacon.dataParse.?(&parser, args, args_len);
-    const targets_spec = beacon.dataExtract.?(&parser, &opt_len);
+    beacon.dataParse(&parser, adata, alen);
+    const targets_spec = beacon.dataExtract(&parser, &opt_len);
     const sTargets_spec = targets_spec.?[0..@intCast(opt_len - 1)];
 
-    debugPrint("args_len: {d}; opt_len: {d}\n", .{ args_len, opt_len });
+    debugPrint("args_len: {d}; opt_len: {d}\n", .{ alen, opt_len });
 
     // verify if additional (optional) arguments are provided and if so process it:
-    if (args_len - 8 > opt_len) {
-        const buf_len = beacon.dataInt.?(&parser);
+    if (alen - 8 > opt_len) {
+        const buf_len = beacon.dataInt(&parser);
 
-        const buf_ptr = beacon.dataExtract.?(&parser, &opt_len);
+        const buf_ptr = beacon.dataExtract(&parser, &opt_len);
         const sBuf_ptr = buf_ptr.?[0..@intCast(opt_len - 1)];
 
         payloads_buf = @as([*]u8, @ptrFromInt(mem.readInt(usize, sBuf_ptr[0..@sizeOf(usize)], .little)))[0..@intCast(buf_len)];
@@ -344,7 +346,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
                 const scanned_addr = net.Address.parseIp(IP, port) catch continue;
                 if (sa.eql(scanned_addr)) {
                     debugPrint("Host: {s}\tPort: {d}\tState: open\n", .{ IP, port });
-                    _ = beacon.printf.?(.output, "Host: %s\tPort: %d\tState: open\n", IP.ptr, port);
+                    _ = beacon.printf(.output, "Host: %s\tPort: %d\tState: open\n", IP.ptr, port);
                 }
             }
         }
@@ -356,7 +358,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
 
 pub fn closeSocket(sock: std.posix.socket_t) void {
     if (@import("builtin").os.tag == .windows) {
-        _ = @import("bof_api").win32.closesocket.?(sock);
+        _ = @import("bof_api").win32.closesocket(sock);
     } else {
         std.posix.close(sock);
     }

@@ -30,12 +30,14 @@ comptime {
 }
 
 // https://man7.org/linux/man-pages/man3/getgrouplist.3.html
-pub extern fn getgrouplist(user: [*:0]const u8, group: c.gid_t, groups: [*]c.gid_t, ngroups: *i32) callconv(.C) i32;
+pub extern fn getgrouplist(user: [*:0]const u8, group: c.gid_t, groups: [*]c.gid_t, ngroups: *i32) callconv(.c) i32;
 
 const NGROUPS_MAX = 32;
 
-pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
-    const printf = beacon.printf.?;
+pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
+    @import("bof_api").init(adata, alen, .{});
+
+    const printf = beacon.printf;
 
     var ruid: c.uid_t = undefined;
     var rgid: c.gid_t = undefined;
@@ -48,14 +50,14 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     const allocator = gpa.allocator();
 
     var groups_gids: [NGROUPS_MAX]c.gid_t = undefined;
-    var groups_names = std.ArrayList([]const u8).init(allocator);
+    var groups_names = std.array_list.Managed([]const u8).init(allocator);
     defer groups_names.deinit();
 
     var pwd: ?*c.passwd = null;
     var grp: ?*posix.group = null;
 
     // no username provided
-    if (args_len == 0) {
+    if (alen == 0) {
         ruid = posix.getuid();
         rgid = posix.getgid();
 
@@ -68,8 +70,8 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
         ngroups = posix.getgroups(NGROUPS_MAX, &groups_gids);
     } else {
         var parser = beacon.datap{};
-        beacon.dataParse.?(&parser, args, args_len);
-        const name = beacon.dataExtract.?(&parser, null);
+        beacon.dataParse(&parser, adata, alen);
+        const name = beacon.dataExtract(&parser, null);
 
         if (name) |n| {
             pwd = posix.getpwnam(@as([*:0]u8, @ptrCast(n)));
@@ -107,7 +109,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     if (grp) |gr|
         _ = printf(.output, "(%s)", gr.gr_name);
 
-    if (args_len == 0) {
+    if (alen == 0) {
         if (euid != ruid) {
             _ = printf(.output, " euid=%d", euid);
             pwd = posix.getpwuid(euid);

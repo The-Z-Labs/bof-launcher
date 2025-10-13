@@ -54,7 +54,7 @@ pub const Error = error{
 pub const CompletionCallback = *const fn (
     bof_context: *Context,
     user_context: ?*anyopaque,
-) callconv(.C) void;
+) callconv(.c) void;
 //------------------------------------------------------------------------------
 //
 // Launcher functions
@@ -361,32 +361,32 @@ pub const Args = opaque {
 // Raw C functions
 //
 //------------------------------------------------------------------------------
-extern fn bofLauncherInit() callconv(.C) c_int;
-extern fn bofLauncherRelease() callconv(.C) void;
+extern fn bofLauncherInit() callconv(.c) c_int;
+extern fn bofLauncherRelease() callconv(.c) void;
 
 extern fn bofObjectInitFromMemory(
     file_data_ptr: [*]const u8,
     file_data_len: c_int,
     out_bof_handle: *Object,
-) callconv(.C) c_int;
+) callconv(.c) c_int;
 
-extern fn bofObjectRelease(bof_handle: Object) callconv(.C) void;
+extern fn bofObjectRelease(bof_handle: Object) callconv(.c) void;
 
-extern fn bofObjectIsValid(bof_handle: Object) callconv(.C) c_int;
+extern fn bofObjectIsValid(bof_handle: Object) callconv(.c) c_int;
 
-extern fn bofObjectGetProcAddress(bof_handle: Object, name: ?[*:0]const u8) callconv(.C) ?*anyopaque;
+extern fn bofObjectGetProcAddress(bof_handle: Object, name: ?[*:0]const u8) callconv(.c) ?*anyopaque;
 
 extern fn bofRun(
     file_data_ptr: [*]const u8,
     file_data_len: c_int,
-) callconv(.C) c_int;
+) callconv(.c) c_int;
 
 extern fn bofObjectRun(
     bof_handle: Object,
     arg_data_ptr: ?[*]u8,
     arg_data_len: c_int,
     out_context: **Context,
-) callconv(.C) c_int;
+) callconv(.c) c_int;
 
 extern fn bofObjectRunAsyncThread(
     bof_handle: Object,
@@ -395,7 +395,7 @@ extern fn bofObjectRunAsyncThread(
     completion_cb: ?CompletionCallback,
     completion_cb_context: ?*anyopaque,
     out_context: **Context,
-) callconv(.C) c_int;
+) callconv(.c) c_int;
 
 extern fn bofObjectRunAsyncProcess(
     bof_handle: Object,
@@ -404,30 +404,30 @@ extern fn bofObjectRunAsyncProcess(
     completion_cb: ?CompletionCallback,
     completion_cb_context: ?*anyopaque,
     out_context: **Context,
-) callconv(.C) c_int;
+) callconv(.c) c_int;
 
 pub extern fn bofDebugRun(
-    go_func: *const fn (?[*]u8, i32) callconv(.C) u8,
+    go_func: *const fn (?[*]u8, i32) callconv(.c) u8,
     arg_data_ptr: ?[*]u8,
     arg_data_len: c_int,
     out_context: **Context,
-) callconv(.C) c_int;
+) callconv(.c) c_int;
 
-extern fn bofMemoryMaskKey(key: [*]const u8, key_len: c_int) callconv(.C) c_int;
-extern fn bofMemoryMaskSysApiCall(api_name: [*:0]const u8, masking_enabled: c_int) callconv(.C) c_int;
+extern fn bofMemoryMaskKey(key: [*]const u8, key_len: c_int) callconv(.c) c_int;
+extern fn bofMemoryMaskSysApiCall(api_name: [*:0]const u8, masking_enabled: c_int) callconv(.c) c_int;
 
-extern fn bofContextRelease(context: *Context) callconv(.C) void;
-extern fn bofContextIsRunning(context: *Context) callconv(.C) c_int;
-extern fn bofContextWait(context: *Context) callconv(.C) void;
-extern fn bofContextGetExitCode(context: *Context) callconv(.C) u8;
-extern fn bofContextGetObjectHandle(context: *Context) callconv(.C) u32;
-extern fn bofContextGetOutput(context: *Context, out_output_len: ?*c_int) callconv(.C) ?[*:0]const u8;
+extern fn bofContextRelease(context: *Context) callconv(.c) void;
+extern fn bofContextIsRunning(context: *Context) callconv(.c) c_int;
+extern fn bofContextWait(context: *Context) callconv(.c) void;
+extern fn bofContextGetExitCode(context: *Context) callconv(.c) u8;
+extern fn bofContextGetObjectHandle(context: *Context) callconv(.c) u32;
+extern fn bofContextGetOutput(context: *Context, out_output_len: ?*c_int) callconv(.c) ?[*:0]const u8;
 
-extern fn bofArgsInit(out_args: **Args) callconv(.C) c_int;
-extern fn bofArgsRelease(args: *Args) callconv(.C) void;
-extern fn bofArgsAdd(args: *Args, arg: [*]const u8, arg_len: c_int) callconv(.C) c_int;
-extern fn bofArgsBegin(args: *Args) callconv(.C) void;
-extern fn bofArgsEnd(args: *Args) callconv(.C) void;
-pub extern fn bofArgsGetBuffer(args: *Args) callconv(.C) ?[*]u8;
-pub extern fn bofArgsGetBufferSize(args: *Args) callconv(.C) c_int;
+extern fn bofArgsInit(out_args: **Args) callconv(.c) c_int;
+extern fn bofArgsRelease(args: *Args) callconv(.c) void;
+extern fn bofArgsAdd(args: *Args, arg: [*]const u8, arg_len: c_int) callconv(.c) c_int;
+extern fn bofArgsBegin(args: *Args) callconv(.c) void;
+extern fn bofArgsEnd(args: *Args) callconv(.c) void;
+pub extern fn bofArgsGetBuffer(args: *Args) callconv(.c) ?[*]u8;
+pub extern fn bofArgsGetBufferSize(args: *Args) callconv(.c) c_int;
 //------------------------------------------------------------------------------

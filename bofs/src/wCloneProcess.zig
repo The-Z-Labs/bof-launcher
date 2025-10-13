@@ -1,7 +1,9 @@
 const std = @import("std");
 const w32 = @import("bof_api").win32;
 
-pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
+pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
+    @import("bof_api").init(adata, alen, .{});
+
     var process_handle: w32.HANDLE = undefined;
     var thread_handle: w32.HANDLE = undefined;
 
@@ -9,7 +11,7 @@ pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
     @memset(std.mem.asBytes(&create_info), 0);
     create_info.Size = @sizeOf(w32.PS_CREATE_INFO);
 
-    const nt_status = w32.NtCreateUserProcess.?(
+    const nt_status = w32.NtCreateUserProcess(
         &process_handle,
         &thread_handle,
         w32.PROCESS_ALL_ACCESS,

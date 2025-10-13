@@ -18,16 +18,18 @@ fn packetHandler(args: [*c]u8, packet_header: [*c]const c.pcap_pkthdr, packet_bo
     _ = c.printf("Packet total length %d\n", packet_header.*.len);
 }
 
-pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
+pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
+    @import("bof_api").init(adata, alen, .{});
+
     var errbuf: [c.PCAP_ERRBUF_SIZE]u8 = undefined;
     var netmask: c.bpf_u_int32 = undefined;
     var srcip: c.bpf_u_int32 = undefined;
     var bpf: c.bpf_program = undefined;
 
     var parser = beacon.datap{};
-    beacon.dataParse.?(&parser, args, args_len);
+    beacon.dataParse(&parser, adata, alen);
 
-    if (beacon.dataExtract.?(&parser, null)) |interface| {
+    if (beacon.dataExtract(&parser, null)) |interface| {
 
         // Get network device source IP address and netmask.
         if (c.pcap_lookupnet(interface, &srcip, &netmask, &errbuf) == c.PCAP_ERROR) {
@@ -35,7 +37,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
             return 1;
         }
 
-        _ = beacon.printf.?(.output, "ip: %d %d\n", srcip, netmask);
+        _ = beacon.printf(.output, "ip: %d %d\n", srcip, netmask);
 
         // Open the network interface for packet capture
         const handle = c.pcap_open_live(interface, 65535, 1, 1000, &errbuf);

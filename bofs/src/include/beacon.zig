@@ -12,25 +12,47 @@ pub const formatp = extern struct {
     size: i32 = 0,
 };
 
-pub const printf = def(?PFN_BeaconPrintf, "BeaconPrintf");
-pub const output = def(?PFN_BeaconOutput, "BeaconOutput");
+pub fn init() void {
+    printf = def(PFN_BeaconPrintf, "BeaconPrintf");
+    output = def(PFN_BeaconOutput, "BeaconOutput");
 
-pub const dataParse = def(?PFN_BeaconDataParse, "BeaconDataParse");
-pub const dataExtract = def(?PFN_BeaconDataExtract, "BeaconDataExtract");
-pub const dataInt = def(?PFN_BeaconDataInt, "BeaconDataInt");
-pub const dataShort = def(?PFN_BeaconDataShort, "BeaconDataShort");
-pub const dataLength = def(?PFN_BeaconDataLength, "BeaconDataLength");
+    dataParse = def(PFN_BeaconDataParse, "BeaconDataParse");
+    dataExtract = def(PFN_BeaconDataExtract, "BeaconDataExtract");
+    dataInt = def(PFN_BeaconDataInt, "BeaconDataInt");
+    dataShort = def(PFN_BeaconDataShort, "BeaconDataShort");
+    dataLength = def(PFN_BeaconDataLength, "BeaconDataLength");
 
-pub const formatPrintf = def(?PFN_BeaconFormatPrintf, "BeaconFormatPrintf");
-pub const formatAlloc = def(?PFN_BeaconFormatAlloc, "BeaconFormatAlloc");
-pub const formatReset = def(?PFN_BeaconFormatReset, "BeaconFormatReset");
-pub const formatFree = def(?PFN_BeaconFormatFree, "BeaconFormatFree");
-pub const formatAppend = def(?PFN_BeaconFormatAppend, "BeaconFormatAppend");
-pub const formatToString = def(?PFN_BeaconFormatToString, "BeaconFormatToString");
-pub const formatInt = def(?PFN_BeaconFormatInt, "BeaconFormatInt");
+    formatPrintf = def(PFN_BeaconFormatPrintf, "BeaconFormatPrintf");
+    formatAlloc = def(PFN_BeaconFormatAlloc, "BeaconFormatAlloc");
+    formatReset = def(PFN_BeaconFormatReset, "BeaconFormatReset");
+    formatFree = def(PFN_BeaconFormatFree, "BeaconFormatFree");
+    formatAppend = def(PFN_BeaconFormatAppend, "BeaconFormatAppend");
+    formatToString = def(PFN_BeaconFormatToString, "BeaconFormatToString");
+    formatInt = def(PFN_BeaconFormatInt, "BeaconFormatInt");
+}
+
+pub var printf: PFN_BeaconPrintf = undefined;
+pub var output: PFN_BeaconOutput = undefined;
+
+pub var dataParse: PFN_BeaconDataParse = undefined;
+pub var dataExtract: PFN_BeaconDataExtract = undefined;
+pub var dataInt: PFN_BeaconDataInt = undefined;
+pub var dataShort: PFN_BeaconDataShort = undefined;
+pub var dataLength: PFN_BeaconDataLength = undefined;
+
+pub var formatPrintf: PFN_BeaconFormatPrintf = undefined;
+pub var formatAlloc: PFN_BeaconFormatAlloc = undefined;
+pub var formatReset: PFN_BeaconFormatReset = undefined;
+pub var formatFree: PFN_BeaconFormatFree = undefined;
+pub var formatAppend: PFN_BeaconFormatAppend = undefined;
+pub var formatToString: PFN_BeaconFormatToString = undefined;
+pub var formatInt: PFN_BeaconFormatInt = undefined;
 
 fn def(comptime T: type, comptime funcname: []const u8) T {
-    return @extern(T, .{ .name = funcname, .is_dll_import = @import("builtin").mode != .Debug });
+    return @extern(T, .{
+        .name = funcname,
+        .is_dll_import = @import("builtin").mode != .Debug,
+    });
 }
 
 pub const CallbackType = enum(i32) {

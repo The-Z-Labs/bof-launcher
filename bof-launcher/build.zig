@@ -11,33 +11,42 @@ pub fn build(b: *std.Build) void {
     const win32_dep = b.dependency("bof_launcher_win32", .{});
     const win32_module = win32_dep.module("bof_launcher_win32");
 
-    const static_lib = b.addStaticLibrary(.{
+    const static_lib = b.addLibrary(.{
         .name = libFileName(b.allocator, target, null),
-        .root_source_file = b.path("src/bof_launcher.zig"),
-        .target = target,
-        .optimize = optimize,
-        .link_libc = target.result.os.tag == .linux,
+        .linkage = .static,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/bof_launcher.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = target.result.os.tag == .linux,
+        }),
     });
     static_lib.root_module.addImport("bof_launcher_win32", win32_module);
     buildLib(b, static_lib, target, optimize);
 
-    const shared_lib = b.addSharedLibrary(.{
+    const shared_lib = b.addLibrary(.{
         .name = libFileName(b.allocator, target, "shared"),
-        .root_source_file = b.path("src/bof_launcher.zig"),
-        .target = target,
-        .optimize = optimize,
-        .link_libc = target.result.os.tag == .linux,
+        .linkage = .dynamic,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/bof_launcher.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = target.result.os.tag == .linux,
+        }),
     });
     shared_lib.root_module.addImport("bof_launcher_win32", win32_module);
     buildLib(b, shared_lib, target, optimize);
 
     if (target.result.os.tag == .linux) {
-        const shared_nolibc_lib = b.addSharedLibrary(.{
+        const shared_nolibc_lib = b.addLibrary(.{
             .name = libFileName(b.allocator, target, "shared_nolibc"),
-            .root_source_file = b.path("src/bof_launcher.zig"),
-            .target = target,
-            .optimize = optimize,
-            .link_libc = false,
+            .linkage = .dynamic,
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("src/bof_launcher.zig"),
+                .target = target,
+                .optimize = optimize,
+                .link_libc = false,
+            }),
         });
         shared_nolibc_lib.root_module.addImport("bof_launcher_win32", win32_module);
         buildLib(b, shared_nolibc_lib, target, optimize);
@@ -48,33 +57,28 @@ fn buildLib(
     b: *std.Build,
     lib: *std.Build.Step.Compile,
     target: std.Build.ResolvedTarget,
-    optimize: std.builtin.Mode,
+    optimize: std.builtin.OptimizeMode,
 ) void {
     lib.root_module.pic = true;
     if (optimize == .ReleaseSmall) {
         lib.root_module.unwind_tables = .none;
     }
-    lib.addCSourceFile(.{
+    lib.root_module.addCSourceFile(.{
         .file = b.path("src/beacon/beacon_impl.c"),
         .flags = &.{ "-std=c99", "-fdeclspec" },
     });
-    lib.addCSourceFile(.{
+    lib.root_module.addCSourceFile(.{
         .file = b.path("src/beacon/stb_sprintf.c"),
         .flags = &.{ "-std=c99", "-fno-sanitize=undefined" },
     });
     if (target.result.os.tag == .windows) {
-        lib.linkSystemLibrary2("ws2_32", .{});
-        lib.linkSystemLibrary2("ole32", .{});
+        lib.root_module.linkSystemLibrary("ws2_32", .{});
+        lib.root_module.linkSystemLibrary("ole32", .{});
+        lib.root_module.linkSystemLibrary("user32", .{});
+        lib.root_module.linkSystemLibrary("advapi32", .{});
     }
     lib.bundle_compiler_rt = true;
-    if (lib.isDynamicLibrary()) {
-        if (target.result.cpu.arch == .x86 and target.result.os.tag == .linux) {
-            // TODO: LTO causes problems on Linux x86 (segfault in Zig test runner).
-            lib.want_lto = false;
-        } else {
-            lib.want_lto = true;
-        }
-    }
+    lib.want_lto = false;
     b.installArtifact(lib);
 }
 

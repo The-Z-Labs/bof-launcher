@@ -39,6 +39,7 @@ const beacon = bofapi.beacon;
 comptime {
     @import("bof_api").embedFunctionCode("memcpy");
     @import("bof_api").embedFunctionCode("memset");
+    @import("bof_api").embedFunctionCode("memmove");
     @import("bof_api").embedFunctionCode("__stackprobe__");
     @import("bof_api").embedFunctionCode("__udivdi3");
     @import("bof_api").embedFunctionCode("__ashldi3");
@@ -109,7 +110,10 @@ pub fn fromTimestamp(ts: u64) DateTime {
 
 pub fn toRFC3339(dt: DateTime) [20]u8 {
     var buf: [20]u8 = undefined;
-    _ = std.fmt.formatIntBuf(buf[0..4], dt.year, 10, .lower, .{ .width = 4, .fill = '0' });
+
+    var w: std.Io.Writer = .fixed(buf[0..4]);
+    w.printInt(dt.year, 10, .lower, .{ .width = 4, .fill = '0' }) catch unreachable;
+
     buf[4] = '-';
     paddingTwoDigits(buf[5..7], dt.month);
     buf[7] = '-';
@@ -138,13 +142,16 @@ fn paddingTwoDigits(buf: *[2]u8, value: u8) void {
         7 => buf.* = "07".*,
         8 => buf.* = "08".*,
         9 => buf.* = "09".*,
-        else => _ = std.fmt.formatIntBuf(buf, value, 10, .lower, .{}),
+        else => {
+            var w: std.Io.Writer = .fixed(buf[0..2]);
+            w.printInt(value, 10, .lower, .{}) catch unreachable;
+        },
     }
 }
 // end of RFC3339 implementation
 
 fn listDirContent(dir_path: [*:0]u8) !u8 {
-    const printf = beacon.printf.?;
+    const printf = beacon.printf;
 
     var iter_dir = try std.fs.openDirAbsoluteZ(dir_path, .{ .iterate = true });
     defer iter_dir.close();
@@ -239,11 +246,13 @@ fn listDirContent(dir_path: [*:0]u8) !u8 {
     return 0;
 }
 
-pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
-    var parser = beacon.datap{};
-    beacon.dataParse.?(&parser, args, args_len);
+pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
+    @import("bof_api").init(adata, alen, .{});
 
-    if (beacon.dataExtract.?(&parser, null)) |dir_path| {
+    var parser = beacon.datap{};
+    beacon.dataParse(&parser, adata, alen);
+
+    if (beacon.dataExtract(&parser, null)) |dir_path| {
         return listDirContent(dir_path) catch |err| switch (err) {
             error.FileNotFound => @intFromEnum(BofErrors.FileNotFound),
             else => @intFromEnum(BofErrors.UnknownError),

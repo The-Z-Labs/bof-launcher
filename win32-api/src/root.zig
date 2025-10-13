@@ -9,7 +9,6 @@ pub const ULONG = windows.ULONG;
 pub const WCHAR = windows.WCHAR;
 pub const LPCSTR = windows.LPCSTR;
 pub const LPSTR = windows.LPSTR;
-pub const WINAPI = windows.WINAPI;
 pub const HMODULE = windows.HMODULE;
 pub const HINSTANCE = windows.HINSTANCE;
 pub const FARPROC = windows.FARPROC;
@@ -844,6 +843,18 @@ pub const PFN_GetProcessHeap = *const fn () callconv(.winapi) ?HANDLE;
 
 pub const PFN_OutputDebugStringA = *const fn (LPCSTR) callconv(.winapi) void;
 
+pub const PFN_GetFileSizeEx = *const fn (
+    hFile: HANDLE,
+    lpFileSize: *LARGE_INTEGER,
+) callconv(.winapi) BOOL;
+
+pub const PFN_SetFilePointerEx = *const fn (
+    hFile: HANDLE,
+    liDistanceToMove: LARGE_INTEGER,
+    lpNewFilePointer: ?*LARGE_INTEGER,
+    dwMoveMethod: DWORD,
+) callconv(.winapi) BOOL;
+
 //
 // NTDLL function types
 //
@@ -927,6 +938,13 @@ pub const PFN_NtAllocateVirtualMemory = *const fn (
     RegionSize: *SIZE_T,
     AllocationType: ULONG,
     Protect: ULONG,
+) callconv(.winapi) NTSTATUS;
+
+pub const PFN_NtFreeVirtualMemory = *const fn (
+    ProcessHandle: HANDLE,
+    BaseAddress: *PVOID,
+    RegionSize: *SIZE_T,
+    FreeType: ULONG,
 ) callconv(.winapi) NTSTATUS;
 
 pub const PFN_NtWriteVirtualMemory = *const fn (
@@ -1057,6 +1075,14 @@ pub const PFN_NtFsControlFile = *const fn (
     InputBufferLength: ULONG,
     OutputBuffer: ?PVOID,
     OutputBufferLength: ULONG,
+) callconv(.winapi) NTSTATUS;
+
+pub const PFN_NtQueryInformationFile = *const fn (
+    FileHandle: HANDLE,
+    IoStatusBlock: *IO_STATUS_BLOCK,
+    FileInformation: *anyopaque,
+    Length: ULONG,
+    FileInformationClass: FILE_INFORMATION_CLASS,
 ) callconv(.winapi) NTSTATUS;
 
 //
@@ -1227,94 +1253,220 @@ pub fn def(
     else {};
 }
 
+pub fn init() void {
+    VirtualAlloc = def(PFN_VirtualAlloc, "VirtualAlloc", "kernel32");
+    VirtualQuery = def(PFN_VirtualQuery, "VirtualQuery", "kernel32");
+    VirtualProtect = def(PFN_VirtualProtect, "VirtualProtect", "kernel32");
+    VirtualFree = def(PFN_VirtualFree, "VirtualFree", "kernel32");
+    GetLastError = def(PFN_GetLastError, "GetLastError", "kernel32");
+    SetLastError = def(PFN_SetLastError, "SetLastError", "kernel32");
+    Sleep = def(PFN_Sleep, "Sleep", "kernel32");
+    ExitProcess = def(PFN_ExitProcess, "ExitProcess", "kernel32");
+    GetCurrentProcess = def(PFN_GetCurrentProcess, "GetCurrentProcess", "kernel32");
+    GetCurrentThreadId = def(PFN_GetCurrentThreadId, "GetCurrentThreadId", "kernel32");
+    FreeLibrary = def(PFN_FreeLibrary, "FreeLibrary", "kernel32");
+    CreateThread = def(PFN_CreateThread, "CreateThread", "kernel32");
+    GetSystemInfo = def(PFN_GetSystemInfo, "GetSystemInfo", "kernel32");
+    VirtualFreeEx = def(PFN_VirtualFreeEx, "VirtualFreeEx", "kernel32");
+    WriteFile = def(PFN_WriteFile, "WriteFile", "kernel32");
+    DuplicateHandle = def(PFN_DuplicateHandle, "DuplicateHandle", "kernel32");
+    ReadFile = def(PFN_ReadFile, "ReadFile", "kernel32");
+    WaitForSingleObject = def(PFN_WaitForSingleObject, "WaitForSingleObject", "kernel32");
+    GetModuleFileNameA = def(PFN_GetModuleFileNameA, "GetModuleFileNameA", "kernel32");
+    GetCurrentProcessId = def(PFN_GetCurrentProcessId, "GetCurrentProcessId", "kernel32");
+    GetProcessId = def(PFN_GetProcessId, "GetProcessId", "kernel32");
+    GetCurrentThread = def(PFN_GetCurrentThread, "GetCurrentThread", "kernel32");
+    CloseHandle = def(PFN_CloseHandle, "CloseHandle", "kernel32");
+    FlushInstructionCache = def(PFN_FlushInstructionCache, "FlushInstructionCache", "kernel32");
+    FreeConsole = def(PFN_FreeConsole, "FreeConsole", "kernel32");
+    AttachConsole = def(PFN_AttachConsole, "AttachConsole", "kernel32");
+    IsWow64Process = def(PFN_IsWow64Process, "IsWow64Process", "kernel32");
+    GetExitCodeProcess = def(PFN_GetExitCodeProcess, "GetExitCodeProcess", "kernel32");
+    GetModuleHandleA = def(PFN_GetModuleHandleA, "GetModuleHandleA", "kernel32");
+    LoadLibraryA = def(PFN_LoadLibraryA, "LoadLibraryA", "kernel32");
+    GetProcAddress = def(PFN_GetProcAddress, "GetProcAddress", "kernel32");
+    CreatePipe = def(PFN_CreatePipe, "CreatePipe", "kernel32");
+    ResumeThread = def(PFN_ResumeThread, "ResumeThread", "kernel32");
+    SuspendThread = def(PFN_ResumeThread, "SuspendThread", "kernel32");
+    VirtualAllocEx = def(PFN_VirtualAllocEx, "VirtualAllocEx", "kernel32");
+    VirtualProtectEx = def(PFN_VirtualProtectEx, "VirtualProtectEx", "kernel32");
+    CreateFileMappingA = def(PFN_CreateFileMappingA, "CreateFileMappingA", "kernel32");
+    GetThreadContext = def(PFN_GetThreadContext, "GetThreadContext", "kernel32");
+    GetThreadId = def(PFN_GetThreadId, "GetThreadId", "kernel32");
+    SetThreadContext = def(PFN_SetThreadContext, "SetThreadContext", "kernel32");
+    MapViewOfFile = def(PFN_MapViewOfFile, "MapViewOfFile", "kernel32");
+    UnmapViewOfFile = def(PFN_UnmapViewOfFile, "UnmapViewOfFile", "kernel32");
+    OpenProcess = def(PFN_OpenProcess, "OpenProcess", "kernel32");
+    OpenThread = def(PFN_OpenThread, "OpenThread", "kernel32");
+    WriteProcessMemory = def(PFN_WriteProcessMemory, "WriteProcessMemory", "kernel32");
+    ReadProcessMemory = def(PFN_ReadProcessMemory, "ReadProcessMemory", "kernel32");
+    CreateRemoteThread = def(PFN_CreateRemoteThread, "CreateRemoteThread", "kernel32");
+    GetCurrentDirectoryW = def(PFN_GetCurrentDirectoryW, "GetCurrentDirectoryW", "kernel32");
+    HeapAlloc = def(PFN_HeapAlloc, "HeapAlloc", "kernel32");
+    HeapFree = def(PFN_HeapFree, "HeapFree", "kernel32");
+    GetProcessHeap = def(PFN_GetProcessHeap, "GetProcessHeap", "kernel32");
+    GetFileSizeEx = def(PFN_GetFileSizeEx, "GetFileSizeEx", "kernel32");
+    SetFilePointerEx = def(PFN_SetFilePointerEx, "SetFilePointerEx", "kernel32");
+
+    NtResumeThread = def(PFN_NtResumeThread, "NtResumeThread", "ntdll");
+    NtSuspendThread = def(PFN_NtSuspendThread, "NtSuspendThread", "ntdll");
+    NtTerminateThread = def(PFN_NtTerminateThread, "NtTerminateThread", "ntdll");
+    NtTerminateProcess = def(PFN_NtTerminateProcess, "NtTerminateProcess", "ntdll");
+    NtOpenProcess = def(PFN_NtOpenProcess, "NtOpenProcess", "ntdll");
+    NtResumeProcess = def(PFN_NtResumeProcess, "NtResumeProcess", "ntdll");
+    NtSuspendProcess = def(PFN_NtSuspendProcess, "NtSuspendProcess", "ntdll");
+    NtCreateJobObject = def(PFN_NtCreateJobObject, "NtCreateJobObject", "ntdll");
+    NtAssignProcessToJobObject = def(PFN_NtAssignProcessToJobObject, "NtAssignProcessToJobObject", "ntdll");
+    NtTerminateJobObject = def(PFN_NtTerminateJobObject, "NtTerminateJobObject", "ntdll");
+    NtIsProcessInJob = def(PFN_NtIsProcessInJob, "NtIsProcessInJob", "ntdll");
+    NtSetInformationJobObject = def(PFN_NtSetInformationJobObject, "NtSetInformationJobObject", "ntdll");
+    NtClose = def(PFN_NtClose, "NtClose", "ntdll");
+    NtAllocateVirtualMemory = def(PFN_NtAllocateVirtualMemory, "NtAllocateVirtualMemory", "ntdll");
+    NtFreeVirtualMemory = def(PFN_NtFreeVirtualMemory, "NtFreeVirtualMemory", "ntdll");
+    NtQueryInformationFile = def(PFN_NtQueryInformationFile, "NtQueryInformationFile", "ntdll");
+    NtWriteVirtualMemory = def(PFN_NtWriteVirtualMemory, "NtWriteVirtualMemory", "ntdll");
+    NtProtectVirtualMemory = def(PFN_NtProtectVirtualMemory, "NtProtectVirtualMemory", "ntdll");
+    NtCreateThreadEx = def(PFN_NtCreateThreadEx, "NtCreateThreadEx", "ntdll");
+    NtCreateUserProcess = def(PFN_NtCreateUserProcess, "NtCreateUserProcess", "ntdll");
+    RtlGetVersion = def(PFN_RtlGetVersion, "RtlGetVersion", "ntdll");
+    RtlCloneUserProcess = def(PFN_RtlCloneUserProcess, "RtlCloneUserProcess", "ntdll");
+    RtlWow64EnableFsRedirection = def(PFN_RtlWow64EnableFsRedirection, "RtlWow64EnableFsRedirection", "ntdll");
+    NtCreateFile = def(PFN_NtCreateFile, "NtCreateFile", "ntdll");
+    RtlSetCurrentDirectory_U = def(PFN_RtlSetCurrentDirectory_U, "RtlSetCurrentDirectory_U", "ntdll");
+    RtlGetSystemTimePrecise = def(PFN_RtlGetSystemTimePrecise, "RtlGetSystemTimePrecise", "ntdll");
+    RtlGetFullPathName_U = def(PFN_RtlGetFullPathName_U, "RtlGetFullPathName_U", "ntdll");
+    NtQueryDirectoryFile = def(PFN_NtQueryDirectoryFile, "NtQueryDirectoryFile", "ntdll");
+    NtQueryObject = def(PFN_NtQueryObject, "NtQueryObject", "ntdll");
+    NtLockFile = def(PFN_NtLockFile, "NtLockFile", "ntdll");
+    NtDeviceIoControlFile = def(PFN_NtDeviceIoControlFile, "NtDeviceIoControlFile", "ntdll");
+    NtFsControlFile = def(PFN_NtFsControlFile, "NtFsControlFile", "ntdll");
+
+    MessageBoxA = def(PFN_MessageBoxA, "MessageBoxA", "user32");
+    EnumWindows = def(PFN_EnumWindows, "EnumWindows", "user32");
+    GetWindowThreadProcessId = def(PFN_GetWindowThreadProcessId, "GetWindowThreadProcessId", "user32");
+    SetForegroundWindow = def(PFN_SetForegroundWindow, "SetForegroundWindow", "user32");
+    GetForegroundWindow = def(PFN_GetForegroundWindow, "GetForegroundWindow", "user32");
+
+    CoInitializeEx = def(PFN_CoInitializeEx, "CoInitializeEx", "ole32");
+    CoUninitialize = def(PFN_CoUninitialize, "CoUninitialize", "ole32");
+    CoTaskMemAlloc = def(PFN_CoTaskMemAlloc, "CoTaskMemAlloc", "ole32");
+    CoTaskMemFree = def(PFN_CoTaskMemFree, "CoTaskMemFree", "ole32");
+    CoGetCurrentProcess = def(PFN_CoGetCurrentProcess, "CoGetCurrentProcess", "ole32");
+    CoGetCallerTID = def(PFN_CoGetCallerTID, "CoGetCallerTID", "ole32");
+
+    OpenProcessToken = def(PFN_OpenProcessToken, "OpenProcessToken", "advapi32");
+    GetTokenInformation = def(PFN_GetTokenInformation, "GetTokenInformation", "advapi32");
+
+    WSAStartup = def(PFN_WSAStartup, "WSAStartup", "ws2_32");
+    WSACleanup = def(PFN_WSACleanup, "WSACleanup", "ws2_32");
+    WSAGetLastError = def(PFN_WSAGetLastError, "WSAGetLastError", "ws2_32");
+    WSASocketW = def(PFN_WSASocketW, "WSASocketW", "ws2_32");
+    WSAPoll = def(PFN_WSAPoll, "WSAPoll", "ws2_32");
+    WSASendTo = def(PFN_WSASendTo, "WSASendTo", "ws2_32");
+    WSARecvFrom = def(PFN_WSARecvFrom, "WSARecvFrom", "ws2_32");
+    closesocket = def(PFN_closesocket, "closesocket", "ws2_32");
+    getaddrinfo = def(PFN_getaddrinfo, "getaddrinfo", "ws2_32");
+    freeaddrinfo = def(PFN_freeaddrinfo, "freeaddrinfo", "ws2_32");
+    bind = def(PFN_bind, "bind", "ws2_32");
+    connect = def(PFN_connect, "connect", "ws2_32");
+    ioctlsocket = def(PFN_ioctlsocket, "ioctlsocket", "ws2_32");
+    getsockopt = def(PFN_getsockopt, "getsockopt", "ws2_32");
+    setsockopt = def(PFN_setsockopt, "setsockopt", "ws2_32");
+}
+
 //
 // KERNEL32 function definitions
 //
-pub const VirtualAlloc = def(?PFN_VirtualAlloc, "VirtualAlloc", "kernel32");
-pub const VirtualQuery = def(?PFN_VirtualQuery, "VirtualQuery", "kernel32");
-pub const VirtualProtect = def(?PFN_VirtualProtect, "VirtualProtect", "kernel32");
-pub const VirtualFree = def(?PFN_VirtualFree, "VirtualFree", "kernel32");
-pub const GetLastError = def(?PFN_GetLastError, "GetLastError", "kernel32");
-pub const SetLastError = def(?PFN_SetLastError, "SetLastError", "kernel32");
-pub const Sleep = def(?PFN_Sleep, "Sleep", "kernel32");
-pub const ExitProcess = def(?PFN_ExitProcess, "ExitProcess", "kernel32");
-pub const GetCurrentProcess = def(?PFN_GetCurrentProcess, "GetCurrentProcess", "kernel32");
-pub const GetCurrentThreadId = def(?PFN_GetCurrentThreadId, "GetCurrentThreadId", "kernel32");
-pub const FreeLibrary = def(?PFN_FreeLibrary, "FreeLibrary", "kernel32");
-pub const CreateThread = def(?PFN_CreateThread, "CreateThread", "kernel32");
-pub const GetSystemInfo = def(?PFN_GetSystemInfo, "GetSystemInfo", "kernel32");
-pub const VirtualFreeEx = def(?PFN_VirtualFreeEx, "VirtualFreeEx", "kernel32");
-pub const WriteFile = def(?PFN_WriteFile, "WriteFile", "kernel32");
-pub const DuplicateHandle = def(?PFN_DuplicateHandle, "DuplicateHandle", "kernel32");
-pub const ReadFile = def(?PFN_ReadFile, "ReadFile", "kernel32");
-pub const WaitForSingleObject = def(?PFN_WaitForSingleObject, "WaitForSingleObject", "kernel32");
-pub const GetModuleFileNameA = def(?PFN_GetModuleFileNameA, "GetModuleFileNameA", "kernel32");
-pub const GetCurrentProcessId = def(?PFN_GetCurrentProcessId, "GetCurrentProcessId", "kernel32");
-pub const GetProcessId = def(?PFN_GetProcessId, "GetProcessId", "kernel32");
-pub const GetCurrentThread = def(?PFN_GetCurrentThread, "GetCurrentThread", "kernel32");
-pub const CloseHandle = def(?PFN_CloseHandle, "CloseHandle", "kernel32");
-pub const FlushInstructionCache = def(?PFN_FlushInstructionCache, "FlushInstructionCache", "kernel32");
-pub const FreeConsole = def(?PFN_FreeConsole, "FreeConsole", "kernel32");
-pub const AttachConsole = def(?PFN_AttachConsole, "AttachConsole", "kernel32");
-pub const IsWow64Process = def(?PFN_IsWow64Process, "IsWow64Process", "kernel32");
-pub const GetExitCodeProcess = def(?PFN_GetExitCodeProcess, "GetExitCodeProcess", "kernel32");
-pub const GetModuleHandleA = def(?PFN_GetModuleHandleA, "GetModuleHandleA", "kernel32");
-pub const LoadLibraryA = def(?PFN_LoadLibraryA, "LoadLibraryA", "kernel32");
-pub const GetProcAddress = def(?PFN_GetProcAddress, "GetProcAddress", "kernel32");
-pub const CreatePipe = def(?PFN_CreatePipe, "CreatePipe", "kernel32");
-pub const ResumeThread = def(?PFN_ResumeThread, "ResumeThread", "kernel32");
-pub const SuspendThread = def(?PFN_ResumeThread, "SuspendThread", "kernel32");
-pub const VirtualAllocEx = def(?PFN_VirtualAllocEx, "VirtualAllocEx", "kernel32");
-pub const VirtualProtectEx = def(?PFN_VirtualProtectEx, "VirtualProtectEx", "kernel32");
-pub const CreateFileMappingA = def(?PFN_CreateFileMappingA, "CreateFileMappingA", "kernel32");
-pub const GetThreadContext = def(?PFN_GetThreadContext, "GetThreadContext", "kernel32");
-pub const GetThreadId = def(?PFN_GetThreadId, "GetThreadId", "kernel32");
-pub const SetThreadContext = def(?PFN_SetThreadContext, "SetThreadContext", "kernel32");
-pub const MapViewOfFile = def(?PFN_MapViewOfFile, "MapViewOfFile", "kernel32");
-pub const UnmapViewOfFile = def(?PFN_UnmapViewOfFile, "UnmapViewOfFile", "kernel32");
-pub const OpenProcess = def(?PFN_OpenProcess, "OpenProcess", "kernel32");
-pub const OpenThread = def(?PFN_OpenThread, "OpenThread", "kernel32");
-pub const WriteProcessMemory = def(?PFN_WriteProcessMemory, "WriteProcessMemory", "kernel32");
-pub const ReadProcessMemory = def(?PFN_ReadProcessMemory, "ReadProcessMemory", "kernel32");
-pub const CreateRemoteThread = def(?PFN_CreateRemoteThread, "CreateRemoteThread", "kernel32");
-pub const GetCurrentDirectoryW = def(?PFN_GetCurrentDirectoryW, "GetCurrentDirectoryW", "kernel32");
-pub const HeapAlloc = def(?PFN_HeapAlloc, "HeapAlloc", "kernel32");
-pub const HeapFree = def(?PFN_HeapFree, "HeapFree", "kernel32");
-pub const GetProcessHeap = def(?PFN_GetProcessHeap, "GetProcessHeap", "kernel32");
+pub var VirtualAlloc: PFN_VirtualAlloc = undefined;
+pub var VirtualQuery: PFN_VirtualQuery = undefined;
+pub var VirtualProtect: PFN_VirtualProtect = undefined;
+pub var VirtualFree: PFN_VirtualFree = undefined;
+pub var GetLastError: PFN_GetLastError = undefined;
+pub var SetLastError: PFN_SetLastError = undefined;
+pub var Sleep: PFN_Sleep = undefined;
+pub var ExitProcess: PFN_ExitProcess = undefined;
+pub var GetCurrentProcess: PFN_GetCurrentProcess = undefined;
+pub var GetCurrentThreadId: PFN_GetCurrentThreadId = undefined;
+pub var FreeLibrary: PFN_FreeLibrary = undefined;
+pub var CreateThread: PFN_CreateThread = undefined;
+pub var GetSystemInfo: PFN_GetSystemInfo = undefined;
+pub var VirtualFreeEx: PFN_VirtualFreeEx = undefined;
+pub var WriteFile: PFN_WriteFile = undefined;
+pub var DuplicateHandle: PFN_DuplicateHandle = undefined;
+pub var ReadFile: PFN_ReadFile = undefined;
+pub var WaitForSingleObject: PFN_WaitForSingleObject = undefined;
+pub var GetModuleFileNameA: PFN_GetModuleFileNameA = undefined;
+pub var GetCurrentProcessId: PFN_GetCurrentProcessId = undefined;
+pub var GetProcessId: PFN_GetProcessId = undefined;
+pub var GetCurrentThread: PFN_GetCurrentThread = undefined;
+pub var CloseHandle: PFN_CloseHandle = undefined;
+pub var FlushInstructionCache: PFN_FlushInstructionCache = undefined;
+pub var FreeConsole: PFN_FreeConsole = undefined;
+pub var AttachConsole: PFN_AttachConsole = undefined;
+pub var IsWow64Process: PFN_IsWow64Process = undefined;
+pub var GetExitCodeProcess: PFN_GetExitCodeProcess = undefined;
+pub var GetModuleHandleA: PFN_GetModuleHandleA = undefined;
+pub var LoadLibraryA: PFN_LoadLibraryA = undefined;
+pub var GetProcAddress: PFN_GetProcAddress = undefined;
+pub var CreatePipe: PFN_CreatePipe = undefined;
+pub var ResumeThread: PFN_ResumeThread = undefined;
+pub var SuspendThread: PFN_ResumeThread = undefined;
+pub var VirtualAllocEx: PFN_VirtualAllocEx = undefined;
+pub var VirtualProtectEx: PFN_VirtualProtectEx = undefined;
+pub var CreateFileMappingA: PFN_CreateFileMappingA = undefined;
+pub var GetThreadContext: PFN_GetThreadContext = undefined;
+pub var GetThreadId: PFN_GetThreadId = undefined;
+pub var SetThreadContext: PFN_SetThreadContext = undefined;
+pub var MapViewOfFile: PFN_MapViewOfFile = undefined;
+pub var UnmapViewOfFile: PFN_UnmapViewOfFile = undefined;
+pub var OpenProcess: PFN_OpenProcess = undefined;
+pub var OpenThread: PFN_OpenThread = undefined;
+pub var WriteProcessMemory: PFN_WriteProcessMemory = undefined;
+pub var ReadProcessMemory: PFN_ReadProcessMemory = undefined;
+pub var CreateRemoteThread: PFN_CreateRemoteThread = undefined;
+pub var GetCurrentDirectoryW: PFN_GetCurrentDirectoryW = undefined;
+pub var HeapAlloc: PFN_HeapAlloc = undefined;
+pub var HeapFree: PFN_HeapFree = undefined;
+pub var GetProcessHeap: PFN_GetProcessHeap = undefined;
+pub var GetFileSizeEx: PFN_GetFileSizeEx = undefined;
+pub var SetFilePointerEx: PFN_SetFilePointerEx = undefined;
 
 //
 // NTDLL function definitions
 //
-pub const NtResumeThread = def(?PFN_NtResumeThread, "NtResumeThread", "ntdll");
-pub const NtSuspendThread = def(?PFN_NtSuspendThread, "NtSuspendThread", "ntdll");
-pub const NtTerminateThread = def(?PFN_NtTerminateThread, "NtTerminateThread", "ntdll");
-pub const NtTerminateProcess = def(?PFN_NtTerminateProcess, "NtTerminateProcess", "ntdll");
-pub const NtOpenProcess = def(?PFN_NtOpenProcess, "NtOpenProcess", "ntdll");
-pub const NtResumeProcess = def(?PFN_NtResumeProcess, "NtResumeProcess", "ntdll");
-pub const NtSuspendProcess = def(?PFN_NtSuspendProcess, "NtSuspendProcess", "ntdll");
-pub const NtCreateJobObject = def(?PFN_NtCreateJobObject, "NtCreateJobObject", "ntdll");
-pub const NtAssignProcessToJobObject = def(?PFN_NtAssignProcessToJobObject, "NtAssignProcessToJobObject", "ntdll");
-pub const NtTerminateJobObject = def(?PFN_NtTerminateJobObject, "NtTerminateJobObject", "ntdll");
-pub const NtIsProcessInJob = def(?PFN_NtIsProcessInJob, "NtIsProcessInJob", "ntdll");
-pub const NtSetInformationJobObject = def(?PFN_NtSetInformationJobObject, "NtSetInformationJobObject", "ntdll");
-pub const NtClose = def(?PFN_NtClose, "NtClose", "ntdll");
-pub const NtAllocateVirtualMemory = def(?PFN_NtAllocateVirtualMemory, "NtAllocateVirtualMemory", "ntdll");
-pub const NtWriteVirtualMemory = def(?PFN_NtWriteVirtualMemory, "NtWriteVirtualMemory", "ntdll");
-pub const NtProtectVirtualMemory = def(?PFN_NtProtectVirtualMemory, "NtProtectVirtualMemory", "ntdll");
-pub const NtCreateThreadEx = def(?PFN_NtCreateThreadEx, "NtCreateThreadEx", "ntdll");
-pub const NtCreateUserProcess = def(?PFN_NtCreateUserProcess, "NtCreateUserProcess", "ntdll");
-pub const RtlGetVersion = def(?PFN_RtlGetVersion, "RtlGetVersion", "ntdll");
-pub const RtlCloneUserProcess = def(?PFN_RtlCloneUserProcess, "RtlCloneUserProcess", "ntdll");
-pub const RtlWow64EnableFsRedirection = def(?PFN_RtlWow64EnableFsRedirection, "RtlWow64EnableFsRedirection", "ntdll");
-pub const NtCreateFile = def(?PFN_NtCreateFile, "NtCreateFile", "ntdll");
-pub const RtlSetCurrentDirectory_U = def(?PFN_RtlSetCurrentDirectory_U, "RtlSetCurrentDirectory_U", "ntdll");
-pub const RtlGetSystemTimePrecise = def(?PFN_RtlGetSystemTimePrecise, "RtlGetSystemTimePrecise", "ntdll");
-pub const RtlGetFullPathName_U = def(?PFN_RtlGetFullPathName_U, "RtlGetFullPathName_U", "ntdll");
-pub const NtQueryDirectoryFile = def(?PFN_NtQueryDirectoryFile, "NtQueryDirectoryFile", "ntdll");
-pub const NtQueryObject = def(?PFN_NtQueryObject, "NtQueryObject", "ntdll");
-pub const NtLockFile = def(?PFN_NtLockFile, "NtLockFile", "ntdll");
-pub const NtDeviceIoControlFile = def(?PFN_NtDeviceIoControlFile, "NtDeviceIoControlFile", "ntdll");
-pub const NtFsControlFile = def(?PFN_NtFsControlFile, "NtFsControlFile", "ntdll");
+pub var NtResumeThread: PFN_NtResumeThread = undefined;
+pub var NtSuspendThread: PFN_NtSuspendThread = undefined;
+pub var NtTerminateThread: PFN_NtTerminateThread = undefined;
+pub var NtTerminateProcess: PFN_NtTerminateProcess = undefined;
+pub var NtOpenProcess: PFN_NtOpenProcess = undefined;
+pub var NtResumeProcess: PFN_NtResumeProcess = undefined;
+pub var NtSuspendProcess: PFN_NtSuspendProcess = undefined;
+pub var NtCreateJobObject: PFN_NtCreateJobObject = undefined;
+pub var NtAssignProcessToJobObject: PFN_NtAssignProcessToJobObject = undefined;
+pub var NtTerminateJobObject: PFN_NtTerminateJobObject = undefined;
+pub var NtIsProcessInJob: PFN_NtIsProcessInJob = undefined;
+pub var NtSetInformationJobObject: PFN_NtSetInformationJobObject = undefined;
+pub var NtClose: PFN_NtClose = undefined;
+pub var NtAllocateVirtualMemory: PFN_NtAllocateVirtualMemory = undefined;
+pub var NtFreeVirtualMemory: PFN_NtFreeVirtualMemory = undefined;
+pub var NtQueryInformationFile: PFN_NtQueryInformationFile = undefined;
+
+pub var NtWriteVirtualMemory: PFN_NtWriteVirtualMemory = undefined;
+pub var NtProtectVirtualMemory: PFN_NtProtectVirtualMemory = undefined;
+pub var NtCreateThreadEx: PFN_NtCreateThreadEx = undefined;
+pub var NtCreateUserProcess: PFN_NtCreateUserProcess = undefined;
+pub var RtlGetVersion: PFN_RtlGetVersion = undefined;
+pub var RtlCloneUserProcess: PFN_RtlCloneUserProcess = undefined;
+pub var RtlWow64EnableFsRedirection: PFN_RtlWow64EnableFsRedirection = undefined;
+pub var NtCreateFile: PFN_NtCreateFile = undefined;
+pub var RtlSetCurrentDirectory_U: PFN_RtlSetCurrentDirectory_U = undefined;
+pub var RtlGetSystemTimePrecise: PFN_RtlGetSystemTimePrecise = undefined;
+pub var RtlGetFullPathName_U: PFN_RtlGetFullPathName_U = undefined;
+pub var NtQueryDirectoryFile: PFN_NtQueryDirectoryFile = undefined;
+pub var NtQueryObject: PFN_NtQueryObject = undefined;
+pub var NtLockFile: PFN_NtLockFile = undefined;
+pub var NtDeviceIoControlFile: PFN_NtDeviceIoControlFile = undefined;
+pub var NtFsControlFile: PFN_NtFsControlFile = undefined;
 
 pub fn NtCurrentProcess() HANDLE {
     return @ptrFromInt(@as(usize, @bitCast(@as(isize, -1))));
@@ -1329,46 +1481,46 @@ pub fn NtCurrentSession() HANDLE {
 //
 // USER32 function definitions
 //
-pub const MessageBoxA = def(?PFN_MessageBoxA, "MessageBoxA", "user32");
-pub const EnumWindows = def(?PFN_EnumWindows, "EnumWindows", "user32");
-pub const GetWindowThreadProcessId = def(?PFN_GetWindowThreadProcessId, "GetWindowThreadProcessId", "user32");
-pub const SetForegroundWindow = def(?PFN_SetForegroundWindow, "SetForegroundWindow", "user32");
-pub const GetForegroundWindow = def(?PFN_GetForegroundWindow, "GetForegroundWindow", "user32");
+pub var MessageBoxA: PFN_MessageBoxA = undefined;
+pub var EnumWindows: PFN_EnumWindows = undefined;
+pub var GetWindowThreadProcessId: PFN_GetWindowThreadProcessId = undefined;
+pub var SetForegroundWindow: PFN_SetForegroundWindow = undefined;
+pub var GetForegroundWindow: PFN_GetForegroundWindow = undefined;
 
 //
 // OLE32 function definitions
 //
-pub const CoInitializeEx = def(?PFN_CoInitializeEx, "CoInitializeEx", "ole32");
-pub const CoUninitialize = def(?PFN_CoUninitialize, "CoUninitialize", "ole32");
-pub const CoTaskMemAlloc = def(?PFN_CoTaskMemAlloc, "CoTaskMemAlloc", "ole32");
-pub const CoTaskMemFree = def(?PFN_CoTaskMemFree, "CoTaskMemFree", "ole32");
-pub const CoGetCurrentProcess = def(?PFN_CoGetCurrentProcess, "CoGetCurrentProcess", "ole32");
-pub const CoGetCallerTID = def(?PFN_CoGetCallerTID, "CoGetCallerTID", "ole32");
+pub var CoInitializeEx: PFN_CoInitializeEx = undefined;
+pub var CoUninitialize: PFN_CoUninitialize = undefined;
+pub var CoTaskMemAlloc: PFN_CoTaskMemAlloc = undefined;
+pub var CoTaskMemFree: PFN_CoTaskMemFree = undefined;
+pub var CoGetCurrentProcess: PFN_CoGetCurrentProcess = undefined;
+pub var CoGetCallerTID: PFN_CoGetCallerTID = undefined;
 
 //
 // ADVAPI32 function definitions
 //
-pub const OpenProcessToken = def(?PFN_OpenProcessToken, "OpenProcessToken", "advapi32");
-pub const GetTokenInformation = def(?PFN_GetTokenInformation, "GetTokenInformation", "advapi32");
+pub var OpenProcessToken: PFN_OpenProcessToken = undefined;
+pub var GetTokenInformation: PFN_GetTokenInformation = undefined;
 
 //
 // WS2_32 function definitions
 //
-pub const WSAStartup = def(?PFN_WSAStartup, "WSAStartup", "ws2_32");
-pub const WSACleanup = def(?PFN_WSACleanup, "WSACleanup", "ws2_32");
-pub const WSAGetLastError = def(?PFN_WSAGetLastError, "WSAGetLastError", "ws2_32");
-pub const WSASocketW = def(?PFN_WSASocketW, "WSASocketW", "ws2_32");
-pub const WSAPoll = def(?PFN_WSAPoll, "WSAPoll", "ws2_32");
-pub const WSASendTo = def(?PFN_WSASendTo, "WSASendTo", "ws2_32");
-pub const WSARecvFrom = def(?PFN_WSARecvFrom, "WSARecvFrom", "ws2_32");
-pub const closesocket = def(?PFN_closesocket, "closesocket", "ws2_32");
-pub const getaddrinfo = def(?PFN_getaddrinfo, "getaddrinfo", "ws2_32");
-pub const freeaddrinfo = def(?PFN_freeaddrinfo, "freeaddrinfo", "ws2_32");
-pub const bind = def(?PFN_bind, "bind", "ws2_32");
-pub const connect = def(?PFN_connect, "connect", "ws2_32");
-pub const ioctlsocket = def(?PFN_ioctlsocket, "ioctlsocket", "ws2_32");
-pub const getsockopt = def(?PFN_getsockopt, "getsockopt", "ws2_32");
-pub const setsockopt = def(?PFN_setsockopt, "setsockopt", "ws2_32");
+pub var WSAStartup: PFN_WSAStartup = undefined;
+pub var WSACleanup: PFN_WSACleanup = undefined;
+pub var WSAGetLastError: PFN_WSAGetLastError = undefined;
+pub var WSASocketW: PFN_WSASocketW = undefined;
+pub var WSAPoll: PFN_WSAPoll = undefined;
+pub var WSASendTo: PFN_WSASendTo = undefined;
+pub var WSARecvFrom: PFN_WSARecvFrom = undefined;
+pub var closesocket: PFN_closesocket = undefined;
+pub var getaddrinfo: PFN_getaddrinfo = undefined;
+pub var freeaddrinfo: PFN_freeaddrinfo = undefined;
+pub var bind: PFN_bind = undefined;
+pub var connect: PFN_connect = undefined;
+pub var ioctlsocket: PFN_ioctlsocket = undefined;
+pub var getsockopt: PFN_getsockopt = undefined;
+pub var setsockopt: PFN_setsockopt = undefined;
 
 //
 // "Redirectors"
@@ -1408,7 +1560,12 @@ comptime {
         @export(&RE_NtLockFile, .{ .name = "NtLockFile", .linkage = .strong });
         @export(&RE_NtDeviceIoControlFile, .{ .name = "NtDeviceIoControlFile", .linkage = .strong });
         @export(&RE_NtFsControlFile, .{ .name = "NtFsControlFile", .linkage = .strong });
+        @export(&RE_NtAllocateVirtualMemory, .{ .name = "NtAllocateVirtualMemory", .linkage = .strong });
+        @export(&RE_NtFreeVirtualMemory, .{ .name = "NtFreeVirtualMemory", .linkage = .strong });
+        @export(&RE_NtQueryInformationFile, .{ .name = "NtQueryInformationFile", .linkage = .strong });
         @export(&RE_GetCurrentDirectoryW, .{ .name = "GetCurrentDirectoryW", .linkage = .strong });
+        @export(&RE_GetFileSizeEx, .{ .name = "GetFileSizeEx", .linkage = .strong });
+        @export(&RE_SetFilePointerEx, .{ .name = "SetFilePointerEx", .linkage = .strong });
     }
 }
 
@@ -1422,7 +1579,7 @@ fn RE_WriteFile(
     lpNumberOfBytesWritten: ?*DWORD,
     lpOverlapped: ?*OVERLAPPED,
 ) linksection(re_section) callconv(.winapi) BOOL {
-    return WriteFile.?(hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped);
+    return WriteFile(hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped);
 }
 fn RE_ReadFile(
     hFile: HANDLE,
@@ -1431,10 +1588,10 @@ fn RE_ReadFile(
     lpNumberOfBytesRead: ?*DWORD,
     lpOverlapped: ?*OVERLAPPED,
 ) linksection(re_section) callconv(.winapi) BOOL {
-    return ReadFile.?(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
+    return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
 }
 fn RE_Sleep(dwMilliseconds: DWORD) linksection(re_section) callconv(.winapi) void {
-    Sleep.?(dwMilliseconds);
+    Sleep(dwMilliseconds);
 }
 fn RE_VirtualAlloc(
     lpAddress: ?LPVOID,
@@ -1442,29 +1599,29 @@ fn RE_VirtualAlloc(
     flAllocationType: DWORD,
     flProtect: DWORD,
 ) linksection(re_section) callconv(.winapi) ?LPVOID {
-    return VirtualAlloc.?(lpAddress, dwSize, flAllocationType, flProtect);
+    return VirtualAlloc(lpAddress, dwSize, flAllocationType, flProtect);
 }
 fn RE_VirtualFree(
     lpAddress: ?LPVOID,
     dwSize: SIZE_T,
     dwFreeType: DWORD,
 ) linksection(re_section) callconv(.winapi) BOOL {
-    return VirtualFree.?(lpAddress, dwSize, dwFreeType);
+    return VirtualFree(lpAddress, dwSize, dwFreeType);
 }
 fn RE_ExitProcess(uExitCode: UINT) linksection(re_section) callconv(.winapi) noreturn {
-    ExitProcess.?(uExitCode);
+    ExitProcess(uExitCode);
 }
 fn RE_WSAStartup(
     wVersionRequired: WORD,
     lpWSAData: *WSADATA,
 ) linksection(re_section) callconv(.winapi) i32 {
-    return WSAStartup.?(wVersionRequired, lpWSAData);
+    return WSAStartup(wVersionRequired, lpWSAData);
 }
 fn RE_WSACleanup() linksection(re_section) callconv(.winapi) i32 {
-    return WSACleanup.?();
+    return WSACleanup();
 }
 fn RE_WSAGetLastError() linksection(re_section) callconv(.winapi) WinsockError {
-    return WSAGetLastError.?();
+    return WSAGetLastError();
 }
 fn RE_WSASocketW(
     af: i32,
@@ -1474,14 +1631,14 @@ fn RE_WSASocketW(
     g: u32,
     dwFlags: u32,
 ) linksection(re_section) callconv(.winapi) SOCKET {
-    return WSASocketW.?(af, @"type", protocol, lpProtocolInfo, g, dwFlags);
+    return WSASocketW(af, @"type", protocol, lpProtocolInfo, g, dwFlags);
 }
 fn RE_WSAPoll(
     fdArray: [*]WSAPOLLFD,
     fds: u32,
     timeout: i32,
 ) linksection(re_section) callconv(.winapi) i32 {
-    return WSAPoll.?(fdArray, fds, timeout);
+    return WSAPoll(fdArray, fds, timeout);
 }
 fn RE_WSASendTo(
     s: SOCKET,
@@ -1494,7 +1651,7 @@ fn RE_WSASendTo(
     lpOverlapped: ?*OVERLAPPED,
     lpCompletionRounte: ?LPWSAOVERLAPPED_COMPLETION_ROUTINE,
 ) linksection(re_section) callconv(.winapi) i32 {
-    return WSASendTo.?(s, lpBuffers, dwBufferCount, lpNumberOfBytesSent, dwFlags, lpTo, iToLen, lpOverlapped, lpCompletionRounte);
+    return WSASendTo(s, lpBuffers, dwBufferCount, lpNumberOfBytesSent, dwFlags, lpTo, iToLen, lpOverlapped, lpCompletionRounte);
 }
 fn RE_WSARecvFrom(
     s: SOCKET,
@@ -1507,10 +1664,10 @@ fn RE_WSARecvFrom(
     lpOverlapped: ?*OVERLAPPED,
     lpCompletionRoutine: ?LPWSAOVERLAPPED_COMPLETION_ROUTINE,
 ) linksection(re_section) callconv(.winapi) i32 {
-    return WSARecvFrom.?(s, lpBuffers, dwBufferCount, lpNumberOfBytesRecvd, lpFlags, lpFrom, lpFromLen, lpOverlapped, lpCompletionRoutine);
+    return WSARecvFrom(s, lpBuffers, dwBufferCount, lpNumberOfBytesRecvd, lpFlags, lpFrom, lpFromLen, lpOverlapped, lpCompletionRoutine);
 }
 fn RE_closesocket(s: SOCKET) linksection(re_section) callconv(.winapi) i32 {
-    return closesocket.?(s);
+    return closesocket(s);
 }
 fn RE_getaddrinfo(
     pNodeName: ?[*:0]const u8,
@@ -1518,31 +1675,31 @@ fn RE_getaddrinfo(
     pHints: ?*const addrinfoa,
     ppResult: *?*addrinfoa,
 ) linksection(re_section) callconv(.winapi) i32 {
-    return getaddrinfo.?(pNodeName, pServiceName, pHints, ppResult);
+    return getaddrinfo(pNodeName, pServiceName, pHints, ppResult);
 }
 fn RE_freeaddrinfo(pAddrInfo: ?*addrinfoa) linksection(re_section) callconv(.winapi) void {
-    freeaddrinfo.?(pAddrInfo);
+    freeaddrinfo(pAddrInfo);
 }
 fn RE_bind(
     s: SOCKET,
     name: *const sockaddr,
     namelen: i32,
 ) linksection(re_section) callconv(.winapi) i32 {
-    return bind.?(s, name, namelen);
+    return bind(s, name, namelen);
 }
 fn RE_connect(
     s: SOCKET,
     name: *const sockaddr,
     namelen: i32,
 ) linksection(re_section) callconv(.winapi) i32 {
-    return connect.?(s, name, namelen);
+    return connect(s, name, namelen);
 }
 fn RE_ioctlsocket(
     s: SOCKET,
     cmd: i32,
     argp: *u32,
 ) linksection(re_section) callconv(.winapi) i32 {
-    return ioctlsocket.?(s, cmd, argp);
+    return ioctlsocket(s, cmd, argp);
 }
 fn RE_getsockopt(
     s: SOCKET,
@@ -1551,7 +1708,7 @@ fn RE_getsockopt(
     optval: [*]u8,
     optlen: *i32,
 ) linksection(re_section) callconv(.winapi) i32 {
-    return getsockopt.?(s, level, optname, optval, optlen);
+    return getsockopt(s, level, optname, optval, optlen);
 }
 fn RE_setsockopt(
     s: SOCKET,
@@ -1560,10 +1717,10 @@ fn RE_setsockopt(
     optval: ?[*]const u8,
     optlen: i32,
 ) linksection(re_section) callconv(.winapi) i32 {
-    return setsockopt.?(s, level, optname, optval, optlen);
+    return setsockopt(s, level, optname, optval, optlen);
 }
 fn RE_NtClose(hHandle: HANDLE) linksection(re_section) callconv(.winapi) NTSTATUS {
-    return NtClose.?(hHandle);
+    return NtClose(hHandle);
 }
 fn RE_NtCreateFile(
     FileHandle: *HANDLE,
@@ -1578,13 +1735,13 @@ fn RE_NtCreateFile(
     EaBuffer: ?*anyopaque,
     EaLength: ULONG,
 ) linksection(re_section) callconv(.winapi) NTSTATUS {
-    return NtCreateFile.?(FileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, AllocationSize, FileAttributes, ShareAccess, CreateDisposition, CreateOptions, EaBuffer, EaLength);
+    return NtCreateFile(FileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, AllocationSize, FileAttributes, ShareAccess, CreateDisposition, CreateOptions, EaBuffer, EaLength);
 }
 fn RE_RtlSetCurrentDirectory_U(PathName: *UNICODE_STRING) linksection(re_section) callconv(.winapi) NTSTATUS {
-    return RtlSetCurrentDirectory_U.?(PathName);
+    return RtlSetCurrentDirectory_U(PathName);
 }
 fn RE_RtlGetSystemTimePrecise() linksection(re_section) callconv(.winapi) LARGE_INTEGER {
-    return RtlGetSystemTimePrecise.?();
+    return RtlGetSystemTimePrecise();
 }
 fn RE_RtlGetFullPathName_U(
     FileName: [*:0]const u16,
@@ -1592,7 +1749,7 @@ fn RE_RtlGetFullPathName_U(
     Buffer: [*]u16,
     ShortName: ?*[*:0]const u16,
 ) linksection(re_section) callconv(.winapi) ULONG {
-    return RtlGetFullPathName_U.?(FileName, BufferByteLength, Buffer, ShortName);
+    return RtlGetFullPathName_U(FileName, BufferByteLength, Buffer, ShortName);
 }
 fn RE_NtQueryDirectoryFile(
     FileHandle: HANDLE,
@@ -1607,7 +1764,7 @@ fn RE_NtQueryDirectoryFile(
     FileName: ?*UNICODE_STRING,
     RestartScan: BOOLEAN,
 ) linksection(re_section) callconv(.winapi) NTSTATUS {
-    return NtQueryDirectoryFile.?(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, FileInformation, Length, FileInformationClass, ReturnSingleEntry, FileName, RestartScan);
+    return NtQueryDirectoryFile(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, FileInformation, Length, FileInformationClass, ReturnSingleEntry, FileName, RestartScan);
 }
 fn RE_NtQueryObject(
     Handle: HANDLE,
@@ -1616,7 +1773,7 @@ fn RE_NtQueryObject(
     ObjectInformationLength: ULONG,
     ReturnLength: ?*ULONG,
 ) linksection(re_section) callconv(.winapi) NTSTATUS {
-    return NtQueryObject.?(Handle, ObjectInformationClass, ObjectInformation, ObjectInformationLength, ReturnLength);
+    return NtQueryObject(Handle, ObjectInformationClass, ObjectInformation, ObjectInformationLength, ReturnLength);
 }
 fn RE_NtLockFile(
     FileHandle: HANDLE,
@@ -1630,7 +1787,7 @@ fn RE_NtLockFile(
     FailImmediately: BOOLEAN,
     ExclusiveLock: BOOLEAN,
 ) linksection(re_section) callconv(.winapi) NTSTATUS {
-    return NtLockFile.?(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, ByteOffset, Length, Key, FailImmediately, ExclusiveLock);
+    return NtLockFile(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, ByteOffset, Length, Key, FailImmediately, ExclusiveLock);
 }
 fn RE_NtDeviceIoControlFile(
     FileHandle: HANDLE,
@@ -1644,7 +1801,7 @@ fn RE_NtDeviceIoControlFile(
     OutputBuffer: ?PVOID,
     OutputBufferLength: ULONG,
 ) linksection(re_section) callconv(.winapi) NTSTATUS {
-    return NtDeviceIoControlFile.?(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, IoControlCode, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength);
+    return NtDeviceIoControlFile(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, IoControlCode, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength);
 }
 fn RE_NtFsControlFile(
     FileHandle: HANDLE,
@@ -1658,11 +1815,52 @@ fn RE_NtFsControlFile(
     OutputBuffer: ?PVOID,
     OutputBufferLength: ULONG,
 ) linksection(re_section) callconv(.winapi) NTSTATUS {
-    return NtFsControlFile.?(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, FsControlCode, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength);
+    return NtFsControlFile(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, FsControlCode, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength);
 }
 fn RE_GetCurrentDirectoryW(
     nBufferLength: DWORD,
     lpBuffer: ?[*]WCHAR,
 ) linksection(re_section) callconv(.winapi) DWORD {
-    return GetCurrentDirectoryW.?(nBufferLength, lpBuffer);
+    return GetCurrentDirectoryW(nBufferLength, lpBuffer);
+}
+fn RE_NtAllocateVirtualMemory(
+    ProcessHandle: HANDLE,
+    BaseAddress: *PVOID,
+    ZeroBits: ULONG_PTR,
+    RegionSize: *SIZE_T,
+    AllocationType: ULONG,
+    Protect: ULONG,
+) linksection(re_section) callconv(.winapi) NTSTATUS {
+    return NtAllocateVirtualMemory(ProcessHandle, BaseAddress, ZeroBits, RegionSize, AllocationType, Protect);
+}
+fn RE_NtFreeVirtualMemory(
+    ProcessHandle: HANDLE,
+    BaseAddress: *PVOID,
+    RegionSize: *SIZE_T,
+    FreeType: ULONG,
+) linksection(re_section) callconv(.winapi) NTSTATUS {
+    return NtFreeVirtualMemory(ProcessHandle, BaseAddress, RegionSize, FreeType);
+}
+fn RE_GetFileSizeEx(
+    hFile: HANDLE,
+    lpFileSize: *LARGE_INTEGER,
+) linksection(re_section) callconv(.winapi) BOOL {
+    return GetFileSizeEx(hFile, lpFileSize);
+}
+fn RE_SetFilePointerEx(
+    hFile: HANDLE,
+    liDistanceToMove: LARGE_INTEGER,
+    lpNewFilePointer: ?*LARGE_INTEGER,
+    dwMoveMethod: DWORD,
+) linksection(re_section) callconv(.winapi) BOOL {
+    return SetFilePointerEx(hFile, liDistanceToMove, lpNewFilePointer, dwMoveMethod);
+}
+fn RE_NtQueryInformationFile(
+    FileHandle: HANDLE,
+    IoStatusBlock: *IO_STATUS_BLOCK,
+    FileInformation: *anyopaque,
+    Length: ULONG,
+    FileInformationClass: FILE_INFORMATION_CLASS,
+) linksection(re_section) callconv(.winapi) NTSTATUS {
+    return NtQueryInformationFile(FileHandle, IoStatusBlock, FileInformation, Length, FileInformationClass);
 }

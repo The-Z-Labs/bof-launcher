@@ -5,6 +5,7 @@ const beacon = @import("bof_api").beacon;
 comptime {
     @import("bof_api").embedFunctionCode("memcpy");
     @import("bof_api").embedFunctionCode("memset");
+    @import("bof_api").embedFunctionCode("memmove");
     @import("bof_api").embedFunctionCode("__udivdi3");
     @import("bof_api").embedFunctionCode("__ashldi3");
     @import("bof_api").embedFunctionCode("__aeabi_llsl");
@@ -19,7 +20,7 @@ fn func() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
-    var list = std.ArrayList(i32).init(allocator);
+    var list = std.array_list.Managed(i32).init(allocator);
     defer list.deinit();
     try list.append(1);
     list.append(2) catch unreachable;
@@ -32,22 +33,24 @@ fn func() !void {
     global_var += 1;
 }
 
-pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
-    const printf = beacon.printf.?;
+pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
+    @import("bof_api").init(adata, alen, .{});
+
+    const printf = beacon.printf;
 
     _ = printf(.output, "--- test_obj1.zig ---\n");
 
     _ = printf(.output, "BeaconPrintf %s\n", "has been called");
     var parser = beacon.datap{};
 
-    beacon.dataParse.?(&parser, arg_data, arg_len);
-    const len = beacon.dataLength.?(&parser);
-    const permissions = beacon.dataExtract.?(&parser, null);
-    const path = beacon.dataExtract.?(&parser, null);
-    const num = beacon.dataInt.?(&parser);
-    const num_short = beacon.dataShort.?(&parser);
-    if (arg_len > 0) {
-        _ = printf(.output, "arg_len (from go): %d\n", arg_len);
+    beacon.dataParse(&parser, adata, alen);
+    const len = beacon.dataLength(&parser);
+    const permissions = beacon.dataExtract(&parser, null);
+    const path = beacon.dataExtract(&parser, null);
+    const num = beacon.dataInt(&parser);
+    const num_short = beacon.dataShort(&parser);
+    if (alen > 0) {
+        _ = printf(.output, "arg_len (from go): %d\n", alen);
         _ = printf(.output, "Length: (from go): %d\n", len);
 
         //const stdout = std.io.getStdErr().writer();

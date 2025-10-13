@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub const supported_zig_version = std.SemanticVersion{ .major = 0, .minor = 14, .patch = 1 };
+pub const supported_zig_version = std.SemanticVersion{ .major = 0, .minor = 15, .patch = 2 };
 
 pub fn build(b: *std.Build) !void {
     ensureZigVersion() catch return;
@@ -149,11 +149,9 @@ pub fn build(b: *std.Build) !void {
         }
 
         // bof stager
-        {
-            const dep = b.dependency("bof_stager", .{ .target = target, .optimize = optimize });
-            const exe = dep.artifact(b.fmt("bof_stager_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }));
-            b.installArtifact(exe);
-        }
+        const dep = b.dependency("bof_stager", .{ .target = target, .optimize = optimize });
+        const exe = dep.artifact(b.fmt("bof_stager_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }));
+        b.installArtifact(exe);
     }
 
     // shellcode in zig
@@ -193,29 +191,31 @@ pub fn build(b: *std.Build) !void {
         b.installArtifact(exe);
     }
 
-    // implant
-    for ([_]std.Target.Query{
-        .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
-    }) |target_query| {
-        const target = b.resolveTargetQuery(target_query);
+    if (false) {
+        // implant
+        for ([_]std.Target.Query{
+            .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
+        }) |target_query| {
+            const target = b.resolveTargetQuery(target_query);
 
-        const dep = b.dependency("implant", .{ .target = target, .optimize = optimize });
-        const implant_exe = dep.artifact(b.fmt(
-            "z-beac0n_{s}_{s}",
-            .{ osTagStr(target), cpuArchStr(target) },
-        ));
-        b.installArtifact(implant_exe);
+            const dep = b.dependency("implant", .{ .target = target, .optimize = optimize });
+            const implant_exe = dep.artifact(b.fmt(
+                "z-beac0n_{s}_{s}",
+                .{ osTagStr(target), cpuArchStr(target) },
+            ));
+            b.installArtifact(implant_exe);
 
-        const shellcode_name = b.fmt("shellcode_binary_temp_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) });
-        const shellcode_exe = dep.artifact(shellcode_name);
-        b.installArtifact(shellcode_exe);
+            const shellcode_name = b.fmt("shellcode_binary_temp_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) });
+            const shellcode_exe = dep.artifact(shellcode_name);
+            b.installArtifact(shellcode_exe);
 
-        const copy = b.addObjCopy(shellcode_exe.getEmittedBin(), .{ .format = .bin, .only_section = ".text" });
-        const install = b.addInstallBinFile(
-            copy.getOutput(),
-            b.fmt("z-beac0n_{s}_{s}.bin", .{ osTagStr(target), cpuArchStr(target) }),
-        );
-        b.getInstallStep().dependOn(&install.step);
+            const copy = b.addObjCopy(shellcode_exe.getEmittedBin(), .{ .format = .bin, .only_section = ".text" });
+            const install = b.addInstallBinFile(
+                copy.getOutput(),
+                b.fmt("z-beac0n_{s}_{s}.bin", .{ osTagStr(target), cpuArchStr(target) }),
+            );
+            b.getInstallStep().dependOn(&install.step);
+        }
     }
 
     //
@@ -243,10 +243,12 @@ pub fn build(b: *std.Build) !void {
 
         const tests = b.addTest(.{
             .name = "bof-launcher-tests",
-            .root_source_file = bofs_dep.path("src/tests/tests.zig"),
-            .target = target,
-            .optimize = optimize,
-            //.filter = "udpScanner",
+            //.filters = &.{"udpScanner"},
+            .root_module = b.createModule(.{
+                .root_source_file = bofs_dep.path("src/tests/tests.zig"),
+                .target = target,
+                .optimize = optimize,
+            }),
         });
         tests.addIncludePath(bof_launcher_dep.path("src"));
         tests.linkLibrary(bof_launcher_lib);

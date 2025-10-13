@@ -32,7 +32,7 @@ const Bof = struct {
     sections: [32]BofSection = undefined,
     sections_num: u32 = 0,
 
-    entry_point: ?*const fn (arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 = null,
+    entry_point: ?*const fn (arg_data: ?[*]u8, arg_len: i32) callconv(.c) u8 = null,
 
     user_externals: std.StringHashMap(usize) = undefined,
 
@@ -95,7 +95,11 @@ const Bof = struct {
 
         bof.is_loaded = true;
 
-        const aligned_file_data = try allocator.alignedAlloc(u8, obj_file_data_alignment, file_data.len);
+        const aligned_file_data = try allocator.alignedAlloc(
+            u8,
+            std.mem.Alignment.fromByteUnits(obj_file_data_alignment),
+            file_data.len,
+        );
         defer allocator.free(aligned_file_data);
 
         @memcpy(aligned_file_data, file_data);
@@ -113,7 +117,7 @@ const Bof = struct {
 
             if (bof.sections_mem) |slice| {
                 if (@import("builtin").os.tag == .windows) {
-                    _ = w32.VirtualFree.?(slice.ptr, 0, w32.MEM_RELEASE);
+                    _ = w32.VirtualFree(slice.ptr, 0, w32.MEM_RELEASE);
                 } else if (@import("builtin").os.tag == .linux) {
                     _ = linux.munmap(slice.ptr, slice.len);
                 }
@@ -154,7 +158,7 @@ const Bof = struct {
         std.log.debug("COFF HEADER:", .{});
         std.log.debug("{any}\n\n", .{header});
 
-        var section_mappings = std.ArrayList([]u8).init(arena);
+        var section_mappings = std.array_list.Managed([]u8).init(arena);
         defer section_mappings.deinit();
 
         const section_headers = parser.getSectionHeaders();
@@ -167,7 +171,7 @@ const Bof = struct {
         }
 
         const all_sections_mem = blk: {
-            const addr = w32.VirtualAlloc.?(
+            const addr = w32.VirtualAlloc(
                 null,
                 total_size,
                 w32.MEM_COMMIT | w32.MEM_RESERVE | w32.MEM_TOP_DOWN,
@@ -301,12 +305,12 @@ const Bof = struct {
                     maybe_func_addr = gstate.func_lookup.get(func_name_z);
 
                     if (maybe_func_addr == null) {
-                        const dll = if (w32.GetModuleHandleA.?(dll_name_z)) |hmod|
+                        const dll = if (w32.GetModuleHandleA(dll_name_z)) |hmod|
                             hmod
                         else
-                            w32.LoadLibraryA.?(dll_name_z).?;
+                            w32.LoadLibraryA(dll_name_z).?;
 
-                        maybe_func_addr = if (w32.GetProcAddress.?(dll, func_name_z)) |addr|
+                        maybe_func_addr = if (w32.GetProcAddress(dll, func_name_z)) |addr|
                             @intFromPtr(addr)
                         else
                             null;
@@ -443,18 +447,18 @@ const Bof = struct {
         for (bof.sections[0..bof.sections_num]) |section| {
             if (section.is_code) {
                 var old_protection: w32.DWORD = 0;
-                if (w32.VirtualProtect.?(
+                if (w32.VirtualProtect(
                     section.mem.ptr,
                     section.mem.len,
                     w32.PAGE_EXECUTE_READ,
                     &old_protection,
                 ) == w32.FALSE) return error.VirtualProtectFailed;
 
-                _ = w32.FlushInstructionCache.?(w32.GetCurrentProcess.?(), section.mem.ptr, section.mem.len);
+                _ = w32.FlushInstructionCache(w32.GetCurrentProcess(), section.mem.ptr, section.mem.len);
             }
         }
 
-        var go: ?*const fn (arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 = null;
+        var go: ?*const fn (arg_data: ?[*]u8, arg_len: i32) callconv(.c) u8 = null;
         for (0..header.number_of_symbols) |symbol_index| {
             const sym = symtab.at(symbol_index, .symbol);
             const sym_name = sym_name: {
@@ -502,6 +506,51 @@ const Bof = struct {
         bof.entry_point = go;
     }
 
+    fn WA_iterateSectionHeadersBuffer(h: std.elf.Header, buf: []const u8) WA_SectionHeaderBufferIterator {
+        return .{
+            .elf_header = h,
+            .buf = buf,
+        };
+    }
+
+    const WA_SectionHeaderBufferIterator = struct {
+        elf_header: std.elf.Header,
+        buf: []const u8,
+        index: usize = 0,
+
+        fn next(it: *WA_SectionHeaderBufferIterator) !?std.elf.Elf64_Shdr {
+            if (it.index >= it.elf_header.shnum) return null;
+            defer it.index += 1;
+
+            const size: u64 = if (it.elf_header.is_64) @sizeOf(std.elf.Elf64_Shdr) else @sizeOf(std.elf.Elf32_Shdr);
+            const offset = it.elf_header.shoff + size * it.index;
+            var reader = std.Io.Reader.fixed(it.buf[@intCast(offset)..]);
+
+            return WA_takeShdr(&reader, it.elf_header);
+        }
+    };
+
+    fn WA_takeShdr(reader: *std.Io.Reader, elf_header: std.elf.Header) !?std.elf.Elf64_Shdr {
+        if (elf_header.is_64) {
+            const shdr = try reader.takeStruct(std.elf.Elf64_Shdr, elf_header.endian);
+            return shdr;
+        }
+
+        const shdr = try reader.takeStruct(std.elf.Elf32_Shdr, elf_header.endian);
+        return .{
+            .sh_name = shdr.sh_name,
+            .sh_type = shdr.sh_type,
+            .sh_flags = shdr.sh_flags,
+            .sh_addr = shdr.sh_addr,
+            .sh_offset = shdr.sh_offset,
+            .sh_size = shdr.sh_size,
+            .sh_link = shdr.sh_link,
+            .sh_info = shdr.sh_info,
+            .sh_addralign = shdr.sh_addralign,
+            .sh_entsize = shdr.sh_entsize,
+        };
+    }
+
     fn loadElf(
         bof: *Bof,
         allocator: std.mem.Allocator,
@@ -511,23 +560,23 @@ const Bof = struct {
         defer arena_state.deinit();
         const arena = arena_state.allocator();
 
-        var section_headers = std.ArrayList(std.elf.Elf64_Shdr).init(arena);
+        var section_headers = std.array_list.Managed(std.elf.Elf64_Shdr).init(arena);
         defer section_headers.deinit();
 
-        var section_mappings = std.ArrayList([]u8).init(arena);
+        var section_mappings = std.array_list.Managed([]u8).init(arena);
         defer section_mappings.deinit();
 
         var symbol_table: []const std.elf.Sym = undefined;
         var string_table: []const u8 = undefined;
 
-        var file_data_stream = std.io.fixedBufferStream(file_data);
+        var file_data_stream = std.Io.Reader.fixed(file_data);
 
         const elf_hdr = try std.elf.Header.read(&file_data_stream);
         std.log.debug("Number of Sections: {d}", .{elf_hdr.shnum});
 
         var total_size: usize = gstate.max_got_section_size;
         {
-            var section_headers_iter = elf_hdr.section_header_iterator(&file_data_stream);
+            var section_headers_iter = WA_iterateSectionHeadersBuffer(elf_hdr, file_data);
             while (try section_headers_iter.next()) |section| {
                 try section_headers.append(section);
 
@@ -985,7 +1034,7 @@ const Bof = struct {
 
         // Print all symbols; get pointer to `go()`.
         std.log.debug("SYMBOLS", .{});
-        var go: ?*const fn (arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 = null;
+        var go: ?*const fn (arg_data: ?[*]u8, arg_len: i32) callconv(.c) u8 = null;
         for (symbol_table) |sym| {
             if (sym.st_shndx != 0 and sym.st_shndx < section_headers.items.len) {
                 const name = @as([*:0]const u8, @ptrCast(&string_table[sym.st_name]));
@@ -1108,26 +1157,26 @@ const BofArgs = extern struct {
     const blob_size = 4096;
 };
 
-export fn bofArgsInit(out_args: **pubapi.Args) callconv(.C) c_int {
+export fn bofArgsInit(out_args: **pubapi.Args) callconv(.c) c_int {
     const args = gstate.allocator.?.create(BofArgs) catch return -1;
     args.* = .{};
     out_args.* = @ptrCast(args);
     return 0;
 }
 
-export fn bofArgsRelease(args: *pubapi.Args) callconv(.C) void {
+export fn bofArgsRelease(args: *pubapi.Args) callconv(.c) void {
     const bof_args = @as(*BofArgs, @ptrCast(@alignCast(args)));
     if (bof_args.blob) |b| gstate.allocator.?.free(b[0..BofArgs.blob_size]);
     gstate.allocator.?.destroy(bof_args);
 }
 
-export fn bofArgsBegin(args: *pubapi.Args) callconv(.C) void {
+export fn bofArgsBegin(args: *pubapi.Args) callconv(.c) void {
     const bof_args = @as(*BofArgs, @ptrCast(@alignCast(args)));
     if (bof_args.blob) |b| gstate.allocator.?.free(b[0..BofArgs.blob_size]);
     bof_args.* = .{};
 }
 
-export fn bofArgsEnd(args: *pubapi.Args) callconv(.C) void {
+export fn bofArgsEnd(args: *pubapi.Args) callconv(.c) void {
     const bof_args = @as(*BofArgs, @ptrCast(@alignCast(args)));
     if (bof_args.blob != null) {
         bof_args.size = bof_args.size - bof_args.length;
@@ -1136,17 +1185,17 @@ export fn bofArgsEnd(args: *pubapi.Args) callconv(.C) void {
     }
 }
 
-export fn bofArgsGetBuffer(args: *pubapi.Args) callconv(.C) ?[*]u8 {
+export fn bofArgsGetBuffer(args: *pubapi.Args) callconv(.c) ?[*]u8 {
     const bof_args = @as(*BofArgs, @ptrCast(@alignCast(args)));
     return bof_args.original;
 }
 
-export fn bofArgsGetBufferSize(args: *pubapi.Args) callconv(.C) c_int {
+export fn bofArgsGetBufferSize(args: *pubapi.Args) callconv(.c) c_int {
     const bof_args = @as(*BofArgs, @ptrCast(@alignCast(args)));
     return bof_args.size;
 }
 
-export fn bofArgsAdd(args: *pubapi.Args, arg: [*]const u8, arg_size: c_int) callconv(.C) c_int {
+export fn bofArgsAdd(args: *pubapi.Args, arg: [*]const u8, arg_size: c_int) callconv(.c) c_int {
     if (!gstate.is_valid) return -1;
     if (arg_size < 1) return -1;
 
@@ -1246,7 +1295,7 @@ export fn bofObjectInitFromMemory(
     file_data_ptr: [*]const u8,
     file_data_len: c_int,
     out_bof_handle: ?*BofHandle,
-) callconv(.C) c_int {
+) callconv(.c) c_int {
     if (out_bof_handle == null) return -1;
 
     const res = bofLauncherInit();
@@ -1267,7 +1316,7 @@ export fn bofObjectInitFromMemory(
 export fn bofRun(
     file_data_ptr: [*]const u8,
     file_data_len: c_int,
-) callconv(.C) c_int {
+) callconv(.c) c_int {
     var bof_handle: BofHandle = undefined;
     const init_res = bofObjectInitFromMemory(file_data_ptr, file_data_len, &bof_handle);
     if (init_res < 0) return init_res;
@@ -1285,9 +1334,9 @@ export fn bofRun(
             if (init_res == 0 and run_res == 0) {
                 const ctx = @as(*BofContext, @ptrCast(@alignCast(bof_context)));
 
-                const user32_dll = w32.LoadLibraryA.?("user32.dll").?;
+                const user32_dll = w32.LoadLibraryA("user32.dll").?;
                 const messageBox: *const fn (?*anyopaque, ?[*:0]const u8, ?[*:0]const u8, u32) callconv(.winapi) c_int =
-                    @ptrCast(w32.GetProcAddress.?(user32_dll, "MessageBoxA"));
+                    @ptrCast(w32.GetProcAddress(user32_dll, "MessageBoxA"));
 
                 _ = messageBox(null, bofContextGetOutput(ctx, null), "bbbbbbbbbbbb", 0);
             }
@@ -1302,19 +1351,19 @@ export fn bofRun(
     return bof_exit_code;
 }
 
-export fn bofObjectRelease(bof_handle: BofHandle) callconv(.C) void {
+export fn bofObjectRelease(bof_handle: BofHandle) callconv(.c) void {
     if (!gstate.is_valid) return;
 
     gstate.bof_pool.unloadBofAndDeallocateHandle(bof_handle);
 }
 
-export fn bofObjectIsValid(bof_handle: BofHandle) callconv(.C) c_int {
+export fn bofObjectIsValid(bof_handle: BofHandle) callconv(.c) c_int {
     if (!gstate.is_valid) return 0;
 
     return @intFromBool(gstate.bof_pool.isBofValid(bof_handle));
 }
 
-export fn bofObjectGetProcAddress(bof_handle: BofHandle, name: ?[*:0]const u8) callconv(.C) ?*anyopaque {
+export fn bofObjectGetProcAddress(bof_handle: BofHandle, name: ?[*:0]const u8) callconv(.c) ?*anyopaque {
     if (!gstate.is_valid) return null;
     if (name == null) return null;
 
@@ -1387,7 +1436,7 @@ fn run(
 }
 
 fn runDebug(
-    go_func: *const fn (?[*]u8, i32) callconv(.C) u8,
+    go_func: *const fn (?[*]u8, i32) callconv(.c) u8,
     arg_data_ptr: ?[*]u8,
     arg_data_len: c_int,
     out_context: **pubapi.Context,
@@ -1416,7 +1465,7 @@ export fn bofObjectRun(
     arg_data_ptr: ?[*]u8,
     arg_data_len: c_int,
     out_context: **pubapi.Context,
-) callconv(.C) c_int {
+) callconv(.c) c_int {
     if (!gstate.is_valid) return -1;
     if (!gstate.bof_pool.isBofValid(bof_handle)) return 0; // ignore (no error)
     run(bof_handle, arg_data_ptr, arg_data_len, out_context) catch return -1;
@@ -1428,7 +1477,7 @@ export fn bofDebugRun(
     arg_data_ptr: ?[*]u8,
     arg_data_len: c_int,
     out_context: **pubapi.Context,
-) callconv(.C) c_int {
+) callconv(.c) c_int {
     const res = bofLauncherInit();
     if (res < 0) return res;
     runDebug(go_func, arg_data_ptr, arg_data_len, out_context) catch return -1;
@@ -1486,16 +1535,19 @@ fn threadFuncCloneProcessLinux(bof: *Bof, arg_data: ?[]u8, context: *BofContext)
         bof.run(context, arg_data);
 
         const file = std.fs.File{ .handle = pipe[1] };
-        file.writer().writeByte(context.exit_code.load(.seq_cst)) catch @panic("OOM");
+
+        var file_writer = file.writer(&.{});
+        file_writer.interface.writeByte(context.exit_code.load(.seq_cst)) catch @panic("OOM");
 
         var output_len: i32 = undefined;
         const maybe_buf = bofContextGetOutput(context, &output_len);
 
-        file.writer().writeInt(i32, output_len, .little) catch @panic("OOM");
+        file_writer.interface.writeInt(i32, output_len, .little) catch @panic("OOM");
 
         if (maybe_buf) |buf| {
-            file.writer().writeAll(buf[0..@intCast(output_len)]) catch @panic("OOM");
+            file_writer.interface.writeAll(buf[0..@intCast(output_len)]) catch @panic("OOM");
         }
+        file_writer.interface.flush() catch @panic("flush() failed");
 
         std.posix.exit(0);
     }
@@ -1504,16 +1556,19 @@ fn threadFuncCloneProcessLinux(bof: *Bof, arg_data: ?[]u8, context: *BofContext)
     const child_result = std.posix.waitpid(pid, 0);
     if (child_result.status == 0) {
         const file = std.fs.File{ .handle = pipe[0] };
-        const exit_code = file.reader().readByte() catch @panic("OOM");
+
+        var file_reader = file.reader(&.{});
+
+        const exit_code = file_reader.interface.takeByte() catch @panic("OOM");
         _ = context.exit_code.swap(exit_code, .seq_cst);
 
-        const output_len = file.reader().readInt(u32, .little) catch @panic("OOM");
+        const output_len = file_reader.interface.takeInt(u32, .little) catch @panic("OOM");
 
         if (output_len > 0) {
             context.output_mutex.lock();
             defer context.output_mutex.unlock();
 
-            const read_len = file.reader().readAll(context.output_ring.data[0..output_len]) catch @panic("OOM");
+            const read_len = file_reader.interface.readSliceShort(context.output_ring.data[0..output_len]) catch @panic("OOM");
 
             context.output_ring.read_index = 0;
             context.output_ring.write_index = read_len;
@@ -1533,15 +1588,15 @@ fn threadFuncCloneProcessWindows(bof: *Bof, arg_data: ?[]u8, context: *BofContex
         .lpSecurityDescriptor = null,
         .bInheritHandle = w32.TRUE,
     };
-    _ = w32.CreatePipe.?(&read_pipe, &write_pipe, &sec_attribs, BofContext.max_output_len + 16);
+    _ = w32.CreatePipe(&read_pipe, &write_pipe, &sec_attribs, BofContext.max_output_len + 16);
     defer {
-        _ = w32.CloseHandle.?(read_pipe);
-        _ = w32.CloseHandle.?(write_pipe);
+        _ = w32.CloseHandle(read_pipe);
+        _ = w32.CloseHandle(write_pipe);
     }
 
     var job_handle: w32.HANDLE = undefined;
-    _ = w32.NtCreateJobObject.?(&job_handle, w32.JOB_OBJECT_ALL_ACCESS, null);
-    defer _ = w32.NtClose.?(job_handle);
+    _ = w32.NtCreateJobObject(&job_handle, w32.JOB_OBJECT_ALL_ACCESS, null);
+    defer _ = w32.NtClose(job_handle);
 
     var job_limits = std.mem.zeroes(w32.JOBOBJECT_EXTENDED_LIMIT_INFORMATION);
     job_limits.BasicLimitInformation.LimitFlags =
@@ -1549,7 +1604,7 @@ fn threadFuncCloneProcessWindows(bof: *Bof, arg_data: ?[]u8, context: *BofContex
         w32.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE |
         w32.JOB_OBJECT_LIMIT_BREAKAWAY_OK;
 
-    _ = w32.NtSetInformationJobObject.?(
+    _ = w32.NtSetInformationJobObject(
         job_handle,
         .JobObjectExtendedLimitInformation,
         &job_limits,
@@ -1558,7 +1613,7 @@ fn threadFuncCloneProcessWindows(bof: *Bof, arg_data: ?[]u8, context: *BofContex
 
     var info: w32.RTL_USER_PROCESS_INFORMATION = undefined;
     info.Length = @sizeOf(w32.RTL_USER_PROCESS_INFORMATION);
-    const status = w32.RtlCloneUserProcess.?(
+    const status = w32.RtlCloneUserProcess(
         w32.RTL_CLONE_PROCESS_FLAGS_INHERIT_HANDLES | w32.RTL_CLONE_PROCESS_FLAGS_CREATE_SUSPENDED,
         null,
         null,
@@ -1571,43 +1626,43 @@ fn threadFuncCloneProcessWindows(bof: *Bof, arg_data: ?[]u8, context: *BofContex
             bof.run(context, arg_data);
 
             const exit_code = context.exit_code.load(.seq_cst);
-            _ = w32.WriteFile.?(write_pipe, @ptrCast(&exit_code), 1, null, null);
+            _ = w32.WriteFile(write_pipe, @ptrCast(&exit_code), 1, null, null);
 
             var output_len: i32 = undefined;
             const maybe_buf = bofContextGetOutput(context, &output_len);
 
-            _ = w32.WriteFile.?(write_pipe, std.mem.asBytes(&output_len), 4, null, null);
+            _ = w32.WriteFile(write_pipe, std.mem.asBytes(&output_len), 4, null, null);
 
             if (maybe_buf) |buf| {
-                _ = w32.WriteFile.?(write_pipe, buf, @intCast(output_len), null, null);
+                _ = w32.WriteFile(write_pipe, buf, @intCast(output_len), null, null);
             }
 
-            _ = w32.NtTerminateProcess.?(w32.NtCurrentProcess(), .SUCCESS);
+            _ = w32.NtTerminateProcess(w32.NtCurrentProcess(), .SUCCESS);
         },
         .SUCCESS => {
             // parent process
-            _ = w32.NtAssignProcessToJobObject.?(job_handle, info.ProcessHandle.?);
-            _ = w32.NtResumeThread.?(info.ThreadHandle.?, null);
-            _ = w32.WaitForSingleObject.?(info.ProcessHandle.?, w32.INFINITE);
+            _ = w32.NtAssignProcessToJobObject(job_handle, info.ProcessHandle.?);
+            _ = w32.NtResumeThread(info.ThreadHandle.?, null);
+            _ = w32.WaitForSingleObject(info.ProcessHandle.?, w32.INFINITE);
 
             var process_exit_code: w32.DWORD = 0xff;
-            _ = w32.GetExitCodeProcess.?(info.ProcessHandle.?, &process_exit_code);
+            _ = w32.GetExitCodeProcess(info.ProcessHandle.?, &process_exit_code);
 
             if (process_exit_code == 0) {
                 var exit_code: u8 = undefined;
-                _ = w32.ReadFile.?(read_pipe, @ptrCast(&exit_code), 1, null, null);
+                _ = w32.ReadFile(read_pipe, @ptrCast(&exit_code), 1, null, null);
 
                 _ = context.exit_code.swap(exit_code, .seq_cst);
 
                 var output_len: u32 = 0;
-                _ = w32.ReadFile.?(read_pipe, std.mem.asBytes(&output_len), 4, null, null);
+                _ = w32.ReadFile(read_pipe, std.mem.asBytes(&output_len), 4, null, null);
 
                 if (output_len > 0) {
                     context.output_mutex.lock();
                     defer context.output_mutex.unlock();
 
                     var read_len: w32.DWORD = 0;
-                    _ = w32.ReadFile.?(read_pipe, context.output_ring.data.ptr, output_len, &read_len, null);
+                    _ = w32.ReadFile(read_pipe, context.output_ring.data.ptr, output_len, &read_len, null);
 
                     context.output_ring.read_index = 0;
                     context.output_ring.write_index = read_len;
@@ -1625,6 +1680,8 @@ fn threadFuncCloneProcessWindows(bof: *Bof, arg_data: ?[]u8, context: *BofContex
     }
 }
 
+const RingBuffer = @import("RingBuffer.zig");
+
 const BofContext = struct {
     const max_output_len = 16 * 1024;
 
@@ -1634,8 +1691,8 @@ const BofContext = struct {
     handle: BofHandle,
     exit_code: std.atomic.Value(u8) = .init(0xff),
 
-    output: std.ArrayList(u8),
-    output_ring: std.RingBuffer,
+    output: std.array_list.Managed(u8),
+    output_ring: RingBuffer,
     output_ring_num_written_bytes: usize = 0,
     output_mutex: std.Thread.Mutex = .{},
 
@@ -1643,8 +1700,8 @@ const BofContext = struct {
         return .{
             .allocator = allocator,
             .handle = handle,
-            .output_ring = std.RingBuffer.init(allocator, max_output_len) catch @panic("OOM"),
-            .output = std.ArrayList(u8).initCapacity(allocator, max_output_len + 1) catch @panic("OOM"),
+            .output_ring = RingBuffer.init(allocator, max_output_len) catch @panic("OOM"),
+            .output = std.array_list.Managed(u8).initCapacity(allocator, max_output_len + 1) catch @panic("OOM"),
         };
     }
 
@@ -1696,8 +1753,8 @@ fn runAsync(
         };
         if (@import("builtin").os.tag == .windows) {
             // TODO: Handle errors
-            const handle = w32.CreateThread.?(null, 0, threadFunc, @ptrCast(in), 0, null);
-            if (handle) |h| _ = w32.CloseHandle.?(h);
+            const handle = w32.CreateThread(null, 0, threadFunc, @ptrCast(in), 0, null);
+            if (handle) |h| _ = w32.CloseHandle(h);
         } else {
             // TODO: Handle errors
             var handle: pthread_t = undefined;
@@ -1716,7 +1773,7 @@ export fn bofObjectRunAsyncThread(
     completion_cb: ?pubapi.CompletionCallback,
     completion_cb_context: ?*anyopaque,
     out_context: **pubapi.Context,
-) callconv(.C) c_int {
+) callconv(.c) c_int {
     if (!gstate.is_valid) return -1;
     if (!gstate.bof_pool.isBofValid(bof_handle)) return 0; // ignore (no error)
     runAsync(
@@ -1738,10 +1795,10 @@ export fn bofObjectRunAsyncProcess(
     completion_cb: ?pubapi.CompletionCallback,
     completion_cb_context: ?*anyopaque,
     out_context: **pubapi.Context,
-) callconv(.C) c_int {
+) callconv(.c) c_int {
     if (@import("builtin").cpu.arch == .x86 and @import("builtin").os.tag == .windows) {
         var is_wow64: w32.BOOL = w32.FALSE;
-        _ = w32.IsWow64Process.?(w32.GetCurrentProcess.?(), &is_wow64);
+        _ = w32.IsWow64Process(w32.GetCurrentProcess(), &is_wow64);
         if (is_wow64 == w32.TRUE)
             return -1; // TODO: Make it work (Windows bug?)
     }
@@ -1759,7 +1816,7 @@ export fn bofObjectRunAsyncProcess(
     return 0; // success
 }
 
-export fn bofMemoryMaskKey(key: [*]const u8, key_len: c_int) callconv(.C) c_int {
+export fn bofMemoryMaskKey(key: [*]const u8, key_len: c_int) callconv(.c) c_int {
     if (!gstate.is_valid) return -1;
     if (key_len > gstate.mask_key_data.len) return -1;
     for (0..@intCast(key_len)) |i| {
@@ -1769,7 +1826,7 @@ export fn bofMemoryMaskKey(key: [*]const u8, key_len: c_int) callconv(.C) c_int 
     return 0;
 }
 
-export fn bofMemoryMaskSysApiCall(api_name: [*:0]const u8, masking_enabled: c_int) callconv(.C) c_int {
+export fn bofMemoryMaskSysApiCall(api_name: [*:0]const u8, masking_enabled: c_int) callconv(.c) c_int {
     if (!gstate.is_valid) return -1;
     if (std.mem.eql(u8, std.mem.span(api_name), "all")) {
         inline for (@typeInfo(ZGateSysApiCall).@"enum".fields, 0..) |_, i| {
@@ -1787,7 +1844,7 @@ export fn bofMemoryMaskSysApiCall(api_name: [*:0]const u8, masking_enabled: c_in
     return 0;
 }
 
-export fn bofContextRelease(context: *pubapi.Context) callconv(.C) void {
+export fn bofContextRelease(context: *pubapi.Context) callconv(.c) void {
     if (!gstate.is_valid) return;
     const ctx = @as(*BofContext, @ptrCast(@alignCast(context)));
 
@@ -1809,31 +1866,31 @@ export fn bofContextRelease(context: *pubapi.Context) callconv(.C) void {
     gstate.allocator.?.destroy(ctx);
 }
 
-export fn bofContextIsRunning(context: *pubapi.Context) callconv(.C) c_int {
+export fn bofContextIsRunning(context: *pubapi.Context) callconv(.c) c_int {
     if (!gstate.is_valid) return 0;
     const ctx = @as(*BofContext, @ptrCast(@alignCast(context)));
     return @intFromBool(ctx.done_event.isSet() == false);
 }
 
-export fn bofContextGetObjectHandle(context: *pubapi.Context) callconv(.C) u32 {
+export fn bofContextGetObjectHandle(context: *pubapi.Context) callconv(.c) u32 {
     if (!gstate.is_valid) return 0;
     const ctx = @as(*BofContext, @ptrCast(@alignCast(context)));
     return @bitCast(ctx.handle);
 }
 
-export fn bofContextGetExitCode(context: *pubapi.Context) callconv(.C) u8 {
+export fn bofContextGetExitCode(context: *pubapi.Context) callconv(.c) u8 {
     if (!gstate.is_valid) return 0;
     const ctx = @as(*BofContext, @ptrCast(@alignCast(context)));
     return ctx.exit_code.load(.seq_cst);
 }
 
-export fn bofContextWait(context: *pubapi.Context) callconv(.C) void {
+export fn bofContextWait(context: *pubapi.Context) callconv(.c) void {
     if (!gstate.is_valid) return;
     const ctx = @as(*BofContext, @ptrCast(@alignCast(context)));
     ctx.done_event.wait();
 }
 
-export fn bofContextGetOutput(context: *BofContext, len: ?*c_int) callconv(.C) ?[*:0]const u8 {
+export fn bofContextGetOutput(context: *BofContext, len: ?*c_int) callconv(.c) ?[*:0]const u8 {
     if (!gstate.is_valid) return null;
 
     context.output_mutex.lock();
@@ -1934,13 +1991,13 @@ const R_ARM_JUMP24 = 29;
 const R_ARM_NONE = 0;
 const R_ARM_PREL31 = 42;
 
-export fn bofLauncherAllocateMemory(size: usize) callconv(.C) ?*anyopaque {
+export fn bofLauncherAllocateMemory(size: usize) callconv(.c) ?*anyopaque {
     gstate.allocator_mutex.lock();
     defer gstate.allocator_mutex.unlock();
 
     const mem = gstate.allocator.?.alignedAlloc(
         u8,
-        mem_alignment,
+        std.mem.Alignment.fromByteUnits(mem_alignment),
         size,
     ) catch return null;
 
@@ -1952,7 +2009,7 @@ export fn bofLauncherAllocateMemory(size: usize) callconv(.C) ?*anyopaque {
     return mem.ptr;
 }
 
-export fn bofLauncherFreeMemory(maybe_ptr: ?*anyopaque) callconv(.C) void {
+export fn bofLauncherFreeMemory(maybe_ptr: ?*anyopaque) callconv(.c) void {
     if (maybe_ptr) |ptr| {
         gstate.allocator_mutex.lock();
         defer gstate.allocator_mutex.unlock();
@@ -1965,7 +2022,7 @@ export fn bofLauncherFreeMemory(maybe_ptr: ?*anyopaque) callconv(.C) void {
     }
 }
 
-export fn bofLauncherAllocateAndZeroMemory(num: usize, size: usize) callconv(.C) ?*anyopaque {
+export fn bofLauncherAllocateAndZeroMemory(num: usize, size: usize) callconv(.c) ?*anyopaque {
     const ptr = bofLauncherAllocateMemory(num * size);
     if (ptr != null) {
         @memset(@as([*]u8, @ptrCast(ptr))[0 .. num * size], 0);
@@ -1976,14 +2033,14 @@ export fn bofLauncherAllocateAndZeroMemory(num: usize, size: usize) callconv(.C)
 
 fn getCurrentThreadId() linksection(zgate_csection) u32 {
     if (@import("builtin").os.tag == .windows) {
-        return @intCast(w32.GetCurrentThreadId.?());
+        return @intCast(w32.GetCurrentThreadId());
     }
     return @intCast(linux.gettid());
 }
 
 fn getCurrentProcessId() linksection(zgate_csection) u32 {
     if (@import("builtin").os.tag == .windows) {
-        return @intCast(w32.GetCurrentProcessId.?());
+        return @intCast(w32.GetCurrentProcessId());
     }
     return @intCast(linux.getpid());
 }
@@ -1991,7 +2048,7 @@ fn getCurrentProcessId() linksection(zgate_csection) u32 {
 fn queryPageSize() u32 {
     if (@import("builtin").os.tag == .windows) {
         var info: w32.SYSTEM_INFO = undefined;
-        w32.GetSystemInfo.?(&info);
+        w32.GetSystemInfo(&info);
         return @intCast(info.dwPageSize);
     }
     // TODO: Is it correct?
@@ -2044,12 +2101,12 @@ const gstate = struct {
     var pthread_create: *const fn (
         noalias newthread: *pthread_t,
         noalias attr: ?*anyopaque,
-        start_routine: *const fn (?*anyopaque) callconv(.C) ?*anyopaque,
+        start_routine: *const fn (?*anyopaque) callconv(.c) ?*anyopaque,
         noalias arg: ?*anyopaque,
-    ) callconv(.C) c_int = undefined;
-    var pthread_detach: *const fn (pthread_t) callconv(.C) c_int = undefined;
+    ) callconv(.c) c_int = undefined;
+    var pthread_detach: *const fn (pthread_t) callconv(.c) c_int = undefined;
 
-    var async_contexts: std.ArrayList(*BofContext) = undefined;
+    var async_contexts: std.array_list.Managed(*BofContext) = undefined;
     var output_contexts: std.AutoHashMap(u32, ?*BofContext) = undefined;
     var output_contexts_mutex: std.Thread.Mutex = .{};
 
@@ -2147,6 +2204,8 @@ fn initLauncher() !void {
     }
 
     if (@import("builtin").os.tag == .windows) {
+        w32.init();
+
         try gstate.func_lookup.put("VirtualAlloc", @intFromPtr(&zgateVirtualAlloc));
         try gstate.func_lookup.put("VirtualAllocEx", @intFromPtr(&zgateVirtualAllocEx));
         try gstate.func_lookup.put("VirtualFree", @intFromPtr(&zgateVirtualFree));
@@ -2169,41 +2228,41 @@ fn initLauncher() !void {
         try gstate.func_lookup.put("CreateRemoteThread", @intFromPtr(&zgateCreateRemoteThread));
 
         {
-            const dll = w32.LoadLibraryA.?("kernel32.dll").?;
+            const dll = w32.LoadLibraryA("kernel32.dll").?;
 
-            try gstate.func_lookup.put("LoadLibraryA", @intFromPtr(w32.GetProcAddress.?(dll, "LoadLibraryA").?));
-            try gstate.func_lookup.put("FreeLibrary", @intFromPtr(w32.GetProcAddress.?(dll, "FreeLibrary").?));
-            try gstate.func_lookup.put("GetProcAddress", @intFromPtr(w32.GetProcAddress.?(dll, "GetProcAddress").?));
-            try gstate.func_lookup.put("GetModuleHandleA", @intFromPtr(w32.GetProcAddress.?(dll, "GetModuleHandleA").?));
+            try gstate.func_lookup.put("LoadLibraryA", @intFromPtr(w32.GetProcAddress(dll, "LoadLibraryA").?));
+            try gstate.func_lookup.put("FreeLibrary", @intFromPtr(w32.GetProcAddress(dll, "FreeLibrary").?));
+            try gstate.func_lookup.put("GetProcAddress", @intFromPtr(w32.GetProcAddress(dll, "GetProcAddress").?));
+            try gstate.func_lookup.put("GetModuleHandleA", @intFromPtr(w32.GetProcAddress(dll, "GetModuleHandleA").?));
 
-            zgateVirtualAllocPtr = @ptrCast(w32.GetProcAddress.?(dll, "VirtualAlloc").?);
-            zgateVirtualAllocExPtr = @ptrCast(w32.GetProcAddress.?(dll, "VirtualAllocEx").?);
-            zgateVirtualFreePtr = @ptrCast(w32.GetProcAddress.?(dll, "VirtualFree").?);
-            zgateVirtualQueryPtr = @ptrCast(w32.GetProcAddress.?(dll, "VirtualQuery").?);
-            zgateVirtualProtectPtr = @ptrCast(w32.GetProcAddress.?(dll, "VirtualProtect").?);
-            zgateVirtualProtectExPtr = @ptrCast(w32.GetProcAddress.?(dll, "VirtualProtectEx").?);
-            zgateCreateFileMappingAPtr = @ptrCast(w32.GetProcAddress.?(dll, "CreateFileMappingA").?);
-            zgateCloseHandlePtr = @ptrCast(w32.GetProcAddress.?(dll, "CloseHandle").?);
-            zgateDuplicateHandlePtr = @ptrCast(w32.GetProcAddress.?(dll, "DuplicateHandle").?);
-            zgateGetThreadContextPtr = @ptrCast(w32.GetProcAddress.?(dll, "GetThreadContext").?);
-            zgateSetThreadContextPtr = @ptrCast(w32.GetProcAddress.?(dll, "SetThreadContext").?);
-            zgateMapViewOfFilePtr = @ptrCast(w32.GetProcAddress.?(dll, "MapViewOfFile").?);
-            zgateUnmapViewOfFilePtr = @ptrCast(w32.GetProcAddress.?(dll, "UnmapViewOfFile").?);
-            zgateOpenProcessPtr = @ptrCast(w32.GetProcAddress.?(dll, "OpenProcess").?);
-            zgateOpenThreadPtr = @ptrCast(w32.GetProcAddress.?(dll, "OpenThread").?);
-            zgateWriteProcessMemoryPtr = @ptrCast(w32.GetProcAddress.?(dll, "WriteProcessMemory").?);
-            zgateReadProcessMemoryPtr = @ptrCast(w32.GetProcAddress.?(dll, "ReadProcessMemory").?);
-            zgateResumeThreadPtr = @ptrCast(w32.GetProcAddress.?(dll, "ResumeThread").?);
-            zgateSuspendThreadPtr = @ptrCast(w32.GetProcAddress.?(dll, "SuspendThread").?);
-            zgateCreateThreadPtr = @ptrCast(w32.GetProcAddress.?(dll, "CreateThread").?);
-            zgateCreateRemoteThreadPtr = @ptrCast(w32.GetProcAddress.?(dll, "CreateRemoteThread").?);
-            zgateOutputDebugStringAPtr = @ptrCast(w32.GetProcAddress.?(dll, "OutputDebugStringA").?);
-            zgateExitProcessPtr = @ptrCast(w32.GetProcAddress.?(dll, "ExitProcess").?);
-            zgateFlushInstructionCachePtr = @ptrCast(w32.GetProcAddress.?(dll, "FlushInstructionCache").?);
+            zgateVirtualAllocPtr = @ptrCast(w32.GetProcAddress(dll, "VirtualAlloc").?);
+            zgateVirtualAllocExPtr = @ptrCast(w32.GetProcAddress(dll, "VirtualAllocEx").?);
+            zgateVirtualFreePtr = @ptrCast(w32.GetProcAddress(dll, "VirtualFree").?);
+            zgateVirtualQueryPtr = @ptrCast(w32.GetProcAddress(dll, "VirtualQuery").?);
+            zgateVirtualProtectPtr = @ptrCast(w32.GetProcAddress(dll, "VirtualProtect").?);
+            zgateVirtualProtectExPtr = @ptrCast(w32.GetProcAddress(dll, "VirtualProtectEx").?);
+            zgateCreateFileMappingAPtr = @ptrCast(w32.GetProcAddress(dll, "CreateFileMappingA").?);
+            zgateCloseHandlePtr = @ptrCast(w32.GetProcAddress(dll, "CloseHandle").?);
+            zgateDuplicateHandlePtr = @ptrCast(w32.GetProcAddress(dll, "DuplicateHandle").?);
+            zgateGetThreadContextPtr = @ptrCast(w32.GetProcAddress(dll, "GetThreadContext").?);
+            zgateSetThreadContextPtr = @ptrCast(w32.GetProcAddress(dll, "SetThreadContext").?);
+            zgateMapViewOfFilePtr = @ptrCast(w32.GetProcAddress(dll, "MapViewOfFile").?);
+            zgateUnmapViewOfFilePtr = @ptrCast(w32.GetProcAddress(dll, "UnmapViewOfFile").?);
+            zgateOpenProcessPtr = @ptrCast(w32.GetProcAddress(dll, "OpenProcess").?);
+            zgateOpenThreadPtr = @ptrCast(w32.GetProcAddress(dll, "OpenThread").?);
+            zgateWriteProcessMemoryPtr = @ptrCast(w32.GetProcAddress(dll, "WriteProcessMemory").?);
+            zgateReadProcessMemoryPtr = @ptrCast(w32.GetProcAddress(dll, "ReadProcessMemory").?);
+            zgateResumeThreadPtr = @ptrCast(w32.GetProcAddress(dll, "ResumeThread").?);
+            zgateSuspendThreadPtr = @ptrCast(w32.GetProcAddress(dll, "SuspendThread").?);
+            zgateCreateThreadPtr = @ptrCast(w32.GetProcAddress(dll, "CreateThread").?);
+            zgateCreateRemoteThreadPtr = @ptrCast(w32.GetProcAddress(dll, "CreateRemoteThread").?);
+            zgateOutputDebugStringAPtr = @ptrCast(w32.GetProcAddress(dll, "OutputDebugStringA").?);
+            zgateExitProcessPtr = @ptrCast(w32.GetProcAddress(dll, "ExitProcess").?);
+            zgateFlushInstructionCachePtr = @ptrCast(w32.GetProcAddress(dll, "FlushInstructionCache").?);
         }
     }
 
-    gstate.async_contexts = std.ArrayList(*BofContext).init(gstate.allocator.?);
+    gstate.async_contexts = std.array_list.Managed(*BofContext).init(gstate.allocator.?);
     gstate.output_contexts = std.AutoHashMap(u32, ?*BofContext).init(gstate.allocator.?);
     gstate.bof_pool = BofPool.init(gstate.allocator.?);
 
@@ -2211,11 +2270,11 @@ fn initLauncher() !void {
         // NOTE(mziulek):
         // Below code loads socket implementation and is required for RtlCloneUserProcess() to work correctly with sockets.
         var wsadata: w32.WSADATA = undefined;
-        _ = w32.WSAStartup.?(0x0202, &wsadata);
-        const sock = w32.WSASocketW.?(w32.AF.INET, w32.SOCK.DGRAM, 0, null, 0, 0);
-        _ = w32.closesocket.?(sock);
+        _ = w32.WSAStartup(0x0202, &wsadata);
+        const sock = w32.WSASocketW(w32.AF.INET, w32.SOCK.DGRAM, 0, null, 0, 0);
+        _ = w32.closesocket(sock);
 
-        _ = w32.CoInitializeEx.?(null, w32.COINIT_MULTITHREADED);
+        _ = w32.CoInitializeEx(null, w32.COINIT_MULTITHREADED);
     }
 
     if (with_libc and @import("builtin").os.tag == .linux) {
@@ -2297,19 +2356,19 @@ fn initLauncher() !void {
     try pubapi.memoryMaskSysApiCall("all", false);
 }
 
-export fn bofLauncherInit() callconv(.C) c_int {
+export fn bofLauncherInit() callconv(.c) c_int {
     initLauncher() catch return -1;
     return 0;
 }
 
-export fn bofLauncherRelease() callconv(.C) void {
+export fn bofLauncherRelease() callconv(.c) void {
     if (!gstate.is_valid) return;
 
     gstate.is_valid = false;
 
     if (@import("builtin").os.tag == .windows) {
-        w32.CoUninitialize.?();
-        _ = w32.WSACleanup.?();
+        w32.CoUninitialize();
+        _ = w32.WSACleanup();
     }
     if (@import("builtin").os.tag == .linux) {
         if (with_libc and gstate.libc != null) {
@@ -2344,7 +2403,7 @@ pub fn DllMain(
     hinstDLL: w32.HINSTANCE,
     fdwReason: w32.DWORD,
     lpvReserved: w32.LPVOID,
-) callconv(w32.WINAPI) w32.BOOL {
+) callconv(.winapi) w32.BOOL {
     _ = lpvReserved;
     if (fdwReason == w32.DLL_PROCESS_ATTACH) {
         gstate.dll.base_address = @intFromPtr(hinstDLL);
@@ -2538,7 +2597,7 @@ fn zgateVirtualAlloc(
     dwSize: w32.SIZE_T,
     flAllocationType: w32.DWORD,
     flProtect: w32.DWORD,
-) linksection(zgate_csection) callconv(w32.WINAPI) ?w32.LPVOID {
+) linksection(zgate_csection) callconv(.winapi) ?w32.LPVOID {
     const do_mask = zgateBegin(.VirtualAlloc);
     const ret = zgateVirtualAllocPtr(lpAddress, dwSize, flAllocationType, flProtect);
     if (do_mask) zgateEnd();
@@ -2551,7 +2610,7 @@ fn zgateVirtualAllocEx(
     dwSize: w32.SIZE_T,
     flAllocationType: w32.DWORD,
     flProtect: w32.DWORD,
-) linksection(zgate_csection) callconv(w32.WINAPI) ?w32.LPVOID {
+) linksection(zgate_csection) callconv(.winapi) ?w32.LPVOID {
     const do_mask = zgateBegin(.VirtualAllocEx);
     const ret = zgateVirtualAllocExPtr(hProcess, lpAddress, dwSize, flAllocationType, flProtect);
     if (do_mask) zgateEnd();
@@ -2562,7 +2621,7 @@ fn zgateVirtualFree(
     lpAddress: ?w32.LPVOID,
     dwSize: w32.SIZE_T,
     dwFreeType: w32.DWORD,
-) linksection(zgate_csection) callconv(w32.WINAPI) w32.BOOL {
+) linksection(zgate_csection) callconv(.winapi) w32.BOOL {
     const do_mask = zgateBegin(.VirtualFree);
     const ret = zgateVirtualFreePtr(lpAddress, dwSize, dwFreeType);
     if (do_mask) zgateEnd();
@@ -2573,7 +2632,7 @@ fn zgateVirtualQuery(
     lpAddress: ?w32.LPVOID,
     lpBuffer: w32.PMEMORY_BASIC_INFORMATION,
     dwLength: w32.SIZE_T,
-) linksection(zgate_csection) callconv(w32.WINAPI) w32.SIZE_T {
+) linksection(zgate_csection) callconv(.winapi) w32.SIZE_T {
     const do_mask = zgateBegin(.VirtualQuery);
     const ret = zgateVirtualQueryPtr(lpAddress, lpBuffer, dwLength);
     if (do_mask) zgateEnd();
@@ -2585,7 +2644,7 @@ fn zgateVirtualProtect(
     dwSize: w32.SIZE_T,
     flNewProtect: w32.DWORD,
     lpflOldProtect: *w32.DWORD,
-) linksection(zgate_csection) callconv(w32.WINAPI) w32.BOOL {
+) linksection(zgate_csection) callconv(.winapi) w32.BOOL {
     const do_mask = zgateBegin(.VirtualProtect);
     const ret = zgateVirtualProtectPtr(lpAddress, dwSize, flNewProtect, lpflOldProtect);
     if (do_mask) zgateEnd();
@@ -2598,7 +2657,7 @@ fn zgateVirtualProtectEx(
     dwSize: w32.SIZE_T,
     flNewProtect: w32.DWORD,
     lpflOldProtect: *w32.DWORD,
-) linksection(zgate_csection) callconv(w32.WINAPI) w32.BOOL {
+) linksection(zgate_csection) callconv(.winapi) w32.BOOL {
     const do_mask = zgateBegin(.VirtualProtectEx);
     const ret = zgateVirtualProtectExPtr(hProcess, lpAddress, dwSize, flNewProtect, lpflOldProtect);
     if (do_mask) zgateEnd();
@@ -2612,7 +2671,7 @@ fn zgateCreateFileMappingA(
     dwMaximumSizeHigh: w32.DWORD,
     dwMaximumSizeLow: w32.DWORD,
     lpName: ?w32.LPCSTR,
-) linksection(zgate_csection) callconv(w32.WINAPI) ?w32.HANDLE {
+) linksection(zgate_csection) callconv(.winapi) ?w32.HANDLE {
     const do_mask = zgateBegin(.CreateFileMappingA);
     const ret = zgateCreateFileMappingAPtr(
         hFile,
@@ -2626,7 +2685,7 @@ fn zgateCreateFileMappingA(
     return ret;
 }
 
-fn zgateCloseHandle(hObject: w32.HANDLE) linksection(zgate_csection) callconv(w32.WINAPI) w32.BOOL {
+fn zgateCloseHandle(hObject: w32.HANDLE) linksection(zgate_csection) callconv(.winapi) w32.BOOL {
     const do_mask = zgateBegin(.CloseHandle);
     const ret = zgateCloseHandlePtr(hObject);
     if (do_mask) zgateEnd();
@@ -2641,7 +2700,7 @@ fn zgateDuplicateHandle(
     dwDesiredAccess: w32.DWORD,
     bInheritHandle: w32.BOOL,
     dwOptions: w32.DWORD,
-) linksection(zgate_csection) callconv(w32.WINAPI) w32.BOOL {
+) linksection(zgate_csection) callconv(.winapi) w32.BOOL {
     const do_mask = zgateBegin(.DuplicateHandle);
     const ret = zgateDuplicateHandlePtr(
         hSourceProcessHandle,
@@ -2659,7 +2718,7 @@ fn zgateDuplicateHandle(
 fn zgateGetThreadContext(
     hThread: w32.HANDLE,
     lpContext: *w32.CONTEXT,
-) linksection(zgate_csection) callconv(w32.WINAPI) w32.BOOL {
+) linksection(zgate_csection) callconv(.winapi) w32.BOOL {
     const do_mask = zgateBegin(.GetThreadContext);
     const ret = zgateGetThreadContextPtr(hThread, lpContext);
     if (do_mask) zgateEnd();
@@ -2669,7 +2728,7 @@ fn zgateGetThreadContext(
 fn zgateSetThreadContext(
     hThread: w32.HANDLE,
     lpContext: *const w32.CONTEXT,
-) linksection(zgate_csection) callconv(w32.WINAPI) w32.BOOL {
+) linksection(zgate_csection) callconv(.winapi) w32.BOOL {
     const do_mask = zgateBegin(.SetThreadContext);
     const ret = zgateSetThreadContextPtr(hThread, lpContext);
     if (do_mask) zgateEnd();
@@ -2682,7 +2741,7 @@ fn zgateMapViewOfFile(
     dwFileOffsetHigh: w32.DWORD,
     dwFileOffsetLow: w32.DWORD,
     dwNumberOfBytesToMap: w32.SIZE_T,
-) linksection(zgate_csection) callconv(w32.WINAPI) w32.LPVOID {
+) linksection(zgate_csection) callconv(.winapi) w32.LPVOID {
     const do_mask = zgateBegin(.MapViewOfFile);
     const ret = zgateMapViewOfFilePtr(
         hFileMappingObject,
@@ -2695,7 +2754,7 @@ fn zgateMapViewOfFile(
     return ret;
 }
 
-fn zgateUnmapViewOfFile(lpBaseAddress: w32.LPCVOID) linksection(zgate_csection) callconv(w32.WINAPI) w32.BOOL {
+fn zgateUnmapViewOfFile(lpBaseAddress: w32.LPCVOID) linksection(zgate_csection) callconv(.winapi) w32.BOOL {
     const do_mask = zgateBegin(.UnmapViewOfFile);
     const ret = zgateUnmapViewOfFilePtr(lpBaseAddress);
     if (do_mask) zgateEnd();
@@ -2706,7 +2765,7 @@ fn zgateOpenProcess(
     dwDesiredAccess: w32.DWORD,
     bInheritHandle: w32.BOOL,
     dwProcessId: w32.DWORD,
-) linksection(zgate_csection) callconv(w32.WINAPI) ?w32.HANDLE {
+) linksection(zgate_csection) callconv(.winapi) ?w32.HANDLE {
     const do_mask = zgateBegin(.OpenProcess);
     const ret = zgateOpenProcessPtr(dwDesiredAccess, bInheritHandle, dwProcessId);
     if (do_mask) zgateEnd();
@@ -2717,7 +2776,7 @@ fn zgateOpenThread(
     dwDesiredAccess: w32.DWORD,
     bInheritHandle: w32.BOOL,
     dwThreadId: w32.DWORD,
-) linksection(zgate_csection) callconv(w32.WINAPI) ?w32.HANDLE {
+) linksection(zgate_csection) callconv(.winapi) ?w32.HANDLE {
     const do_mask = zgateBegin(.OpenProcess);
     const ret = zgateOpenThreadPtr(dwDesiredAccess, bInheritHandle, dwThreadId);
     if (do_mask) zgateEnd();
@@ -2730,7 +2789,7 @@ fn zgateWriteProcessMemory(
     lpBuffer: w32.LPCVOID,
     nSize: w32.SIZE_T,
     lpNumberOfBytesWritten: ?*w32.SIZE_T,
-) linksection(zgate_csection) callconv(w32.WINAPI) w32.BOOL {
+) linksection(zgate_csection) callconv(.winapi) w32.BOOL {
     const do_mask = zgateBegin(.WriteProcessMemory);
     const ret = zgateWriteProcessMemoryPtr(hProcess, lpBaseAddress, lpBuffer, nSize, lpNumberOfBytesWritten);
     if (do_mask) zgateEnd();
@@ -2743,14 +2802,14 @@ fn zgateReadProcessMemory(
     lpBuffer: w32.LPVOID,
     nSize: w32.SIZE_T,
     lpNumberOfBytesRead: ?*w32.SIZE_T,
-) linksection(zgate_csection) callconv(w32.WINAPI) w32.BOOL {
+) linksection(zgate_csection) callconv(.winapi) w32.BOOL {
     const do_mask = zgateBegin(.ReadProcessMemory);
     const ret = zgateReadProcessMemoryPtr(hProcess, lpBaseAddress, lpBuffer, nSize, lpNumberOfBytesRead);
     if (do_mask) zgateEnd();
     return ret;
 }
 
-fn zgateResumeThread(hThread: w32.HANDLE) linksection(zgate_csection) callconv(w32.WINAPI) w32.DWORD {
+fn zgateResumeThread(hThread: w32.HANDLE) linksection(zgate_csection) callconv(.winapi) w32.DWORD {
     const do_mask = zgateBegin(.ResumeThread);
     const ret = zgateResumeThreadPtr(hThread);
     if (do_mask) zgateEnd();
@@ -2764,7 +2823,7 @@ fn zgateCreateThread(
     lpParameter: ?w32.LPVOID,
     dwCreationFlags: w32.DWORD,
     lpThreadId: ?*w32.DWORD,
-) linksection(zgate_csection) callconv(w32.WINAPI) ?w32.HANDLE {
+) linksection(zgate_csection) callconv(.winapi) ?w32.HANDLE {
     const do_mask = zgateBegin(.CreateThread);
     var ret: ?w32.HANDLE = null;
     if (!do_mask or (dwCreationFlags & w32.CREATE_SUSPENDED) != 0) {
@@ -2800,7 +2859,7 @@ fn zgateCreateRemoteThread(
     lpParameter: ?w32.LPVOID,
     dwCreationFlags: w32.DWORD,
     lpThreadId: ?*w32.DWORD,
-) linksection(zgate_csection) callconv(w32.WINAPI) ?w32.HANDLE {
+) linksection(zgate_csection) callconv(.winapi) ?w32.HANDLE {
     const do_mask = zgateBegin(.CreateRemoteThread);
     const ret = zgateCreateRemoteThreadPtr(
         hProcess,

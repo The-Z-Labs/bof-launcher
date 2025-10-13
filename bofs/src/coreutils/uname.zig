@@ -31,12 +31,14 @@ comptime {
     @import("bof_api").embedFunctionCode("__aeabi_llsl");
 }
 
-pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
-    const printf = beacon.printf.?;
+pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
+    @import("bof_api").init(adata, alen, .{});
+
+    const printf = beacon.printf;
 
     const utsn: std.posix.utsname = std.posix.uname();
 
-    if (args_len == 0) {
+    if (alen == 0) {
         _ = printf(.output, "%s\n", &utsn.sysname);
         return 0;
     }
@@ -45,8 +47,8 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
 
     var parser = beacon.datap{};
 
-    beacon.dataParse.?(&parser, args, args_len);
-    const opt = beacon.dataExtract.?(&parser, &opt_size);
+    beacon.dataParse(&parser, adata, alen);
+    const opt = beacon.dataExtract(&parser, &opt_size);
     const optS = opt.?[0..@as(usize, @intCast(opt_size - 1))];
     std.debug.print("[uname] optS: {s} opt_size: {d}", .{ optS, opt_size });
     //const optS = std.mem.sliceTo(opt, 0);

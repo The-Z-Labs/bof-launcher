@@ -46,7 +46,7 @@ fn getModulesList(allocator: std.mem.Allocator) !u8 {
             mod_usedby,
         });
 
-        _ = beacon.printf.?(.output, "%s\n", mod_entry.ptr);
+        _ = beacon.printf(.output, "%s\n", mod_entry.ptr);
         allocator.free(mod_entry);
     }
 
@@ -54,7 +54,8 @@ fn getModulesList(allocator: std.mem.Allocator) !u8 {
     return 0;
 }
 
-pub export fn go() callconv(.C) u8 {
+pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
+    @import("bof_api").init(adata, alen, .{});
     const allocator = std.heap.page_allocator;
 
     return getModulesList(allocator) catch 2;

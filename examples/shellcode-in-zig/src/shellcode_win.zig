@@ -1,6 +1,5 @@
 const std = @import("std");
 const w32 = std.os.windows;
-const WINAPI = w32.WINAPI;
 const HMODULE = w32.HMODULE;
 const HWND = w32.HWND;
 const LPCSTR = w32.LPCSTR;
@@ -15,23 +14,23 @@ comptime {
     @export(&wWinMainCRTStartup, .{ .name = "wWinMainCRTStartup" });
 }
 
-pub fn wWinMainCRTStartup() callconv(.C) void {
+pub fn wWinMainCRTStartup() callconv(.c) void {
     const kernel32_base = w32_loader.getDllBase(w32_loader.hash_kernel32);
 
-    const LoadLibraryA: *const fn ([*:0]const u8) callconv(WINAPI) ?HMODULE =
+    const LoadLibraryA: *const fn ([*:0]const u8) callconv(.winapi) ?HMODULE =
         @ptrFromInt(w32_loader.getProcAddress(kernel32_base, w32_loader.hash_LoadLibraryA));
 
     _ = LoadLibraryA(&str_user32);
 
     const user32_base = w32_loader.getDllBase(w32_loader.hash_user32);
 
-    const MessageBoxA: *const fn (?HWND, ?LPCSTR, ?LPCSTR, UINT) callconv(WINAPI) c_int =
+    const MessageBoxA: *const fn (?HWND, ?LPCSTR, ?LPCSTR, UINT) callconv(.winapi) c_int =
         @ptrFromInt(w32_loader.getProcAddress(user32_base, w32_loader.hash_MessageBoxA));
 
-    const VirtualAlloc: *const fn (?LPVOID, SIZE_T, DWORD, DWORD) callconv(WINAPI) ?LPVOID =
+    const VirtualAlloc: *const fn (?LPVOID, SIZE_T, DWORD, DWORD) callconv(.winapi) ?LPVOID =
         @ptrFromInt(w32_loader.getProcAddress(kernel32_base, w32_loader.hash_VirtualAlloc));
 
-    const VirtualFree: *const fn (?LPVOID, SIZE_T, DWORD) callconv(WINAPI) BOOL =
+    const VirtualFree: *const fn (?LPVOID, SIZE_T, DWORD) callconv(.winapi) BOOL =
         @ptrFromInt(w32_loader.getProcAddress(kernel32_base, w32_loader.hash_VirtualFree));
 
     const mem_size = 64 * 1024;

@@ -6,16 +6,33 @@ pub const kerberos = @import("kerberos.zig");
 
 const std = @import("std");
 
+pub const InitOptions = struct{};
+
+pub fn init(adata: ?[*]u8, alen: i32, options: InitOptions) void {
+    _ = adata;
+    _ = alen;
+    _ = options;
+    beacon.init();
+    if (@import("builtin").os.tag == .windows) win32.init();
+}
+
 pub fn print(@"type": beacon.CallbackType, comptime fmt: []const u8, args: anytype) void {
     const len = std.fmt.count(fmt, args);
     if (len < 4096) {
         var buf: [4096]u8 = undefined;
         const str = std.fmt.bufPrintZ(buf[0..], fmt, args) catch unreachable;
-        _ = beacon.printf.?(@"type", "%s", str.ptr);
+        _ = beacon.printf(@"type", "%s", str.ptr);
     } else {
-        const str = std.fmt.allocPrintZ(std.heap.page_allocator, fmt, args) catch unreachable;
-        defer std.heap.page_allocator.free(str);
-        _ = beacon.printf.?(@"type", "%s", str.ptr);
+        var a: std.io.Writer.Allocating = .init(std.heap.page_allocator);
+        defer a.deinit();
+        const w = &a.writer;
+
+        w.print(fmt, args) catch unreachable;
+        w.writeByte(0) catch unreachable;
+
+        //const str = std.fmt.allocPrintZ(std.heap.page_allocator, fmt, args) catch unreachable;
+        //defer std.heap.page_allocator.free(str);
+        _ = beacon.printf(@"type", "%s", a.written().ptr);
     }
 }
 
@@ -54,6 +71,8 @@ pub fn embedFunctionCode(name: []const u8) void {
                 xexport(&memcpy, "memcpy");
             } else if (std.mem.eql(u8, name, "memset")) {
                 xexport(&memset, "memset");
+            } else if (std.mem.eql(u8, name, "memmove")) {
+                xexport(&memmove, "memmove");
             } else if (std.mem.eql(u8, name, "__udivdi3")) {
                 xexport(&__udivdi3, "__udivdi3");
             } else if (std.mem.eql(u8, name, "__divdi3")) {
@@ -121,45 +140,62 @@ fn memset(dest: ?[*]u8, c: u8, len: usize) callconv(.c) ?[*]u8 {
     return dest;
 }
 
-fn __ashlti3(a: i128, b: i32) callconv(.C) i128 {
+fn memmove(opt_dest: ?[*]u8, opt_src: ?[*]const u8, len: usize) callconv(.c) ?[*]u8 {
+    const dest = opt_dest.?;
+    const src = opt_src.?;
+
+    if (@intFromPtr(dest) < @intFromPtr(src)) {
+        for (0..len) |i| {
+            dest[i] = src[i];
+        }
+    } else {
+        for (0..len) |i| {
+            dest[len - 1 - i] = src[len - 1 - i];
+        }
+    }
+
+    return dest;
+}
+
+fn __ashlti3(a: i128, b: i32) callconv(.c) i128 {
     return ashlXi3(i128, a, b);
 }
 
-fn __ashldi3(a: i64, b: i32) callconv(.C) i64 {
+fn __ashldi3(a: i64, b: i32) callconv(.c) i64 {
     return ashlXi3(i64, a, b);
 }
 
-fn __lshrdi3(a: i64, b: i32) callconv(.C) i64 {
+fn __lshrdi3(a: i64, b: i32) callconv(.c) i64 {
     return lshrXi3(i64, a, b);
 }
 
-fn __aeabi_llsr(a: i64, b: i32) callconv(.AAPCS) i64 {
+fn __aeabi_llsr(a: i64, b: i32) callconv(.{ .arm_aapcs = .{} }) i64 {
     return lshrXi3(i64, a, b);
 }
 
-fn __aeabi_llsl(a: i64, b: i32) callconv(.AAPCS) i64 {
+fn __aeabi_llsl(a: i64, b: i32) callconv(.{ .arm_aapcs = .{} }) i64 {
     return ashlXi3(i64, a, b);
 }
 
-fn _chkstk() callconv(.Naked) void {
+fn _chkstk() callconv(.naked) void {
     @setRuntimeSafety(false);
     @call(.always_inline, win_probe_stack_adjust_sp, .{});
 }
 
-fn ___chkstk_ms() callconv(.Naked) void {
+fn ___chkstk_ms() callconv(.naked) void {
     @setRuntimeSafety(false);
     @call(.always_inline, win_probe_stack_only, .{});
 }
 
-fn __udivdi3(a: u64, b: u64) callconv(.C) u64 {
+fn __udivdi3(a: u64, b: u64) callconv(.c) u64 {
     return __udivmoddi4(a, b, null);
 }
 
-fn __udivmoddi4(a: u64, b: u64, maybe_rem: ?*u64) callconv(.C) u64 {
+fn __udivmoddi4(a: u64, b: u64, maybe_rem: ?*u64) callconv(.c) u64 {
     return udivmod(u64, a, b, maybe_rem);
 }
 
-fn __divdi3(a: i64, b: i64) callconv(.C) i64 {
+fn __divdi3(a: i64, b: i64) callconv(.c) i64 {
     // Set aside the sign of the quotient.
     const sign: u64 = @bitCast((a ^ b) >> 63);
     // Take absolute value of a and b via abs(x) = (x^(x >> 63)) - (x >> 63).
@@ -171,37 +207,37 @@ fn __divdi3(a: i64, b: i64) callconv(.C) i64 {
     return @bitCast((res ^ sign) -% sign);
 }
 
-fn __umoddi3(a: u64, b: u64) callconv(.C) u64 {
+fn __umoddi3(a: u64, b: u64) callconv(.c) u64 {
     var r: u64 = undefined;
     _ = __udivmoddi4(a, b, &r);
     return r;
 }
 
-fn __aeabi_uidiv(n: u32, d: u32) callconv(.AAPCS) u32 {
+fn __aeabi_uidiv(n: u32, d: u32) callconv(.{ .arm_aapcs = .{} }) u32 {
     return div_u32(n, d);
 }
 
-fn __modti3(a: i128, b: i128) callconv(.C) i128 {
+fn __modti3(a: i128, b: i128) callconv(.c) i128 {
     return mod(a, b);
 }
 
 const v2u64 = @Vector(2, u64);
 
-fn __modti3_windows_x86_64(a: v2u64, b: v2u64) callconv(.C) v2u64 {
+fn __modti3_windows_x86_64(a: v2u64, b: v2u64) callconv(.c) v2u64 {
     return @bitCast(mod(@as(i128, @bitCast(a)), @as(i128, @bitCast(b))));
 }
 
-fn __divti3(a: i128, b: i128) callconv(.C) i128 {
+fn __divti3(a: i128, b: i128) callconv(.c) i128 {
     return div(a, b);
 }
 
 const v128 = @Vector(2, u64);
 
-fn __divti3_windows_x86_64(a: v128, b: v128) callconv(.C) v128 {
+fn __divti3_windows_x86_64(a: v128, b: v128) callconv(.c) v128 {
     return @bitCast(div(@bitCast(a), @bitCast(b)));
 }
 
-fn __aeabi_uidivmod() callconv(.Naked) void {
+fn __aeabi_uidivmod() callconv(.naked) void {
     @setRuntimeSafety(false);
     // Divide r0 by r1; the quotient goes in r0, the remainder in r1
     asm volatile (
@@ -214,12 +250,11 @@ fn __aeabi_uidivmod() callconv(.Naked) void {
         \\ pop {pc}
         :
         : [__udivmodsi4] "X" (&__udivmodsi4),
-        : "memory"
-    );
+        : .{ .memory = true });
     unreachable;
 }
 
-fn __aeabi_uldivmod() callconv(.Naked) void {
+fn __aeabi_uldivmod() callconv(.naked) void {
     @setRuntimeSafety(false);
     // Divide r1:r0 by r3:r2; the quotient goes in r1:r0, the remainder in r3:r2
     asm volatile (
@@ -234,12 +269,11 @@ fn __aeabi_uldivmod() callconv(.Naked) void {
         \\ pop {r4, pc}
         :
         : [__udivmoddi4] "X" (&__udivmoddi4),
-        : "memory"
-    );
+        : .{ .memory = true });
     unreachable;
 }
 
-fn __aeabi_idivmod() callconv(.Naked) void {
+fn __aeabi_idivmod() callconv(.naked) void {
     @setRuntimeSafety(false);
     // Divide r0 by r1; the quotient goes in r0, the remainder in r1
     asm volatile (
@@ -252,12 +286,11 @@ fn __aeabi_idivmod() callconv(.Naked) void {
         \\ pop {pc}
         :
         : [__divmodsi4] "X" (&__divmodsi4),
-        : "memory"
-    );
+        : .{ .memory = true });
     unreachable;
 }
 
-fn __aeabi_ldivmod() callconv(.Naked) void {
+fn __aeabi_ldivmod() callconv(.naked) void {
     @setRuntimeSafety(false);
     // Divide r1:r0 by r3:r2; the quotient goes in r1:r0, the remainder in r3:r2
     asm volatile (
@@ -272,34 +305,33 @@ fn __aeabi_ldivmod() callconv(.Naked) void {
         \\ pop {r4, pc}
         :
         : [__divmoddi4] "X" (&__divmoddi4),
-        : "memory"
-    );
+        : .{ .memory = true });
     unreachable;
 }
 
-fn __udivmodsi4(a: u32, b: u32, rem: *u32) callconv(.C) u32 {
+fn __udivmodsi4(a: u32, b: u32, rem: *u32) callconv(.c) u32 {
     const d = __udivsi3(a, b);
     rem.* = @bitCast(@as(i32, @bitCast(a)) -% (@as(i32, @bitCast(d)) * @as(i32, @bitCast(b))));
     return d;
 }
 
-fn __divmodsi4(a: i32, b: i32, rem: *i32) callconv(.C) i32 {
+fn __divmodsi4(a: i32, b: i32, rem: *i32) callconv(.c) i32 {
     const d = __divsi3(a, b);
     rem.* = a -% (d * b);
     return d;
 }
 
-fn __divmoddi4(a: i64, b: i64, rem: *i64) callconv(.C) i64 {
+fn __divmoddi4(a: i64, b: i64, rem: *i64) callconv(.c) i64 {
     const d = __divdi3(a, b);
     rem.* = a -% (d * b);
     return d;
 }
 
-fn __udivsi3(n: u32, d: u32) callconv(.C) u32 {
+fn __udivsi3(n: u32, d: u32) callconv(.c) u32 {
     return div_u32(n, d);
 }
 
-fn __divsi3(n: i32, d: i32) callconv(.C) i32 {
+fn __divsi3(n: i32, d: i32) callconv(.c) i32 {
     return div_i32(n, d);
 }
 

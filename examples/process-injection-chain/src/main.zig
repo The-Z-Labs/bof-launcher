@@ -127,8 +127,10 @@ pub fn main() !void {
         if (ctx.getExitCode() == 0) return;
     }
 
+    w32.init();
+
     var thread_handle: w32.HANDLE = undefined;
-    state.nt_status = w32.NtCreateThreadEx.?(
+    state.nt_status = w32.NtCreateThreadEx(
         &thread_handle,
         0x1fffff,
         null,
@@ -144,7 +146,7 @@ pub fn main() !void {
 
     std.debug.print("nt status: {d}\n", .{state.nt_status});
 
-    _ = w32.NtClose.?(thread_handle);
+    _ = w32.NtClose(thread_handle);
 }
 
 fn loadBofFromFile(allocator: std.mem.Allocator, bof_name: [:0]const u8) ![]const u8 {
@@ -169,11 +171,19 @@ fn loadBofFromFile(allocator: std.mem.Allocator, bof_name: [:0]const u8) ![]cons
     const file = try std.fs.openFileAbsoluteZ(&bof_path, .{});
     defer file.close();
 
-    return try file.reader().readAllAlloc(allocator, 16 * 1024 * 1024);
+    const file_stat = try file.stat();
+    const file_data = try allocator.alloc(u8, @intCast(file_stat.size));
+    errdefer allocator.free(file_data);
+
+    var file_reader = file.reader(&.{});
+    try file_reader.interface.readSliceAll(file_data);
+    return file_data;
 }
 
 fn usage() !void {
-    const stdout = std.io.getStdOut().writer();
+    var stdout_writer = std.fs.File.stdout().writer(&.{});
+    const stdout = &stdout_writer.interface;
+
     try stdout.print(
         \\
         \\ USAGE:

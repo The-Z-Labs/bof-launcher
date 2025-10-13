@@ -1,7 +1,7 @@
 const std = @import("std");
 const bof_launcher = @import("bof_launcher_api");
 
-extern fn go(_: ?[*]u8, _: i32) callconv(.C) u8;
+extern fn go(_: ?[*]u8, _: i32) callconv(.c) u8;
 
 pub fn main() !void {
     try bof_launcher.initLauncher();
@@ -74,10 +74,12 @@ fn loadFileContent(
     const file = try std.fs.openFileAbsoluteZ(file_path, .{});
     defer file.close();
 
-    var file_data = std.ArrayList(u8).init(allocator);
-    defer file_data.deinit();
+    const file_stat = try file.stat();
+    const file_data = try allocator.alloc(u8, @intCast(file_stat.size));
+    errdefer allocator.free(file_data);
 
-    try file.reader().readAllArrayList(&file_data, 16 * 1024 * 1024);
+    var file_reader = file.reader(&.{});
+    try file_reader.interface.readSliceAll(file_data);
 
-    return file_data.toOwnedSlice();
+    return file_data;
 }

@@ -2,7 +2,7 @@ const builtin = @import("builtin");
 const std = @import("std");
 const main = @import("main");
 
-pub export fn _start() linksection(".startup") callconv(.Naked) noreturn {
+pub export fn _start() linksection(".startup") callconv(.naked) noreturn {
     asm volatile (switch (builtin.cpu.arch) {
             .x86_64 =>
             \\ xorl %%ebp, %%ebp
@@ -17,7 +17,9 @@ pub export fn _start() linksection(".startup") callconv(.Naked) noreturn {
 }
 
 fn entry() noreturn {
-    const stdout = std.io.getStdOut().writer();
+    var stdout_writer = std.fs.File.stdout().writer(&.{});
+    const stdout = &stdout_writer.interface;
+
     stdout.print("Zig-based shellcode on Linux\n", .{}) catch {};
 
     _ = std.os.linux.syscall1(.exit, 0);

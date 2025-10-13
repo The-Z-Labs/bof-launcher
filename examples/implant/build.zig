@@ -26,11 +26,13 @@ pub fn build(b: *std.Build) void {
     //
     const exe = b.addExecutable(.{
         .name = b.fmt("z-beac0n_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }),
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
-    exe.linkLibrary(bof_launcher_lib);
+    exe.root_module.linkLibrary(bof_launcher_lib);
     exe.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
     exe.root_module.addAnonymousImport("z_beacon_embed", .{
         .root_source_file = z_beacon.getEmittedBin(),
@@ -44,12 +46,14 @@ pub fn build(b: *std.Build) void {
     const shellcode_name = b.fmt("shellcode_binary_temp_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) });
     const shellcode = b.addExecutable(.{
         .name = shellcode_name,
-        .root_source_file = b.path("src/shellcode.zig"),
-        .target = target,
-        .optimize = .ReleaseSmall,
-        .link_libc = false,
-        .strip = true,
-        .single_threaded = true,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/shellcode.zig"),
+            .target = target,
+            .optimize = .ReleaseSmall,
+            .link_libc = false,
+            .strip = true,
+            .single_threaded = true,
+        }),
     });
     shellcode.link_eh_frame_hdr = false;
     shellcode.link_emit_relocs = false;
@@ -64,7 +68,10 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(shellcode);
 
     const copy = b.addObjCopy(shellcode.getEmittedBin(), .{ .format = .bin, .only_section = ".text" });
-    const install = b.addInstallBinFile(copy.getOutput(), b.fmt("z-beac0n_{s}_{s}.bin", .{ osTagStr(target), cpuArchStr(target) }));
+    const install = b.addInstallBinFile(copy.getOutput(), b.fmt("z-beac0n_{s}_{s}.bin", .{
+        osTagStr(target),
+        cpuArchStr(target),
+    }));
     b.getInstallStep().dependOn(&install.step);
 
     //

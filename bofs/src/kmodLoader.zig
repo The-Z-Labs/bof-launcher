@@ -4,8 +4,8 @@
 ///tags: ['linux','post-exploitation','z-labs']
 ///OS: linux
 ///api:
-///  - 'kmodLoad(module_image: [*]const u8, len: usize, param_values: [*:0]const u8) callconv(.C) u8'
-///  - 'kmodRemove(module_name: [*:0]const u8, flags: u32) callconv(.C) u8'
+///  - 'kmodLoad(module_image: [*]const u8, len: usize, param_values: [*:0]const u8) callconv(.c) u8'
+///  - 'kmodRemove(module_name: [*:0]const u8, flags: u32) callconv(.c) u8'
 ///sources:
 ///  - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/kmodLoader.zig'
 ///examples: '
@@ -62,7 +62,7 @@ const syscalls = switch (@import("builtin").cpu.arch) {
     else => unreachable,
 };
 
-pub export fn kmodLoad(module_image: [*]const u8, len: usize, param_values: [*:0]const u8) callconv(.C) u8 {
+pub export fn kmodLoad(module_image: [*]const u8, len: usize, param_values: [*:0]const u8) callconv(.c) u8 {
     debugPrint("Loading kernel module: {s}\n", .{param_values});
 
     const rc = std.os.linux.syscall3(syscalls.init_module, @intFromPtr(module_image), len, @intFromPtr(param_values));
@@ -79,7 +79,7 @@ pub export fn kmodLoad(module_image: [*]const u8, len: usize, param_values: [*:0
     return 0;
 }
 
-pub export fn kmodRemove(name: [*:0]const u8, flags: u32) callconv(.C) u8 {
+pub export fn kmodRemove(name: [*:0]const u8, flags: u32) callconv(.c) u8 {
     const rc = std.os.linux.syscall2(syscalls.delete_module, @intFromPtr(name), flags);
     switch (std.os.linux.E.init(rc)) {
         .SUCCESS => {},
@@ -92,7 +92,7 @@ pub export fn kmodRemove(name: [*:0]const u8, flags: u32) callconv(.C) u8 {
     return 0;
 }
 
-pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
+pub export fn go(_: ?[*]u8, _: i32) callconv(.c) u8 {
     return 0;
 }
 

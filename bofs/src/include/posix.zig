@@ -21,7 +21,7 @@ const cast = std.math.cast;
 // POSIX time types:
 // https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/time.h.html
 //
-pub extern fn ctime(c.time_t) callconv(.C) [*:0]const u8;
+pub extern fn ctime(c.time_t) callconv(.c) [*:0]const u8;
 
 //
 // POSIX user accounting database definitions:
@@ -31,10 +31,10 @@ pub extern fn ctime(c.time_t) callconv(.C) [*:0]const u8;
 pub const utmpx = extern struct {
     ut_type: i16,
     ut_pid: c.pid_t,
-    ut_line: [32] u8,
+    ut_line: [32]u8,
     ut_id: [4]u8,
-    ut_user: [32] u8,
-    ut_host: [256] u8,
+    ut_user: [32]u8,
+    ut_host: [256]u8,
     ut_exit_termination: i16,
     ut_exit_exit: i16,
     ut_session: i32,
@@ -53,10 +53,10 @@ pub const USER_PROCESS = 7;
 pub const DEAD_PROCESS = 8;
 pub const ACCOUNTING = 9;
 
-pub extern fn setutxent() callconv(.C) void;
-pub extern fn getutxent() callconv(.C) ?*utmpx;
-pub extern fn getutxid(*utmpx) callconv(.C) *utmpx;
-pub extern fn endutxent() callconv(.C) void;
+pub extern fn setutxent() callconv(.c) void;
+pub extern fn getutxent() callconv(.c) ?*utmpx;
+pub extern fn getutxid(*utmpx) callconv(.c) *utmpx;
+pub extern fn endutxent() callconv(.c) void;
 
 //
 // group structure definition
@@ -86,28 +86,28 @@ pub const group = extern struct {
 //
 
 // https://pubs.opengroup.org/onlinepubs/9699919799/functions/gethostid.html
-pub extern fn gethostid() callconv(.C) c_long;
+pub extern fn gethostid() callconv(.c) c_long;
 
 // https://pubs.opengroup.org/onlinepubs/9699919799/functions/gethostname.html
 pub const HOST_NAME_MAX = 64;
-pub extern fn gethostname(name: [*:0]u8, namelen: usize) callconv(.C) i32;
+pub extern fn gethostname(name: [*:0]u8, namelen: usize) callconv(.c) i32;
 
 // https://pubs.opengroup.org/onlinepubs/9699919799/functions/getuid.html
-pub extern fn getuid() callconv(.C) c.uid_t;
+pub extern fn getuid() callconv(.c) c.uid_t;
 // https://pubs.opengroup.org/onlinepubs/9699919799/functions/geteuid.html
-pub extern fn geteuid() callconv(.C) c.uid_t;
+pub extern fn geteuid() callconv(.c) c.uid_t;
 // https://pubs.opengroup.org/onlinepubs/9699919799/functions/getgid.html
-pub extern fn getgid() callconv(.C) c.gid_t;
+pub extern fn getgid() callconv(.c) c.gid_t;
 // https://pubs.opengroup.org/onlinepubs/9699919799/functions/getegid.html
-pub extern fn getegid() callconv(.C) c.gid_t;
+pub extern fn getegid() callconv(.c) c.gid_t;
 // https://pubs.opengroup.org/onlinepubs/9699919799/functions/getgrgid.html
-pub extern fn getgrgid(c.gid_t) callconv(.C) ?*group;
+pub extern fn getgrgid(c.gid_t) callconv(.c) ?*group;
 // https://pubs.opengroup.org/onlinepubs/9699919799/functions/getgroups.html
-pub extern fn getgroups(gidsetsize: i32, grouplist: [*]c.gid_t) callconv(.C) i32;
+pub extern fn getgroups(gidsetsize: i32, grouplist: [*]c.gid_t) callconv(.c) i32;
 // https://pubs.opengroup.org/onlinepubs/9699919799/functions/getpwuid.html
-pub extern fn getpwuid(uid: c.uid_t) callconv(.C) ?*c.passwd;
+pub extern fn getpwuid(uid: c.uid_t) callconv(.c) ?*c.passwd;
 // https://pubs.opengroup.org/onlinepubs/9699919799/functions/getpwnam.html
-pub extern fn getpwnam(name: [*:0]u8) callconv(.C) ?*c.passwd;
+pub extern fn getpwnam(name: [*:0]u8) callconv(.c) ?*c.passwd;
 
 // TODO: Remove this and use std.posix.recvfrom() once fixed (current version requires libc).
 pub fn recvfrom(
@@ -145,7 +145,7 @@ pub fn getsockoptError(sockfd: std.posix.fd_t) std.posix.ConnectError!void {
         var err_code: i32 = undefined;
         var size: i32 = @sizeOf(i32);
         const rc = windows.ws2_32.getsockopt(@ptrCast(sockfd), std.posix.SOL.SOCKET, std.posix.SO.ERROR, @ptrCast(&err_code), &size);
-        if(rc == windows.ws2_32.SOCKET_ERROR) {
+        if (rc == windows.ws2_32.SOCKET_ERROR) {
             switch (windows.ws2_32.WSAGetLastError()) {
                 .WSANOTINITIALISED => unreachable,
                 .WSAEFAULT => unreachable,
@@ -157,10 +157,10 @@ pub fn getsockoptError(sockfd: std.posix.fd_t) std.posix.ConnectError!void {
                 else => return error.Unexpected,
             }
         } else {
-                switch (@as(windows.ws2_32.WinsockError, @enumFromInt(err_code))) {
-                    windows.ws2_32.WinsockError.WSAECONNREFUSED => return error.ConnectionRefused,
-                    else => return error.Unexpected,
-                }
+            switch (@as(windows.ws2_32.WinsockError, @enumFromInt(err_code))) {
+                windows.ws2_32.WinsockError.WSAECONNREFUSED => return error.ConnectionRefused,
+                else => return error.Unexpected,
+            }
         }
     }
     return std.posix.getsockoptError(sockfd);

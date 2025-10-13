@@ -12,14 +12,16 @@ pub fn build(b: *std.Build) void {
     if (target.result.os.tag == .windows) {
         const shellcode_win_exe = b.addExecutable(.{
             .name = shellcode_name,
-            .root_source_file = b.path("src/shellcode_win.zig"),
-            .target = target,
-            .optimize = .ReleaseSmall,
-            .single_threaded = true,
-            .unwind_tables = .none,
-            .strip = true,
-            .link_libc = false,
-            .pic = true,
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("src/shellcode_win.zig"),
+                .target = target,
+                .optimize = .ReleaseSmall,
+                .single_threaded = true,
+                .unwind_tables = .none,
+                .strip = true,
+                .link_libc = false,
+                .pic = true,
+            }),
         });
         shellcode_win_exe.pie = true;
         shellcode_win_exe.subsystem = .Windows;
@@ -31,10 +33,12 @@ pub fn build(b: *std.Build) void {
         // Shellcode crafting based on: https://github.com/chivay/shellcodez
         const shellcode_lin_exe = b.addExecutable(.{
             .name = shellcode_name,
-            .root_source_file = b.path("src/shellcode_lin.zig"),
-            .target = target,
-            .optimize = .ReleaseSmall,
-            .single_threaded = true,
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("src/shellcode_lin.zig"),
+                .target = target,
+                .optimize = .ReleaseSmall,
+                .single_threaded = true,
+            }),
         });
         shellcode_lin_exe.link_eh_frame_hdr = false;
         shellcode_lin_exe.link_emit_relocs = false;
@@ -53,10 +57,18 @@ pub fn build(b: *std.Build) void {
             "shellcode_launcher_{s}_{s}",
             .{ osTagStr(target), cpuArchStr(target) },
         ),
-        .root_source_file = b.path("src/shellcode_launcher.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/shellcode_launcher.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
+    if (target.result.os.tag == .windows) {
+        shellcode_launcher_exe.root_module.linkSystemLibrary("ws2_32", .{});
+        shellcode_launcher_exe.root_module.linkSystemLibrary("ole32", .{});
+        shellcode_launcher_exe.root_module.linkSystemLibrary("user32", .{});
+        shellcode_launcher_exe.root_module.linkSystemLibrary("advapi32", .{});
+    }
 
     if (target.result.os.tag == .windows) {
         const win32_dep = b.dependency("bof_launcher_win32", .{});

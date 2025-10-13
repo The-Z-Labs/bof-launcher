@@ -20,16 +20,18 @@ pub fn build(b: *std.Build) void {
                 @import("bof_launcher_lib").cpuArchStr(target),
             },
         ),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
     });
-    exe.addIncludePath(bof_launcher_dep.path("src"));
-    exe.addCSourceFile(.{
+    exe.root_module.addIncludePath(bof_launcher_dep.path("src"));
+    exe.root_module.addCSourceFile(.{
         .file = b.path("main.c"),
         .flags = &.{"-std=c99"},
     });
-    exe.linkLibrary(bof_launcher_lib);
-    exe.linkLibC();
+    exe.root_module.linkLibrary(bof_launcher_lib);
 
     b.installArtifact(exe);
 }

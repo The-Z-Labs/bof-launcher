@@ -28,6 +28,8 @@ const beacon = bofapi.beacon;
 
 comptime {
     @import("bof_api").embedFunctionCode("memcpy");
+    @import("bof_api").embedFunctionCode("memmove");
+    @import("bof_api").embedFunctionCode("memset");
     @import("bof_api").embedFunctionCode("__stackprobe__");
 }
 
@@ -46,7 +48,9 @@ fn getCwd() !u8 {
     return 0;
 }
 
-pub export fn go() callconv(.C) u8 {
+pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
+    @import("bof_api").init(adata, alen, .{});
+
     return getCwd() catch |err| switch (err) {
         error.NameTooLong => @intFromEnum(BofErrors.NameTooLong),
         error.CurrentWorkingDirectoryUnlinked => @intFromEnum(BofErrors.CwdUnlinked),

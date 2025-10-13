@@ -2,23 +2,25 @@ const std = @import("std");
 const fmt = std.fmt;
 const beacon = @import("bof_api").beacon;
 
-pub export fn go(arg_data: ?[*]u8, arg_len: i32) callconv(.C) u8 {
-    const printf = beacon.printf.?;
+pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
+    @import("bof_api").init(adata, alen, .{});
+
+    const printf = beacon.printf;
 
     var parser = beacon.datap{};
 
     _ = printf(.output, "--- test_obj4.zig ---\n");
 
-    if (arg_data == null) return 0;
+    if (adata == null) return 0;
 
-    beacon.dataParse.?(&parser, arg_data, arg_len);
-    const len = beacon.dataLength.?(&parser);
-    const permissions = beacon.dataExtract.?(&parser, null);
-    const path = beacon.dataExtract.?(&parser, null);
-    const num = beacon.dataInt.?(&parser);
-    const num_short = beacon.dataShort.?(&parser);
-    if (arg_len > 0) {
-        _ = printf(.output, "arg_len (from go): %d\n", arg_len);
+    beacon.dataParse(&parser, adata, alen);
+    const len = beacon.dataLength(&parser);
+    const permissions = beacon.dataExtract(&parser, null);
+    const path = beacon.dataExtract(&parser, null);
+    const num = beacon.dataInt(&parser);
+    const num_short = beacon.dataShort(&parser);
+    if (alen > 0) {
+        _ = printf(.output, "arg_len (from go): %d\n", alen);
         _ = printf(.output, "Length: (from go): %d\n", len);
 
         _ = printf(.output, "permissions: (from go): %s\n", permissions);

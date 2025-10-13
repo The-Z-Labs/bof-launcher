@@ -41,6 +41,7 @@ const posix = bofapi.posix;
 comptime {
     @import("bof_api").embedFunctionCode("memcpy");
     @import("bof_api").embedFunctionCode("memset");
+    @import("bof_api").embedFunctionCode("memmove");
     @import("bof_api").embedFunctionCode("__aeabi_llsl");
     @import("bof_api").embedFunctionCode("__aeabi_uidiv");
     @import("bof_api").embedFunctionCode("__udivdi3");
@@ -62,24 +63,30 @@ fn getFileContent(file_path: [*:0]u8) !u8 {
     const file = try std.fs.openFileAbsoluteZ(file_path, .{});
     defer file.close();
 
-    const content = try file.reader().readAllAlloc(std.heap.page_allocator, 4 * 1024 * 1024);
-    defer std.heap.page_allocator.free(content);
+    const file_stat = try file.stat();
 
-    bofapi.print(.output, "{s}", .{content});
+    const file_data = try std.heap.page_allocator.alloc(u8, @intCast(file_stat.size));
+    defer std.heap.page_allocator.free(file_data);
+
+    var file_reader = file.reader(&.{});
+    try file_reader.interface.readSliceAll(file_data);
+
+    bofapi.print(.output, "{s}", .{file_data});
 
     return 0;
 }
 
-pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
-    var parser = beacon.datap{};
-    beacon.dataParse.?(&parser, args, args_len);
+pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
+    @import("bof_api").init(adata, alen, .{});
 
-    if (beacon.dataExtract.?(&parser, null)) |file_path| {
+    var parser = beacon.datap{};
+    beacon.dataParse(&parser, adata, alen);
+
+    if (beacon.dataExtract(&parser, null)) |file_path| {
         return getFileContent(file_path) catch |err| switch (err) {
             error.AccessDenied => @intFromEnum(BofErrors.AccessDenied),
             error.FileNotFound => @intFromEnum(BofErrors.FileNotFound),
             error.AntivirusInterference => @intFromEnum(BofErrors.AntivirusInterference),
-            error.StreamTooLong => @intFromEnum(BofErrors.StreamTooLong),
             else => @intFromEnum(BofErrors.UnknownError),
         };
     } else return @intFromEnum(BofErrors.FileNotProvided);

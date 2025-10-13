@@ -27,15 +27,16 @@ const BofErrors = enum(u8) {
 };
 
 fn getUptimeLinux() !u8 {
-    const printf = beacon.printf.?;
+    const printf = beacon.printf;
 
     var buffer = [_]u8{0} ** 100;
 
     const f = try std.fs.openFileAbsoluteZ(UPTIME_FILE, .{ .mode = .read_only });
     defer f.close();
 
-    const uptimeStr = try f.reader().readUntilDelimiterOrEof(&buffer, '.') orelse
-        return @intFromEnum(BofErrors.UnknownError);
+    var f_reader = f.reader(buffer[0..]);
+
+    const uptimeStr = try f_reader.interface.takeDelimiter('.') orelse return error.Unknown;
 
     const SECONDS_PER_DAY = 86400;
     const uptimeSec = try std.fmt.parseInt(u64, uptimeStr, 10);
@@ -74,7 +75,6 @@ fn getUptimeLinux() !u8 {
         if ((ut.ut_type == posix.USER_PROCESS) and ((ut.ut_user[0]) != 0)) {
             nuser = nuser + 1;
         }
-
         ut_entry = posix.getutxent();
     }
     _ = posix.endutxent();
@@ -85,13 +85,15 @@ fn getUptimeLinux() !u8 {
     return 0;
 }
 
-pub export fn go() callconv(.C) u8 {
+pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
+    @import("bof_api").init(adata, alen, .{});
+
     if (@import("builtin").os.tag == .linux) {
         return getUptimeLinux() catch |err| switch (err) {
-            std.fs.File.OpenError.AntivirusInterference => return @intFromEnum(BofErrors.AntivirusInterference),
-            std.fs.File.OpenError.AccessDenied => return @intFromEnum(BofErrors.AccessDenied),
-            std.fs.File.OpenError.FileNotFound => return @intFromEnum(BofErrors.FileNotFound),
-            std.fs.File.OpenError.FileBusy => return @intFromEnum(BofErrors.FileBusy),
+            error.AntivirusInterference => return @intFromEnum(BofErrors.AntivirusInterference),
+            error.AccessDenied => return @intFromEnum(BofErrors.AccessDenied),
+            error.FileNotFound => return @intFromEnum(BofErrors.FileNotFound),
+            error.FileBusy => return @intFromEnum(BofErrors.FileBusy),
             else => return @intFromEnum(BofErrors.UnknownError),
         };
     }

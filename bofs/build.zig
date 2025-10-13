@@ -48,7 +48,7 @@ const bofs_included_in_launcher = [_]BofTableItem{
     .{ .name = "sniffer", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_sniffer },
     .{ .name = "snifferBOF", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_sniffer },
     // BOF0 - special purpose BOF that acts as a standalone implant and uses other BOFs as its post-ex modules:
-    .{ .name = "z-beac0n-core", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+    //.{ .name = "z-beac0n-core", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
 };
 
 const bofs_for_testing = [_]BofTableItem{
@@ -116,19 +116,23 @@ pub fn build(b: *std.Build) !void {
                 bof_launcher_dep,
             );
             const debug_exe = b.addExecutable(.{
-                .root_source_file = b.path("src/_debug_entry.zig"),
                 .name = full_name,
-                .target = target,
-                .optimize = .Debug,
+                .root_module = b.createModule(.{
+                    .root_source_file = b.path("src/_debug_entry.zig"),
+                    .target = target,
+                    .optimize = .Debug,
+                    .link_libc = true,
+                }),
             });
-            debug_exe.linkLibrary(bof_launcher_lib);
-            debug_exe.linkLibC();
+            debug_exe.root_module.linkLibrary(bof_launcher_lib);
             debug_exe.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
             if (target.query.os_tag == .windows) {
-                debug_exe.linkSystemLibrary2("ws2_32", .{});
-                debug_exe.linkSystemLibrary2("ole32", .{});
+                debug_exe.root_module.linkSystemLibrary("ws2_32", .{});
+                debug_exe.root_module.linkSystemLibrary("ole32", .{});
+                debug_exe.root_module.linkSystemLibrary("user32", .{});
+                debug_exe.root_module.linkSystemLibrary("advapi32", .{});
             }
-            debug_exe.addObject(debug_obj);
+            debug_exe.root_module.addObject(debug_obj);
             b.installArtifact(debug_exe);
         } else {
             const win32_dep = b.dependency("bof_launcher_win32", .{ .bof = true });
@@ -269,11 +273,18 @@ fn genBofList(b: *std.Build, optimize: std.builtin.OptimizeMode) []const Bof {
                 if (format == .coff and arch == .aarch64) continue;
                 if (format == .coff and arch == .arm) continue;
 
-                static.bofs[index] = Bof.init(b, item, format, arch, .ReleaseSmall);
+                const bof = Bof.init(b, item, format, arch, .ReleaseSmall);
+
+                static.bofs[index] = bof;
                 index += 1;
 
                 if (optimize == .Debug) {
-                    static.bofs[index] = Bof.init(b, item, format, arch, .Debug);
+                    const dbof = Bof.init(b, item, format, arch, .Debug);
+
+                    // TODO: Compile errors
+                    if (dbof.lang == .c) continue;
+
+                    static.bofs[index] = dbof;
                     index += 1;
                 }
             }
@@ -292,22 +303,26 @@ fn addBofObj(
 ) !*std.Build.Step.Compile {
     const obj = switch (bof.lang) {
         .@"asm" => blk: {
-            const obj = b.addAssembly(.{
+            const obj = b.addObject(.{
                 .name = full_name,
-                .source_file = b.path(bof.source_file_path),
-                .target = bof.target,
-                .optimize = bof.optimize,
+                .root_module = b.createModule(.{
+                    .target = bof.target,
+                    .optimize = bof.optimize,
+                }),
             });
+            obj.root_module.addAssemblyFile(b.path(bof.source_file_path));
             if (bof.custom_build_fn) |customBuild| _ = customBuild(b, obj, bof);
             break :blk obj;
         },
         .zig => blk: {
             const obj = b.addObject(.{
                 .name = full_name,
-                .root_source_file = b.path(bof.source_file_path),
-                .target = bof.target,
-                .optimize = bof.optimize,
-                .link_libc = bof.target.result.os.tag == .linux,
+                .root_module = b.createModule(.{
+                    .root_source_file = b.path(bof.source_file_path),
+                    .target = bof.target,
+                    .optimize = bof.optimize,
+                    .link_libc = bof.target.result.os.tag == .linux,
+                }),
             });
             if (bof.custom_build_fn) |customBuild| _ = customBuild(b, obj, bof);
             break :blk obj;
@@ -387,12 +402,15 @@ fn build_wWinverC(b: *std.Build, obj: *std.Build.Step.Compile, bof: Bof) []const
 fn build_sniffer(b: *std.Build, obj: *std.Build.Step.Compile, bof: Bof) []const []const u8 {
     const pcap_dep = b.dependency("pcap", .{});
 
-    const pcap = b.addStaticLibrary(.{
+    const pcap = b.addLibrary(.{
         .name = b.fmt("pcap.{s}", .{@tagName(bof.arch)}),
-        .target = bof.target,
-        .optimize = bof.optimize,
-        .link_libc = true,
-        .pic = true,
+        .linkage = .static,
+        .root_module = b.createModule(.{
+            .target = bof.target,
+            .optimize = bof.optimize,
+            .link_libc = true,
+            .pic = true,
+        }),
     });
     pcap.addIncludePath(pcap_dep.path("."));
     pcap.addCSourceFiles(.{
@@ -572,10 +590,8 @@ fn build_sniffer(b: *std.Build, obj: *std.Build.Step.Compile, bof: Bof) []const 
 }
 
 fn generateBofCollectionYaml(b: *std.Build) !void {
-    var list = std.ArrayList(u8).init(b.allocator);
-    defer list.deinit();
-
-    const doc_file = list.writer();
+    var doc_file: std.io.Writer.Allocating = .init(b.allocator);
+    defer doc_file.deinit();
 
     for (bof_tables) |item| {
         const bof = Bof.init(b, item, item.formats[0], item.archs[0], .ReleaseSmall);
@@ -593,16 +609,16 @@ fn generateBofCollectionYaml(b: *std.Build) !void {
         var iter = std.mem.splitSequence(u8, source, "\n");
         while (iter.next()) |source_line| {
             if (source_line.len >= 3 and std.mem.eql(u8, source_line[0..3], "///")) {
-                if (line_number == 1) try doc_file.writeAll("---\n");
+                if (line_number == 1) try doc_file.writer.writeAll("---\n");
                 line_number += 1;
-                try doc_file.writeAll(source_line[3..]);
-                try doc_file.writeAll("\n");
+                try doc_file.writer.writeAll(source_line[3..]);
+                try doc_file.writer.writeAll("\n");
             }
         }
     }
 
     const wf = b.addWriteFiles();
-    const doc_file_path = wf.add("bof-collection.yaml", list.items);
+    const doc_file_path = wf.add("bof-collection.yaml", doc_file.writer.buffer);
     b.addNamedLazyPath("bof_collection_doc", doc_file_path);
 
     b.getInstallStep().dependOn(&b.addInstallFile(doc_file_path, "bof-collection.yaml").step);

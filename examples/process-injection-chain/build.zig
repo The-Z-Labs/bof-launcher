@@ -26,11 +26,13 @@ pub fn build(b: *std.Build) void {
                 @import("bof_launcher_lib").cpuArchStr(target),
             },
         ),
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
-    exe.linkLibrary(bof_launcher_lib);
+    exe.root_module.linkLibrary(bof_launcher_lib);
     exe.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
     exe.root_module.addImport("bof_launcher_win32", win32_module);
     exe.root_module.addAnonymousImport(

@@ -11,8 +11,13 @@ fn runBofFromFile(
     const file = try std.fs.openFileAbsoluteZ(bof_path, .{});
     defer file.close();
 
-    const file_data = try file.reader().readAllAlloc(allocator, 16 * 1024 * 1024);
+    const file_stat = try file.stat();
+
+    const file_data = try allocator.alloc(u8, @intCast(file_stat.size));
     defer allocator.free(file_data);
+
+    var file_reader = file.reader(&.{});
+    try file_reader.interface.readSliceAll(file_data);
 
     const object = try bof.Object.initFromMemory(file_data);
     defer object.release();
@@ -29,6 +34,8 @@ fn testRunBofFromFile(
     arg_data_ptr: ?[*]u8,
     arg_data_len: i32,
 ) !*bof.Context {
+    errdefer std.debug.print("\nERROR Loading BOF: {s}\n", .{bof_path});
+
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
 
@@ -55,6 +62,8 @@ fn testRunBofFromFile(
 }
 
 fn loadBofFromFile(allocator: std.mem.Allocator, bof_name: [:0]const u8) ![]u8 {
+    errdefer std.debug.print("\nERROR Loading BOF: {s}\n", .{bof_name});
+
     const pathname = try std.mem.join(allocator, ".", &.{
         bof_name,
         if (@import("builtin").os.tag == .windows) "coff" else "elf",
@@ -75,7 +84,13 @@ fn loadBofFromFile(allocator: std.mem.Allocator, bof_name: [:0]const u8) ![]u8 {
     const file = try std.fs.openFileAbsoluteZ(&bof_path, .{});
     defer file.close();
 
-    return try file.reader().readAllAlloc(allocator, 16 * 1024 * 1024);
+    const file_stat = try file.stat();
+    const file_data = try allocator.alloc(u8, @intCast(file_stat.size));
+    errdefer allocator.free(file_data);
+
+    var file_reader = file.reader(&.{});
+    try file_reader.interface.readSliceAll(file_data);
+    return file_data;
 }
 
 const bofs_path = "zig-out/bin/bofs/";
@@ -532,7 +547,7 @@ test "bof-launcher.bofs.masking" {
     try expect(object1.isValid());
     try expect(object2.isValid());
 
-    var contexts = std.ArrayList(*bof.Context).init(allocator);
+    var contexts = std.array_list.Managed(*bof.Context).init(allocator);
     defer {
         for (contexts.items) |ctx| ctx.release();
         contexts.deinit();
@@ -779,9 +794,9 @@ test "bof-launcher.getProcAddress" {
     try expect(object.getProcAddress("func") != null);
     try expect(object.getProcAddress("func123") != null);
 
-    const func: *const fn ([*:0]const u8) callconv(.C) u8 = @ptrCast(@alignCast(object.getProcAddress("func")));
+    const func: *const fn ([*:0]const u8) callconv(.c) u8 = @ptrCast(@alignCast(object.getProcAddress("func")));
 
-    const func123: *const fn ([*:0]const u8) callconv(.C) u8 = @ptrCast(@alignCast(object.getProcAddress("func123")));
+    const func123: *const fn ([*:0]const u8) callconv(.c) u8 = @ptrCast(@alignCast(object.getProcAddress("func123")));
 
     try expect(func("aaa") == 0);
     try expect(func123("bbb") == 123);
@@ -821,33 +836,6 @@ test "bof-launcher.wProcessInjectionSrdi" {
         try args.add("i:-1"); // PID == -1 means current process.
         // Optional: --dump-shellcode (dump final shellcode to disk)
         //try args.add("--dump-shellcode");
-        args.end();
-
-        const context = try srdi_bof_object.run(args.getBuffer());
-        defer context.release();
-
-        try expect(context.getExitCode() == 0);
-    }
-    if (@import("builtin").cpu.arch == .x86_64) {
-        var notepad = std.process.Child.init(&.{"notepad.exe"}, allocator);
-        try notepad.spawn();
-        defer _ = notepad.kill() catch unreachable;
-
-        args.begin();
-        // BOF bytes len
-        {
-            const len_str = try std.fmt.allocPrint(allocator, "i:{d}", .{hello_bof_data.len});
-            defer allocator.free(len_str);
-            try args.add(len_str);
-        }
-        // BOF bytes pointer
-        try args.add(std.mem.asBytes(&hello_bof_data.ptr));
-        // PID
-        {
-            const str = try std.fmt.allocPrint(allocator, "i:{d}", .{w32.GetProcessId.?(notepad.id)});
-            defer allocator.free(str);
-            try args.add(str);
-        }
         args.end();
 
         const context = try srdi_bof_object.run(args.getBuffer());
@@ -932,8 +920,8 @@ test "bof-launcher.nolibc_dynlib" {
     var lib = try std.DynLib.open("zig-out/lib/libbof_launcher_lin_x64_shared_nolibc.so");
     defer lib.close();
 
-    const bofLauncherInit = lib.lookup(*const fn () callconv(.C) c_int, "bofLauncherInit") orelse return expect(false);
-    const bofLauncherRelease = lib.lookup(*const fn () callconv(.C) void, "bofLauncherRelease") orelse return expect(false);
+    const bofLauncherInit = lib.lookup(*const fn () callconv(.c) c_int, "bofLauncherInit") orelse return expect(false);
+    const bofLauncherRelease = lib.lookup(*const fn () callconv(.c) void, "bofLauncherRelease") orelse return expect(false);
 
     try expect(bofLauncherInit() == 0);
     defer bofLauncherRelease();

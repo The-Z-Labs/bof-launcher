@@ -64,11 +64,13 @@ fn changeDir(file_path: [*:0]const u8) !u8 {
     return 0;
 }
 
-pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
-    var parser = beacon.datap{};
-    beacon.dataParse.?(&parser, args, args_len);
+pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
+    @import("bof_api").init(adata, alen, .{});
 
-    if (beacon.dataExtract.?(&parser, null)) |file_path| {
+    var parser = beacon.datap{};
+    beacon.dataParse(&parser, adata, alen);
+
+    if (beacon.dataExtract(&parser, null)) |file_path| {
         return changeDir(file_path) catch |err| switch (err) {
             error.AccessDenied => @intFromEnum(BofErrors.AccessDenied),
             error.SymLinkLoop => @intFromEnum(BofErrors.SymLinkLoop),

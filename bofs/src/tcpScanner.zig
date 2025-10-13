@@ -39,7 +39,7 @@ pub const linger = extern struct {
 };
 
 fn extractPorts(allocator: mem.Allocator, port_spec: []const u8) ![]u16 {
-    var list = std.ArrayList(u16).init(allocator);
+    var list = std.array_list.Managed(u16).init(allocator);
     defer list.deinit();
 
     var iter = mem.tokenizeScalar(u8, port_spec, ',');
@@ -78,7 +78,7 @@ fn extractPorts(allocator: mem.Allocator, port_spec: []const u8) ![]u16 {
 }
 
 fn extractIPs(allocator: mem.Allocator, ip_spec: []const u8) ![][]const u8 {
-    var list = std.ArrayList([]const u8).init(allocator);
+    var list = std.array_list.Managed([]const u8).init(allocator);
     defer list.deinit();
 
     // ip_spec contains only single IP - add it to the list and return
@@ -126,10 +126,12 @@ fn extractIPs(allocator: mem.Allocator, ip_spec: []const u8) ![][]const u8 {
     return list.toOwnedSlice();
 }
 
-pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
-    const printf = beacon.printf.?;
+pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
+    @import("bof_api").init(adata, alen, .{});
 
-    if (args_len == 0) {
+    const printf = beacon.printf;
+
+    if (alen == 0) {
         return 1; // err 1: no argument provided
     }
 
@@ -138,8 +140,8 @@ pub export fn go(args: ?[*]u8, args_len: i32) callconv(.C) u8 {
     var parser = beacon.datap{};
 
     // parse 1st (mandatory) argument:
-    beacon.dataParse.?(&parser, args, args_len);
-    const targets_spec = beacon.dataExtract.?(&parser, &opt_len);
+    beacon.dataParse(&parser, adata, alen);
+    const targets_spec = beacon.dataExtract(&parser, &opt_len);
     const sTargets_spec = targets_spec.?[0..@as(usize, @intCast(opt_len - 1))];
 
     // spliting IP:port specification argument to IPs and ports parts
