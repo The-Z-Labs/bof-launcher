@@ -4,7 +4,13 @@
   <img src="https://github.com/The-Z-Labs/bof-launcher/assets/4785347/990ad1fb-c35b-48cf-a0db-aed3c825d149" width="192" height="192" />
 </p>
 
-Z-Labs blog:
+Featured in:
+* [Cobalt Strike Community Kit](https://cobalt-strike.github.io/community_kit/)
+* [cli4bofs](https://github.com/The-Z-Labs/cli4bofs)
+* [z-beac0n Linux implant](examples/implant/)
+* [Linux Attack, Detection and Live Forensics Course](https://edu.defensive-security.com/view/courses/linux-attack-live-forensics-at-scale/1427336-12-linux-rootkits-for-red-and-blue-teams/9443073-us-beacon-object-file-bof-stager)
+
+Blog posts:
 * [So you want to rapidly run a BOF? Let's look at this 'cli4bofs' thing then](https://blog.z-labs.eu/2025/06/04/all-about-cli4bofs-tool.html)
 * [Write, debug and execute BOFs with bof-launcher (part 2)](https://blog.z-labs.eu/2025/01/15/write-debug-and-execute-bofs-part2.html)
 * [Write, debug and execute BOFs with bof-launcher (part 1)](https://blog.z-labs.eu/2024/12/02/write-debug-and-execute-bofs-part1.html)
