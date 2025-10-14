@@ -145,7 +145,13 @@ fn netDisconnect(state: *anyopaque, net_connection: *anyopaque) callconv(.c) voi
     //conn.close(s.allocator);
 }
 
-fn netExchange(state: *anyopaque, connectionType: netConnectionType, net_connection: *anyopaque, len: *u32, extra_data: ?*anyopaque) callconv(.c) ?*anyopaque {
+fn netExchange(
+    state: *anyopaque,
+    connectionType: netConnectionType,
+    net_connection: *anyopaque,
+    len: *u32,
+    extra_data: ?*anyopaque,
+) callconv(.c) ?*anyopaque {
     const s: *State = @ptrCast(@alignCast(state));
     const conn: *std.http.Client.Connection = @ptrCast(@alignCast(net_connection));
 
@@ -156,10 +162,17 @@ fn netExchange(state: *anyopaque, connectionType: netConnectionType, net_connect
 
     if (res != null) {
         return @ptrCast(res.?.ptr);
-    } else return null;
+    }
+    return null;
 }
 
-fn netHttpExchange(s: *State, connectionType: netConnectionType, conn: *std.http.Client.Connection, len: *u32, extra_data: ?*anyopaque) !?[]u8 {
+fn netHttpExchange(
+    s: *State,
+    connectionType: netConnectionType,
+    conn: *std.http.Client.Connection,
+    len: *u32,
+    extra_data: ?*anyopaque,
+) !?[]u8 {
     const http_client: *std.http.Client = @ptrCast(@alignCast(s.net_client));
 
     var http_method: std.http.Method = undefined;
