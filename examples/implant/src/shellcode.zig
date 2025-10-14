@@ -5,7 +5,7 @@ const bof_launcher = @import("bof_launcher_api");
 
 const exe_raw = @embedFile("implant_executable_embed");
 
-pub export fn _start() linksection(".startup") callconv(.Naked) noreturn {
+pub export fn _start() linksection(".startup") callconv(.naked) noreturn {
     asm volatile (switch (builtin.cpu.arch) {
             .x86_64 =>
             \\ xorl %%ebp, %%ebp
