@@ -7,6 +7,7 @@ comptime {
     @import("bof_api").embedFunctionCode("__stackprobe__");
     @import("bof_api").embedFunctionCode("memcpy");
     @import("bof_api").embedFunctionCode("memset");
+    @import("bof_api").embedFunctionCode("memmove");
     @import("bof_api").embedFunctionCode("__udivdi3");
     @import("bof_api").embedFunctionCode("__divti3");
     @import("bof_api").embedFunctionCode("__divdi3");
