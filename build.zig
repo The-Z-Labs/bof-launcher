@@ -199,10 +199,16 @@ pub fn build(b: *std.Build) !void {
 
         const dep = b.dependency("implant", .{ .target = target, .optimize = optimize });
         const implant_exe = dep.artifact(b.fmt(
-            "z-beac0n_{s}_{s}",
+            "z-beac0n_{s}_{s}.elf",
             .{ osTagStr(target), cpuArchStr(target) },
         ));
         b.installArtifact(implant_exe);
+
+        const implant_so = dep.artifact(b.fmt(
+            "z-beac0n_{s}_{s}",
+            .{ osTagStr(target), cpuArchStr(target) },
+        ));
+        b.installArtifact(implant_so);
 
         const shellcode_name = b.fmt("shellcode_binary_temp_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) });
         const shellcode_exe = dep.artifact(shellcode_name);

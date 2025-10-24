@@ -25,7 +25,7 @@ pub fn build(b: *std.Build) void {
     // z-beac0n implant: stageless payload (executable)
     //
     const exe = b.addExecutable(.{
-        .name = b.fmt("z-beac0n_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }),
+        .name = b.fmt("z-beac0n_{s}_{s}.elf", .{ osTagStr(target), cpuArchStr(target) }),
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/main.zig"),
             .target = target,
@@ -49,7 +49,7 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/shellcode.zig"),
             .target = target,
-            .optimize = .ReleaseSmall,
+            .optimize = optimize,
             .link_libc = false,
             .strip = true,
             .single_threaded = true,
@@ -77,6 +77,23 @@ pub fn build(b: *std.Build) void {
     //
     // z-beac0n implant: stageless payload (shared library)
     //
-    // TODO
+    const shared_lib = b.addLibrary(.{
+        .name = b.fmt("z-beac0n_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }),
+        .linkage = .dynamic,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/shared.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = target.result.os.tag == .linux,
+        }),
+    });
+
+    shared_lib.root_module.linkLibrary(bof_launcher_lib);
+    shared_lib.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
+    shared_lib.root_module.addAnonymousImport("z_beacon_embed", .{
+        .root_source_file = z_beacon.getEmittedBin(),
+    });
+
+    b.installArtifact(shared_lib);
 
 }
