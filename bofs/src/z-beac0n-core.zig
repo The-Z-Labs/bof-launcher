@@ -251,8 +251,12 @@ fn netHttpExchange(
     const response_content = try s.allocator.alloc(u8, @intCast(response.head.content_length.?));
     errdefer s.allocator.free(response_content);
 
+    // read body content
     const response_reader = response.reader(response_content);
     try response_reader.readSliceAll(response_content);
+
+    // update body length
+    len.* = @intCast(response_content.len);
 
     if (connectionType != .TaskResult) {
         return response_content;
