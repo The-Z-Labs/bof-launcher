@@ -55,7 +55,7 @@ pub const BofRes = extern struct {
 //
 // ----------------------------------------------------------------------------
 //
-// BOF-specific error codes
+
 pub const netConnectionType = enum(u8) {
     Heartbeat,
     ResourceFetch,
