@@ -1,6 +1,14 @@
 # z-beac0n - Open Adversary Simulation Toolkit
 
-We follow DIY (do-it-yourself) philosophy when preparing C2 solution for a given mission objectives (i.e. professional adversary simulation engagement). Therefore we provide an open and flexible architectural solution together with reusable building blocks that can be quickly tailored to a given scenario.
+We follow DIY (do-it-yourself) philosophy when preparing C2 solution for a given mission objectives (i.e. professional adversary simulation engagements). Therefore we provide an open and flexible architectural solution together with reusable building blocks that can be quickly tailored to a given scenario.
+
+The building blocks of the toolkit:
+
+- [z-beac0n implant](#implant)
+- [backend components](#backend-components)
+- [bof-launcher library](#bof-launcher-library)
+- [Z-Labs BOFs collection](https://github.com/The-Z-Labs/bof-launcher/tree/main/bofs)
+- [cli4bofs tool](#cli4bofs-tool)
 
 ## Implant
 
@@ -29,7 +37,7 @@ Example [stager.py](src/stager.py) script is available as a staging script that 
 On the server side following components are available:
 
 - [stage-listener.py](src/stage-listener.py) - HTTP(S)-based payload serving listener compatible with ["meterpreter protocol"](https://github.com/rsmudge/metasploit-loader); 
-- [C2-https.py] - Command and control server for handling implant's beaconing.
+- [serve_bofs.py](https://github.com/The-Z-Labs/bof-launcher/blob/main/utils/serve_bofs.py) - Command and control server for handling implant's beaconing.
 
 ## bof-launcher library
 
@@ -86,7 +94,7 @@ int bofArgsGetBufferSize(BofArgs* args);
 
 ## cli4bofs tool
 
-[cli4bofs](https://github.com/The-Z-Labs/cli4bofs (i.e. command line interface for running BOFs) is an accompanying tool that stores documentation of your BOFs collection.
+[cli4bofs](https://github.com/The-Z-Labs/cli4bofs) (i.e. command line interface for running BOFs) is a swiss army knife tool for running and mainataining collection of BOFs files. Allows for running any BOF from a filesystem and for conveniently passing arguments to it. Defines simple YAML schema for essential information about BOF files, like: description, URL(s) of the source code, supported arguments, usage examples, etc. Handy also for testing, prototyping and developing your own BOFs.
 
 
 
