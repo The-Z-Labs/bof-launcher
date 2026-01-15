@@ -96,6 +96,46 @@ int bofArgsGetBufferSize(BofArgs* args);
 
 [cli4bofs](https://github.com/The-Z-Labs/cli4bofs) (i.e. command line interface for running BOFs) is a swiss army knife tool for running and mainataining collection of BOFs files. Allows for running any BOF from a filesystem and for conveniently passing arguments to it. Defines simple YAML schema for essential information about BOF files, like: description, URL(s) of the source code, supported arguments, usage examples, etc. Handy also for testing, prototyping and developing your own BOFs.
 
+An example of complete YAML file for one of the BOFs:
+
+```
+name: cat
+description: "Print content of a file"
+author: Z-Labs
+tags: ['windows', 'linux','host-recon','z-labs']
+OS: cross
+sources:
+    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/cat.zig'
+examples: '
+ cat /etc/passwd
+ cat C:\Windows\System32\drivers\etc\hosts
+'
+arguments:
+- name: file_path
+  desc: "path to the file to be printed"
+  type: string
+  required: true
+errors:
+- name: AccessDenied
+  code: 0x1
+  message: "Failed to open provided file"
+- name: FileNotFound
+  code: 0x2
+  message: "File not found"
+- name: AntivirusInterference
+  code: 0x3
+  message: "Possible Antivirus Interference while opening the file"
+- name: FileNotProvided
+  code: 0x4
+  message: "No file provided"
+- name: StreamTooLong
+  code: 0x5
+  message: "File is very large"
+- name: UnknownError
+  code: 0x6
+  message: "Unknown error"
+```
+
 
 
 
