@@ -14,21 +14,82 @@ It is composed of:
 - statically compiled [bof-launcher library](../../bof-launcher/src/bof_launcher_api.h);
 - arbitrary number of additional BOFs launched and managed by the z-beac0n core BOF.
 
-## Backend components
-
-On the server side following components are available:
-
-- [stage-listener.py](src/stage-listener.py) - HTTP(S)-based payload serving listener compatible with ["meterpreter protocol"](https://github.com/rsmudge/metasploit-loader); 
-- [stager.py](src/stager.py) - Python-based staging script that fetches over HTTP(S) a payload and execute it in-memory in the context of Python's interpreter process;
-- [C2-https.py] - Command and control server for handling implant's beaconing.
-
-## Execution flow
+Execution flow:
 
 1. During the implant's startup self-contained `z-beac0n core BOF` is started using bof-launcher's `bofRun()` function. The control is then transferred to BOF0's `go()` entrypoint function.
 2. `z-beac0n core BOF` has full access to bof-launcher's API so it is capable of launching other BOFs based on the operator's needs and requirements. BOFs could be launched using one of available routines: `bofObjectRun`. `bofObjectRunAsyncThread`. `bofObjectRunAsyncProcess`.
 3. C2 server is queried for additional commands.
 
 z-beac0n implant is currently available as a stageless payload in following forms: `elf executable`, `shellcode` and `shared library (so)`.
+
+Example [stager.py](src/stager.py) script is available as a staging script that fetches over HTTP(S) an ELF executable payload and launches it in-memory in the context of Python's interpreter process;
+
+## Backend components
+
+On the server side following components are available:
+
+- [stage-listener.py](src/stage-listener.py) - HTTP(S)-based payload serving listener compatible with ["meterpreter protocol"](https://github.com/rsmudge/metasploit-loader); 
+- [C2-https.py] - Command and control server for handling implant's beaconing.
+
+## bof-launcher library
+
+Of course working horse of z-beac0n implant is bof-launcher library it exposes following, well thought and efficient interface/API:
+
+```c
+int bofLauncherInit(void);
+void bofLauncherRelease(void);
+
+int bofMemoryMaskKey(const unsigned char* key, int key_len);
+int bofMemoryMaskWin32ApiCall(const char* win32_api_name, int masking_enabled);
+
+int bofObjectInitFromMemory(const unsigned char* file_data_ptr, int file_data_len, BofObjectHandle* out_bof_handle);
+
+void bofObjectRelease(BofObjectHandle bof_handle);
+int bofObjectIsValid(BofObjectHandle bof_handle);
+
+void* bofObjectGetProcAddress(BofObjectHandle bof_handle, const char* name);
+
+int bofRun(const unsigned char* file_data_ptr, int file_data_len);
+int bofObjectRun(BofObjectHandle bof_handle,
+             unsigned char* arg_data_ptr,
+             int arg_data_len,
+             BofContext** out_context);
+int bofObjectRunAsyncThread(BofObjectHandle bof_handle,
+             unsigned char* arg_data_ptr,
+             int arg_data_len,
+             BofCompletionCallback completion_cb,
+             void* completion_cb_context,
+             BofContext** out_context);
+int bofObjectRunAsyncProcess(BofObjectHandle bof_handle,
+             unsigned char* arg_data_ptr,
+             int arg_data_len,
+             BofCompletionCallback completion_cb,
+             void* completion_cb_context,
+             BofContext** out_context);
+
+void bofContextRelease(BofContext* context);
+int bofContextIsRunning(BofContext* context);
+void bofContextWait(BofContext* context);
+unsigned char bofContextGetExitCode(BofContext* context);
+const char* bofContextGetOutput(BofContext* context, int* out_output_len);
+BofObjectHandle bofContextGetObjectHandle(BofContext* context);
+
+int bofArgsInit(BofArgs** out_args);
+int bofArgsInit(BofArgs** out_args);
+void bofArgsRelease(BofArgs* args);
+int bofArgsAdd(BofArgs* args, unsigned char* arg, int arg_len);
+void bofArgsBegin(BofArgs* args);
+void bofArgsEnd(BofArgs* args);
+const char* bofArgsGetBuffer(BofArgs* args);
+int bofArgsGetBufferSize(BofArgs* args);
+```
+
+## cli4bofs tool
+
+[cli4bofs](https://github.com/The-Z-Labs/cli4bofs (i.e. command line interface for running BOFs) is an accompanying tool that stores documentation of your BOFs collection.
+
+
+
 
 
 
