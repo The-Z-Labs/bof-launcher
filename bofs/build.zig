@@ -46,6 +46,7 @@ const bofs_included_in_launcher = [_]BofTableItem{
     .{ .name = "kmodLoader", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "lskmod", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "whereami", .formats = &.{.elf, .coff}, .archs = &.{ .x64, .x86 } },
+    .{ .name = "zcat", .formats = &.{.elf, .coff}, .archs = &.{ .x64, .x86, .aarch64, .arm} },
     .{ .name = "sniffer", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_sniffer },
     .{ .name = "snifferBOF", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_sniffer },
     // alternative C2 communication channels implemented as BOFs and ready to use by z-beac0n implant (template):
