@@ -3,6 +3,7 @@ pub const win32 = @import("bof_launcher_win32");
 pub const posix = @import("posix.zig");
 pub const asn1 = @import("asn1.zig");
 pub const kerberos = @import("kerberos.zig");
+pub const srdi = @import("srdi.zig");
 
 const std = @import("std");
 
