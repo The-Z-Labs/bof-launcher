@@ -19,6 +19,13 @@ const std = @import("std");
 const bofapi = @import("bof_api");
 const beacon = bofapi.beacon;
 
+comptime {
+    @import("bof_api").embedFunctionCode("__stackprobe__");
+    @import("bof_api").embedFunctionCode("memcpy");
+    @import("bof_api").embedFunctionCode("memset");
+    @import("bof_api").embedFunctionCode("memmove");
+}
+
 // BOF-specific error codes
 const BofErrors = enum(u8) {
     UnknownHypervisor = 0x1,
@@ -37,10 +44,10 @@ const Hypervisor = enum(u8) {
     QNX,
     ACRN,
     SRE,
-    AppleVZ
+    AppleVZ,
 };
 
-const hypervisor_sig = [_][]const u8 {
+const hypervisor_sig = [_][]const u8{
     "XenVMMXenVMM",
     "KVMKVMKVM",
     "Linux KVM Hv",
@@ -53,7 +60,6 @@ const hypervisor_sig = [_][]const u8 {
     "SRESRESRESRE",
     "Apple VZ",
 };
-
 
 // https://github.com/ziglang/zig/blob/738d2be9d6b6ef3ff3559130c05159ef53336224/lib/std/zig/system/x86.zig
 
@@ -82,31 +88,20 @@ fn cpuid(leaf_id: u32, subid: u32) CpuidLeaf {
     return .{ .eax = eax, .ebx = ebx, .ecx = ecx, .edx = edx };
 }
 
-fn cpuidHypervisorType() error{
-    UnknownHypervisor,
-    UnknownError
-}!Hypervisor {
-    // https://lwn.net/Articles/301888/ 
+fn cpuidHypervisorType() error{ UnknownHypervisor, UnknownError }!Hypervisor {
+    // https://lwn.net/Articles/301888/
 
-    const Sig = extern union {
-        sig32: [3]u32,
-        text: [13]u8 
-    };
+    const Sig = extern union { sig32: [3]u32, text: [13]u8 };
 
-    var sig: Sig = .{
-        .text = [_]u8{0} ** 13
-    };
+    var sig: Sig = .{ .text = [_]u8{0} ** 13 };
 
     const leaf_0x4 = cpuid(0x40000000, 0);
-    sig = Sig{
-        .sig32 = .{ leaf_0x4.ebx, leaf_0x4.ecx, leaf_0x4.edx }
-    };
+    sig = Sig{ .sig32 = .{ leaf_0x4.ebx, leaf_0x4.ecx, leaf_0x4.edx } };
 
     const cpuid_sig = std.mem.sliceTo(&sig.text, 0);
 
     for (hypervisor_sig, 0..) |hyper_sig, i| {
-
-        if(std.mem.eql(u8, hyper_sig, cpuid_sig)) {
+        if (std.mem.eql(u8, hyper_sig, cpuid_sig)) {
             return @as(Hypervisor, @enumFromInt(i));
         }
     }
@@ -118,7 +113,7 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
     @import("bof_api").init(adata, alen, .{});
 
     // let's detect if there is a hypervisor
-    const leaf_0x1 = cpuid(0x1, 0); 
+    const leaf_0x1 = cpuid(0x1, 0);
     const hypervisor_bit = leaf_0x1.ecx & 0x80000000;
 
     // a hypervisor is present, let's see which one
