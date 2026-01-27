@@ -36,6 +36,7 @@ const bofs_included_in_launcher = [_]BofTableItem{
     .{ .name = "pwd", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "cd", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "ls", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+    .{ .name = "grep", .formats = &.{ .elf }, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_grep },
     .{ .name = "ifconfig", .dir = "net-tools/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "wCloneProcess", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wInjectionChainStage0", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
@@ -401,6 +402,17 @@ const CustomBuildFn = *const fn (*std.Build, *std.Build.Step.Compile, Bof) []con
 fn build_wWinverC(b: *std.Build, obj: *std.Build.Step.Compile, bof: Bof) []const []const u8 {
     _ = .{ b, obj, bof };
     return &.{"-DMY_DEFINE"};
+}
+
+fn build_grep(b: *std.Build, obj: *std.Build.Step.Compile, bof: Bof) []const []const u8 {
+    const zig_regex_module = b.dependency("zig_regex", .{
+        .target = bof.target,
+        .optimize = bof.optimize,
+    }).module("regex");
+
+    obj.root_module.addImport("regex", zig_regex_module);
+
+    return &.{};
 }
 
 fn build_sniffer(b: *std.Build, obj: *std.Build.Step.Compile, bof: Bof) []const []const u8 {

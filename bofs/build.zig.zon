@@ -20,5 +20,9 @@
             .hash = "N-V-__8AACf1FwA1wd1cVzYKbr2p20f_Lx6Q3Ty-EjUp0etU",
             .version = "1.10.4",
         },
+        .zig_regex = .{
+            .url = "https://github.com/tiehuis/zig-regex/archive/49c5694c8b3ee4ae4a7131035a44a69841ef4740.tar.gz",
+            .hash = "regex-0.1.3-axC357jaAQBRENglwG9NTcuej8pYz1IZmfwER_AXMlHZ",
+        },
     },
 }
