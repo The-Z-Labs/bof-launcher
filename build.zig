@@ -59,6 +59,7 @@ pub fn build(b: *std.Build) !void {
             // Blacklist (llvm-objcopy can't remove section for some reason)
             if (std.mem.containsAtLeast(u8, full_name, 1, "udpScanner")) break :strip;
             if (std.mem.containsAtLeast(u8, full_name, 1, "tcpScanner")) break :strip;
+            if (std.mem.containsAtLeast(u8, full_name, 1, "grep")) break :strip;
 
             if (std.mem.containsAtLeast(u8, full_name, 1, "coff")) {
                 const run = b.addSystemCommand(&.{
