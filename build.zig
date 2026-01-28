@@ -223,6 +223,45 @@ pub fn build(b: *std.Build) !void {
         b.getInstallStep().dependOn(&install.step);
     }
 
+    for ([_]std.Target.Query{
+        .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu },
+        .{ .cpu_arch = .x86, .os_tag = .windows, .abi = .gnu },
+    }) |target_query| {
+        const target = b.resolveTargetQuery(target_query);
+
+        const z_beacon = bofs_dep.artifact(b.fmt("z-beac0n-core.coff.{s}", .{cpuArchStr(target)}));
+
+        const bof_launcher_dep = b.dependency(
+            "bof_launcher_lib",
+            .{ .target = target, .optimize = optimize },
+        );
+        const bof_launcher_lib = bof_launcher_dep.artifact(
+            libFileName(b.allocator, target, "shared"),
+        );
+
+        const exe = b.addExecutable(.{
+            .name = b.fmt("implant_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }),
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("utils/implant_srdi.zig"),
+                .target = target,
+                .optimize = optimize,
+            }),
+        });
+        exe.root_module.addAnonymousImport("srdi", .{
+            .root_source_file = b.path("bofs/src/include/srdi.zig"),
+        });
+        exe.root_module.addAnonymousImport("z_beacon_embed", .{
+            .root_source_file = z_beacon.getEmittedBin(),
+        });
+        exe.root_module.addAnonymousImport("bof_launcher_lib_embed", .{
+            .root_source_file = bof_launcher_lib.getEmittedBin(),
+        });
+
+        const run = b.addRunArtifact(exe);
+        run.setCwd(b.path("zig-out/bin"));
+        b.getInstallStep().dependOn(&run.step);
+    }
+
     //
     // Build, install and run tests
     //

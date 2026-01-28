@@ -70,7 +70,12 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
         break :blk false;
     };
 
-    const shellcode_bytes = srdi.allocateShellcode(@embedFile("bof_launcher_lib_embed"), bof_bytes, 0) catch return 0xff;
+    const shellcode_bytes = srdi.allocateShellcode(
+        @embedFile("bof_launcher_lib_embed"),
+        bof_bytes,
+        0,
+        @import("builtin").cpu.arch,
+    ) catch return 0xff;
     defer srdi.freeShellcode(shellcode_bytes);
 
     if (dump_shellcode) {

