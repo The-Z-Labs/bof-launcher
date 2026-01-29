@@ -268,10 +268,12 @@ pub fn build(b: *std.Build) !void {
 
         b.installArtifact(exe);
 
-        const run = b.addRunArtifact(exe);
-        run.addArg("--dump-shellcode");
-        run.setCwd(b.path("zig-out/bin"));
-        b.getInstallStep().dependOn(&run.step);
+        if (@import("builtin").os.tag == .windows) {
+            const run = b.addRunArtifact(exe);
+            run.addArg("--dump-shellcode");
+            run.setCwd(b.path("zig-out/bin"));
+            b.getInstallStep().dependOn(&run.step);
+        }
     }
 
     //
