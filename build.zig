@@ -239,6 +239,9 @@ pub fn build(b: *std.Build) !void {
             libFileName(b.allocator, target, "shared"),
         );
 
+        const win32_dep = b.dependency("bof_launcher_win32", .{});
+        const win32_module = win32_dep.module("bof_launcher_win32");
+
         const exe = b.addExecutable(.{
             .name = b.fmt("implant_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }),
             .root_module = b.createModule(.{
@@ -247,6 +250,12 @@ pub fn build(b: *std.Build) !void {
                 .optimize = optimize,
             }),
         });
+        exe.root_module.linkSystemLibrary("ws2_32", .{});
+        exe.root_module.linkSystemLibrary("ole32", .{});
+        exe.root_module.linkSystemLibrary("user32", .{});
+        exe.root_module.linkSystemLibrary("advapi32", .{});
+
+        exe.root_module.addImport("bof_launcher_win32", win32_module);
         exe.root_module.addAnonymousImport("srdi", .{
             .root_source_file = b.path("bofs/src/include/srdi.zig"),
         });
@@ -257,7 +266,10 @@ pub fn build(b: *std.Build) !void {
             .root_source_file = bof_launcher_lib.getEmittedBin(),
         });
 
+        b.installArtifact(exe);
+
         const run = b.addRunArtifact(exe);
+        run.addArg("--dump-shellcode");
         run.setCwd(b.path("zig-out/bin"));
         b.getInstallStep().dependOn(&run.step);
     }
