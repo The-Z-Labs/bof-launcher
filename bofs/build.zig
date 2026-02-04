@@ -36,7 +36,8 @@ const bofs_included_in_launcher = [_]BofTableItem{
     .{ .name = "pwd", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "cd", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "ls", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    .{ .name = "grep", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_grep },
+    .{ .name = "grep", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_regex},
+    .{ .name = "find", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_regex },
     .{ .name = "ifconfig", .dir = "net-tools/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "wCloneProcess", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wInjectionChainStage0", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
@@ -404,7 +405,7 @@ fn build_wWinverC(b: *std.Build, obj: *std.Build.Step.Compile, bof: Bof) []const
     return &.{"-DMY_DEFINE"};
 }
 
-fn build_grep(b: *std.Build, obj: *std.Build.Step.Compile, bof: Bof) []const []const u8 {
+fn build_regex(b: *std.Build, obj: *std.Build.Step.Compile, bof: Bof) []const []const u8 {
     const zig_regex_module = b.dependency("zig_regex", .{
         .target = bof.target,
         .optimize = bof.optimize,

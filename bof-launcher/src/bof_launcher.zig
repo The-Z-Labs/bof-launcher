@@ -1683,7 +1683,7 @@ fn threadFuncCloneProcessWindows(bof: *Bof, arg_data: ?[]u8, context: *BofContex
 const RingBuffer = @import("RingBuffer.zig");
 
 const BofContext = struct {
-    const max_output_len = 16 * 1024;
+    const max_output_len = 64 * 1024;
 
     allocator: std.mem.Allocator,
 
