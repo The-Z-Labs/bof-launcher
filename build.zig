@@ -60,6 +60,7 @@ pub fn build(b: *std.Build) !void {
             if (std.mem.containsAtLeast(u8, full_name, 1, "udpScanner")) break :strip;
             if (std.mem.containsAtLeast(u8, full_name, 1, "tcpScanner")) break :strip;
             if (std.mem.containsAtLeast(u8, full_name, 1, "grep")) break :strip;
+            if (std.mem.containsAtLeast(u8, full_name, 1, "find")) break :strip;
 
             if (std.mem.containsAtLeast(u8, full_name, 1, "coff")) {
                 const run = b.addSystemCommand(&.{

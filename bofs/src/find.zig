@@ -217,7 +217,6 @@ fn filesProcess(allocator: std.mem.Allocator, files_list: []u8, test_type: [*:0]
             fileKind = .unix_domain_socket;
         }
 
-
     } else if(std.mem.eql(u8, ttype, "-regex")) {
         testType = .Regex;
         re = try Regex.compile(allocator, param);
@@ -227,12 +226,42 @@ fn filesProcess(allocator: std.mem.Allocator, files_list: []u8, test_type: [*:0]
     }
 
     while (try reader.takeDelimiter('\n')) |line| {
+
         if(testType == .FileType) {
-            try aw.writer.print("{s}\n", .{line});
+            // lstat is not available for aarch64
+            if (@import("builtin").os.tag == .linux and @import("builtin").cpu.arch != .aarch64) {
+                const l0 = try allocator.dupe(u8, line);
+                defer allocator.free(l0);
+                std.mem.replaceScalar(u8, l0, '\n', 0);
+
+                var stat: std.os.linux.Stat = undefined;
+                _ = std.os.linux.lstat(@ptrCast(l0.ptr), &stat);
+
+                if (std.os.linux.S.ISLNK(stat.mode) and (fileKind == .sym_link)) {
+                    try aw.writer.print("{s}\n", .{line});
+                } else
+                if (std.os.linux.S.ISBLK(stat.mode) and (fileKind == .block_device)) {
+                    try aw.writer.print("{s}\n", .{line});
+                } else
+                if (std.os.linux.S.ISCHR(stat.mode) and (fileKind == .character_device)) {
+                    try aw.writer.print("{s}\n", .{line});
+                } else
+                if (std.os.linux.S.ISDIR(stat.mode) and (fileKind == .directory)) {
+                    try aw.writer.print("{s}\n", .{line});
+                } else
+                if (std.os.linux.S.ISFIFO(stat.mode) and (fileKind == .named_pipe)) {
+                    try aw.writer.print("{s}\n", .{line});
+                } else
+                if (std.os.linux.S.ISREG(stat.mode) and (fileKind == .file)) {
+                    try aw.writer.print("{s}\n", .{line});
+                } else
+                if (std.os.linux.S.ISSOCK(stat.mode) and (fileKind == .unix_domain_socket)) {
+                    try aw.writer.print("{s}\n", .{line});
+                }
+            }
 
         } else if(testType == .Regex) {
             if(try re.partialMatch(line)) {
-                //bofapi.print(.output, "Test: -regex {s}\n{s}\n", .{param, line});
                 try aw.writer.print("{s}\n", .{line});
             }
         } else if(testType == .Perm) {

@@ -14,7 +14,8 @@
 | [zcat](src/zcat.zig) | print content of a gzip compressed file | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `cat /boot/config.gz` |
 | [ls](src/ls.zig) | list directory content | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `ls /etc` |
 | [whereami](src/whereami.zig) | print hypervisor vendor signature from CPUID | `Linux x86/x86_64`; `Windows x86/x86_64` | `whereami` |
-| [grep](src/grep.zig) | Print lines that match patterns | `Linux x86/x86_64`; `Windows x86/x86_64` | `grep root /etc/passwd` |
+| [grep](src/grep.zig) | Print lines that match patterns | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `grep root /etc/passwd` |
+| [find](src/find.zig) | Search for files in a directory hierarchy | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `find /dev -type b` |
 
 ## Linux-only BOFs
 
