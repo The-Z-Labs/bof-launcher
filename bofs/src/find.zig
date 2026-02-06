@@ -226,7 +226,6 @@ fn filesProcess(allocator: std.mem.Allocator, files_list: []u8, test_type: [*:0]
     return aw.toOwnedSlice();
 }
 
-// find with -maxdepth 3
 fn filesList(allocator: std.mem.Allocator, dir_path: [*:0]u8) ![]u8 {
 
     var aw: std.Io.Writer.Allocating = .init(allocator);
