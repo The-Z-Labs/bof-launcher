@@ -1280,7 +1280,6 @@ export fn bofArgsAdd(args: *pubapi.Args, arg: [*]const u8, arg_size: c_int) call
         params.buffer.? += 4;
 
         @memcpy(params.buffer.?[0..bytes.len], bytes);
-
         params.length -= @intCast(bytes.len);
         params.buffer.? += @as(usize, @intCast(bytes.len));
     } else if (std.mem.eql(u8, sArg_type, "int") or std.mem.eql(u8, sArg_type, "i")) {
