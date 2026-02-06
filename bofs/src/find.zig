@@ -6,8 +6,30 @@
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/find.zig'
 ///examples: '
-/// find .
-/// find /home/user -type s
+/// Considerations:
+///    -maxdepth hardcoded to 3
+///    symbolic links are not followed
+///    one find "test" supported at a time
+///
+//  Supported find(1) "Tests":
+//    -type {b,c,d,p,f,l,s}
+//    -regex PATTERN
+//    -perm -MODE
+//
+//  Supported find(1) "Actions":
+//    -print action is supported
+///
+/// Find and list unix socket in a given directory:
+///   find /home/user -type s
+///
+/// List files hich have r and w permission for their owner and group and only r for other users, without regard to the presence of any extra permission bits:
+///   find . -perm -664
+///
+/// Search for set-user-ID files and directories, without regard to the presence of any extra permission bits:
+///   find . -perm -4000
+///
+/// List files matching provided regex (match on the whole path, not a search):
+///   find /etc/apt -regex .*archive.*
 ///'
 ///arguments:
 ///- name: dir_path
@@ -41,8 +63,14 @@
 ///- name: OutOfMemory
 ///  code: 0x6
 ///  message: "Not sufficient memory available"
-///- name: UnknownError
+///- name: NoSuchTest
 ///  code: 0x7
+///  message: "Urecognized test type provided"
+///- name: BadParameter
+///  code: 0x8
+///  message: "Parameter for chosen test is badly formatted"
+///- name: UnknownError
+///  code: 0x9
 ///  message: "Unknown error"
 const std = @import("std");
 const linux = std.os.linux;
@@ -52,15 +80,7 @@ const beacon = bofapi.beacon;
 const Regex = @import("regex").Regex;
 
 // Simple version of find(1) utility: search for files in a directory hierarchy. Limitations:
-// Never  follow  symbolic  links
-// -maxdepth always set to 3 (i.e. sub- and sub-sub- directories are searched)
-// Only one "test" supported at a time
-// Supported "Tests":
-// -type {b,c,d,p,f,l,s} - only one file type at a time can be searched for (i.e: -type f,l is not supported)
-// -regex PATTERN
-// -perm
-// Supported "Actions":
-// Only -print action is supported
+
 
 comptime {
     @import("bof_api").embedFunctionCode("memcpy");
@@ -83,100 +103,10 @@ const BofErrors = enum(u8) {
     DirNotProvided,
     TestParamNotProvided,
     OutOfMemory,
+    NoSuchTest,
+    BadParameter,
     UnknownError,
 };
-
-// RFC3339 implementation taken from:
-// https://www.aolium.com/karlseguin/cf03dee6-90e1-85ac-8442-cf9e6c11602a
-pub const DateTime = struct {
-    year: u16,
-    month: u8,
-    day: u8,
-    hour: u8,
-    minute: u8,
-    second: u8,
-};
-
-pub fn fromTimestamp(ts: u64) DateTime {
-    const SECONDS_PER_DAY = 86400;
-    const DAYS_PER_YEAR = 365;
-    const DAYS_IN_4YEARS = 1461;
-    const DAYS_IN_100YEARS = 36524;
-    const DAYS_IN_400YEARS = 146097;
-    const DAYS_BEFORE_EPOCH = 719468;
-
-    const seconds_since_midnight: u64 = @rem(ts, SECONDS_PER_DAY);
-    var day_n: u64 = DAYS_BEFORE_EPOCH + ts / SECONDS_PER_DAY;
-    var temp: u64 = 0;
-
-    temp = 4 * (day_n + DAYS_IN_100YEARS + 1) / DAYS_IN_400YEARS - 1;
-    var year: u16 = @intCast(100 * temp);
-    day_n -= DAYS_IN_100YEARS * temp + temp / 4;
-
-    temp = 4 * (day_n + DAYS_PER_YEAR + 1) / DAYS_IN_4YEARS - 1;
-    year += @intCast(temp);
-    day_n -= DAYS_PER_YEAR * temp + temp / 4;
-
-    var month: u8 = @intCast((5 * day_n + 2) / 153);
-    const day: u8 = @intCast(day_n - (@as(u64, @intCast(month)) * 153 + 2) / 5 + 1);
-
-    month += 3;
-    if (month > 12) {
-        month -= 12;
-        year += 1;
-    }
-
-    return DateTime{
-        .year = year,
-        .month = month,
-        .day = day,
-        .hour = @intCast(seconds_since_midnight / 3600),
-        .minute = @intCast(seconds_since_midnight % 3600 / 60),
-        .second = @intCast(seconds_since_midnight % 60),
-    };
-}
-
-pub fn toRFC3339(dt: DateTime) [20]u8 {
-    var buf: [20]u8 = undefined;
-
-    var w: std.Io.Writer = .fixed(buf[0..4]);
-    w.printInt(dt.year, 10, .lower, .{ .width = 4, .fill = '0' }) catch unreachable;
-
-    buf[4] = '-';
-    paddingTwoDigits(buf[5..7], dt.month);
-    buf[7] = '-';
-    paddingTwoDigits(buf[8..10], dt.day);
-    buf[10] = ' ';
-
-    paddingTwoDigits(buf[11..13], dt.hour);
-    buf[13] = ':';
-    paddingTwoDigits(buf[14..16], dt.minute);
-    buf[16] = ':';
-    paddingTwoDigits(buf[17..19], dt.second);
-    buf[19] = 0;
-
-    return buf;
-}
-
-fn paddingTwoDigits(buf: *[2]u8, value: u8) void {
-    switch (value) {
-        0 => buf.* = "00".*,
-        1 => buf.* = "01".*,
-        2 => buf.* = "02".*,
-        3 => buf.* = "03".*,
-        4 => buf.* = "04".*,
-        5 => buf.* = "05".*,
-        6 => buf.* = "06".*,
-        7 => buf.* = "07".*,
-        8 => buf.* = "08".*,
-        9 => buf.* = "09".*,
-        else => {
-            var w: std.Io.Writer = .fixed(buf[0..2]);
-            w.printInt(value, 10, .lower, .{}) catch unreachable;
-        },
-    }
-}
-// end of RFC3339 implementation
 
 fn filesProcess(allocator: std.mem.Allocator, files_list: []u8, test_type: [*:0]u8, test_param: [*:0]u8) ![] u8 {
 
@@ -197,7 +127,9 @@ fn filesProcess(allocator: std.mem.Allocator, files_list: []u8, test_type: [*:0]
     var re: Regex = undefined;
     var testType: TestType = .FileType;
     var fileKind: std.fs.File.Kind = .file;
+    var req_perm: u32 = undefined;
 
+    // initial file processing preparation
     if(std.mem.eql(u8, ttype, "-type")) {
         testType = .FileType;
 
@@ -223,8 +155,16 @@ fn filesProcess(allocator: std.mem.Allocator, files_list: []u8, test_type: [*:0]
 
     } else if(std.mem.eql(u8, ttype, "-perm")) {
         testType = .Perm;
-    }
+        bofapi.print(.output, "Parma:{s}\n", .{param});
+        if(!std.mem.startsWith(u8, param, "-"))
+            return error.BadParameter;
 
+        req_perm = try std.fmt.parseUnsigned(u32, std.mem.trimStart(u8, param, "-"), 8);
+    }
+    else
+        return error.NoSuchTest;
+
+    // file processing: running requested tests on files
     while (try reader.takeDelimiter('\n')) |line| {
 
         if(testType == .FileType) {
@@ -261,11 +201,25 @@ fn filesProcess(allocator: std.mem.Allocator, files_list: []u8, test_type: [*:0]
             }
 
         } else if(testType == .Regex) {
-            if(try re.partialMatch(line)) {
+            if(try re.match(line)) {
                 try aw.writer.print("{s}\n", .{line});
             }
         } else if(testType == .Perm) {
             bofapi.print(.output, "Test: -perm {s}\n", .{param});
+            if (@import("builtin").os.tag == .linux and @import("builtin").cpu.arch != .aarch64) {
+
+                const l0 = try allocator.dupe(u8, line);
+                defer allocator.free(l0);
+                std.mem.replaceScalar(u8, l0, '\n', 0);
+
+                var stat: std.os.linux.Stat = undefined;
+                _ = std.os.linux.lstat(@ptrCast(l0.ptr), &stat);
+
+                const file_mode_mask = stat.mode & ~@as(u16, std.os.linux.S.IFMT);
+
+                if((req_perm & file_mode_mask) != 0)
+                    try aw.writer.print("{s}\n", .{line});
+            }
         }
     }
 
@@ -348,6 +302,8 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
 
                 processedFiles = filesProcess(allocator, files, test_type, test_param) catch |err| switch (err) {
                     error.OutOfMemory => return @intFromEnum(BofErrors.OutOfMemory),
+                    error.NoSuchTest => return @intFromEnum(BofErrors.NoSuchTest),
+                    error.BadParameter => return @intFromEnum(BofErrors.BadParameter),
                     else => return @intFromEnum(BofErrors.UnknownError),
                 };
 
