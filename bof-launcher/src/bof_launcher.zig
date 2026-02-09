@@ -1263,6 +1263,25 @@ export fn bofArgsAdd(args: *pubapi.Args, arg: [*]const u8, arg_size: c_int) call
         params.buffer.?[0] = 0;
         params.length -= 1;
         params.buffer.? += @as(usize, @intCast(1));
+    } else if (std.mem.eql(u8, sArg_type, "wstr") or std.mem.eql(u8, sArg_type, "Z")) {
+        var wchar_buf: []u16 = gstate.allocator.?.alloc(u16, @intCast(arg_len + 1)) catch return -1;
+        defer gstate.allocator.?.free(wchar_buf);
+        const wstr_end = std.unicode.utf8ToUtf16Le(wchar_buf, sArg) catch return -1;
+        wchar_buf[wstr_end] = 0;
+        const bytes = std.mem.sliceAsBytes(wchar_buf);
+        std.log.debug("Wstr param: {s} {d}", .{ sArg, bytes.len });
+
+        if (bytes.len >= params.length) {
+            return -1;
+        }
+
+        @memcpy(params.buffer.?[0..4], std.mem.asBytes(&@as(u32, @intCast(bytes.len))));
+        params.length -= 4;
+        params.buffer.? += 4;
+
+        @memcpy(params.buffer.?[0..bytes.len], bytes);
+        params.length -= @intCast(bytes.len);
+        params.buffer.? += @as(usize, @intCast(bytes.len));
     } else if (std.mem.eql(u8, sArg_type, "int") or std.mem.eql(u8, sArg_type, "i")) {
         const numArg = std.fmt.parseInt(i32, sArg, 10) catch return -1;
 
@@ -1286,7 +1305,6 @@ export fn bofArgsAdd(args: *pubapi.Args, arg: [*]const u8, arg_size: c_int) call
         params.length -= 2;
         params.buffer.? += 2;
     }
-    // TODO: add wstr (wide chars) support
 
     return 0;
 }
