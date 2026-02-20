@@ -2,9 +2,7 @@ const std = @import("std");
 const assert = std.debug.assert;
 const bof = @import("bof_launcher_api");
 const beacon = @import("bof_api").beacon;
-
-const State = @import("z-beac0n-core.zig").State;
-const BofRes = @import("z-beac0n-core.zig").BofRes;
+const zbeac0n = @import("z-beac0n-common.zig");
 
 comptime {
     @import("bof_api").embedFunctionCode("__stackprobe__");
@@ -13,12 +11,6 @@ comptime {
     @import("bof_api").embedFunctionCode("memmove");
 }
 
-pub const netConnectionType = enum(u8) {
-    Heartbeat,
-    ResourceFetch,
-    TaskResult,
-};
-
 pub export fn netInit(allocator: *anyopaque) callconv(.c) *anyopaque {
     const alloc: *std.mem.Allocator = @ptrCast(@alignCast(allocator));
 
@@ -26,7 +18,7 @@ pub export fn netInit(allocator: *anyopaque) callconv(.c) *anyopaque {
     return @ptrCast(str);
 }
 
-pub export fn netConnect(state: *anyopaque, connectionType: netConnectionType, extra_data: ?*anyopaque) callconv(.c) ?*anyopaque {
+pub export fn netConnect(state: *anyopaque, connectionType: zbeac0n.netConnectionType, extra_data: ?*anyopaque) callconv(.c) ?*anyopaque {
     _ = state;
     _ = connectionType;
     _ = extra_data;
@@ -45,7 +37,7 @@ pub export fn netDisconnect(state: *anyopaque, net_connection: *anyopaque) callc
 
 pub export fn netExchange(
     state: *anyopaque,
-    connectionType: netConnectionType,
+    connectionType: zbeac0n.netConnectionType,
     net_connection: *anyopaque,
     len: *u32,
     extra_data: ?*anyopaque,
@@ -61,7 +53,7 @@ pub export fn netExchange(
     return null;
 }
 
-pub export fn netMasquerade(state: *anyopaque, connectionType: netConnectionType, hdr_to_mask: *anyopaque, data_to_mask: ?*anyopaque, len: *u32) callconv(.c) ?*anyopaque {
+pub export fn netMasquerade(state: *anyopaque, connectionType: zbeac0n.netConnectionType, hdr_to_mask: *anyopaque, data_to_mask: ?*anyopaque, len: *u32) callconv(.c) ?*anyopaque {
     _ = state;
     _ = connectionType;
     _ = hdr_to_mask;
@@ -73,7 +65,7 @@ pub export fn netMasquerade(state: *anyopaque, connectionType: netConnectionType
     return null;
 }
 
-pub export fn netUnmasquerade(state: *anyopaque, connectionType: netConnectionType, pkt_data: ?*anyopaque, len: *u32) callconv(.c) ?*anyopaque {
+pub export fn netUnmasquerade(state: *anyopaque, connectionType: zbeac0n.netConnectionType, pkt_data: ?*anyopaque, len: *u32) callconv(.c) ?*anyopaque {
     _ = state;
     _ = connectionType;
     _ = pkt_data;
