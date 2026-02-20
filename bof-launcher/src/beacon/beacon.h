@@ -9,6 +9,10 @@
 #ifndef BEACON_API_H_
 #define BEACON_API_H_
 
+#ifdef DECLSPEC_IMPORT
+#undef DECLSPEC_IMPORT
+#endif
+
 #if !defined(_DEBUG) && defined(_WIN32)
 #define DECLSPEC_IMPORT __declspec(dllimport)
 #else
