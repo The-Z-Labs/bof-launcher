@@ -36,7 +36,7 @@ const bofs_included_in_launcher = [_]BofTableItem{
     .{ .name = "pwd", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "cd", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "ls", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    .{ .name = "grep", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_regex},
+    .{ .name = "grep", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_regex },
     .{ .name = "find", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_regex },
     .{ .name = "ifconfig", .dir = "net-tools/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "wCloneProcess", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
@@ -47,12 +47,12 @@ const bofs_included_in_launcher = [_]BofTableItem{
     .{ .name = "wInjectionChainStage2C", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "kmodLoader", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "lskmod", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    .{ .name = "whereami", .formats = &.{.elf, .coff}, .archs = &.{ .x64, .x86 } },
-    .{ .name = "zcat", .formats = &.{.elf, .coff}, .archs = &.{ .x64, .x86, .aarch64, .arm} },
+    .{ .name = "whereami", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86 } },
+    .{ .name = "zcat", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "sniffer", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_sniffer },
     .{ .name = "snifferBOF", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_sniffer },
     // alternative C2 communication channels implemented as BOFs and ready to use by z-beac0n implant (template):
-    .{ .name = "C2channelUDP", .formats = &.{.elf, .coff}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+    .{ .name = "C2channelUDP", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     // BOF0 - special purpose BOF that acts as a standalone implant and uses other BOFs as its post-ex modules:
     .{ .name = "z-beac0n-core", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
 };
@@ -344,7 +344,7 @@ fn addBofObj(
                     .link_libc = true,
                 }),
             });
-            const std_flags = [_][]const u8{"-fdeclspec"};
+            const std_flags = [_][]const u8{ "-fdeclspec", "-DBOF" };
             const custom_flags = if (bof.custom_build_fn) |customBuild| customBuild(b, obj, bof) else &.{};
 
             const flags = try b.allocator.alloc([]const u8, custom_flags.len + std_flags.len);
