@@ -745,6 +745,13 @@ const Bof = struct {
                             if (gstate.libc != null) {
                                 maybe_func_ptr = if (gstate.libc.?.lookup(*anyopaque, func_name_z)) |ptr| @intFromPtr(ptr) else null;
                             }
+
+                            if (gstate.libpthread == null) {
+                                gstate.libpthread = std.DynLib.open("libpthread.so.0") catch null;
+                            }
+                            if (gstate.libpthread != null) {
+                                maybe_func_ptr = if (gstate.libpthread.?.lookup(*anyopaque, func_name_z)) |ptr| @intFromPtr(ptr) else null;
+                            }
                         }
 
                         if (maybe_func_ptr == null) {

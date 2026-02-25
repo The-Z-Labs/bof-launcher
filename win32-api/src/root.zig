@@ -1166,6 +1166,24 @@ pub const PFN_WSAPoll = *const fn (
     timeout: i32,
 ) callconv(.winapi) i32;
 
+pub const PFN_WSAGetOverlappedResult = *const fn (
+    s: SOCKET,
+    lpOverlapped: *OVERLAPPED,
+    lpcbTransfer: *DWORD,
+    fWait: BOOL,
+    lpdwFlags: *DWORD,
+) callconv(.winapi) BOOL;
+
+pub const PFN_WSASend = *const fn (
+    s: SOCKET,
+    lpBuffers: [*]WSABUF,
+    dwBufferCount: u32,
+    lpNumberOfBytesSent: ?*u32,
+    dwFlags: u32,
+    lpOverlapped: ?*OVERLAPPED,
+    lpCompletionRounte: ?LPWSAOVERLAPPED_COMPLETION_ROUTINE,
+) callconv(.winapi) i32;
+
 pub const PFN_WSASendTo = *const fn (
     s: SOCKET,
     lpBuffers: [*]WSABUF,
@@ -1176,6 +1194,16 @@ pub const PFN_WSASendTo = *const fn (
     iToLen: i32,
     lpOverlapped: ?*OVERLAPPED,
     lpCompletionRounte: ?LPWSAOVERLAPPED_COMPLETION_ROUTINE,
+) callconv(.winapi) i32;
+
+pub const PFN_WSARecv = *const fn (
+    s: SOCKET,
+    lpBuffers: [*]WSABUF,
+    dwBuffercount: u32,
+    lpNumberOfBytesRecvd: ?*u32,
+    lpFlags: *u32,
+    lpOverlapped: ?*OVERLAPPED,
+    lpCompletionRoutine: ?LPWSAOVERLAPPED_COMPLETION_ROUTINE,
 ) callconv(.winapi) i32;
 
 pub const PFN_WSARecvFrom = *const fn (
@@ -1362,6 +1390,8 @@ pub fn init() void {
     WSAGetLastError = def(PFN_WSAGetLastError, "WSAGetLastError", "ws2_32");
     WSASocketW = def(PFN_WSASocketW, "WSASocketW", "ws2_32");
     WSAPoll = def(PFN_WSAPoll, "WSAPoll", "ws2_32");
+    WSAGetOverlappedResult = def(PFN_WSAGetOverlappedResult, "WSAGetOverlappedResult", "ws2_32");
+    WSASend = def(PFN_WSASend, "WSASend", "ws2_32");
     WSASendTo = def(PFN_WSASendTo, "WSASendTo", "ws2_32");
     WSARecvFrom = def(PFN_WSARecvFrom, "WSARecvFrom", "ws2_32");
     closesocket = def(PFN_closesocket, "closesocket", "ws2_32");
@@ -1511,7 +1541,10 @@ pub var WSACleanup: PFN_WSACleanup = undefined;
 pub var WSAGetLastError: PFN_WSAGetLastError = undefined;
 pub var WSASocketW: PFN_WSASocketW = undefined;
 pub var WSAPoll: PFN_WSAPoll = undefined;
+pub var WSAGetOverlappedResult: PFN_WSAGetOverlappedResult = undefined;
+pub var WSASend: PFN_WSASend = undefined;
 pub var WSASendTo: PFN_WSASendTo = undefined;
+pub var WSARecv: PFN_WSARecv = undefined;
 pub var WSARecvFrom: PFN_WSARecvFrom = undefined;
 pub var closesocket: PFN_closesocket = undefined;
 pub var getaddrinfo: PFN_getaddrinfo = undefined;
@@ -1540,7 +1573,10 @@ comptime {
         @export(&RE_WSAGetLastError, .{ .name = "WSAGetLastError", .linkage = .strong });
         @export(&RE_WSASocketW, .{ .name = "WSASocketW", .linkage = .strong });
         @export(&RE_WSAPoll, .{ .name = "WSAPoll", .linkage = .strong });
+        @export(&RE_WSAGetOverlappedResult, .{ .name = "WSAGetOverlappedResult", .linkage = .strong });
+        @export(&RE_WSASend, .{ .name = "WSASend", .linkage = .strong });
         @export(&RE_WSASendTo, .{ .name = "WSASendTo", .linkage = .strong });
+        @export(&RE_WSARecv, .{ .name = "WSARecv", .linkage = .strong });
         @export(&RE_WSARecvFrom, .{ .name = "WSARecvFrom", .linkage = .strong });
         @export(&RE_closesocket, .{ .name = "closesocket", .linkage = .strong });
         @export(&RE_getaddrinfo, .{ .name = "getaddrinfo", .linkage = .strong });
@@ -1640,6 +1676,26 @@ fn RE_WSAPoll(
 ) linksection(re_section) callconv(.winapi) i32 {
     return WSAPoll(fdArray, fds, timeout);
 }
+fn RE_WSAGetOverlappedResult(
+    s: SOCKET,
+    lpOverlapped: *OVERLAPPED,
+    lpcbTransfer: *DWORD,
+    fWait: BOOL,
+    lpdwFlags: *DWORD,
+) linksection(re_section) callconv(.winapi) BOOL {
+    return WSAGetOverlappedResult(s, lpOverlapped, lpcbTransfer, fWait, lpdwFlags);
+}
+fn RE_WSASend(
+    s: SOCKET,
+    lpBuffers: [*]WSABUF,
+    dwBufferCount: u32,
+    lpNumberOfBytesSent: ?*u32,
+    dwFlags: u32,
+    lpOverlapped: ?*OVERLAPPED,
+    lpCompletionRounte: ?LPWSAOVERLAPPED_COMPLETION_ROUTINE,
+) linksection(re_section) callconv(.winapi) i32 {
+    return WSASend(s, lpBuffers, dwBufferCount, lpNumberOfBytesSent, dwFlags, lpOverlapped, lpCompletionRounte);
+}
 fn RE_WSASendTo(
     s: SOCKET,
     lpBuffers: [*]WSABUF,
@@ -1652,6 +1708,17 @@ fn RE_WSASendTo(
     lpCompletionRounte: ?LPWSAOVERLAPPED_COMPLETION_ROUTINE,
 ) linksection(re_section) callconv(.winapi) i32 {
     return WSASendTo(s, lpBuffers, dwBufferCount, lpNumberOfBytesSent, dwFlags, lpTo, iToLen, lpOverlapped, lpCompletionRounte);
+}
+fn RE_WSARecv(
+    s: SOCKET,
+    lpBuffers: [*]WSABUF,
+    dwBufferCount: u32,
+    lpNumberOfBytesRecvd: ?*u32,
+    lpFlags: *u32,
+    lpOverlapped: ?*OVERLAPPED,
+    lpCompletionRoutine: ?LPWSAOVERLAPPED_COMPLETION_ROUTINE,
+) linksection(re_section) callconv(.winapi) i32 {
+    return WSARecv(s, lpBuffers, dwBufferCount, lpNumberOfBytesRecvd, lpFlags, lpOverlapped, lpCompletionRoutine);
 }
 fn RE_WSARecvFrom(
     s: SOCKET,
