@@ -21,7 +21,7 @@ const PendingBof = struct {
     launcher_error_code: i32 = 0,
 };
 
-pub const ImplantActions = struct {
+pub const ImplantActions = extern struct {
     const Self = @This();
 
     netInit: *const fn (state: *anyopaque) callconv(.c) *anyopaque = undefined,
@@ -38,6 +38,7 @@ pub const ImplantActions = struct {
     kmodRemove: ?*const fn (mod_name: [*:0]const u8, flags: u32) callconv(.c) c_int = null,
 
     pub fn attachFunctionality(self: *Self, bofObj: bof.Object) void {
+
         const fields = @typeInfo(Self).@"struct".fields;
 
         var ptr_table: [fields.len]usize = undefined;

