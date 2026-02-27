@@ -186,6 +186,12 @@ examples: string:"usage examples of a BOF"
 
 [bof-minimal_win_x64](https://github.com/The-Z-Labs/bof-minimal_win_x64) - if you're new to `bof-launcher`, be sure to check out this repo and read this [blog post](https://blog.z-labs.eu/2024/02/08/bof-launcher.html).
 
+### Open Adversary Simulation Toolkit - z-beac0n
+
+*Implementing custom, cross-platform implants*
+
+[z-beac0n implant](examples/implant) - open and flexible architectural solution for building custom implant following *(almost) everything is a BOF* concept.
+
 ### Running BOFs from disk
 
 *Rapid launching, prototyping and testing BOFs*
@@ -201,9 +207,3 @@ examples: string:"usage examples of a BOF"
 [integration-with-rust](examples/integration-with-rust) - simple example showing how to integrate bof-launcher in an application written in `Rust`.
 
 [integration-with-go](examples/integration-with-go) - simple example showing how to integrate bof-launcher in an application written in `Go`.
-
-### Simple C2 solution with BOF execution capabilities
-
-*Implementing custom, cross-platform C2 solutions capable of running BOFs*
-
-[BOF-stager](examples/BOF-stager) - example of simple, cross-platform C2 implant that uses BOFs as its post-exploitation modules and communicates over HTTP with the C2 server.

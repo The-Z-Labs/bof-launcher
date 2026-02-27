@@ -2,17 +2,59 @@
 
 We follow DIY (do-it-yourself) philosophy when preparing C2 solution for a given mission objectives (i.e. professional adversary simulation engagements). Therefore we provide an open and flexible architectural solution together with reusable building blocks that can be quickly tailored to a given scenario.
 
+- [Architecture](#architecture)
+- [Deployment](#deployment)
+
 The building blocks of the toolkit:
 
-- [Architecture](#architecture)
 - [z-beac0n implant](#implant)
 - [backend components](#backend-components)
 - [bof-launcher library](#bof-launcher-library)
 - [Z-Labs BOFs collection](https://github.com/The-Z-Labs/bof-launcher/tree/main/bofs)
 - [cli4bofs tool](#cli4bofs-tool)
-- [Deployment](#deployment)
 
 ## Architecture
+
+## Deployment
+
+To run z-beac0n implant on o local machine for the testing/experimenting purposes, follow the steps below: 
+
+1. Build all components
+
+```
+~/bof-launcher$ zig build
+```
+
+2. Prepare C2 server
+
+By default server will listen at `127.0.0.1:8000`:
+
+```
+cp -r ../../zig-out/bin/bofs/ ./
+~/bof-launcher$ cd examples/implant
+~/bof-launcher/examples/implant$ python C2-http.py
+```
+
+The server exposes two endpoints:
+
+- '/tasking' - meant to be used by the operator to issue net tasks for the implant (`POST` request) and for retrieving output from completed tasks (`GET` request);
+- '/heartbeat' - meant to be used by the implant to query for a new tasks (`GET` request) and to send back tasks' output (`POST` request);
+
+3. Run z-beac0n implant
+
+By default z-beac0n is being built for Linux:
+
+ - as shellcode: `zig-out/bin/z-beac0n_lin_x64.bin`
+ - as ELF executable: `zig-out/bin/z-beac0n_lin_x64.elf`
+ - as shared library: `libz-beac0n_lin_x64.so`
+
+For Windows:
+
+ - as PE executable: `zig-out/bin/implant_win_{x86,x64}.exe`
+
+In simplest case running the implant is a matter of executing the binary:
+
+    ~/bof-launcher$ ./zig-out/bin/z-beac0n_lin_x64.elf
 
 ## Implant
 
@@ -42,7 +84,7 @@ Example [stager.py](src/stager.py) script is available as a staging script that 
 On the server side following components are available:
 
 - [stage-listener.py](src/stage-listener.py) - HTTP(S)-based payload serving listener compatible with ["meterpreter protocol"](https://github.com/rsmudge/metasploit-loader); 
-- [serve_bofs.py](https://github.com/The-Z-Labs/bof-launcher/blob/main/utils/serve_bofs.py) - Command and control server for handling implant's beaconing.
+- [C2-http.py](C2-http.py) - Command and control server for handling implant's beaconing.
 
 ## bof-launcher library
 
@@ -140,10 +182,3 @@ errors:
   code: 0x6
   message: "Unknown error"
 ```
-
-## Deployment
-
-
-
-
-
