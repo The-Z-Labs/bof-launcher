@@ -7,7 +7,7 @@
 Featured in:
 * [Cobalt Strike Community Kit](https://cobalt-strike.github.io/community_kit/)
 * [cli4bofs](https://github.com/The-Z-Labs/cli4bofs)
-* [z-beac0n Linux implant](examples/implant/)
+* [z-beac0n - Open Adversary Simulation Toolkit](examples/implant/)
 * [Linux Attack, Detection and Live Forensics Course](https://edu.defensive-security.com/view/courses/linux-attack-live-forensics-at-scale/1427336-12-linux-rootkits-for-red-and-blue-teams/9443073-us-beacon-object-file-bof-stager)
 
 Blog posts:
@@ -145,13 +145,6 @@ unsigned char go(unsigned char* arg_data, int arg_len) {
 }
 ```
 
-## Running BOFs from a filesystem
-
-Often during the developemnt/debugging, testing or just playing with a new piece of BOF code it is convenient to run it directly from a filesystem. For that purpose we created [cli4bofs](https://github.com/The-Z-Labs/cli4bofs) tool. After downloading and building it you can run every BOF out there. Below, an example of running [our BOFs](bofs/src) is shown:
-
-    cli4bofs.exe exec .\zig-out\bin\wWinver.coff.x64.o
-    cli4bofs.exe exec .\zig-out\bin\udpScanner.coff.x64.o str:162.159.200.1-5:123,88
-
 ## Documenting your BOFs
 
 We have also introduced a way for documenting BOFs with a simple yaml syntax within BOF's source code file. To document a BOF one can prefix each line containing the documentation with `///` at the top of BOF's source code file. By defualt during building the library with `zig build`, documentation from each BOF file will be concatenated to one common file `BOF-collection.yaml`. This file is ready to be used by our [cli4bofs tool](https://github.com/The-Z-Labs/cli4bofs). The yaml syntax for BOF documenting is shown below. An example of a BOF with complete documentation can be seen [here](https://github.com/The-Z-Labs/bof-launcher/blob/main/bofs/src/udpScanner.zig) and [here](https://github.com/The-Z-Labs/bof-launcher/blob/main/bofs/src/kmodLoader.zig) (for an example of BOF that exports API).
@@ -186,7 +179,7 @@ examples: string:"usage examples of a BOF"
 
 [bof-minimal_win_x64](https://github.com/The-Z-Labs/bof-minimal_win_x64) - if you're new to `bof-launcher`, be sure to check out this repo and read this [blog post](https://blog.z-labs.eu/2024/02/08/bof-launcher.html).
 
-### Open Adversary Simulation Toolkit - z-beac0n
+### z-beac0n - Open Adversary Simulation Toolkit
 
 *Implementing custom, cross-platform implants*
 
