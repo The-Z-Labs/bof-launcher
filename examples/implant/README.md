@@ -4,11 +4,15 @@ We follow DIY (do-it-yourself) philosophy when preparing C2 solution for a given
 
 The building blocks of the toolkit:
 
+- [Architecture](#architecture)
 - [z-beac0n implant](#implant)
 - [backend components](#backend-components)
 - [bof-launcher library](#bof-launcher-library)
 - [Z-Labs BOFs collection](https://github.com/The-Z-Labs/bof-launcher/tree/main/bofs)
 - [cli4bofs tool](#cli4bofs-tool)
+- [Deployment](#deployment)
+
+## Architecture
 
 ## Implant
 
@@ -18,8 +22,9 @@ z-beac0n implant is an example of software implant written with bof-launcher lib
 
 It is composed of:
 
-- [z-beac0n core BOF](../../bofs/src/z-beac0n-core.zig) (so called `BOF0`, i.e. initally executed BOF), it will take control over the implant and will manage its whole life-cycle (processing operator's commands, downloading additional BOFs, executing BOFs, uploading BOF's output to the operator, etc.);
+- [z-beac0n core BOF](../../bofs/src/z-beac0n-core.zig) (so called `BOF0`, i.e. initally executed BOF), it will take control over the implant and will manage its whole life-cycle (processing operator's commands, fetching additional BOFs, executing BOFs, uploading BOF's output to the operator, etc.);
 - statically compiled [bof-launcher library](../../bof-launcher/src/bof_launcher_api.h);
+- so called API-style BOF providing C2 communication protocol implementation. Thanks to implementing it as a BOF switching communication protocol implementation is possible during run-time (i.e. an implant is capable of fetching a BOF that provides alternative C2 communication implementation and re-attach it to "speak" with C2 server via other protocol!).
 - arbitrary number of additional BOFs launched and managed by the z-beac0n core BOF.
 
 Execution flow:
@@ -136,6 +141,7 @@ errors:
   message: "Unknown error"
 ```
 
+## Deployment
 
 
 
