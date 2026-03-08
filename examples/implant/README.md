@@ -15,6 +15,9 @@ The building blocks of the toolkit:
 
 ## Architecture
 
+<img width="699" height="273" alt="image" src="https://github.com/user-attachments/assets/441d23d5-15fc-4845-8bd3-f6b7fbfc59f5" />
+
+
 ## Deployment
 
 To run z-beac0n implant on o local machine for the testing/experimenting purposes, follow the steps below: 
