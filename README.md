@@ -183,7 +183,7 @@ examples: string:"usage examples of a BOF"
 
 *Implementing custom, cross-platform implants*
 
-[z-beac0n implant](examples/implant) - open and flexible architectural solution for building custom implant following *(almost) everything is a BOF* concept.
+[z-beac0n implant](examples/implant) - open and flexible architectural solution for building custom implant following: *(almost) everything is implemented as a BOF* concept.
 
 ### Running BOFs from disk
 
