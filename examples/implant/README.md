@@ -17,6 +17,8 @@ The building blocks of the toolkit:
 
 <img width="699" height="273" alt="image" src="https://github.com/user-attachments/assets/441d23d5-15fc-4845-8bd3-f6b7fbfc59f5" />
 
+For a description of implant's components depicted on the diagram see below: 
+
 **BOF zero (BOF0)** - heart of z-beac0n implant, it has access to bof-launcher API so it is capable of launching other BOFs. BOF0 is executed right after implant's launch. It will take control over the implant and will manage its whole life-cycle (processing operator's commands, fetching additional BOFs, executing BOFs, uploading BOF's output to the operator, etc.);
 
 **C2 Channel: API-style BOF** - initial implementation of the communication protocol with the C2 server. This essential BOF provides implementation of the following functions: `netInit`, `netConnect`, `netDisconnect`, `netExchange`, `netMasquerade`, and `netUnmasquerade` which are used by the implant to call home (i.e. C2 server) and obfuscate/mask generated network traffic. Notably an operator can provide alternative implementation of this BOF and re-attach it (during implant's runtime!) to cause the implant to "speak" with the C2 server in different language (i.e. using different communication protocol and/or modify traffic obfuscation/masking algorithm). Of course C2 server needs to act accordingly and prepare for "language" change.
