@@ -33,14 +33,14 @@ To run z-beac0n implant on o local machine for the testing/experimenting purpose
 By default server will listen at `127.0.0.1:8000`:
 
 ```
-cp -r ../../zig-out/bin/bofs/ ./
 ~/bof-launcher$ cd examples/implant
+cp -r ../../zig-out/bin/bofs/ ./
 ~/bof-launcher/examples/implant$ python C2-http.py
 ```
 
 The server exposes two endpoints:
 
-- '/tasking' - meant to be used by the operator to issue net tasks for the implant (`POST` request) and for retrieving output from completed tasks (`GET` request);
+- '/tasking' - meant to be used by the operator to issue new tasks for the implant (`POST` request) and for retrieving output from completed tasks (`GET` request);
 - '/heartbeat' - meant to be used by the implant to query for a new tasks (`GET` request) and to send back tasks' output (`POST` request);
 
 3. Run z-beac0n implant
@@ -55,7 +55,7 @@ For Windows:
 
  - as PE executable: `zig-out/bin/implant_win_{x86,x64}.exe`
 
-In simplest case running the implant is a matter of executing the binary:
+In simplest case (for testing purposes) running the implant is a matter of executing the binary:
 
     ~/bof-launcher$ ./zig-out/bin/z-beac0n_lin_x64.elf
 
