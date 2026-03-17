@@ -60,9 +60,10 @@ fn buildLib(
     optimize: std.builtin.OptimizeMode,
 ) void {
     lib.root_module.pic = true;
-    if (optimize == .ReleaseSmall) {
-        lib.root_module.unwind_tables = .none;
-    }
+    _ = optimize;
+    //if (optimize == .ReleaseSmall) {
+    //    lib.root_module.unwind_tables = .none;
+    //}
     lib.root_module.addCSourceFile(.{
         .file = b.path("src/beacon/beacon_impl.c"),
         .flags = &.{ "-std=c99", "-fdeclspec" },
