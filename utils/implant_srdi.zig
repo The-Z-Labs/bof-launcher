@@ -27,7 +27,7 @@ pub fn main() !void {
 
     if (dump_shellcode) {
         const file = try std.fs.cwd().createFile(
-            "implant_win_" ++ (if (@import("builtin").cpu.arch == .x86_64) "x64" else "x86") ++ ".bin",
+            "z-beac0n_win_" ++ (if (@import("builtin").cpu.arch == .x86_64) "x64" else "x86") ++ ".bin",
             .{},
         );
         defer file.close();

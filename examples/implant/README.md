@@ -49,8 +49,8 @@ cp -r ../../zig-out/bin/bofs/ ./
 
 The server exposes two endpoints:
 
-- '/tasking' - meant to be used by the operator to issue new tasks for the implant (`POST` request) and for retrieving output from completed tasks (`GET` request);
-- '/heartbeat' - meant to be used by the implant to query for a new tasks (`GET` request) and to send back tasks' output (`POST` request);
+- `/tasking` - meant to be used by the operator to issue new tasks for the implant (`POST` request) and for retrieving output from completed tasks (`GET` request);
+- `/heartbeat` - meant to be used by the implant to query for a new tasks (`GET` request) and to send back tasks' output (`POST` request);
 
 3. Run z-beac0n implant
 
@@ -62,7 +62,8 @@ By default z-beac0n is being built for Linux:
 
 For Windows:
 
- - as PE executable: `zig-out/bin/implant_win_{x86,x64}.exe`
+ - as shellcode: `zig-out/bin/z-beac0n_win_{x86,x64}.bin`
+ - as PE executable: `zig-out/bin/z-beac0n_win_{x86,x64}.exe`
 
 In simplest case (for testing purposes) running the implant is a matter of executing the binary:
 

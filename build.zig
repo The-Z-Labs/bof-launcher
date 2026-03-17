@@ -244,7 +244,7 @@ pub fn build(b: *std.Build) !void {
         const win32_module = win32_dep.module("bof_launcher_win32");
 
         const exe = b.addExecutable(.{
-            .name = b.fmt("implant_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }),
+            .name = b.fmt("z-beac0n_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }),
             .root_module = b.createModule(.{
                 .root_source_file = b.path("utils/implant_srdi.zig"),
                 .target = target,
