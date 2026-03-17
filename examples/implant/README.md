@@ -58,7 +58,7 @@ By default z-beac0n is being built for Linux:
 
  - as shellcode: `zig-out/bin/z-beac0n_lin_x64.bin`
  - as ELF executable: `zig-out/bin/z-beac0n_lin_x64.elf`
- - as shared library: `libz-beac0n_lin_x64.so`
+ - as shared library: `zig-out/lib/libz-beac0n_lin_x64.so`
 
 For Windows:
 
