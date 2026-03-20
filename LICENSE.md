@@ -1,8 +1,11 @@
 
+```
 Files: *
 Copyright: 2022-2026, Z-Labs (https://z-labs.eu)
 License: BSD-3-clause
+```
 
+```
 # The bof-launcher is provided under the 3-clause BSD license provided
 # at the end of this file.
 #
@@ -10,14 +13,19 @@ License: BSD-3-clause
 #
 # This license does not apply to third-party components detailed below.
 #
+```
 
+```
 Files: utils/boflint.py
 Copyright: 2025-2026
 License: Apache-2.0
+```
 
+```
 Files: bin/malasada{,exe}
 Copyright: 2026
 License: GNU GPL 3
+```
 
 
 License: BSD-3-clause
