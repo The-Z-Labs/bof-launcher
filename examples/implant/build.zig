@@ -76,7 +76,7 @@ pub fn build(b: *std.Build) void {
 
     // run malasada: https://github.com/sliverarmory/malasada - it converts provided so to executable shellcode
     const malasada_run = b.addSystemCommand(&.{
-        "bin/malasada",
+        if (@import("builtin").os.tag == .windows) "bin/malasada.exe" else "bin/malasada",
         "--call-export",
         "launch",
         b.fmt("zig-out/lib/" ++ "lib" ++ "{s}.so", .{shared_name}),
