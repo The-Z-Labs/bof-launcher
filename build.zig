@@ -212,7 +212,7 @@ pub fn build(b: *std.Build) !void {
         ));
         b.installArtifact(implant_so);
 
-        const shellcode_name = b.fmt("shellcode_binary_temp_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) });
+        const shellcode_name = b.fmt("temp_implant_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) });
         const shellcode_exe = dep.artifact(shellcode_name);
         b.installArtifact(shellcode_exe);
 

