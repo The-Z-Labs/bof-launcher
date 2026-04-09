@@ -185,7 +185,7 @@ examples: string:"usage examples of a BOF"
 
 [z-beac0n implant](examples/implant) - open and flexible architectural solution for building custom implant following: *(almost) everything is implemented as a BOF* concept.
 
-### Running BOFs from disk
+### Running BOFs from a disk
 
 *Rapid launching, prototyping and testing BOFs*
 
