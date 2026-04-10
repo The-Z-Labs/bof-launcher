@@ -2231,6 +2231,10 @@ fn initLauncher() !void {
     if (@import("builtin").os.tag == .windows) {
         w32.init();
 
+        try gstate.func_lookup.put("memcpy", @intFromPtr(&memcpy));
+        try gstate.func_lookup.put("memset", @intFromPtr(&memset));
+        try gstate.func_lookup.put("memmove", @intFromPtr(&memmove));
+
         try gstate.func_lookup.put("VirtualAlloc", @intFromPtr(&zgateVirtualAlloc));
         try gstate.func_lookup.put("VirtualAllocEx", @intFromPtr(&zgateVirtualAllocEx));
         try gstate.func_lookup.put("VirtualFree", @intFromPtr(&zgateVirtualFree));
@@ -2422,6 +2426,43 @@ export fn bofLauncherRelease() callconv(.c) void {
 
     assert(gstate.gpa.?.deinit() == .ok);
     gstate.gpa = null;
+}
+
+fn memcpy(noalias dest: ?[*]u8, noalias src: ?[*]const u8, len: usize) callconv(.c) ?[*]u8 {
+    @setRuntimeSafety(false);
+
+    for (0..len) |i| {
+        dest.?[i] = src.?[i];
+    }
+
+    return dest;
+}
+
+fn memset(dest: ?[*]u8, c: u8, len: usize) callconv(.c) ?[*]u8 {
+    @setRuntimeSafety(false);
+
+    for (0..len) |i| {
+        dest.?[i] = c;
+    }
+
+    return dest;
+}
+
+fn memmove(opt_dest: ?[*]u8, opt_src: ?[*]const u8, len: usize) callconv(.c) ?[*]u8 {
+    const dest = opt_dest.?;
+    const src = opt_src.?;
+
+    if (@intFromPtr(dest) < @intFromPtr(src)) {
+        for (0..len) |i| {
+            dest[i] = src[i];
+        }
+    } else {
+        for (0..len) |i| {
+            dest[len - 1 - i] = src[len - 1 - i];
+        }
+    }
+
+    return dest;
 }
 
 pub fn DllMain(
