@@ -575,11 +575,11 @@ fn processCommands(allocator: std.mem.Allocator, state: *zbeac0n.State, resp_con
 
     // for uri: make sure that it is \0 ended
     const uri = iter_task.next();
-    var uri_final: []const u8 = undefined;
+    var uri_final: [:0]const u8 = undefined;
     if (uri) |u| {
-        uri_final = try std.mem.joinZ(allocator, "", &.{u});
+        uri_final = try allocator.dupeZ(u8, u);
     } else {
-        uri_final = try std.mem.joinZ(allocator, "", &.{""});
+        uri_final = try allocator.dupeZ(u8, "");
     }
     try task_fields.append(uri_final);
     defer allocator.free(uri_final);
