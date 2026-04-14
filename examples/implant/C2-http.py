@@ -140,6 +140,8 @@ def netUnmasquerade(Task, MsgType):
         taskID = request.headers.get(OUTPUT_RESULT_TASKID_HEADER)
         if status_code == 0:
             data = base64.b64decode(request.get_data())
+        else:
+            data = ""
 
         return data, status_code, taskID
 
