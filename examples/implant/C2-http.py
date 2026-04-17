@@ -161,7 +161,7 @@ def addTask():
 
         # check if all required fields are present
         if not 'name' in reqData or not 'header' in reqData:
-            return "<p>Badly formatted taskt!</p>"
+            return "<p>Badly formatted task!</p>"
 
         # convert JSON request to string and append it to TaskFifo 
         data = json.dumps(reqData)
@@ -261,6 +261,8 @@ def constructImplantTask(implant_identity):
             bof_hash = format(abs(hash(f.read())), 'x')
 
         header = cmdData['header']
+
+        # we're swapping hash with "persistent" (if provided) to have the latter one at the end of the header
         if 'persist' in header:
             # replace 'persist' for bof_hash in header and then append 'persist'
             header = header.replace("persist", bof_hash)
