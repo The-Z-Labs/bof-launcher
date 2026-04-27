@@ -2,6 +2,7 @@ import icli
 import sys
 import json
 import http.client
+import urllib.parse
 from pathlib import Path
 import yaml
 
@@ -53,8 +54,64 @@ def processBofDocYaml():
             BOF_DOCS[bofMetadata['name']] = bofMetadata
 
 
+# Implants functions
+
+
+def showImplantInfo(implantSN):
+    print("Implant: " + implantSN)
+    print("Task: " + implantSN)
+    print("Status: " + implantSN)
+
+def showImplantStatus(implantSN):
+
+    try:
+        param = urllib.parse.urlencode({'implant': implantSN})
+        conn = http.client.HTTPConnection(C2_HOST)
+        conn.request("GET", "/tasking/implants?{}".format(param))
+        response = conn.getresponse()
+
+        task_status = json.loads(response.read())
+
+        print("Implant (implantSN: {})".format(implantSN))
+
+        pendingTasksN = task_status['pendingTasksN']
+        assignedTasksN = task_status['assignedTasksN']
+        completedTasksN = task_status['completedTasksN']
+        errTasksN = task_status['errTasksN']
+        last_taskID = task_status['last_taskID']
+        last_task_command = task_status['last_task_command']
+        last_task_output = task_status['last_task_output']
+
+        print()
+        print("Number of successfully completed tasks: " + str(completedTasksN))
+        print("Number of tasks resulted with error(s): " + str(errTasksN))
+        print("Number of running tasks: " + str(assignedTasksN))
+        print("Number of tasks pending on server: " + str(pendingTasksN))
+        print()
+
+        print("Last task (taskID: {})".format(last_taskID))
+        print()
+        print(last_task_command)
+        print()
+        print("Output: ")
+        print()
+        print(last_task_output)
+
+
+    except http.client.RemoteDisconnected as e:
+        print(f"Oops! The server disconnected unexpectedly: {e}")
+    except http.client.HTTPException as e:
+        print(f"A general HTTP error occurred: {type(e).__name__}: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+    
+
 # get content of ImplantDict from C2 server
-def queryImplantInfo():
+def getImplantsList():
     try:
         conn = http.client.HTTPConnection(C2_HOST)
         conn.request("GET", "/tasking/implants")
@@ -77,6 +134,7 @@ def queryImplantInfo():
         if 'conn' in locals():
             conn.close()
 
+### BOFs functions
 
 def execBof(TYPE, bof, implantSN, argv):
     try:
@@ -129,6 +187,7 @@ def execBof(TYPE, bof, implantSN, argv):
     print(implantSN, bof)
     print(argv)
 
+
 def listingBofs():
     return bofs
 
@@ -161,11 +220,13 @@ class ArgumentParser(icli.ArgumentParser):
             print('exec_shellcode')
         elif _object == 'implant':
             if _command == 'list':
-                resp = queryImplantInfo()
+                resp = getImplantsList()
                 print(resp)
             if _command == 'info':
-                resp = queryImplantInfo()
+                resp = showImplantInfo(kwargs['implantSN'])
                 print(resp)
+            if _command == 'status':
+                showImplantStatus(kwargs['implantSN'])
 
     def print_global_help(self):
         print()
@@ -193,6 +254,7 @@ ap = ArgumentParser(prog='' if len(sys.argv) < 2 else None)
 
 sp = ap.add_subparsers(dest='_object', metavar='object', help='Object')
 
+# Implant commands
 
 ap_implant = sp.add_parser('implant', help='Implants')
 sp_implant = ap_implant.add_subparsers(dest='_command',
@@ -200,8 +262,16 @@ sp_implant = ap_implant.add_subparsers(dest='_command',
                                        help='Command')
 
 sp_implant_list = sp_implant.add_parser('list', help='Lists implants that beaconed at least once')
-sp_implant_info = sp_implant.add_parser('info', help='Show details about the implant')
 
+sp_implant_info = sp_implant.add_parser('info', help='Show details about the implant')
+sp_implant_info.add_argument(
+    'implantSN', metavar='IMPLANT', help='Implant SN').completer = ComplImplants()
+
+sp_implant_status = sp_implant.add_parser('status', help='Show current status of selected IMPLANT')
+sp_implant_status.add_argument(
+    'implantSN', metavar='IMPLANT', help='Implant SN').completer = ComplImplants()
+
+# BOF commands
 
 ap_bof = sp.add_parser('bof', help='BOF execution routines')
 sp_bof = ap_bof.add_subparsers(dest='_command',

