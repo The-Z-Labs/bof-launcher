@@ -16,6 +16,9 @@ implants = []
 # populated at startup in processBofDocYaml() function
 BOF_DOCS = dict()
 
+def displayTaskID(taskID):
+    return taskID[:10]
+
 def getArgSpecFromDoc(bof_doc_entry):
     argsSpec = ""
 
@@ -53,9 +56,9 @@ def processBofDocYaml():
             bof_entry = dict()
             BOF_DOCS[bofMetadata['name']] = bofMetadata
 
-
+#
 # Implants functions
-
+#
 
 def showImplantInfo(implantSN):
     print("Implant: " + implantSN)
@@ -89,7 +92,7 @@ def showImplantStatus(implantSN):
         print("Number of tasks pending on server: " + str(pendingTasksN))
         print()
 
-        print("Last task (taskID: {})".format(last_taskID))
+        print("Last task (taskID: {})".format(displayTaskID(last_taskID)))
         print()
         print(last_task_command)
         print()
@@ -134,7 +137,53 @@ def getImplantsList():
         if 'conn' in locals():
             conn.close()
 
-### BOFs functions
+#
+# Tasks functions
+#
+TASK_STATUS = [
+        'UNKNOWN',
+        'PENDING',
+        'ASSIGNED',
+        'COMPLETED',
+        'FAILED',
+        ]
+
+def getTasksList(implantSN):
+    try:
+        if implantSN != "" and implantSN in implants:
+            param = urllib.parse.urlencode({'implant': implantSN})
+            url = "/tasking/tasks?{}".format(param)
+        else:
+            url = "/tasking/tasks"
+
+        conn = http.client.HTTPConnection(C2_HOST)
+        conn.request("GET", url)
+        response = conn.getresponse()
+
+        try:
+            records = json.loads(response.read())
+        except json.JSONDecodeError as e:
+            print("Invalid JSON syntax:", e)
+
+        print("taskID |", "ImplantID |", "Input command | State")
+        for entry in records:
+            print(displayTaskID(entry['taskID']), entry['implantID'], entry['task_command'], TASK_STATUS[entry['task_state']])
+
+    except http.client.RemoteDisconnected as e:
+        print(f"Oops! The server disconnected unexpectedly: {e}")
+    except http.client.HTTPException as e:
+        print(f"A general HTTP error occurred: {type(e).__name__}: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+        return ""
+
+
+#
+# BOFs functions
+#
 
 def execBof(TYPE, bof, implantSN, argv):
     try:
@@ -205,7 +254,7 @@ class ArgumentParser(icli.ArgumentParser):
 
     def run(self, _object, _type=None, _command=None, **kwargs):
         if _object == 'bof':
-            if _command == 'list':
+            if _command == 'list' or _command == 'ls':
                 res = listingBofs()
                 for b in res:
                     print(b)
@@ -216,10 +265,10 @@ class ArgumentParser(icli.ArgumentParser):
                 execBof("inline", kwargs['bofName'], kwargs['implantSN'], argv)
             if _command == 'exec-thread':
                 execBof("thread", kwargs['bofName'], kwargs['implantSN'], kwargs['argv'])
-        elif _object == 'exec_shellcode':
+        elif _object == 'shellcode':
             print('exec_shellcode')
         elif _object == 'implant':
-            if _command == 'list':
+            if _command == 'list' or _command == 'ls':
                 resp = getImplantsList()
                 print(resp)
             if _command == 'info':
@@ -227,6 +276,13 @@ class ArgumentParser(icli.ArgumentParser):
                 print(resp)
             if _command == 'status':
                 showImplantStatus(kwargs['implantSN'])
+        elif _object == 'task':
+            if _command == 'list' or _command == 'ls':
+                implantSN = ""
+                if kwargs['implant']:
+                    implantSN = kwargs['implant']
+                resp = getTasksList(implantSN)
+                print(resp)
 
     def print_global_help(self):
         print()
@@ -252,16 +308,17 @@ class ArgumentParser(icli.ArgumentParser):
 
 ap = ArgumentParser(prog='' if len(sys.argv) < 2 else None)
 
-sp = ap.add_subparsers(dest='_object', metavar='object', help='Object')
+sp = ap.add_subparsers(dest='_object', metavar='', help='')
 
 # Implant commands
 
-ap_implant = sp.add_parser('implant', help='Implants')
+ap_implant = sp.add_parser('implant', help='Implants management')
 sp_implant = ap_implant.add_subparsers(dest='_command',
                                        metavar='command',
                                        help='Command')
 
 sp_implant_list = sp_implant.add_parser('list', help='Lists implants that beaconed at least once')
+sp_implant_list = sp_implant.add_parser('ls', help='The same as "list"')
 
 sp_implant_info = sp_implant.add_parser('info', help='Show details about the implant')
 sp_implant_info.add_argument(
@@ -271,6 +328,29 @@ sp_implant_status = sp_implant.add_parser('status', help='Show current status of
 sp_implant_status.add_argument(
     'implantSN', metavar='IMPLANT', help='Implant SN').completer = ComplImplants()
 
+# Task commands
+
+ap_task = sp.add_parser('task', help='Tasks history')
+sp_task = ap_task.add_subparsers(dest='_command',
+                                       metavar='command',
+                                       help='Command')
+
+sp_task_list = sp_task.add_parser('list', help='Lists implants that beaconed at least once')
+sp_task_ls = sp_task.add_parser('ls', help='The same as "list"')
+sp_task_list.add_argument('--implant',
+                                 metavar='IMPLANT',
+                                 help='Implant serial number (SN)', required=False)
+sp_task_ls.add_argument('--implant',
+                                 metavar='IMPLANT',
+                                 help='Implant serial number (SN)', required=False)
+
+# Shellcode commands
+
+ap_shellcode = sp.add_parser('shellcode', help='Shellcode execution routines')
+sp_shellcode = ap_shellcode.add_subparsers(dest='_command',
+                                       metavar='command',
+                                       help='Command')
+
 # BOF commands
 
 ap_bof = sp.add_parser('bof', help='BOF execution routines')
@@ -279,6 +359,7 @@ sp_bof = ap_bof.add_subparsers(dest='_command',
                                        help='Command')
 
 sp_bof_list = sp_bof.add_parser('list', help='Lists available BOFs')
+sp_bof_list = sp_bof.add_parser('ls', help='The same as "list"')
 
 
 sp_bof_exec = sp_bof.add_parser('info', help='Show BOF details')

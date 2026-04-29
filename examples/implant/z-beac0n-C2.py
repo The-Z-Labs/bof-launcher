@@ -242,6 +242,63 @@ def addTask():
     str_out = ''.join(resp)
     return str_out
 
+class TaskStatus(IntEnum):
+    UNKNOWN = 0
+    PENDING = 1
+    ASSIGNED = 2
+    COMPLETED = 3
+    FAILED = 4
+
+# return task's current state
+def getTaskState(taskID):
+    taskStatus = TaskStatus.UNKNOWN
+
+    if taskID in OutputDict:
+        return taskStatus.COMPLETED
+    elif taskID in ErrorDict:
+        return taskStatus.FAILED
+    elif taskID in InputDict:
+        return taskStatus.ASSIGNED
+    else:
+        return taskStatus.PENDING
+
+# return task's command line execution and (if task has completed) its output
+def getTaskInOut(taskID):
+    task_command = ""
+    task_output = ""
+
+    if taskID in InputDict:
+        task_command = InputDict[taskID]['name']
+        if 'argv' in InputDict[taskID]:
+            task_command += " " + InputDict[taskID]['argv']
+        if getTaskState(taskID) == TaskStatus.COMPLETED:
+            task_output = OutputDict[taskID].decode('utf-8')
+
+    return task_command, task_output
+
+
+@app.route("/tasking/tasks", methods=['GET'])
+def tasks():
+    implantSN = request.args.get('implant')
+
+    resp = []
+
+    for key_iSN, taskList in ImplantTasksDict.items():
+        if implantSN != None and implantSN != key_iSN:
+            continue
+        for task in taskList:
+            task_state = getTaskState(task)
+            task_command, _ = getTaskInOut(task)
+
+            resp.append({
+                'taskID' : task,
+                'implantID' : key_iSN,
+                'task_command' : task_command,
+                'task_state' : task_state,
+                })
+
+    return jsonify(resp)
+
 
 @app.route("/tasking/implants", methods=['GET'])
 def implants():
@@ -251,7 +308,7 @@ def implants():
     # if implant=<implantSN> not provided return only essential data aobut all implants: ImplantDict
     if implantSN == None:
         return jsonify(ImplantDict)
-    # in other case return status about running/pending/completed tasks and input and output aof last completed task
+    # in other case return status about running/pending/completed tasks and input and output of a lastly completed task
     else:
         pendingTasksN = 0
         assignedTasksN = 0
@@ -274,24 +331,21 @@ def implants():
             implant_tasks_list = []
 
         for t in implant_tasks_list:
-            if t in OutputDict:
+            ts = getTaskState(t)
+            if ts == TaskStatus.COMPLETED:
                 completedTasksN += 1
-            elif t in ErrorDict:
+                # record taskID of last completed task
+                last_taskID = t
+            elif ts == TaskStatus.FAILED:
                 errTasksN += 1
-            elif t in InputDict:
+            elif ts == TaskStatus.ASSIGNED:
                 assignedTasksN += 1
             else:
                 pendingTasksN += 1
 
         # get last completed task's ID
         if completedTasksN > 0:
-            last_taskID = implant_tasks_list[-1]
-            if last_taskID in InputDict:
-                last_task_command = InputDict[last_taskID]['name']
-                if 'argv' in InputDict[last_taskID]:
-                    last_task_command += " " + InputDict[last_taskID]['argv']
-            if last_taskID in OutputDict:
-                last_task_output = OutputDict[last_taskID].decode('utf-8')
+            last_task_command, last_task_output = getTaskInOut(last_taskID)
 
             print(type(last_task_output))
 
