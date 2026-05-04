@@ -5,6 +5,7 @@ import http.client
 import urllib.parse
 from pathlib import Path
 import yaml
+import texttable
 
 C2_HOST="127.0.0.1:8000"
 YAML_FILE="BOF-Z-Labs.yaml"
@@ -92,13 +93,14 @@ def showImplantStatus(implantSN):
         print("Number of tasks pending on server: " + str(pendingTasksN))
         print()
 
-        print("Last task (taskID: {})".format(displayTaskID(last_taskID)))
-        print()
-        print(last_task_command)
-        print()
-        print("Output: ")
-        print()
-        print(last_task_output)
+        if last_taskID != "":
+            print("Last task (taskID: {})".format(displayTaskID(last_taskID)))
+            print()
+            print(last_task_command)
+            print()
+            print("Output: ")
+            print()
+            print(last_task_output)
 
 
     except http.client.RemoteDisconnected as e:
@@ -122,10 +124,17 @@ def getImplantsList():
 
         records = json.loads(response.read())
 
-        print("implant SN |", "first Seen At |", "last seen at |", "implantIdentity")
+        tableObj = texttable.Texttable(0)
+        tableObj.set_deco(texttable.Texttable.HEADER)
+        tableObj.set_cols_dtype(["t", "t", "t", "t"])
+        #tableObj.set_cols_valign(["t", "t", "t", "t"])
+        tableObj.add_rows([["Implant ID", "First seen at", "Last seen at", "Implant identity string"]], header=True)
+
         for keySN, record in records.items():
             implants.append(keySN)
-            print(keySN, record['firstSeenAt'], record['lastSeenAt'], record['implantIdentity'])
+            tableObj.add_row([keySN, record['firstSeenAt'], record['lastSeenAt'], record['implantIdentity']])
+
+        print(tableObj.draw())
 
     except http.client.RemoteDisconnected as e:
         print(f"Oops! The server disconnected unexpectedly: {e}")
@@ -165,9 +174,17 @@ def getTasksList(implantSN):
         except json.JSONDecodeError as e:
             print("Invalid JSON syntax:", e)
 
-        print("taskID |", "ImplantID |", "Input command | State")
+        tableObj = texttable.Texttable(0)
+        tableObj.set_deco(texttable.Texttable.HEADER)
+        tableObj.set_cols_dtype(["t", "t", "t", "t"])
+        #tableObj.set_cols_valign(["t", "t", "t", "t"])
+        tableObj.add_rows([["Task ID", "Implant ID", "Input Command", "Task State"]], header=True)
+
+        print()
         for entry in records:
-            print(displayTaskID(entry['taskID']), entry['implantID'], entry['task_command'], TASK_STATUS[entry['task_state']])
+            tableObj.add_row([displayTaskID(entry['taskID']), entry['implantID'], entry['task_command'], TASK_STATUS[entry['task_state']]])
+
+        print(tableObj.draw())
 
     except http.client.RemoteDisconnected as e:
         print(f"Oops! The server disconnected unexpectedly: {e}")
@@ -270,7 +287,6 @@ class ArgumentParser(icli.ArgumentParser):
         elif _object == 'implant':
             if _command == 'list' or _command == 'ls':
                 resp = getImplantsList()
-                print(resp)
             if _command == 'info':
                 resp = showImplantInfo(kwargs['implantSN'])
                 print(resp)
