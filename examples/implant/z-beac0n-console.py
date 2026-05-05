@@ -62,9 +62,12 @@ def processBofDocYaml():
 #
 
 def showImplantInfo(implantSN):
-    print("Implant: " + implantSN)
-    print("Task: " + implantSN)
-    print("Status: " + implantSN)
+    print()
+    print("Implant ID: " + implantSN)
+    print("First seen at: TODO")
+    print("Last seen at: TODO")
+    print("Implant identity string: TODO")
+    print()
 
 def showImplantStatus(implantSN):
 
@@ -135,6 +138,7 @@ def getImplantsList():
             tableObj.add_row([keySN, record['firstSeenAt'], record['lastSeenAt'], record['implantIdentity']])
 
         print(tableObj.draw())
+        print()
 
     except http.client.RemoteDisconnected as e:
         print(f"Oops! The server disconnected unexpectedly: {e}")
@@ -197,6 +201,46 @@ def getTasksList(implantSN):
             conn.close()
         return ""
 
+def showTaskInfo(taskID):
+    try:
+        param = urllib.parse.urlencode({'id': taskID})
+        url = "/tasking/task?{}".format(param)
+
+        conn = http.client.HTTPConnection(C2_HOST)
+        conn.request("GET", url)
+        response = conn.getresponse()
+
+        try:
+            record = json.loads(response.read())
+        except json.JSONDecodeError as e:
+            print("Invalid JSON syntax:", e)
+
+        for taskInfo in record:
+            tstate = taskInfo['task_state']
+            print("Task State: {}".format(TASK_STATUS[tstate]))
+            print("Task (taskID: {}) input:".format(displayTaskID(taskInfo['taskID'])))
+
+            print()
+            print(taskInfo['task_command'])
+            print()
+
+            if TASK_STATUS[tstate] == "COMPLETED":
+                print("Output: ")
+                print()
+                print(taskInfo['task_output'])
+            elif TASK_STATUS[tstate] == "FAILED":
+                print("Return Status: {}".format(taskInfo['task_retstatus']))
+
+    except http.client.RemoteDisconnected as e:
+        print(f"Oops! The server disconnected unexpectedly: {e}")
+    except http.client.HTTPException as e:
+        print(f"A general HTTP error occurred: {type(e).__name__}: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+        return ""
 
 #
 # BOFs functions
@@ -293,6 +337,9 @@ class ArgumentParser(icli.ArgumentParser):
             if _command == 'status':
                 showImplantStatus(kwargs['implantSN'])
         elif _object == 'task':
+            if _command == 'info':
+                taskID = kwargs['taskID']
+                showTaskInfo(taskID)
             if _command == 'list' or _command == 'ls':
                 implantSN = ""
                 if kwargs['implant']:
@@ -359,6 +406,10 @@ sp_task_list.add_argument('--implant',
 sp_task_ls.add_argument('--implant',
                                  metavar='IMPLANT',
                                  help='Implant serial number (SN)', required=False)
+
+sp_task_info = sp_task.add_parser('info', help='Show details about the task')
+sp_task_info.add_argument(
+    'taskID', metavar='TASK', help='Task ID')
 
 # Shellcode commands
 

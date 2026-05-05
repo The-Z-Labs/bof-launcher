@@ -98,8 +98,10 @@ ImplantTasksDict = dict()
 # dict() of whole task sent by the operator is stored as a value:
 InputDict = dict()
 
-# strings of outpud data is stored
+# string of output data is stored
 OutputDict = dict()
+
+# ret status code from BOF is stored
 ErrorDict = dict()
 
 ### Network traffic evasion (C2 <-> implant)
@@ -176,7 +178,7 @@ def netUnmasquerade(Task, MsgType):
 ### end of Network traffic evasion (C2 <-> implant)
 
 
-### Handling operator's requests from console (adding new tasks and status display)
+### Handling operator's requests from console (like adding new tasks and status display)
 @app.route("/")
 def main_page():
     return "<p>bofs repository</p>"
@@ -299,6 +301,30 @@ def tasks():
 
     return jsonify(resp)
 
+@app.route("/tasking/task", methods=['GET'])
+def taskInfo():
+    taskID = request.args.get('id')
+
+    resp = []
+
+    if taskID != "":
+        task_command, task_output = getTaskInOut(taskID)
+        task_state = getTaskState(taskID)
+
+        if task_state == TaskStatus.FAILED:
+            task_retstatus = ErrorDict[taskID]
+        else:
+            task_retstatus = 0
+
+        resp.append({
+            'taskID' : taskID,
+            'task_command' : task_command,
+            'task_output' : task_output,
+            'task_retstatus' : task_retstatus,
+            'task_state' : task_state,
+            })
+
+    return jsonify(resp)
 
 @app.route("/tasking/implants", methods=['GET'])
 def implants():
