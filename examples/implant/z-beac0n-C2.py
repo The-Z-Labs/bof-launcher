@@ -194,9 +194,12 @@ def addTask():
             return "<p>Badly formatted task!</p>"
 
         # add unique ID to the task (taskID)
-        reqData['id'] = secrets.token_hex()
+        reqData['id'] = secrets.token_hex(8)
         taskID = reqData['id']
         serial_number = reqData['SN']
+
+        # store task's input data for logging purposes
+        InputDict[taskID] = reqData
 
         # assign generated taskID to specified implant 'SN' in ImplantTasksDict:
         if ImplantTasksDict.get(serial_number) is None:
@@ -247,9 +250,17 @@ def addTask():
 class TaskStatus(IntEnum):
     UNKNOWN = 0
     PENDING = 1
-    ASSIGNED = 2
+    IN_PROGRESS = 2
     COMPLETED = 3
     FAILED = 4
+
+def isTaskIDinTaskFifo(taskID):
+    for task in TaskFifo:
+        t = json.loads(task)
+        if t['id'] == taskID:
+            return True
+
+    return False
 
 # return task's current state
 def getTaskState(taskID):
@@ -259,10 +270,12 @@ def getTaskState(taskID):
         return taskStatus.COMPLETED
     elif taskID in ErrorDict:
         return taskStatus.FAILED
-    elif taskID in InputDict:
-        return taskStatus.ASSIGNED
-    else:
+    elif isTaskIDinTaskFifo(taskID) == True:
         return taskStatus.PENDING
+    elif taskID in InputDict and isTaskIDinTaskFifo(taskID) == False:
+        return taskStatus.IN_PROGRESS
+    else:
+        return taskStatus.UNKNOWN
 
 # return task's command line execution and (if task has completed) its output
 def getTaskInOut(taskID):
@@ -292,11 +305,19 @@ def tasks():
             task_state = getTaskState(task)
             task_command, _ = getTaskInOut(task)
 
+            # get execution-mode from task's header
+            exec_mode = ""
+            try:
+                exec_mode = InputDict[task]['header'].split(':')[0]
+            except Exception as e:
+                print(e)
+
             resp.append({
                 'taskID' : task,
                 'implantID' : key_iSN,
                 'task_command' : task_command,
                 'task_state' : task_state,
+                'exec_mode' : exec_mode,
                 })
 
     return jsonify(resp)
@@ -307,9 +328,16 @@ def taskInfo():
 
     resp = []
 
-    if taskID != "":
+    if taskID != "" and taskID in InputDict:
         task_command, task_output = getTaskInOut(taskID)
         task_state = getTaskState(taskID)
+
+        # get execution-mode from task's header
+        exec_mode = ""
+        try:
+            exec_mode = InputDict[taskID]['header'].split(':')[0]
+        except Exception as e:
+            print(e)
 
         if task_state == TaskStatus.FAILED:
             task_retstatus = ErrorDict[taskID]
@@ -322,6 +350,7 @@ def taskInfo():
             'task_output' : task_output,
             'task_retstatus' : task_retstatus,
             'task_state' : task_state,
+            'exec_mode' : exec_mode,
             })
 
     return jsonify(resp)
@@ -337,7 +366,7 @@ def implants():
     # in other case return status about running/pending/completed tasks and input and output of a lastly completed task
     else:
         pendingTasksN = 0
-        assignedTasksN = 0
+        inprogressTasksN = 0
         completedTasksN = 0
         errTasksN = 0
         last_taskID = ""
@@ -364,8 +393,8 @@ def implants():
                 last_taskID = t
             elif ts == TaskStatus.FAILED:
                 errTasksN += 1
-            elif ts == TaskStatus.ASSIGNED:
-                assignedTasksN += 1
+            elif ts == TaskStatus.IN_PROGRESS:
+                inprogressTasksN += 1
             else:
                 pendingTasksN += 1
 
@@ -377,7 +406,7 @@ def implants():
 
         resp = {
                 'pendingTasksN' : pendingTasksN,
-                'assignedTasksN' : assignedTasksN,
+                'inprogressTasksN' : inprogressTasksN,
                 'completedTasksN' : completedTasksN,
                 'errTasksN' : errTasksN,
                 'last_taskID' : last_taskID,
@@ -491,9 +520,6 @@ def constructImplantTask(taskJSON, implant_identity):
 
     # request ID for identifying requests (task input data) with responses (tasks output)
     taskID = cmdData['id']
-
-    # store task's input data for logging purposes
-    InputDict[taskID] = cmdData
 
     # Based on task's input data (cmdData), prepare an implant's instruction (Instruction) for execution 
     Instruction = {

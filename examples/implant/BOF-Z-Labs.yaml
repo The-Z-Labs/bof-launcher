@@ -591,3 +591,14 @@ errors:
 - name: UnknownError
   code: 0x8
   message: "Unknown error"
+---
+name: sleepyJoe
+description: "Just sleeping ..."
+author: Z-Labs
+tags: ['linux','host-recon','z-labs']
+OS: linux
+sources:
+    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/sleepyJoe.zig'
+examples: '
+ sleepyJoe
+'

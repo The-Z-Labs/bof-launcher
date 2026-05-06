@@ -18,7 +18,7 @@ implants = []
 BOF_DOCS = dict()
 
 def displayTaskID(taskID):
-    return taskID[:10]
+    return taskID
 
 def getArgSpecFromDoc(bof_doc_entry):
     argsSpec = ""
@@ -82,7 +82,7 @@ def showImplantStatus(implantSN):
         print("Implant (implantSN: {})".format(implantSN))
 
         pendingTasksN = task_status['pendingTasksN']
-        assignedTasksN = task_status['assignedTasksN']
+        inprogressTasksN = task_status['inprogressTasksN']
         completedTasksN = task_status['completedTasksN']
         errTasksN = task_status['errTasksN']
         last_taskID = task_status['last_taskID']
@@ -92,7 +92,7 @@ def showImplantStatus(implantSN):
         print()
         print("Number of successfully completed tasks: " + str(completedTasksN))
         print("Number of tasks resulted with error(s): " + str(errTasksN))
-        print("Number of running tasks: " + str(assignedTasksN))
+        print("Number of running tasks: " + str(inprogressTasksN))
         print("Number of tasks pending on server: " + str(pendingTasksN))
         print()
 
@@ -156,7 +156,7 @@ def getImplantsList():
 TASK_STATUS = [
         'UNKNOWN',
         'PENDING',
-        'ASSIGNED',
+        'IN PROGRESS',
         'COMPLETED',
         'FAILED',
         ]
@@ -180,13 +180,13 @@ def getTasksList(implantSN):
 
         tableObj = texttable.Texttable(0)
         tableObj.set_deco(texttable.Texttable.HEADER)
-        tableObj.set_cols_dtype(["t", "t", "t", "t"])
+        tableObj.set_cols_dtype(["t", "t", "t", "t", "t"])
         #tableObj.set_cols_valign(["t", "t", "t", "t"])
-        tableObj.add_rows([["Task ID", "Implant ID", "Input Command", "Task State"]], header=True)
+        tableObj.add_rows([["Task ID", "Implant ID", "Input Command", "Execution Mode", "Task State"]], header=True)
 
         print()
         for entry in records:
-            tableObj.add_row([displayTaskID(entry['taskID']), entry['implantID'], entry['task_command'], TASK_STATUS[entry['task_state']]])
+            tableObj.add_row([displayTaskID(entry['taskID']), entry['implantID'], entry['task_command'], entry['exec_mode'], TASK_STATUS[entry['task_state']]])
 
         print(tableObj.draw())
 
@@ -217,18 +217,21 @@ def showTaskInfo(taskID):
 
         for taskInfo in record:
             tstate = taskInfo['task_state']
+            print("Task ID: {}".format(displayTaskID(taskInfo['taskID'])))
             print("Task State: {}".format(TASK_STATUS[tstate]))
-            print("Task (taskID: {}) input:".format(displayTaskID(taskInfo['taskID'])))
+            print("Execution Mode: {}".format(taskInfo['exec_mode']))
+            print("Task Input:")
 
             print()
             print(taskInfo['task_command'])
             print()
 
             if TASK_STATUS[tstate] == "COMPLETED":
-                print("Output: ")
+                print("Task Output: ")
                 print()
                 print(taskInfo['task_output'])
             elif TASK_STATUS[tstate] == "FAILED":
+                # TODO: get string from YAML realted to a given return code
                 print("Return Status: {}".format(taskInfo['task_retstatus']))
 
     except http.client.RemoteDisconnected as e:
