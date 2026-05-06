@@ -303,8 +303,14 @@ def execBof(TYPE, bof, implantSN, argv):
     print(argv)
 
 
-def listingBofs():
-    return bofs
+def listingBofs(details):
+
+    for b in bofs:
+        if details == True:
+            print(b + " (OS: " + BOF_DOCS[b]['OS'] + ") - " + BOF_DOCS[b]['description'])
+        else:
+            print(b)
+
 
 class ComplImplants():
 
@@ -321,9 +327,10 @@ class ArgumentParser(icli.ArgumentParser):
     def run(self, _object, _type=None, _command=None, **kwargs):
         if _object == 'bof':
             if _command == 'list' or _command == 'ls':
-                res = listingBofs()
-                for b in res:
-                    print(b)
+                details = ""
+                if kwargs['all']:
+                    details = kwargs['all']
+                listingBofs(details)
             if _command == 'exec-inline':
                 argv = ""
                 if kwargs['argv']:
@@ -439,7 +446,12 @@ sp_bof = ap_bof.add_subparsers(dest='_command',
                                        help='Command')
 
 sp_bof_list = sp_bof.add_parser('list', help='Lists available BOFs')
-sp_bof_list = sp_bof.add_parser('ls', help='The same as "list"')
+sp_bof_ls = sp_bof.add_parser('ls', help='The same as "list"')
+sp_bof_list.add_argument('--all', '-a',
+                                 help='Implant serial number (SN)', action='store_true', required=False)
+sp_bof_ls.add_argument('--all', '-a',
+                                 help='Implant serial number (SN)', action='store_true', required=False)
+
 
 
 sp_bof_exec = sp_bof.add_parser('info', help='Show BOF details')
