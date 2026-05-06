@@ -263,6 +263,8 @@ def execBof(TYPE, bof, implantSN, argv):
             bof_header += "inline:"
         elif TYPE == "thread":
             bof_header += "thread:"
+        elif TYPE == "spawn":
+            bof_header += "process:"
 
         args_spec = getArgSpecFromDoc(bof_doc_entry)
         bof_header += args_spec
@@ -328,7 +330,15 @@ class ArgumentParser(icli.ArgumentParser):
                     argv = kwargs['argv']
                 execBof("inline", kwargs['bofName'], kwargs['implantSN'], argv)
             if _command == 'exec-thread':
-                execBof("thread", kwargs['bofName'], kwargs['implantSN'], kwargs['argv'])
+                argv = ""
+                if kwargs['argv']:
+                    argv = kwargs['argv']
+                execBof("thread", kwargs['bofName'], kwargs['implantSN'], argv)
+            if _command == 'spawn':
+                argv = ""
+                if kwargs['argv']:
+                    argv = kwargs['argv']
+                execBof("spawn", kwargs['bofName'], kwargs['implantSN'], argv)
         elif _object == 'shellcode':
             print('exec_shellcode')
         elif _object == 'implant':
@@ -453,11 +463,31 @@ sp_bof_exec.add_argument('--argv',
                                  metavar='ARGV',
                                  help='BOF arguments', required=False)
 
-sp_bof_exec = sp_bof.add_parser('exec-thread', help='Execution of a chosen BOF in a separate thread')
-sp_bof_exec = sp_bof.add_parser('spawn', help='Execution of a chosen BOF inside of a sacrificial process')
+sp_bof_exec_thread = sp_bof.add_parser('exec-thread', help='Execution of a chosen BOF in a separate thread')
+sp_bof_exec_thread.add_argument(
+    'implantSN', metavar='IMPLANT', help='Implant SN').completer = ComplImplants()
+sp_bof_exec_thread.add_argument(
+    'bofName', metavar='BOF', help='BOF name').completer = ComplBofs()
+
+sp_bof_exec_thread.add_argument('--argv',
+                                 metavar='ARGV',
+                                 help='BOF arguments', required=False)
+
+
+sp_bof_exec_process = sp_bof.add_parser('spawn', help='Execution of a chosen BOF inside of a sacrificial process')
+sp_bof_exec_process.add_argument(
+    'implantSN', metavar='IMPLANT', help='Implant SN').completer = ComplImplants()
+sp_bof_exec_process.add_argument(
+    'bofName', metavar='BOF', help='BOF name').completer = ComplBofs()
+
+sp_bof_exec_process.add_argument('--argv',
+                                 metavar='ARGV',
+                                 help='BOF arguments', required=False)
+
+
 sp_bof_exec = sp_bof.add_parser('inject', help='Injecting chosen BOF to a chosen (running) process')
 
-ap.sections = {'implant': [], 'bof': []}
+ap.sections = {'implant': [], 'bof': [], 'task': []}
 
 print(
 """
