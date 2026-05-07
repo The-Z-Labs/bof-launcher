@@ -8,7 +8,16 @@ import yaml
 import texttable
 
 C2_HOST="127.0.0.1:8000"
-YAML_FILE="BOF-Z-Labs.yaml"
+#YAML_FILE="BOF-Z-Labs.yaml"
+YAML_FILE="BOF-all.yaml"
+
+# BOFs' categorization adopted from https://github.com/Adaptix-Framework/Extension-Kit
+bofs_categories = [
+        {"SAL-BOF" : "Local situational awareness BOFs"},
+        {"SAR-BOF" : "Remote situational awareness BOFs"},
+        {"AD-BOF" : "BOFs that contains common enumeration and attack methods for Windows Active Directory"},
+        {"ADCS-BOF" : "BOFs for interacting with ADCS servers and certificates"},
+]
 
 bofs = []
 implants = []
@@ -127,7 +136,7 @@ def getImplantsList():
 
         records = json.loads(response.read())
 
-        tableObj = texttable.Texttable(0)
+        tableObj = texttable.Texttable(160)
         tableObj.set_deco(texttable.Texttable.HEADER)
         tableObj.set_cols_dtype(["t", "t", "t", "t"])
         #tableObj.set_cols_valign(["t", "t", "t", "t"])
@@ -178,7 +187,7 @@ def getTasksList(implantSN):
         except json.JSONDecodeError as e:
             print("Invalid JSON syntax:", e)
 
-        tableObj = texttable.Texttable(0)
+        tableObj = texttable.Texttable(160)
         tableObj.set_deco(texttable.Texttable.HEADER)
         tableObj.set_cols_dtype(["t", "t", "t", "t", "t"])
         #tableObj.set_cols_valign(["t", "t", "t", "t"])
@@ -305,11 +314,47 @@ def execBof(TYPE, bof, implantSN, argv):
 
 def listingBofs(details):
 
-    for b in bofs:
-        if details == True:
-            print(b + " (OS: " + BOF_DOCS[b]['OS'] + ") - " + BOF_DOCS[b]['description'])
-        else:
-            print(b)
+    misc = []
+
+    for cat in bofs_categories:
+
+        tableObj = texttable.Texttable(160)
+        tableObj.set_deco(texttable.Texttable.HEADER)
+        tableObj.set_cols_dtype(["t", "t", "t", "t"])
+        tableObj.add_rows([["BOF name", "Supported OS", "Supported Arch", "Description"]], header=True)
+
+        for key, value in cat.items():
+            print()
+            print(key + " - " + value)
+            print()
+            for b in bofs:
+                if 'category' in BOF_DOCS[b]:
+                    if BOF_DOCS[b]['category'] == key:
+                        os = BOF_DOCS[b]['OS']
+                        arch = "TODO"
+                        tableObj.add_row([b, os, arch, BOF_DOCS[b]['description']])
+                else:
+                    if b not in misc:
+                        misc.append(b)
+
+        print(tableObj.draw())
+
+    # print remaining uncategorized BOFs
+
+    print()
+    print("Misc - Other, currently not categorized BOFs")
+    print()
+    tableObj = texttable.Texttable(160)
+    tableObj.set_deco(texttable.Texttable.HEADER)
+    tableObj.set_cols_dtype(["t", "t", "t", "t"])
+    tableObj.add_rows([["BOF name", "Supported OS", "Supported Arch", "Description"]], header=True)
+    for b in misc:
+        os = BOF_DOCS[b]['OS']
+        arch = "TODO"
+        tableObj.add_row([b, os, arch, BOF_DOCS[b]['description']])
+
+    print(tableObj.draw())
+
 
 def showBofInfo(bof_name):
     print("Name: " + bof_name)
