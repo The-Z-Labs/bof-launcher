@@ -311,6 +311,29 @@ def listingBofs(details):
         else:
             print(b)
 
+def showBofInfo(bof_name):
+    print("Name: " + bof_name)
+    print("Description: " + BOF_DOCS[bof_name]['description'])
+    print("Author: " + BOF_DOCS[bof_name]['author'])
+    print("Operating System: " + BOF_DOCS[bof_name]['OS'])
+
+    if 'arguments' in BOF_DOCS[bof_name]:
+        args_list = BOF_DOCS[bof_name]['arguments']
+        print("Arguments:")
+        for arg in args_list:
+            for key, val in arg.items():
+                print("  " + key + ": " + str(val))
+
+    if 'errors' in BOF_DOCS[bof_name]:
+        err_list = BOF_DOCS[bof_name]['errors']
+        print("Errors:")
+        for err in err_list:
+            for key, val in err.items():
+                print("  " + key + ": " + str(val))
+
+    if 'examples' in BOF_DOCS[bof_name]:
+        print("Usage: ")
+        print(BOF_DOCS[bof_name]['examples'])
 
 class ComplImplants():
 
@@ -331,23 +354,31 @@ class ArgumentParser(icli.ArgumentParser):
                 if kwargs['all']:
                     details = kwargs['all']
                 listingBofs(details)
+
+            if _command == 'info':
+                showBofInfo(kwargs['bofName'])
+
             if _command == 'exec-inline':
                 argv = ""
                 if kwargs['argv']:
                     argv = kwargs['argv']
                 execBof("inline", kwargs['bofName'], kwargs['implantSN'], argv)
+
             if _command == 'exec-thread':
                 argv = ""
                 if kwargs['argv']:
                     argv = kwargs['argv']
                 execBof("thread", kwargs['bofName'], kwargs['implantSN'], argv)
+
             if _command == 'spawn':
                 argv = ""
                 if kwargs['argv']:
                     argv = kwargs['argv']
                 execBof("spawn", kwargs['bofName'], kwargs['implantSN'], argv)
+
         elif _object == 'shellcode':
             print('exec_shellcode')
+
         elif _object == 'implant':
             if _command == 'list' or _command == 'ls':
                 resp = getImplantsList()
@@ -356,6 +387,7 @@ class ArgumentParser(icli.ArgumentParser):
                 print(resp)
             if _command == 'status':
                 showImplantStatus(kwargs['implantSN'])
+
         elif _object == 'task':
             if _command == 'info':
                 taskID = kwargs['taskID']
@@ -454,15 +486,9 @@ sp_bof_ls.add_argument('--all', '-a',
 
 
 
-sp_bof_exec = sp_bof.add_parser('info', help='Show BOF details')
-
-
-sp_bof_exec.add_argument('implantSN',
-                                 metavar='IMPLANT',
-                                 help='SN of implant for tasking')
-sp_bof_exec.add_argument('bofName',
-                                 metavar='BOF',
-                                 help='BOF to execute')
+sp_bof_info = sp_bof.add_parser('info', help='Show BOF details')
+sp_bof_info.add_argument(
+    'bofName', metavar='BOF', help='BOF name').completer = ComplBofs()
 
 
 sp_bof_exec = sp_bof.add_parser('exec-inline', help='Inline execution of a chosen BOF')
