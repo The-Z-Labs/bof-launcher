@@ -17,7 +17,13 @@ bofs_categories = [
         {"SAR-BOF" : "Remote situational awareness BOFs"},
         {"AD-BOF" : "BOFs that contains common enumeration and attack methods for Windows Active Directory"},
         {"ADCS-BOF" : "BOFs for interacting with ADCS servers and certificates"},
+        {"Execution-BOF" : "BOFs for inline execution of unmanaged EXE/DLL and .NET assembly"},
 ]
+# BOF's categories for auto completion purposes
+bofs_categories_compl = []
+for cat in bofs_categories:
+    for key, val in cat.items():
+        bofs_categories_compl.append(key)
 
 bofs = []
 implants = []
@@ -312,18 +318,28 @@ def execBof(TYPE, bof, implantSN, argv):
     print(argv)
 
 
-def listingBofs(details):
+def listingBofs(chosen_category):
 
     misc = []
+    bofs_cats = []
 
-    for cat in bofs_categories:
+    # if a specific category was provided
+    if chosen_category != "":
+        for cat in bofs_categories:
+            for key, val in cat.items():
+                if chosen_category == key: 
+                    bofs_cats.append({key : val})
+    else:
+        bofs_cats = bofs_categories
+
+    for c in bofs_cats:
 
         tableObj = texttable.Texttable(160)
         tableObj.set_deco(texttable.Texttable.HEADER)
         tableObj.set_cols_dtype(["t", "t", "t", "t"])
         tableObj.add_rows([["BOF name", "Supported OS", "Supported Arch", "Description"]], header=True)
 
-        for key, value in cat.items():
+        for key, value in c.items():
             print()
             print(key + " - " + value)
             print()
@@ -339,21 +355,22 @@ def listingBofs(details):
 
         print(tableObj.draw())
 
-    # print remaining uncategorized BOFs
+    # print remaining uncategorized BOFs (if no category was explicitly chosen):
+    if chosen_category == "":
+ 
+        print()
+        print("Misc - Other, currently not categorized BOFs")
+        print()
+        tableObj = texttable.Texttable(160)
+        tableObj.set_deco(texttable.Texttable.HEADER)
+        tableObj.set_cols_dtype(["t", "t", "t", "t"])
+        tableObj.add_rows([["BOF name", "Supported OS", "Supported Arch", "Description"]], header=True)
+        for b in misc:
+            os = BOF_DOCS[b]['OS']
+            arch = "TODO"
+            tableObj.add_row([b, os, arch, BOF_DOCS[b]['description']])
 
-    print()
-    print("Misc - Other, currently not categorized BOFs")
-    print()
-    tableObj = texttable.Texttable(160)
-    tableObj.set_deco(texttable.Texttable.HEADER)
-    tableObj.set_cols_dtype(["t", "t", "t", "t"])
-    tableObj.add_rows([["BOF name", "Supported OS", "Supported Arch", "Description"]], header=True)
-    for b in misc:
-        os = BOF_DOCS[b]['OS']
-        arch = "TODO"
-        tableObj.add_row([b, os, arch, BOF_DOCS[b]['description']])
-
-    print(tableObj.draw())
+        print(tableObj.draw())
 
 
 def showBofInfo(bof_name):
@@ -380,6 +397,11 @@ def showBofInfo(bof_name):
         print("Usage: ")
         print(BOF_DOCS[bof_name]['examples'])
 
+class ComplBofCategories():
+
+    def __call__(self, prefix, **kwargs):
+        return bofs_categories_compl
+
 class ComplImplants():
 
     def __call__(self, prefix, **kwargs):
@@ -395,10 +417,10 @@ class ArgumentParser(icli.ArgumentParser):
     def run(self, _object, _type=None, _command=None, **kwargs):
         if _object == 'bof':
             if _command == 'list' or _command == 'ls':
-                details = ""
-                if kwargs['all']:
-                    details = kwargs['all']
-                listingBofs(details)
+                cat = ""
+                if kwargs['category']:
+                    cat = kwargs['category']
+                listingBofs(cat)
 
             if _command == 'info':
                 showBofInfo(kwargs['bofName'])
@@ -499,10 +521,10 @@ sp_task_list = sp_task.add_parser('list', help='Lists implants that beaconed at 
 sp_task_ls = sp_task.add_parser('ls', help='The same as "list"')
 sp_task_list.add_argument('--implant',
                                  metavar='IMPLANT',
-                                 help='Implant serial number (SN)', required=False)
+                                 help='Implant serial number (SN)', required=False).completer = ComplImplants()
 sp_task_ls.add_argument('--implant',
                                  metavar='IMPLANT',
-                                 help='Implant serial number (SN)', required=False)
+                                 help='Implant serial number (SN)', required=False).completer = ComplImplants()
 
 sp_task_info = sp_task.add_parser('info', help='Show details about the task')
 sp_task_info.add_argument(
@@ -524,10 +546,12 @@ sp_bof = ap_bof.add_subparsers(dest='_command',
 
 sp_bof_list = sp_bof.add_parser('list', help='Lists available BOFs')
 sp_bof_ls = sp_bof.add_parser('ls', help='The same as "list"')
-sp_bof_list.add_argument('--all', '-a',
-                                 help='Implant serial number (SN)', action='store_true', required=False)
-sp_bof_ls.add_argument('--all', '-a',
-                                 help='Implant serial number (SN)', action='store_true', required=False)
+sp_bof_list.add_argument('--category', '-c',
+                                 metavar='CATEGORY',
+                                 help='Implant serial number (SN)', required=False).completer = ComplBofCategories()
+sp_bof_ls.add_argument('--category', '-c',
+                                 metavar='CATEGORY',
+                                 help='Implant serial number (SN)', required=False).completer = ComplBofCategories()
 
 
 
