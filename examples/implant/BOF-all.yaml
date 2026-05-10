@@ -3,6 +3,7 @@ name: wProcessInjectionSrdi
 description: "Injects any BOF to any process"
 author: Z-Labs
 tags: ['windows','srdi','z-labs','process','injection']
+category: "Injection-BOF"
 OS: Windows
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/wProcessInjectionSrdi.zig'
@@ -35,6 +36,7 @@ name: "udpScanner"
 description: "Universal UDP port sweeper."
 author: "Z-Labs"
 tags: ['windows', 'linux','net-recon','z-labs']
+category: "SAR-BOF"
 OS: cross-platform
 entrypoint: "go"
 sources:
@@ -80,6 +82,7 @@ name: "tcpScanner"
 description: "TCP connect() port scanner"
 author: "Z-Labs"
 tags: ['windows', 'linux','net-recon','z-labs']
+category: "SAR-BOF"
 OS: cross-platform
 entrypoint: "go"
 sources:
@@ -101,6 +104,7 @@ name: uname
 description: "Print system information. With no flag, same as -s"
 author: Z-Labs
 tags: ['linux','host-recon','z-labs']
+category: "SAL-BOF"
 OS: Linux
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/uname.zig'
@@ -126,6 +130,7 @@ name: hostid
 description: "Print the numeric identifier for the current host"
 author: Z-Labs
 tags: ['linux','host-recon','z-labs']
+category: "SAL-BOF"
 OS: Linux
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/hostid.zig'
@@ -137,6 +142,7 @@ name: hostname
 description: "Show system host name"
 author: Z-Labs
 tags: ['linux','host-recon','z-labs']
+category: "SAL-BOF"
 OS: Linux
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/hostname.zig'
@@ -148,6 +154,7 @@ name: id
 description: "Print user and group information for each specified USER, or (when USER omitted) for the current process"
 author: Z-Labs
 tags: ['linux','host-recon','z-labs']
+category: "SAL-BOF"
 OS: Linux
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/id.zig'
@@ -165,6 +172,7 @@ name: cat
 description: "Print content of a file"
 author: Z-Labs
 tags: ['windows', 'linux','host-recon','z-labs']
+category: "FILES-BOF"
 OS: cross-platform
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/cat.zig'
@@ -201,6 +209,7 @@ name: pwd
 description: "Print name of current/working directory"
 author: Z-Labs
 tags: ['windows', 'linux','host-recon','z-labs']
+category: "FILES-BOF"
 OS: cross-platform
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/pwd.zig'
@@ -225,6 +234,7 @@ name: cd
 description: "Change current working directory"
 author: Z-Labs
 tags: ['windows', 'linux','host-recon','z-labs']
+category: "FILES-BOF"
 OS: cross-platform
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/cd.zig'
@@ -267,6 +277,7 @@ name: ls
 description: "List given directory content"
 author: Z-Labs
 tags: ['windows', 'linux','host-recon','z-labs']
+category: "FILES-BOF"
 OS: cross-platform
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/ls.zig'
@@ -300,6 +311,7 @@ name: grep
 description: "Print lines that match patterns"
 author: Z-Labs
 tags: ['windows', 'linux','host-recon','z-labs']
+category: "TEXT-BOF"
 OS: cross-platform
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/grep.zig'
@@ -340,6 +352,7 @@ name: find
 description: "Search for files in a directory hierarchy. Simple version of find(1) utility."
 author: Z-Labs
 tags: ['windows', 'linux','host-recon','z-labs']
+category: "FILES-BOF"
 OS: cross-platform
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/find.zig'
@@ -408,6 +421,7 @@ name: "ifconfig"
 description: "Displays the status of network interfaces; Manipulates current state of the device (euid = 0 or CAP_NET_ADMIN is required for that)"
 author: "Z-Labs"
 tags: ['linux','host-recon','z-labs']
+category: "SAL-BOF"
 OS: 'linux'
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/net-tools/ifconfig.zig'
@@ -427,6 +441,7 @@ name: kmodLoader
 description: "Loads and unloads Linux kernel modules images directly from memory"
 author: Z-Labs
 tags: ['linux','post-exploitation','z-labs']
+category: "Postex-BOF"
 OS: Linux
 api:
   - 'kmodLoad(module_image: [*]const u8, len: usize, param_values: [*:0]const u8) callconv(.c) u8'
@@ -471,6 +486,7 @@ name: lskmod
 description: "Print the currently loaded kernel modules"
 author: Z-Labs
 tags: ['linux','host-recon','z-labs']
+category: "SAL-BOF"
 OS: Linux
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/lskmod.zig'
@@ -489,6 +505,7 @@ name: whereami
 description: "Print hypervisor vendor signature from CPUID"
 author: Z-Labs
 tags: ['windows', 'linux','host-recon','z-labs']
+category: "SAL-BOF"
 OS: cross-platform
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/whereami.zig'
@@ -507,6 +524,7 @@ name: zcat
 description: "Print content of a gzip compressed file"
 author: Z-Labs
 tags: ['windows', 'linux','host-recon','z-labs']
+category: "FILES-BOF"
 OS: cross-platform
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/zcat.zig'
@@ -542,6 +560,7 @@ name: dirtypipe
 description: "Port of privilege escalation exploit for 'dirtypipe' vulnerability (CVE-2022-0847)"
 author: Z-Labs
 tags: ['linux','privilege-escalation','z-labs']
+category: "Elevation-BOF"
 OS: Linux
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/dirtypipe.zig'
@@ -660,6 +679,36 @@ arguments:
     desc: "user process PID"
     type: integer
     required: true
+---
+name: No-consolation
+srcfile: "entry"
+description: "Attempts to detect userland API hooks in place by AV/EDR"
+author: Fortra
+tags: ['windows', 'execution', 'fortra']
+category: "Execution-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/source/apisetlookup.c'
+  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/source/console.c'
+  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/source/entry.c'
+  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/source/hwbp.c'
+  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/source/loader.c'
+  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/source/peb.c'
+  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/source/runner.c'
+  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/source/utils.c'
+  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/include/apisetlookup.h'
+  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/include/bofdefs.h'
+  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/include/console.h'
+  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/include/entry.h'
+  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/include/hwbp.h'
+  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/include/loader.h'
+  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/include/output.h'
+  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/include/peb.h'
+  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/include/runner.h'
+  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/include/utils.h'
+examples: '
+'
 ---
 name: Domaininfo
 description: "Enumerate CAs and templates in the AD using Win32 functions"
@@ -2146,3 +2195,56 @@ arguments:
     desc: "User name"
     type: wstring
     required: true
+---
+name: ping
+description: "Reimplementation of common Unix utilities as BOF: ping utility"
+author: Sebastian.Haas
+tags: ['linux', 'BusyBOF', 'cmprmsd']
+category: "SAR-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-ping/ping.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+ ping 192.168.99.99
+'
+---
+name: traceroute
+description: "Reimplementation as common Unix utilities as BOF: traceroute utility"
+author: Sebastian.Haas
+tags: ['linux', 'BusyBOF', 'cmprmsd']
+category: "SAR-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-traceroute/traceroute.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+'
+---
+name: nslookup
+description: "Reimplementation as common Unix utilities as BOF: nslookup utility"
+author: Sebastian.Haas
+tags: ['linux', 'BusyBOF', 'cmprmsd']
+category: "SAR-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-nslookup/nslookup.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+'
+---
+name: wget
+description: "Reimplementation as common Unix utilities as BOF: wget utility"
+author: Sebastian.Haas
+tags: ['linux', 'BusyBOF', 'cmprmsd']
+category: "SAR-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-wget/wget.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+'

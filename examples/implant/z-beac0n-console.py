@@ -13,11 +13,16 @@ YAML_FILE="BOF-all.yaml"
 
 # BOFs' categorization adopted from https://github.com/Adaptix-Framework/Extension-Kit
 bofs_categories = [
+        {"FILES-BOF" : "Files and directories processing BOFs"},
+        {"TEXT-BOF" : "Text processing BOFs"},
         {"SAL-BOF" : "Local situational awareness BOFs"},
         {"SAR-BOF" : "Remote situational awareness BOFs"},
         {"AD-BOF" : "BOFs that contains common enumeration and attack methods for Windows Active Directory"},
         {"ADCS-BOF" : "BOFs for interacting with ADCS servers and certificates"},
         {"Execution-BOF" : "BOFs for inline execution of unmanaged EXE/DLL and .NET assembly"},
+        {"Postex-BOF" : "Various BOFs for post exploitation tasks"},
+        {"Elevation-BOF" : "BOFs for privileges elevation"},
+        {"Injection-BOF" : "BOFs for injecting BOFs/shellcodes into target process"},
 ]
 # BOF's categories for auto completion purposes
 bofs_categories_compl = []
@@ -142,7 +147,7 @@ def getImplantsList():
 
         records = json.loads(response.read())
 
-        tableObj = texttable.Texttable(160)
+        tableObj = texttable.Texttable(140)
         tableObj.set_deco(texttable.Texttable.HEADER)
         tableObj.set_cols_dtype(["t", "t", "t", "t"])
         #tableObj.set_cols_valign(["t", "t", "t", "t"])
@@ -193,7 +198,7 @@ def getTasksList(implantSN):
         except json.JSONDecodeError as e:
             print("Invalid JSON syntax:", e)
 
-        tableObj = texttable.Texttable(160)
+        tableObj = texttable.Texttable(140)
         tableObj.set_deco(texttable.Texttable.HEADER)
         tableObj.set_cols_dtype(["t", "t", "t", "t", "t"])
         #tableObj.set_cols_valign(["t", "t", "t", "t"])
@@ -334,7 +339,7 @@ def listingBofs(chosen_category):
 
     for c in bofs_cats:
 
-        tableObj = texttable.Texttable(160)
+        tableObj = texttable.Texttable(140)
         tableObj.set_deco(texttable.Texttable.HEADER)
         tableObj.set_cols_dtype(["t", "t", "t", "t"])
         tableObj.add_rows([["BOF name", "Supported OS", "Supported Arch", "Description"]], header=True)
@@ -361,7 +366,7 @@ def listingBofs(chosen_category):
         print()
         print("Misc - Other, currently not categorized BOFs")
         print()
-        tableObj = texttable.Texttable(160)
+        tableObj = texttable.Texttable(140)
         tableObj.set_deco(texttable.Texttable.HEADER)
         tableObj.set_cols_dtype(["t", "t", "t", "t"])
         tableObj.add_rows([["BOF name", "Supported OS", "Supported Arch", "Description"]], header=True)
