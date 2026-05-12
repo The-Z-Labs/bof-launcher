@@ -2152,6 +2152,12 @@ const gstate = struct {
         sections_to_mask: [8]BofSection = undefined,
         sections_to_mask_num: u32 = 0,
     } linksection(zgate_dsection) = .{};
+
+    // BeaconAddValue()
+    // BeaconGetValue()
+    // BeaconRemoveValue()
+    var beacon_values: std.AutoHashMap(u64, ?*anyopaque) = undefined;
+    var beacon_values_mutex: std.Thread.Mutex = .{};
 };
 
 fn initLauncher() !void {
@@ -2179,6 +2185,12 @@ fn initLauncher() !void {
         gstate.func_lookup = undefined;
     }
 
+    gstate.beacon_values = std.AutoHashMap(u64, ?*anyopaque).init(gstate.allocator.?);
+    errdefer {
+        gstate.beacon_values.deinit();
+        gstate.beacon_values = undefined;
+    }
+
     const impl = @import("beacon/beacon_impl.zig");
 
     try gstate.func_lookup.put("BeaconPrintf", @intFromPtr(&impl.BeaconPrintf));
@@ -2195,6 +2207,9 @@ fn initLauncher() !void {
     try gstate.func_lookup.put("BeaconFormatPrintf", @intFromPtr(&impl.BeaconFormatPrintf));
     try gstate.func_lookup.put("BeaconFormatToString", @intFromPtr(&impl.BeaconFormatToString));
     try gstate.func_lookup.put("BeaconFormatInt", @intFromPtr(&impl.BeaconFormatInt));
+    try gstate.func_lookup.put("BeaconGetValue", @intFromPtr(&BeaconGetValue));
+    try gstate.func_lookup.put("BeaconAddValue", @intFromPtr(&BeaconAddValue));
+    try gstate.func_lookup.put("BeaconRemoveValue", @intFromPtr(&BeaconRemoveValue));
 
     try gstate.func_lookup.put("bofRun", @intFromPtr(&bofRun));
     try gstate.func_lookup.put("bofObjectInitFromMemory", @intFromPtr(&bofObjectInitFromMemory));
@@ -2417,6 +2432,9 @@ export fn bofLauncherRelease() callconv(.c) void {
     gstate.func_lookup.deinit();
     gstate.func_lookup = undefined;
 
+    gstate.beacon_values.deinit();
+    gstate.beacon_values = undefined;
+
     assert(gstate.allocations.?.count() == 0);
 
     gstate.allocations.?.deinit();
@@ -2426,6 +2444,44 @@ export fn bofLauncherRelease() callconv(.c) void {
 
     assert(gstate.gpa.?.deinit() == .ok);
     gstate.gpa = null;
+}
+
+// Returns 0 (FALSE) on error.
+pub export fn BeaconAddValue(key: ?[*:0]const u8, ptr: ?*anyopaque) callconv(.c) i32 {
+    if (!gstate.is_valid) return 0;
+    if (key == null) return 0;
+
+    gstate.beacon_values_mutex.lock();
+    defer gstate.beacon_values_mutex.unlock();
+
+    const hash = std.hash_map.hashString(std.mem.span(key.?));
+    if (gstate.beacon_values.contains(hash)) return 0;
+    gstate.beacon_values.put(hash, ptr) catch return 0;
+    return 1;
+}
+
+pub export fn BeaconGetValue(key: ?[*:0]const u8) callconv(.c) ?*anyopaque {
+    if (!gstate.is_valid) return null;
+    if (key == null) return null;
+
+    gstate.beacon_values_mutex.lock();
+    defer gstate.beacon_values_mutex.unlock();
+
+    const hash = std.hash_map.hashString(std.mem.span(key.?));
+    const value = gstate.beacon_values.get(hash) orelse return null;
+    return value;
+}
+
+pub export fn BeaconRemoveValue(key: ?[*:0]const u8) callconv(.c) i32 {
+    if (!gstate.is_valid) return 0;
+    if (key == null) return 0;
+
+    gstate.beacon_values_mutex.lock();
+    defer gstate.beacon_values_mutex.unlock();
+
+    const hash = std.hash_map.hashString(std.mem.span(key.?));
+    if (gstate.beacon_values.remove(hash)) return 1;
+    return 0;
 }
 
 fn memcpy(noalias dest: ?[*]u8, noalias src: ?[*]const u8, len: usize) callconv(.c) ?[*]u8 {

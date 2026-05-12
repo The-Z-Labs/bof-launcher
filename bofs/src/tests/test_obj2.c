@@ -38,6 +38,11 @@ int getNumCalls(void) {
 unsigned char go(char* arg_data, int arg_len) {
     BeaconPrintf(CALLBACK_OUTPUT, "--- test_obj2.c ---\n%s\n", "bof");
 
+    if (BeaconGetValue("abc") != NULL) return 255;
+    if (BeaconAddValue("abc", (void *)12345) != 1) return 255;
+    if ((int)BeaconGetValue("abc") != 12345) return 255;
+    if (BeaconRemoveValue("abc") != 1) return 255;
+
     datap parser = {0};
     BeaconDataParse(&parser, arg_data, arg_len);
     int len = BeaconDataLength(&parser);

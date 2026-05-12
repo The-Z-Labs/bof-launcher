@@ -29,6 +29,10 @@ pub fn init() void {
     formatAppend = def(PFN_BeaconFormatAppend, "BeaconFormatAppend");
     formatToString = def(PFN_BeaconFormatToString, "BeaconFormatToString");
     formatInt = def(PFN_BeaconFormatInt, "BeaconFormatInt");
+
+    addValue = def(PFN_BeaconAddValue, "BeaconAddValue");
+    getValue = def(PFN_BeaconGetValue, "BeaconGetValue");
+    removeValue = def(PFN_BeaconRemoveValue, "BeaconRemoveValue");
 }
 
 pub var printf: PFN_BeaconPrintf = undefined;
@@ -47,6 +51,10 @@ pub var formatFree: PFN_BeaconFormatFree = undefined;
 pub var formatAppend: PFN_BeaconFormatAppend = undefined;
 pub var formatToString: PFN_BeaconFormatToString = undefined;
 pub var formatInt: PFN_BeaconFormatInt = undefined;
+
+pub var addValue: PFN_BeaconAddValue = undefined;
+pub var getValue: PFN_BeaconGetValue = undefined;
+pub var removeValue: PFN_BeaconRemoveValue = undefined;
 
 fn def(comptime T: type, comptime funcname: []const u8) T {
     return @extern(T, .{
@@ -80,3 +88,7 @@ const PFN_BeaconFormatFree = *const fn (format: ?*formatp) callconv(.c) void;
 const PFN_BeaconFormatAppend = *const fn (format: ?*formatp, text: [*]u8, len: i32) callconv(.c) void;
 const PFN_BeaconFormatToString = *const fn (format: ?*formatp, size: ?*i32) callconv(.c) [*]u8;
 const PFN_BeaconFormatInt = *const fn (format: ?*formatp, value: i32) callconv(.c) void;
+
+const PFN_BeaconAddValue = *const fn (key: ?[*:0]const u8, ptr: ?*anyopaque) callconv(.c) i32;
+const PFN_BeaconGetValue = *const fn (key: ?[*:0]const u8) callconv(.c) ?*anyopaque;
+const PFN_BeaconRemoveValue = *const fn (key: ?[*:0]const u8) callconv(.c) i32;

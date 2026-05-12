@@ -61,4 +61,8 @@ DECLSPEC_IMPORT void    BeaconFormatInt(formatp * format, int value);
 DECLSPEC_IMPORT void BeaconPrintf(int type, char * fmt, ...);
 DECLSPEC_IMPORT void BeaconOutput(int type, char * data, int len);
 
+DECLSPEC_IMPORT int BeaconAddValue(const char * key, void * ptr);
+DECLSPEC_IMPORT void * BeaconGetValue(const char * key);
+DECLSPEC_IMPORT int BeaconRemoveValue(const char * key);
+
 #endif
