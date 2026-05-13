@@ -1,3 +1,14 @@
+///name: who
+///description: "Show who is logged on"
+///author: Z-Labs
+///tags: ['linux','TA0007', 'T1082','z-labs']
+///category: 'SAL-BOF'
+///OS: Linux
+///sources:
+///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/who.zig'
+///examples: |
+/// who
+///
 const std = @import("std");
 const beacon = @import("bof_api").beacon;
 const posix = @import("bof_api").posix;

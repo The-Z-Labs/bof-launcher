@@ -1,8 +1,9 @@
 ///name: wProcessInjectionSrdi
 ///description: "Injects any BOF to any process"
 ///author: Z-Labs
-///tags: ['windows','srdi','z-labs','process','injection']
-///OS: windows
+///tags: ['windows','srdi','z-labs','TA0005','TA0004','T1055.001']
+///category: "Injection-BOF"
+///OS: Windows
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/wProcessInjectionSrdi.zig'
 ///examples: '

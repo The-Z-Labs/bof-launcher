@@ -1,13 +1,13 @@
 ///name: lskmod
 ///description: "Print the currently loaded kernel modules"
 ///author: Z-Labs
-///tags: ['linux','host-recon','z-labs']
-///OS: linux
+///tags: ['linux','T0007','T1082', 'z-labs']
+///category: "SAL-BOF"
+///OS: Linux
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/lskmod.zig'
-///examples: '
+///examples: |
 /// lskmod
-///'
 ///errors:
 ///- name: FaileOpenFailure
 ///  code: 0x1

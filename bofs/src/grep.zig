@@ -1,14 +1,14 @@
 ///name: grep
 ///description: "Print lines that match patterns"
 ///author: Z-Labs
-///tags: ['windows', 'linux','host-recon','z-labs']
-///OS: cross
+///tags: ['windows', 'linux','TA0007', 'T1083', 'z-labs']
+///category: "TEXT-BOF"
+///OS: cross-platform
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/grep.zig'
-///examples: '
+///examples: |
 /// grep root /etc/passwd
 /// grep '^[^#\n]' /etc/hosts
-///'
 ///arguments:
 ///- name: pattern
 ///  desc: "Searched pattern in an extended regular expression syntax"

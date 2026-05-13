@@ -1,8 +1,9 @@
 ///name: id
 ///description: "Print user and group information for each specified USER, or (when USER omitted) for the current process"
 ///author: Z-Labs
-///tags: ['linux','host-recon','z-labs']
-///OS: linux
+///tags: ['windows', 'linux','TA0007','T1033', 'z-labs']
+///category: "SAL-BOF"
+///OS: Linux
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/id.zig'
 ///examples: '

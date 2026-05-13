@@ -1,8 +1,9 @@
 ///name: uname
 ///description: "Print system information. With no flag, same as -s"
 ///author: Z-Labs
-///tags: ['linux','host-recon','z-labs']
-///OS: linux
+///tags: ['linux','TA0007', 'T1082','z-labs']
+///category: 'SAL-BOF'
+///OS: Linux
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/uname.zig'
 ///examples: '

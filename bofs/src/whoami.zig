@@ -1,3 +1,14 @@
+///name: whoami
+///description: "Print current user"
+///author: Z-Labs
+///tags: ['windows', 'linux','TA0007','T1033', 'z-labs']
+///category: "SAL-BOF"
+///OS: cross-platform
+///sources:
+///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/whoami.zig'
+///examples: '
+/// whoami
+///'
 const std = @import("std");
 const w32 = @import("bof_api").win32;
 const beacon = @import("bof_api").beacon;

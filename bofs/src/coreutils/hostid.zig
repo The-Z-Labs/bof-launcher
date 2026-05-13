@@ -1,8 +1,9 @@
 ///name: hostid
 ///description: "Print the numeric identifier for the current host"
 ///author: Z-Labs
-///tags: ['linux','host-recon','z-labs']
-///OS: linux
+///tags: ['linux','TA0007', 'T1016','z-labs']
+///category: 'SAL-BOF'
+///OS: Linux
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/hostid.zig'
 ///examples: '

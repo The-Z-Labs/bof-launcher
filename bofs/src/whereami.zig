@@ -1,8 +1,9 @@
 ///name: whereami
 ///description: "Print hypervisor vendor signature from CPUID"
 ///author: Z-Labs
-///tags: ['windows', 'linux','host-recon','z-labs']
-///OS: cross
+///tags: ['windows', 'linux','T0007','T1082', 'z-labs']
+///category: "SAL-BOF"
+///OS: cross-platform
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/whereami.zig'
 ///examples: '

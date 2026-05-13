@@ -1,21 +1,22 @@
 ///name: "ifconfig"
 ///description: "Displays the status of the currently active network interfaces; Manipulates current state of the device (euid = 0 or CAP_NET_ADMIN is required for that)"
 ///author: "Z-Labs"
-///tags: ['linux','host-recon','z-labs']
-///OS: 'linux'
+///tags: ['linux','TA0007', 'T1016','z-labs']
+///category: 'SAL-BOF'
+///OS: 'Linux'
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/net-tools/ifconfig.zig'
+///arguments:
+///- name: User
+///  desc: "Prints user and group information for this user"
+///  type: string
+///  required: false
 ///examples: '
 /// ifconfig
 /// ifconfig eth0 down
 /// ifconfig eth0 promisc
 /// ifconfig eth0 -promisc
 ///'
-///arguments:
-///- name: User
-///  desc: "Prints user and group information for this user"
-///  type: string
-///  required: false
 
 // TODO:
 // get MTU value

@@ -1,8 +1,9 @@
 ///name: cd
 ///description: "Change current working directory"
 ///author: Z-Labs
-///tags: ['windows', 'linux','host-recon','z-labs']
-///OS: cross
+///tags: ['windows', 'linux','TA0007', 'T1083', 'z-labs']
+///category: "FILES-BOF"
+///OS: cross-platform
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/cd.zig'
 ///examples: '

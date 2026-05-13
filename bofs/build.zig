@@ -631,6 +631,20 @@ fn generateBofCollectionYaml(b: *std.Build) !void {
             if (source_line.len >= 3 and std.mem.eql(u8, source_line[0..3], "///")) {
                 if (line_number == 1) try doc_file.writer.writeAll("---\n");
                 line_number += 1;
+
+                // add 'Arch' field to the BOF yaml based on entry in 'bof_tables'
+                if (std.mem.containsAtLeast(u8, source_line, 1, "tags: [")) {
+                    try doc_file.writer.writeAll("Arch: [");
+                    for (item.archs) |a| {
+                        try doc_file.writer.writeAll("\"");
+                        try doc_file.writer.writeAll(@tagName(a));
+                        try doc_file.writer.writeAll("\"");
+                        try doc_file.writer.writeAll(", ");
+                    }
+                    doc_file.writer.undo(2);
+                    try doc_file.writer.writeAll("]\n");
+                }
+
                 try doc_file.writer.writeAll(source_line[3..]);
                 try doc_file.writer.writeAll("\n");
             }

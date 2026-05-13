@@ -1,17 +1,17 @@
 ///name: dirtypipe
-///description: "Port of privilege escalation exploit for 'dirtypipe' vulnerability (CVE-2022-0847)"
+///description: "Privilege escalation exploit for 'dirtypipe' vulnerability (CVE-2022-0847) against Linux Kernel"
 ///author: Z-Labs
-///tags: ['linux','privilege-escalation','z-labs']
-///OS: linux
+///tags: ['linux','TA0004', 'T1068', 'z-labs']
+///category: "Elevation-BOF"
+///OS: Linux
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/dirtypipe.zig'
-///examples: '
+///examples: |
 /// Basic usage of the BOF:
 ///   dirtypipe /etc/shadow 913 "backdoor:xxx:10123::::::"
 ///
 /// Details about vulnerability and PoC exploit (author: Max Kellermann):
 ///   https://dirtypipe.cm4all.com/
-///'
 ///arguments:
 ///- name: file_path
 ///  desc: "path to a file that will be overwritten"

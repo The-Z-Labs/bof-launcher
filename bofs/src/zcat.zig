@@ -1,8 +1,9 @@
 ///name: zcat
 ///description: "Print content of a gzip compressed file"
 ///author: Z-Labs
-///tags: ['windows', 'linux','host-recon','z-labs']
-///OS: cross
+///tags: ['windows', 'linux','TA0007','T1083', 'z-labs']
+///category: "FILES-BOF"
+///OS: cross-platform
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/zcat.zig'
 ///examples: '

@@ -1,8 +1,9 @@
 ///name: hostname
 ///description: "Show system host name"
 ///author: Z-Labs
-///tags: ['linux','host-recon','z-labs']
-///OS: linux
+///tags: ['linux','TA0007', 'T1016','z-labs']
+///category: 'SAL-BOF'
+///OS: Linux
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/hostname.zig'
 ///examples: '

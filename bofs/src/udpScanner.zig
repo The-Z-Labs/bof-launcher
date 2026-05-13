@@ -1,12 +1,13 @@
 ///name: "udpScanner"
-///description: "Universal UDP port sweeper."
+///description: "Universal UDP port sweeper"
 ///author: "Z-Labs"
-///tags: ['windows', 'linux','net-recon','z-labs']
-///OS: "cross"
+///tags: ['windows', 'linux','T0007','T0846.001', 'z-labs']
+///category: "SAR-BOF"
+///OS: "cross-platform"
 ///entrypoint: "go"
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/udpScanner.zig'
-///examples: '
+///examples: |
 /// Scanning provided IP range on most common UDP ports with builtin UDP probes:
 ///
 ///   udpScanner str:192.168.0.1-32
@@ -29,7 +30,6 @@
 /// Example of running udpScanner using cli4bofs tool and with UDP probes provided from the file:
 ///
 ///   cli4bofs exec udpScanner 102.168.1.1-4:161,427 file:/tmp/udpPayloads
-///'
 ///arguments:
 ///  - name: IPSpec
 ///    desc: "IP addresses specification, ex: 192.168.0.1; 10.0.0-255.1-254; 192.168.0.1:161,427,10-15"

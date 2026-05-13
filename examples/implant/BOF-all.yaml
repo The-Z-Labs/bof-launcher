@@ -2,7 +2,8 @@
 name: wProcessInjectionSrdi
 description: "Injects any BOF to any process"
 author: Z-Labs
-tags: ['windows','srdi','z-labs','process','injection']
+Arch: ["x64", "x86"]
+tags: ['windows','srdi','z-labs','TA0005','TA0004','T1055.001']
 category: "Injection-BOF"
 OS: Windows
 sources:
@@ -33,11 +34,12 @@ errors:
   message: "Unknown error"
 ---
 name: "udpScanner"
-description: "Universal UDP port sweeper."
+description: "Universal UDP port sweeper"
 author: "Z-Labs"
-tags: ['windows', 'linux','net-recon','z-labs']
+Arch: ["x64", "x86", "aarch64", "arm"]
+tags: ['windows', 'linux','T0007','T0846.001', 'z-labs']
 category: "SAR-BOF"
-OS: cross-platform
+OS: "cross-platform"
 entrypoint: "go"
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/udpScanner.zig'
@@ -81,30 +83,44 @@ arguments:
 name: "tcpScanner"
 description: "TCP connect() port scanner"
 author: "Z-Labs"
-tags: ['windows', 'linux','net-recon','z-labs']
+Arch: ["x64", "x86", "aarch64", "arm"]
+tags: ['windows', 'linux','T0007','T0846.001', 'z-labs']
 category: "SAR-BOF"
-OS: cross-platform
+OS: "cross-platform"
 entrypoint: "go"
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/tcpScanner.zig'
-examples: '
+examples: |
  Scanning selected hosts and ports:
 
    tcpScanner str:192.168.0.1:80,22,443
    tcpScanner str:192.168.0.1:100-200
    tcpScanner str:102.168.1.1-128:445,81,8080-8089
-'
 arguments:
   - name: IPSpec
     desc: "IP addresses specification, ex: 192.168.0.1; 10.0.0-255.1-254; 192.168.0.1:161,427,10-15"
     type: string
     required: true
 ---
+name: whoami
+description: "Print current user"
+author: Z-Labs
+Arch: ["x64", "x86", "aarch64", "arm"]
+tags: ['windows', 'linux','TA0007','T1033', 'z-labs']
+category: "SAL-BOF"
+OS: cross-platform
+sources:
+    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/whoami.zig'
+examples: '
+ whoami
+'
+---
 name: uname
 description: "Print system information. With no flag, same as -s"
 author: Z-Labs
-tags: ['linux','host-recon','z-labs']
-category: "SAL-BOF"
+Arch: ["x64", "x86", "aarch64", "arm"]
+tags: ['linux','TA0007', 'T1082','z-labs']
+category: 'SAL-BOF'
 OS: Linux
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/uname.zig'
@@ -129,8 +145,9 @@ arguments:
 name: hostid
 description: "Print the numeric identifier for the current host"
 author: Z-Labs
-tags: ['linux','host-recon','z-labs']
-category: "SAL-BOF"
+Arch: ["x64", "x86", "aarch64", "arm"]
+tags: ['linux','TA0007', 'T1016','z-labs']
+category: 'SAL-BOF'
 OS: Linux
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/hostid.zig'
@@ -141,8 +158,9 @@ examples: '
 name: hostname
 description: "Show system host name"
 author: Z-Labs
-tags: ['linux','host-recon','z-labs']
-category: "SAL-BOF"
+Arch: ["x64", "x86", "aarch64", "arm"]
+tags: ['linux','TA0007', 'T1016','z-labs']
+category: 'SAL-BOF'
 OS: Linux
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/hostname.zig'
@@ -150,10 +168,24 @@ examples: '
  hostname
 '
 ---
+name: uptime
+description: "Tell how long the system has been running"
+author: Z-Labs
+Arch: ["x64", "x86", "aarch64", "arm"]
+tags: ['linux','TA0007', 'T1082','z-labs']
+category: 'SAL-BOF'
+OS: Linux
+sources:
+    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/uptime.zig'
+examples: |
+ uptime
+
+---
 name: id
 description: "Print user and group information for each specified USER, or (when USER omitted) for the current process"
 author: Z-Labs
-tags: ['linux','host-recon','z-labs']
+Arch: ["x64", "x86", "aarch64", "arm"]
+tags: ['windows', 'linux','TA0007','T1033', 'z-labs']
 category: "SAL-BOF"
 OS: Linux
 sources:
@@ -168,18 +200,31 @@ arguments:
   type: string
   required: false
 ---
+name: who
+description: "Show who is logged on"
+author: Z-Labs
+Arch: ["x64", "x86", "aarch64", "arm"]
+tags: ['linux','TA0007', 'T1082','z-labs']
+category: 'SAL-BOF'
+OS: Linux
+sources:
+    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/who.zig'
+examples: |
+ who
+
+---
 name: cat
 description: "Print content of a file"
 author: Z-Labs
-tags: ['windows', 'linux','host-recon','z-labs']
+Arch: ["x64", "x86", "aarch64", "arm"]
+tags: ['windows', 'linux','TA0007', 'T1083', 'z-labs']
 category: "FILES-BOF"
 OS: cross-platform
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/cat.zig'
-examples: '
+examples: |
  cat /etc/passwd
  cat C:\Windows\System32\drivers\etc\hosts
-'
 arguments:
 - name: file_path
   desc: "path to the file to be printed"
@@ -208,7 +253,8 @@ errors:
 name: pwd
 description: "Print name of current/working directory"
 author: Z-Labs
-tags: ['windows', 'linux','host-recon','z-labs']
+Arch: ["x64", "x86", "aarch64", "arm"]
+tags: ['windows', 'linux','TA0007', 'T1083', 'z-labs']
 category: "FILES-BOF"
 OS: cross-platform
 sources:
@@ -233,7 +279,8 @@ errors:
 name: cd
 description: "Change current working directory"
 author: Z-Labs
-tags: ['windows', 'linux','host-recon','z-labs']
+Arch: ["x64", "x86", "aarch64", "arm"]
+tags: ['windows', 'linux','TA0007', 'T1083', 'z-labs']
 category: "FILES-BOF"
 OS: cross-platform
 sources:
@@ -276,7 +323,8 @@ errors:
 name: ls
 description: "List given directory content"
 author: Z-Labs
-tags: ['windows', 'linux','host-recon','z-labs']
+Arch: ["x64", "x86", "aarch64", "arm"]
+tags: ['windows', 'linux','TA0007', 'T1083', 'z-labs']
 category: "FILES-BOF"
 OS: cross-platform
 sources:
@@ -310,15 +358,15 @@ errors:
 name: grep
 description: "Print lines that match patterns"
 author: Z-Labs
-tags: ['windows', 'linux','host-recon','z-labs']
+Arch: ["x64", "x86", "aarch64", "arm"]
+tags: ['windows', 'linux','TA0007', 'T1083', 'z-labs']
 category: "TEXT-BOF"
 OS: cross-platform
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/grep.zig'
-examples: '
+examples: |
  grep root /etc/passwd
- grep ^[^#\n] /etc/hosts
-'
+ grep '^[^#\n]' /etc/hosts
 arguments:
 - name: pattern
   desc: "Searched pattern in an extended regular expression syntax"
@@ -349,14 +397,15 @@ errors:
   message: "Unknown error"
 ---
 name: find
-description: "Search for files in a directory hierarchy. Simple version of find(1) utility."
+description: "Search for files in a directory hierarchy. Simple version of find(1) utility"
 author: Z-Labs
-tags: ['windows', 'linux','host-recon','z-labs']
+Arch: ["x64", "x86", "aarch64", "arm"]
+tags: ['windows', 'linux','TA0007', 'T1083', 'z-labs']
 category: "FILES-BOF"
 OS: cross-platform
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/find.zig'
-examples: '
+examples: |
  Considerations:
     -maxdepth hardcoded to 3
     symbolic links are not followed
@@ -374,7 +423,6 @@ examples: '
 
  List files matching provided regex (match on the whole path, not a search):
    find /etc/apt -regex .*archive.*
-'
 arguments:
 - name: dir_path
   desc: "path to the directory to be listed"
@@ -418,29 +466,31 @@ errors:
   message: "Unknown error"
 ---
 name: "ifconfig"
-description: "Displays the status of network interfaces; Manipulates current state of the device (euid = 0 or CAP_NET_ADMIN is required for that)"
+description: "Displays the status of the currently active network interfaces; Manipulates current state of the device (euid = 0 or CAP_NET_ADMIN is required for that)"
 author: "Z-Labs"
-tags: ['linux','host-recon','z-labs']
-category: "SAL-BOF"
-OS: 'linux'
+Arch: ["x64", "x86", "aarch64", "arm"]
+tags: ['linux','TA0007', 'T1016','z-labs']
+category: 'SAL-BOF'
+OS: 'Linux'
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/net-tools/ifconfig.zig'
+arguments:
+- name: User
+  desc: "Prints user and group information for this user"
+  type: string
+  required: false
 examples: '
  ifconfig
  ifconfig eth0 down
  ifconfig eth0 promisc
  ifconfig eth0 -promisc
 '
-arguments:
-- name: User
-  desc: "Prints user and group information for this user"
-  type: string
-  required: false
 ---
 name: kmodLoader
 description: "Loads and unloads Linux kernel modules images directly from memory"
 author: Z-Labs
-tags: ['linux','post-exploitation','z-labs']
+Arch: ["x64", "x86", "aarch64", "arm"]
+tags: ['linux','TA0003', 'TA0004', 'T1547.006', 'DC0031', 'z-labs']
 category: "Postex-BOF"
 OS: Linux
 api:
@@ -485,14 +535,14 @@ errors:
 name: lskmod
 description: "Print the currently loaded kernel modules"
 author: Z-Labs
-tags: ['linux','host-recon','z-labs']
+Arch: ["x64", "x86", "aarch64", "arm"]
+tags: ['linux','T0007','T1082', 'z-labs']
 category: "SAL-BOF"
 OS: Linux
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/lskmod.zig'
-examples: '
+examples: |
  lskmod
-'
 errors:
 - name: FaileOpenFailure
   code: 0x1
@@ -504,7 +554,8 @@ errors:
 name: whereami
 description: "Print hypervisor vendor signature from CPUID"
 author: Z-Labs
-tags: ['windows', 'linux','host-recon','z-labs']
+Arch: ["x64", "x86"]
+tags: ['windows', 'linux','T0007','T1082', 'z-labs']
 category: "SAL-BOF"
 OS: cross-platform
 sources:
@@ -523,7 +574,8 @@ errors:
 name: zcat
 description: "Print content of a gzip compressed file"
 author: Z-Labs
-tags: ['windows', 'linux','host-recon','z-labs']
+Arch: ["x64", "x86", "aarch64", "arm"]
+tags: ['windows', 'linux','TA0007','T1083', 'z-labs']
 category: "FILES-BOF"
 OS: cross-platform
 sources:
@@ -557,26 +609,26 @@ errors:
   message: "Unknown error"
 ---
 name: dirtypipe
-description: "Port of privilege escalation exploit for 'dirtypipe' vulnerability (CVE-2022-0847)"
+description: "Privilege escalation exploit for 'dirtypipe' vulnerability (CVE-2022-0847) against Linux Kernel"
 author: Z-Labs
-tags: ['linux','privilege-escalation','z-labs']
+Arch: ["x64", "x86", "aarch64", "arm"]
+tags: ['linux','TA0004', 'T1068', 'z-labs']
 category: "Elevation-BOF"
 OS: Linux
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/dirtypipe.zig'
-examples: '
+examples: |
  Basic usage of the BOF:
    dirtypipe /etc/shadow 913 "backdoor:xxx:10123::::::"
 
  Details about vulnerability and PoC exploit (author: Max Kellermann):
    https://dirtypipe.cm4all.com/
-'
 arguments:
 - name: file_path
   desc: "path to a file that will be overwritten"
   type: string
   required: true
-- name: offset
+- name: offset 
   desc: "offset in overwritten file"
   type: string
   required: true
@@ -609,1642 +661,3 @@ errors:
 - name: UnknownError
   code: 0x8
   message: "Unknown error"
----
-name: KillDefender
-description: "Make Windows Defender useless by removing its token privileges and lowering the token integrity"
-author: Cerbersec
-tags: ['windows', 'host-recon', 'cerbersec']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/Cerbersec/KillDefenderBOF/refs/heads/main/KillDefender.c'
-    - 'https://raw.githubusercontent.com/Cerbersec/KillDefenderBOF/refs/heads/main/KillDefender.h'
-    - 'https://raw.githubusercontent.com/Cerbersec/KillDefenderBOF/refs/heads/main/syscalls-asm.h'
-    - 'https://raw.githubusercontent.com/Cerbersec/KillDefenderBOF/refs/heads/main/syscalls.c'
-    - 'https://raw.githubusercontent.com/Cerbersec/KillDefenderBOF/refs/heads/main/syscalls.h'
-examples: '
- KillDefender
-'
----
-name: ppenum
-description: "Read the protection level of a process"
-author: rasta-mouse
-tags: ['windows', 'host-recon']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/rasta-mouse/PPEnum/refs/heads/main/ppenum.c'
-examples: '
-'
-arguments:
-  - name: pid
-    desc: "process PID"
-    type: integer
-    required: true
----
-name: detect-hooks
-description: "Attempts to detect userland API hooks in place by AV/EDR"
-author: X-Force-Red
-tags: ['windows', 'host-recon', 'xforcered']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/xforcered/Detect-Hooks/refs/heads/main/src/detect-hooks.c'
-    - 'https://raw.githubusercontent.com/xforcered/Detect-Hooks/refs/heads/main/src/detect-hooks.h'
-examples: '
-  detect-hooks
-'
----
-name: CredMan
-description: "Dumps the credential manager by abusing the SeTrustedCredmanAccess Privilege"
-author: jsecu
-tags: ['windows', 'lateral-movement']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/jsecu/CredManBOF/refs/heads/main/CredMan.c'
-examples: '
-  credman "filepath1" "filepath2" pid
-'
-arguments:
-  - name: pid
-    desc: "encrypted backup file location"
-    type: wstring
-    required: true
-  - name: pid
-    desc: "decrypted backup file location"
-    type: wstring
-    required: true
-  - name: pid
-    desc: "user process PID"
-    type: integer
-    required: true
----
-name: No-consolation
-srcfile: "entry"
-description: "Attempts to detect userland API hooks in place by AV/EDR"
-author: Fortra
-tags: ['windows', 'execution', 'fortra']
-category: "Execution-BOF"
-OS: Windows
-entrypoint: "go"
-sources:
-  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/source/apisetlookup.c'
-  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/source/console.c'
-  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/source/entry.c'
-  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/source/hwbp.c'
-  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/source/loader.c'
-  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/source/peb.c'
-  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/source/runner.c'
-  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/source/utils.c'
-  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/include/apisetlookup.h'
-  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/include/bofdefs.h'
-  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/include/console.h'
-  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/include/entry.h'
-  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/include/hwbp.h'
-  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/include/loader.h'
-  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/include/output.h'
-  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/include/peb.h'
-  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/include/runner.h'
-  - 'https://raw.githubusercontent.com/fortra/No-Consolation/refs/heads/main/include/utils.h'
-examples: '
-'
----
-name: Domaininfo
-description: "Enumerate CAs and templates in the AD using Win32 functions"
-author: Outflank
-tags: ['windows', 'host-recon', 'outflank']
-OS: windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/outflanknl/C2-Tool-Collection/refs/heads/main/BOF/Domaininfo/SOURCE/Domaininfo.c'
-    - 'https://raw.githubusercontent.com/outflanknl/C2-Tool-Collection/refs/heads/main/BOF/Domaininfo/SOURCE/Domaininfo.h'
-examples: '
- domaininfo
-'
----
-name: Smbinfo
-description: "Gather remote system version info using the NetWkstaGetInfo API"
-author: Outflank
-tags: ['windows', 'host-recon', 'outflank']
-OS: windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/outflanknl/C2-Tool-Collection/refs/heads/main/BOF/Smbinfo/SOURCE/Smbinfo.c'
-    - 'https://raw.githubusercontent.com/outflanknl/C2-Tool-Collection/refs/heads/main/BOF/Smbinfo/SOURCE/Smbinfo.h'
-examples: '
- smbinfo <computername>
-'
-arguments:
-  - name: computername
-    desc: "Active directory computer name"
-    type: wstring
-    required: true
----
-name: ReconAD
-description: "Query Active Directory objects and attributes using ADSI API"
-author: Outflank
-tags: ['windows', 'host-recon', 'outflank']
-OS: windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/outflanknl/C2-Tool-Collection/refs/heads/main/BOF/ReconAD/SOURCE/ReconAD.c'
-    - 'https://raw.githubusercontent.com/outflanknl/C2-Tool-Collection/refs/heads/main/BOF/ReconAD/SOURCE/ReconAD.h'
-examples: '
- ReconAD (&(objectClass=user)(objectCategory=person)(sAMAccountName=*admin*)) displayName,sAMAccountName 10
- ReconAD users *admin* displayName,sAMAccountName 10 -usegc
- ReconAD groups "Domain Admins" -all -max -usegc 192.168.1.10
- ReconAD computers *srv* name,operatingSystemVersion 20 -ldap 192.168.1.10
-'
-arguments:
-  - name: objects
-    desc: "custom|users|groups|computers"
-    type: wstring
-    required: true
-  - name: ldap_filter
-    desc: "custom_ldap_filter|username|groupname|computername"
-    type: wstring
-    required: true
-  - name: ldap_attr
-    desc: "comma separated ldap attributes"
-    type: wstring
-    required: false
-  - name: max_results
-    desc: "max results"
-    type: integer
-    required: false
-  - name: usegc
-    desc: "search within the Global Catalogue (set to 1); use LDAP (default)"
-    type: integer
-    required: false
-  - name: server
-    desc: "IP of custom server; or '-noserver' for serverless binding (default)"
-    type: wstring
-    required: false
----
-name: Psk
-description: "Shows detailed information from the windows kernel and loaded driver modules and provides a summary of installed security products (AV/EDR drivers)"
-author: Outflank
-tags: ['windows', 'host-recon', 'outflank']
-OS: windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/outflanknl/C2-Tool-Collection/refs/heads/main/BOF/Psk/SOURCE/Psk.c'
-    - 'https://raw.githubusercontent.com/outflanknl/C2-Tool-Collection/refs/heads/main/BOF/Psk/SOURCE/Psk.h'
-    - 'https://raw.githubusercontent.com/outflanknl/C2-Tool-Collection/refs/heads/main/BOF/Psk/SOURCE/Syscalls-WoW64.h'
-    - 'https://raw.githubusercontent.com/outflanknl/C2-Tool-Collection/refs/heads/main/BOF/Psk/SOURCE/Syscalls.h'
-examples: '
- psk
-'
----
-name: Klist
-description: "Displays a list of currently cached Kerberos tickets"
-author: Outflank
-tags: ['windows', 'host-recon', 'outflank']
-OS: windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/outflanknl/C2-Tool-Collection/refs/heads/main/BOF/Klist/SOURCE/Klist.c'
-    - 'https://raw.githubusercontent.com/outflanknl/C2-Tool-Collection/refs/heads/main/BOF/Klist/SOURCE/Klist.h'
-examples: '
-  TODO
-'
----
-name: adcs_enum
-srcfile: "entry"
-description: "Enumerate CAs and templates in the AD using Win32 functions"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-category: "ADCS-BOF"
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum/adcs_enum.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum/adcs_enum.h'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum/certca.h'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum/certenroll.h'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- adcs_enum <domain>
-'
-arguments:
-  - name: domain
-    desc: "Active directory domain name"
-    type: wstring
-    required: true
----
-name: adcs_enum_com
-srcfile: "entry"
-description: "Enumerate CAs and templates in the AD using ICertConfig COM object"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-category: "ADCS-BOF"
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum_com/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum_com/adcs_enum_com.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum_com/adcs_enum_com.h'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum_com/certca.h'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum_com/certenroll.h'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- adcs_enum_com
-'
----
-name: adcs_enum_com2
-srcfile: "entry"
-description: "Enumerate CAs and templates in the AD using IX509PolicyServerListManager COM object"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-category: "ADCS-BOF"
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum_com2/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum_com2/adcs_enum_com2.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum_com2/adcs_enum_com2.h'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum_com2/certenroll.h'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- adcs_enum_com2
-'
----
-name: adv_audit_policies
-srcfile: "entry"
-description: "Retrieve advanced security audit policies"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adv_audit_policies/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- adv_audit_policies
- adv_audit_policies 1
-'
-arguments:
-  - name: iswow64
-    desc: "If set to non zero (e.g. 1) it retrieves policy for WoW64 subsystem. Default: 0"
-    type: integer
-    required: false
----
-name: arp
-srcfile: "entry"
-description: "List ARP table"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-category: "SAL-BOF"
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/arp/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- arp
-'
----
-name: cacls
-srcfile: "entry"
-description: "List user permissions for the specified file, wildcards supported"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-category: "SAL-BOF"
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/cacls/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/cacls/defines.h'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- cacls *
- cacls .
- cacls "C:\\windows\\system32"
- cacls "C:\\windows\\system32\\notepad.exe"
-'
-arguments:
-  - name: filepath
-    desc: "Path to the filesystem entry"
-    type: wstring
-    required: true
----
-name: dir
-srcfile: "entry"
-description: "List files in a directory. Supports wildcards"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-category: "SAL-BOF"
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/dir/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/queue.c'
-examples: '
- dir "C:\\windows\\system32" 1
-'
-arguments:
-  - name: path
-    desc: "Path to the directory"
-    type: string
-    required: true
-  - name: subdirs
-    desc: "If set to non zero (e.g. 1) it will list subdirectories"
-    type: short
-    required: true
----
-name: listmods
-srcfile: "entry"
-description: "List process modules (DLL). Target current process if PID is empty"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/listmods/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- listmods
- listmods 3461
-'
-arguments:
-  - name: pid
-    desc: "Process PID"
-    type: integer
-    required: false
----
-name: ldapsearch
-srcfile: "entry"
-description: "Execute LDAP searches"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-category: "AD-BOF"
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/ldapsearch/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- ldapsearch z:"(objectclass=*)" z:"" i:0 i:0 z:"" z:"" i:0
- ldapsearch z:"(objectclass=*)" "objectSID,name" i:0 i:0 z:"" z:""
-'
-arguments:
-  - name: ldap_filter
-    desc: "LDAP filter"
-    type: string
-    required: true
-  - name: ldap_attributes
-    desc: "LDAP attribute(s) or empty string (z:\"\")"
-    type: string
-    required: true
-  - name: results_count
-    desc: "Count of results or 0 for all results"
-    type: integer
-    required: true
-  - name: scope_of_search
-    desc: "LDAP attributes"
-    type: integer
-    required: true
-  - name: hostname
-    desc: "Domain Controller name or IP address or empty string (z:\"\")"
-    type: string
-    required: true
-  - name: domain
-    desc: "Distinguished Name or empty string (z:\"\")"
-    type: string
-    required: true
-  - name: ldaps
-    desc: "LDAPS support; set to 0 (false) by default"
-    type: integer
-    required: false
----
-name: driversigs
-srcfile: "entry"
-description: "Enumerate installed services Imagepaths to check the signing cert against known AV/EDR vendors"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/driversigs/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- driversigs
-'
----
-name: enum_filter_driver
-srcfile: "entry"
-description: "Enumerate filter drivers"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/enum_filter_driver/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- enum_filter_driver
-'
-arguments:
-  - name: hostName
-    desc: 'The name of the remote computer in form: \\computername. If not provided the local machine name is used'
-    type: string
-    required: false
----
-name: enumLocalSessions
-srcfile: "entry"
-description: "Enumerate currently attached user sessions both local and over RDP"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/enumLocalSessions/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- enumLocalSessions
-'
----
-name: env
-srcfile: "entry"
-description: "List process environment variables"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-category: "SAL-BOF"
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/env/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- env
-'
----
-name: findLoadedModule
-srcfile: "entry"
-description: "Find what processes *modulepart* are loaded into, optionally searching just *procnamepart*"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/findLoadedModule/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- findLoadedModule ntdll explorer
- findLoadedModule ntdll
- findLoadedModule amsi.dll
-'
-arguments:
-  - name: modulepart
-    desc: 'Part of dll module name used by the process(es)'
-    type: string
-    required: true
-  - name: procnamepart
-    desc: 'Part of process name to search in. If not provided search in every process'
-    type: string
-    required: false
----
-name: get_dpapi_system
-srcfile: "entry"
-description: "Get the DPAPI_SYSTEM key and bootkey"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/get_dpapi_system/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- get_dpapi_system
-'
----
-name: get_password_policy
-srcfile: "entry"
-description: "Get target server or domain's configured password policy and lockouts"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/get_password_policy/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- get_password_policy
- get_password_policy 127.0.0.1
-'
-arguments:
-  - name: hostname
-    desc: 'If not set check password policy for the domain'
-    type: wstring
-    required: false
----
-name: get_session_info
-srcfile: "entry"
-description: "Prints out information related to the current users logon session"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/get_session_info/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- get_session_info
-'
----
-name: ipconfig
-srcfile: "entry"
-description: "List IPv4 address, hostname, and DNS server"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-category: "SAL-BOF"
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/ipconfig/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- ipconfig
-'
----
-name: ldapsecuritycheck
-srcfile: "entry"
-description: "Check LDAP signing and LDAPS channel binding requirements on domain controllers. Performs authentication tests to detect security configurations"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/ldapsecuritycheck/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- ldapsecuritycheck
- ldapsecuritycheck DCname
-'
-arguments:
-  - name: DCname
-    desc: 'Domain Controller name. If not provided autodiscovery is performed'
-    type: wstring
-    required: false
----
-name: listdns
-srcfile: "entry"
-description: "List DNS cache entries. Attempt to query and resolve each"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-category: "SAL-BOF"
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/listdns/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- listdns
-'
----
-name: list_firewall_rules
-srcfile: "entry"
-description: "List Windows firewall rules"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/list_firewall_rules/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- list_firewall_rules
-'
----
-name: windowlist
-srcfile: "entry"
-description: "List visible windows in the current user session"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/windowlist/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- windowlist
- windowlist 0
-'
-arguments:
-  - name: display_all
-    desc: 'By defualt displays all windows (also hidden ones), set to 0 to change it'
-    type: integer
-    required: false
----
-name: whoami
-srcfile: "entry"
-description: "List whoami /all"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/whoami/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- whoami
-'
----
-name: wmi_query
-srcfile: "entry"
-description: "Run a wmi query and display results in CSV format"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/wmi_query/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/wmi.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/wmi.h'
-examples: '
- wmi_query "root\\cimv2", "select * from win32_process"
-'
-arguments:
-  - name: query
-    desc: 'WMI query to run'
-    type: wstring
-    required: true
-  - name: resource
-    desc: 'WMI resource to connnect to'
-    type: wstring
-    required: true
----
-name: vssenum
-srcfile: "entry"
-description: "Enumerate Shadow Copies on some Server 2012+ servers"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/vssenum/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- vssenum "localhost" "share"
-'
-arguments:
-  - name: hostname
-    desc: "hostname to check"
-    type: wstring
-    required: true
-  - name: sharename
-    desc: "sharename to check"
-    type: wstring
-    required: false
----
-name: useridletime
-srcfile: "entry"
-description: "Shows how long the user as been idle, displayed in seconds, minutes, hours and days"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/useridletime/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- useridletime
-'
----
-name: uptime
-srcfile: "entry"
-description: "List system boot time and how long it has been running"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/uptime/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- uptime
-'
----
-name: tasklist
-srcfile: "entry"
-description: "List running processes including PID, PPID, and ComandLine (uses wmi)"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/tasklist/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/wmi.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/wmi.h'
-examples: '
- tasklist localhost
-'
-arguments:
-  - name: server
-    desc: "hostname to connect to via WMI"
-    type: wstring
-    required: true
----
-name: sha1
-srcfile: "entry"
-description: "Hash filename using sha1"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/sha1/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- sha1 filename
-'
-arguments:
-  - name: file
-    desc: "file for which calculate sha1 sum"
-    type: wstring
-    required: true
----
-name: sha256
-srcfile: "entry"
-description: "Hash filename using sha256"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/sha256/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- sha256 filename
-'
-arguments:
-  - name: file
-    desc: "file for which calculate sha1 sum"
-    type: wstring
-    required: true
----
-name: schtasksquery
-srcfile: "entry"
-description: "Query the given task on the local or remote computer"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/schtasksquery/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/queue.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/anticrash.c'
-examples: '
- schtasksquery "" "\\Microsoft\\Windows\\Autochk\\Proxy"
-'
-arguments:
-  - name: hostname
-    desc: "Hostname or empty wstring for localhost"
-    type: wstring
-    required: true
-  - name: taskname
-    desc: "Taskname to query"
-    type: wstring
-    required: true
----
-name: schtasksenum
-srcfile: "entry"
-description: "Enumerate scheduled tasks on the local or remote computer"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/schtasksenum/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/queue.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/anticrash.c'
-examples: '
- schtasksenum ""
-'
-arguments:
-  - name: hostname
-    desc: "Hostname or empty wstring for localhost"
-    type: wstring
-    required: true
----
-name: sc_enum
-srcfile: "entry"
-description: "Enumerate services for qc, query, qfailure, and qtriggers info"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/sc_enum/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/anticrash.c'
-examples: '
- sc_enum ""
-'
-arguments:
-  - name: hostname
-    desc: "Hostname or empty wstring for localhost"
-    type: wstring
-    required: true
----
-name: sc_qc
-srcfile: "entry"
-description: "sc qc impelmentation in BOF"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/sc_qc/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/anticrash.c'
-examples: '
- sc_qc "192.168.1.1" SvcName
-'
-arguments:
-  - name: hostname
-    desc: "Hostname or empty string for localhost"
-    type: wstring
-    required: true
-  - name: servicename
-    desc: "Servicename to check"
-    type: string
-    required: true
----
-name: sc_qdescription
-srcfile: "entry"
-description: "sc qdescription implementation in BOF"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/sc_qdescription/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- sc_qdescription "192.168.1.1" SvcName
-'
-arguments:
-  - name: hostname
-    desc: "Hostname or empty string for localhost"
-    type: wstring
-    required: true
-  - name: servicename
-    desc: "Servicename to check"
-    type: string
-    required: true
----
-name: sc_qfailure
-srcfile: "entry"
-description: "Query a service for failure conditions"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/sc_qfailure/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/anticrash.c'
-examples: '
- sc_qfailure "192.168.1.1" SvcName
-'
-arguments:
-  - name: hostname
-    desc: "Hostname or empty string for localhost"
-    type: wstring
-    required: true
-  - name: servicename
-    desc: "Servicename to check"
-    type: string
-    required: true
----
-name: sc_qtriggerinfo
-srcfile: "entry"
-description: "Query a service for trigger conditions"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/sc_qtriggerinfo/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/anticrash.c'
-examples: '
- sc_qtriggerinfo "192.168.1.1" SvcName
-'
-arguments:
-  - name: hostname
-    desc: "Hostname or empty string for localhost"
-    type: wstring
-    required: true
-  - name: servicename
-    desc: "Servicename to check"
-    type: string
-    required: true
----
-name: sc_query
-srcfile: "entry"
-description: "sc query implementation in BOF"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/sc_query/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/anticrash.c'
-examples: '
- sc_query "192.168.1.1" SvcName
-'
-arguments:
-  - name: hostname
-    desc: "Hostname or empty string for localhost"
-    type: wstring
-    required: true
-  - name: servicename
-    desc: "Servicename to check"
-    type: string
-    required: true
----
-name: routeprint
-srcfile: "entry"
-description: "List IPv4 routes"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/routeprint/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- routeprint
-'
----
-name: resources
-srcfile: "entry"
-description: "List memory usage and available disk space on the primary hard drive"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/resources/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- resources
-'
----
-name: md5
-srcfile: "entry"
-description: "Hash filename using md5"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/md5/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- md5 filename
-'
-arguments:
-  - name: filename
-    desc: "creating md5 hash for this file"
-    type: string
-    required: true
----
-name: probe
-srcfile: "entry"
-description: "Check if a specific port is open"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/probe/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- probe "192.168.1.1" 22
-'
-arguments:
-  - name: host
-    desc: "IP address of target host"
-    type: string
-    required: true
-  - name: port
-    desc: "port number to probe"
-    type: integer
-    required: true
----
-name: regsession
-srcfile: "entry"
-description: "Return logged on user SIDs by enumerating HKEY_USERS. BOFHound compatible"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/regsession/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- regsession "192.168.1.1"
-'
-arguments:
-  - name: hostname
-    desc: "Hostname or empty string for localhost"
-    type: string
-    required: true
----
-name: reg_query
-srcfile: "entry"
-description: "Query a registry value or enumerate a single key"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/reg_query/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/anticrash.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/stack.c'
-examples: '
- reg_query "" 2 "system\\currentcontrolset\\services\\webclient" ImagePath
- reg_query "192.168.1.1" 2 "system\\currentcontrolset\\services\\webclient" ImagePath
-'
-arguments:
-  - name: hostname
-    desc: "Hostname or empty string for localhost"
-    type: string
-    required: true
-  - name: hive
-    desc: "Registry hive to query"
-    type: integer
-    required: true
-  - name: path
-    desc: "Key path"
-    type: string
-    required: true
-  - name: queryValue
-    desc: "Value to query"
-    type: string
-    required: flase
----
-name: nslookup
-srcfile: "entry"
-description: "Make a DNS query"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-category: "SAL-BOF"
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/nslookup/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- nslookup "no.such.host.com" "1.1.1.1" 1
-'
-arguments:
-  - name: hostname
-    desc: "name to resolve"
-    type: string
-    required: true
-  - name: dnsServer
-    desc: "DNS server to query"
-    type: integer
-    required: true
-  - name: recordType
-    desc: "DNS record type: A = 1, NS = 2, CNAME = 5, AAAA = 28, ANY = 255"
-    type: short
-    required: true
----
-name: locale
-srcfile: "entry"
-description: "List system locale language, locale ID, date, time, and country"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/locale/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/anticrash.c'
-examples: '
- locale
-'
----
-name: netgroup
-srcfile: "entry"
-description: "List groups or grup members from the default or specified domain"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/netgroup/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- netgroup 0 "corp.local"
- netgroup 1 "" "Domain Admins"
-'
-arguments:
-  - name: type
-    desc: "listing type: 0 - list groups; 1 - list group members"
-    type: short
-    required: true
-  - name: domain
-    desc: "domain name"
-    type: wstring
-    required: true
-  - name: group
-    desc: "group name"
-    type: wstring
-    required: true
----
-name: netlocalgroup
-srcfile: "entry"
-description: "List local groups or local grup members from the local or specified computer"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/netlocalgroup/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- netlocalgroup 0 "192.168.1.1" Administrators
- netlocalgroup 1 "" "Administrators"
-'
-arguments:
-  - name: type
-    desc: "listing type: 0 - list local groups; 1 - list local group members"
-    type: short
-    required: true
-  - name: server
-    desc: "server name"
-    type: wstring
-    required: true
-  - name: group
-    desc: "group name"
-    type: wstring
-    required: true
----
-name: netlocalgroup2
-srcfile: "entry"
-description: "List local grup members from the local or specified computer (supports BOFHound)"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/netlocalgroup2/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- netlocalgroup2 "192.168.1.1" Administrators
- netlocalgroup2 "" "Administrators"
-'
-arguments:
-  - name: server
-    desc: "server name"
-    type: wstring
-    required: true
-  - name: group
-    desc: "group name"
-    type: wstring
-    required: true
----
-name: netloggedon
-srcfile: "entry"
-description: "Return users logged on the local or remote computer"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/netloggedon/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- netloggedon "192.168.1.1"
- netloggedon ""
-'
-arguments:
-  - name: server
-    desc: "server name"
-    type: wstring
-    required: true
----
-name: netloggedon2
-srcfile: "entry"
-description: "Return users logged on the local or remote computer (supports BOFHound)"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/netloggedon2/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- netloggedon2 "192.168.1.1"
- netloggedon2 ""
-'
-arguments:
-  - name: server
-    desc: "server name"
-    type: wstring
-    required: true
----
-name: get-netsession
-srcfile: "entry"
-description: "Enumerate sessions on the local or specified computer"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/get-netsession/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- get-netsession "192.168.1.1"
- get-netsession ""
-'
-arguments:
-  - name: server
-    desc: "server name"
-    type: wstring
-    required: true
----
-name: get-netsession2
-srcfile: "entry"
-description: "Enumerate sessions on the local or specified computer (supports BOFHound)"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/get-netsession2/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- get-netsession2 "host.local" 0 dc.local
-'
-arguments:
-  - name: server
-    desc: "server name"
-    type: wstring
-    required: true
-  - name: resolveMethod
-    desc: "resolveMethod: 0 - for DNS; 1 - for NetWkstaGetInfo"
-    type: short
-    required: true
-  - name: dnsserver
-    desc: "dns server"
-    type: wstring
-    required: true
----
-name: netshares
-srcfile: "entry"
-description: "List shares on the local or remote computer"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/netshares/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- netshares "192.168.1.1"
- netshares ""
-'
-arguments:
-  - name: server
-    desc: "server name"
-    type: wstring
-    required: true
----
-name: netstat
-srcfile: "entry"
-description: "TCP and UDP IPv4 listing ports"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-category: "SAL-BOF"
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/netstat/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- netstat
-'
----
-name: nettime
-srcfile: "entry"
-description: "Display time on remote computer"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/nettime/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- nettime
- nettime "192.168.1.1"
-'
-arguments:
-  - name: server
-    desc: "server name"
-    type: wstring
-    required: true
----
-name: netuptime
-srcfile: "entry"
-description: "Return information about the boot time on the local or remote computer"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/netuptime/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- netuptime
- netuptime "192.168.1.1"
-'
-arguments:
-  - name: server
-    desc: "server name"
-    type: wstring
-    required: true
----
-name: netuser
-srcfile: "entry"
-description: "Get info about specific user. Pull from domain if a domainname is specified"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/netuser/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- netuser alice "domain.local"
- netuser bob ""
-'
-arguments:
-  - name: username
-    desc: "User name"
-    type: wstring
-    required: true
-  - name: domain
-    desc: "Domain name"
-    type: wstring
-    required: true
----
-name: netuse
-srcfile: "entry"
-description: "Connect/disconnect a computer to/from a shared resource. List locally bound connections"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/netuse/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- Bind IPC$ of a remote computer using current user context:
-    netuse 1 "dc.local\\IPC$" "" "" "" 0 0
-
- Map a Share creating a specific device mapping, using a diferent set of credentials:
-    netuse 1 "dc.local\\res" user passwd F 0 0
-
- List local connections:
-    netuse 2 "" "" "" "" 0 0
-
- List all info about Z:
-    netuse 2 "" "" "" "Z:" 0 0
-
- Delete the share with the local device name Y:
-    netuse 3 Y "" "" "" 0 0
-
- Delete the share with an unmapped local device name
-    netuse_delete "\\\\fileshare.somecomp.local\\Public"
-
- Delete a share and remove its persistent mapping
-    netuse 3 Y "" "" "" 1 0
-
- Note if the share has a local device name mapped you must delete using the local name
-'
-arguments:
-  - name: cmd
-    desc: "cmd: 1 - Connect to a shared resource; 2 - List locally bound connections; 3 - disconnect from a shared resource"
-    type: short
-    required: true
-  - name: sharename
-    desc: "User name"
-    type: wstring
-    required: true
-  - name: username
-    desc: "User name"
-    type: wstring
-    required: true
-  - name: password
-    desc: "User password"
-    type: wstring
-    required: true
-  - name: device
-    desc: "The device name on the local system to bind the connection to"
-    type: wstring
-    required: true
-  - name: persist
-    desc: "persist: 0 - false; 1 - true"
-    type: short
-    required: true
-  - name: requirePrivacy
-    desc: "requirePrivacy: 0 - false; 1 - true"
-    type: short
-    required: true
----
-name: netview
-srcfile: "entry"
-description: "List reachable computers in the current domain"
-author: Trustedsec
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/netview/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
-examples: '
- netview
-'
----
-name: adduser
-srcfile: "entry"
-description: "Add specified user to a machine"
-author: Trustedsec
-tags: ['windows', 'lateral-movement', 'trustedsec', 'CS-Remote-OPs-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Remote-OPs-BOF/refs/heads/main/src/Remote/adduser/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Remote-OPs-BOF/refs/heads/main/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Remote-OPs-BOF/refs/heads/main/src/common/bofdefs.h'
-examples: '
- adduser alice "passw0rd" "192.168.1.1"
-'
-arguments:
-  - name: username
-    desc: "User name"
-    type: wstring
-    required: true
-  - name: password
-    desc: "User passwrod"
-    type: wstring
-    required: true
-  - name: machine
-    desc: "Machine name"
-    type: wstring
-    required: true
----
-name: unexpireuser
-srcfile: "entry"
-description: "Set a user account to never expire"
-author: Trustedsec
-tags: ['windows', 'lateral-movement', 'trustedsec', 'CS-Remote-OPs-BOF']
-OS: Windows
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Remote-OPs-BOF/refs/heads/main/src/Remote/unexpireuser/entry.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Remote-OPs-BOF/refs/heads/main/src/common/base.c'
-    - 'https://raw.githubusercontent.com/trustedsec/CS-Remote-OPs-BOF/refs/heads/main/src/common/bofdefs.h'
-examples: '
- unexpireuser alice ""
- unexpireuser bob "abc.local.corp"
-'
-arguments:
-  - name: hostname
-    desc: "Machine name"
-    type: wstring
-    required: true
-  - name: username
-    desc: "User name"
-    type: wstring
-    required: true
----
-name: ping
-description: "Reimplementation of common Unix utilities as BOF: ping utility"
-author: Sebastian.Haas
-tags: ['linux', 'BusyBOF', 'cmprmsd']
-category: "SAR-BOF"
-OS: Linux
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-ping/ping.c'
-    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
-examples: '
- ping 192.168.99.99
-'
----
-name: traceroute
-description: "Reimplementation as common Unix utilities as BOF: traceroute utility"
-author: Sebastian.Haas
-tags: ['linux', 'BusyBOF', 'cmprmsd']
-category: "SAR-BOF"
-OS: Linux
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-traceroute/traceroute.c'
-    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
-examples: '
-'
----
-name: nslookup
-description: "Reimplementation as common Unix utilities as BOF: nslookup utility"
-author: Sebastian.Haas
-tags: ['linux', 'BusyBOF', 'cmprmsd']
-category: "SAR-BOF"
-OS: Linux
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-nslookup/nslookup.c'
-    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
-examples: '
-'
----
-name: wget
-description: "Reimplementation as common Unix utilities as BOF: wget utility"
-author: Sebastian.Haas
-tags: ['linux', 'BusyBOF', 'cmprmsd']
-category: "SAR-BOF"
-OS: Linux
-entrypoint: "go"
-sources:
-    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-wget/wget.c'
-    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
-examples: '
-'

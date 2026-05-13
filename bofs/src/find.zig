@@ -1,11 +1,12 @@
 ///name: find
-///description: "Search for files in a directory hierarchy. Simple version of find(1) utility."
+///description: "Search for files in a directory hierarchy. Simple version of find(1) utility"
 ///author: Z-Labs
-///tags: ['windows', 'linux','host-recon','z-labs']
-///OS: cross
+///tags: ['windows', 'linux','TA0007', 'T1083', 'z-labs']
+///category: "FILES-BOF"
+///OS: cross-platform
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/find.zig'
-///examples: '
+///examples: |
 /// Considerations:
 ///    -maxdepth hardcoded to 3
 ///    symbolic links are not followed
@@ -30,7 +31,6 @@
 ///
 /// List files matching provided regex (match on the whole path, not a search):
 ///   find /etc/apt -regex .*archive.*
-///'
 ///arguments:
 ///- name: dir_path
 ///  desc: "path to the directory to be listed"

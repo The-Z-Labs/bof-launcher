@@ -1,14 +1,14 @@
 ///name: cat
 ///description: "Print content of a file"
 ///author: Z-Labs
-///tags: ['windows', 'linux','host-recon','z-labs']
-///OS: cross
+///tags: ['windows', 'linux','TA0007', 'T1083', 'z-labs']
+///category: "FILES-BOF"
+///OS: cross-platform
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/cat.zig'
-///examples: '
+///examples: |
 /// cat /etc/passwd
 /// cat C:\Windows\System32\drivers\etc\hosts
-///'
 ///arguments:
 ///- name: file_path
 ///  desc: "path to the file to be printed"

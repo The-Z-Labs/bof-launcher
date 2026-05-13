@@ -1,18 +1,18 @@
 ///name: "tcpScanner"
 ///description: "TCP connect() port scanner"
 ///author: "Z-Labs"
-///tags: ['windows', 'linux','net-recon','z-labs']
-///OS: "cross"
+///tags: ['windows', 'linux','T0007','T0846.001', 'z-labs']
+///category: "SAR-BOF"
+///OS: "cross-platform"
 ///entrypoint: "go"
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/tcpScanner.zig'
-///examples: '
+///examples: |
 /// Scanning selected hosts and ports:
 ///
 ///   tcpScanner str:192.168.0.1:80,22,443
 ///   tcpScanner str:192.168.0.1:100-200
 ///   tcpScanner str:102.168.1.1-128:445,81,8080-8089
-///'
 ///arguments:
 ///  - name: IPSpec
 ///    desc: "IP addresses specification, ex: 192.168.0.1; 10.0.0-255.1-254; 192.168.0.1:161,427,10-15"

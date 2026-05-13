@@ -1,3 +1,14 @@
+///name: uptime
+///description: "Tell how long the system has been running"
+///author: Z-Labs
+///tags: ['linux','TA0007', 'T1082','z-labs']
+///category: 'SAL-BOF'
+///OS: Linux
+///sources:
+///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/coreutils/uptime.zig'
+///examples: |
+/// uptime
+///
 const std = @import("std");
 const beacon = @import("bof_api").beacon;
 const posix = @import("bof_api").posix;
