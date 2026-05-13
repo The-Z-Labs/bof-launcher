@@ -322,11 +322,29 @@ def execBof(TYPE, bof, implantSN, argv):
     print(implantSN, bof)
     print(argv)
 
+def listingBof(bof_name):
+    bof_entry = []
+    os = BOF_DOCS[bof_name]['OS']
+    desc = BOF_DOCS[bof_name]['description']
+
+    bof_entry.append(bof_name)
+    bof_entry.append(os)
+
+    arch = ""
+    for a in BOF_DOCS[bof_name]['Arch']:
+        arch += a
+        arch += ","
+
+    bof_entry.append(arch.rstrip(","))
+    bof_entry.append(desc)
+
+    return bof_entry
 
 def listingBofs(chosen_category):
 
     misc = []
     bofs_cats = []
+    HEADER = ["BOF name", "Supported OS", "Supported Arch", "Description"]
 
     # if a specific category was provided
     if chosen_category != "":
@@ -342,18 +360,19 @@ def listingBofs(chosen_category):
         tableObj = texttable.Texttable(140)
         tableObj.set_deco(texttable.Texttable.HEADER)
         tableObj.set_cols_dtype(["t", "t", "t", "t"])
-        tableObj.add_rows([["BOF name", "Supported OS", "Supported Arch", "Description"]], header=True)
+        tableObj.add_rows([HEADER], header=True)
 
         for key, value in c.items():
+            print()
+            print()
             print()
             print(key + " - " + value)
             print()
             for b in bofs:
                 if 'category' in BOF_DOCS[b]:
                     if BOF_DOCS[b]['category'] == key:
-                        os = BOF_DOCS[b]['OS']
-                        arch = "TODO"
-                        tableObj.add_row([b, os, arch, BOF_DOCS[b]['description']])
+                        bof_entry = listingBof(b)
+                        tableObj.add_row(bof_entry)
                 else:
                     if b not in misc:
                         misc.append(b)
@@ -363,19 +382,19 @@ def listingBofs(chosen_category):
     # print remaining uncategorized BOFs (if no category was explicitly chosen):
     if chosen_category == "":
  
-        print()
-        print("Misc - Other, currently not categorized BOFs")
-        print()
         tableObj = texttable.Texttable(140)
         tableObj.set_deco(texttable.Texttable.HEADER)
         tableObj.set_cols_dtype(["t", "t", "t", "t"])
-        tableObj.add_rows([["BOF name", "Supported OS", "Supported Arch", "Description"]], header=True)
+        tableObj.add_rows([HEADER], header=True)
         for b in misc:
-            os = BOF_DOCS[b]['OS']
-            arch = "TODO"
-            tableObj.add_row([b, os, arch, BOF_DOCS[b]['description']])
+            bof_entry = listingBof(b)
+            tableObj.add_row(bof_entry)
 
-        print(tableObj.draw())
+        if len(misc) > 0:
+            print()
+            print("Misc - Other, currently not categorized BOFs")
+            print()
+            print(tableObj.draw())
 
 
 def showBofInfo(bof_name):
