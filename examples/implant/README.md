@@ -39,18 +39,39 @@ To run z-beac0n implant on o local machine for the testing/experimenting purpose
 
 2. Prepare C2 server
 
-By default server will listen at `127.0.0.1:8000`:
+Copy BOFs that will be served by the C2 server, you should put here binaries of every supported architecture. I copy our publicly available BOFs, you can add yours:
 
 ```
 ~/bof-launcher$ cd examples/implant
 cp -r ../../zig-out/bin/bofs/ ./
-~/bof-launcher/examples/implant$ python C2-http.py
 ```
+
+It's time to launch the server (by default it will listen at `127.0.0.1:8000`):
+
+    ~/bof-launcher/examples/implant$ python z-beac0n-C2.py
 
 The server exposes two endpoints:
 
 - `/tasking` - meant to be used by the operator to issue new tasks for the implant (`POST` request) and for retrieving output from completed tasks (`GET` request);
 - `/heartbeat` - meant to be used by the implant to query for a new tasks (`GET` request) and to send back tasks' output (`POST` request);
+
+Now, run the console. It will use those endpoints to contrl the implant:
+
+    ~/bof-launcher/examples/implant$ python z-beac0n-console.py
+
+You should see following hackish logo :) and the prompt:
+
+```
+
+             bb                             00000          
+zzzzz        bb        eee    aa aa   cccc 00   00 nn nnn  
+  zz  _____  bbbbbb  ee   e  aa aaa cc     00   00 nnn  nn 
+ zz          bb   bb eeeee  aa  aaa cc     00   00 nn   nn 
+zzzzz        bbbbbb   eeeee  aaa aa  ccccc  00000  nn   nn 
+                                                           
+
+z-beac0n>
+```
 
 3. Run z-beac0n implant
 
