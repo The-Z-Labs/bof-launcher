@@ -2644,3 +2644,826 @@ arguments:
   desc: "Max depth"
   type: string
   required: false
+---
+name: chmod
+description: "change file permissions"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "FILES-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-chmod/chmod.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  chmod
+'
+arguments:
+- name: mode
+  desc: "Octal permissions (e.g. 755)"
+  type: string
+  required: true
+- name: target
+  desc: "File path(s)"
+  type: string
+  required: true
+---
+name: awk
+description: "minimal awk (print columns only)"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "TEXT-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-awk/awk.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  awk
+'
+arguments:
+- name: expression
+  desc: "awk expression, e.g. '{print $1}'"
+  type: string
+  required: true
+- name: file
+  desc: "Input file"
+  type: string
+  required: false
+- name: delimiter
+  desc: "Field separator (default: whitespace)"
+  type: string
+  required: false
+---
+name: date
+description: "print current date/time"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "SAL-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-date/date.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  date
+'
+arguments:
+- name: format
+  desc: "+format string"
+  type: string
+  required: false
+---
+name: df
+description: "disk space usage"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "SAL-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-df/df.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  df
+'
+arguments:
+- name: path
+  desc: "Mount point or path"
+  type: string
+  required: false
+---
+name: dmesg
+description: "print kernel ring buffer"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "SAL-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-dmesg/dmesg.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  dmesg
+'
+arguments:
+- name: lines
+  desc: "Number of lines to show (default: all)"
+  type: string
+  required: false
+---
+name: du
+description: "estimate disk usage"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "SAL-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-du/du.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  du
+'
+arguments:
+- name: path
+  desc: "Target path (default: .)"
+  type: string
+  required: false
+- name: options
+  desc: "Flags: s (summary only)"
+  type: string
+  required: false
+---
+name: env
+description: "print environment variables"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "SAL-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-env/env.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  env
+'
+arguments:
+- name: name
+  desc: "Variable name"
+  type: string
+  required: false
+---
+name: free
+description: "display memory usage"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "SAL-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-free/free.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  free
+'
+---
+name: groups
+description: "print group memberships"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "SAL-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-groups/groups.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  groups
+'
+arguments:
+- name: user
+  desc: "Username (default: current user)"
+  type: string
+  required: false
+---
+name: kill
+description: "send signal to process"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "SAL-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-kill/kill.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  kill
+'
+arguments:
+- name: pid
+  desc: "Process ID"
+  type: string
+  required: true
+- name: signal
+  desc: "Signal name or number (default: TERM)"
+  type: string
+  required: false
+---
+name: mount
+description: "list mount points"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "SAL-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-mount/mount.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  mount
+'
+---
+name: ps
+description: "list processes"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "SAL-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-ps/ps.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  ps
+'
+---
+name: sysctl
+description: "read/write kernel parameters"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "SAL-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-sysctl/sysctl.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  sysctl
+'
+arguments:
+- name: key
+  desc: "Sysctl key to read (omit to list all)"
+  type: string
+  required: false
+- name: filter
+  desc: "Filter pattern when listing all"
+  type: string
+  required: false
+---
+name: cut
+description: "extract fields/columns"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "TEXT-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-cut/cut.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  cut
+'
+arguments:
+- name: field
+  desc: "Field number to extract"
+  type: string
+  required: true
+- name: delimiter
+  desc: "Delimiter character (default: tab)"
+  type: string
+  required: false
+- name: file
+  desc: "Input file"
+  type: string
+  required: false
+---
+name: head
+description: "output first part of file"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "TEXT-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-head/head.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  head
+'
+arguments:
+- name: file
+  desc: "Input file"
+  type: string
+  required: true
+- name: lines
+  desc: "Number of lines (default: 10)"
+  type: string
+  required: false
+---
+name: nl
+description: "number lines of files"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "TEXT-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-nl/nl.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  nl
+'
+arguments:
+- name: file
+  desc: "Input file"
+  type: string
+  required: true
+---
+name: paste
+description: "merge lines of files"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "TEXT-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-paste/paste.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  paste
+'
+arguments:
+- name: files
+  desc: "Space-separated file paths (min 2)"
+  type: string
+  required: true
+---
+name: rev
+description: "reverse lines of a file"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "TEXT-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-rev/rev.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  rev
+'
+arguments:
+- name: file
+  desc: "Input file"
+  type: string
+  required: true
+---
+name: sed
+description: "stream editor (s/old/new/g)"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "TEXT-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-sed/sed.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  sed
+'
+arguments:
+- name: expression
+  desc: "s/pattern/replacement/[g]"
+  type: string
+  required: true
+- name: file
+  desc: "Input file"
+  type: string
+  required: true
+---
+name: sort
+description: "sort lines of a file"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "TEXT-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-sort/sort.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  sort
+'
+arguments:
+- name: file
+  desc: "Input file"
+  type: string
+  required: false
+- name: options
+  desc: "Flags: r (reverse), n (numeric)"
+  type: string
+  required: false
+---
+name: tail
+description: "output last part of file"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "TEXT-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-tail/tail.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  tail
+'
+arguments:
+- name: file
+  desc: "Input file"
+  type: string
+  required: false
+- name: lines
+  desc: "Number of lines (default: 10)"
+  type: string
+  required: false
+---
+name: tr
+description: "translate/delete characters"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "TEXT-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-tr/tr.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  tr
+'
+arguments:
+- name: set1
+  desc: "Source character set"
+  type: string
+  required: true
+- name: set2
+  desc: "Replacement character set"
+  type: string
+  required: false
+- name: file
+  desc: "Input file"
+  type: string
+  required: false
+- name: options
+  desc: "Flags: d (delete set1 chars)"
+  type: string
+  required: false
+---
+name: uniq
+description: "remove duplicate adjacent lines"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "TEXT-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-uniq/uniq.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  uniq
+'
+arguments:
+- name: file
+  desc: "Input file"
+  type: string
+  required: false
+- name: options
+  desc: "Flags: c (show count)"
+  type: string
+  required: false
+---
+name: wc
+description: "word, line, byte count"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "TEXT-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-wc/wc.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  wc
+'
+arguments:
+- name: file
+  desc: "Input file"
+  type: string
+  required: false
+- name: options
+  desc: "Flags: l (lines), w (words), c (bytes)"
+  type: string
+  required: false
+---
+name: chown
+description: "change file ownership"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "FILES-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-chown/chown.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  chown
+'
+arguments:
+- name: owner
+  desc: "user[:group]"
+  type: string
+  required: true
+- name: target
+  desc: "File path(s)"
+  type: string
+  required: true
+---
+name: netstat
+description: "show network connections"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "SAL-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-netstat/netstat.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  netstat
+'
+arguments:
+- name: flags
+  desc: "[-tlnpu]"
+  type: string
+  required: false
+---
+name: route
+description: "show routing table"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "SAL-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-route/route.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  route
+'
+---
+name: base64
+description: "base64 encode/decode"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "TEXT-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-base64/base64.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  base64
+'
+arguments:
+- name: file
+  desc: "File to encode/decode"
+  type: string
+  required: false
+- name: mode
+  desc: "encode or decode"
+  type: string
+  required: false
+---
+name: md5sum
+description: "compute MD5 hash"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "FILES-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-md5sum/md5sum.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  md5sum
+'
+arguments:
+- name: target
+  desc: "File path(s)"
+  type: string
+  required: true
+---
+name: od
+description: "octal dump"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "TEXT-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-od/od.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  od
+'
+arguments:
+- name: file
+  desc: "Input file"
+  type: string
+  required: false
+- name: address_format
+  desc: "Address format (default: o)"
+  type: string
+  required: false
+- name: type_format
+  desc: "Output type (default: o)"
+  type: string
+  required: false
+- name: max_bytes
+  desc: "Maximum bytes to read"
+  type: string
+  required: false
+---
+name: sha256sum
+description: "compute SHA-256 hash"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "FILES-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-sha256sum/sha256sum.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  sha256sum
+'
+arguments:
+- name: target
+  desc: "File path(s)"
+  type: string
+  required: true
+---
+name: strings
+description: "find printable strings"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "FILES-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-strings/strings.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  strings
+'
+arguments:
+- name: file
+  desc: "Input file"
+  type: string
+  required: false
+- name: min_length
+  desc: "Minimum string length (default: 4)"
+  type: string
+  required: false
+---
+name: xxd
+description: "hex dump"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "TEXT-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-xxd/xxd.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  xxd
+'
+arguments:
+- name: file
+  desc: "Input file"
+  type: string
+  required: false
+- name: length
+  desc: "Number of bytes to dump"
+  type: string
+  required: false
+---
+name: basename
+description: "strip directory from path"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "FILES-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-basename/basename.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  basename
+'
+arguments:
+- name: path
+  desc: "File path"
+  type: string
+  required: true
+- name: suffix
+  desc: "Suffix to remove"
+  type: string
+  required: false
+---
+name: dirname
+description: "strip filename from path"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "FILES-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-dirname/dirname.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  dirname
+'
+arguments:
+- name: path
+  desc: "File path"
+  type: string
+  required: true
+---
+name: logger
+description: "write message to syslog"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "SAL-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-logger/logger.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  logger
+'
+arguments:
+- name: message
+  desc: "Log message"
+  type: string
+  required: true
+- name: tag
+  desc: "Syslog tag (default: user)"
+  type: string
+  required: false
+- name: priority
+  desc: "Syslog priority number (default: 14)"
+  type: string
+  required: false
+---
+name: arp
+description: "show arp table"
+author: Sebastian.Haas
+Arch: ["x64","x86","aarch64","arm"]
+tags: ['linux', 'cmprmsd', 'TA0007', 'T1016']
+category: "SAL-BOF"
+OS: Linux
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-arp/arp.c'
+    - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+examples: '
+  arp
+'
