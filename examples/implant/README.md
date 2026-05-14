@@ -7,7 +7,7 @@ We follow DIY (do-it-yourself) philosophy when preparing C2 solution for a given
 
 The building blocks of the toolkit:
 
-- [z-beac0n implant](#implant)
+- [z-beac0n implant](#implant-internals)
 - [backend components](#backend-components)
 - [bof-launcher library](#bof-launcher-library)
 - [Z-Labs BOFs collection](https://github.com/The-Z-Labs/bof-launcher/tree/main/bofs)
@@ -90,7 +90,26 @@ In simplest case (for testing purposes) running the implant is a matter of execu
 
     ~/bof-launcher$ ./zig-out/bin/z-beac0n_lin_x64.elf
 
-## Implant
+Verify the beaconing from the implant in the console:
+
+```
+
+             bb                             00000          
+zzzzz        bb        eee    aa aa   cccc 00   00 nn nnn  
+  zz  _____  bbbbbb  ee   e  aa aaa cc     00   00 nnn  nn 
+ zz          bb   bb eeeee  aa  aaa cc     00   00 nn   nn 
+zzzzz        bbbbbb   eeeee  aaa aa  ccccc  00000  nn   nn 
+                                                           
+
+z-beac0n> implant ls
+Implant ID      First seen at         Last seen at       Implant identity string
+================================================================================
+Wxepb5bA     2026-05-14 17:40:16   2026-05-14 17:40:28   x86_64:linux:Wxepb5bA  
+
+z-beac0n>
+```
+
+## Implant internals
 
 z-beac0n implant is an example of software implant written with bof-launcher library, conceptually it looks like this:
 
@@ -118,11 +137,14 @@ Example [stager.py](src/stager.py) script is available as a staging script that 
 On the server side following components are available:
 
 - [stage-listener.py](src/stage-listener.py) - HTTP(S)-based payload serving listener compatible with ["meterpreter protocol"](https://github.com/rsmudge/metasploit-loader); 
-- [C2-http.py](C2-http.py) - Command and control server for handling implant's beaconing.
+- [z-beac0n-C2.py](z-beac0n-C2.py) - Command and control server for handling implant's beaconing.
+- [z-beac0n-console.py](z-beac0n-console.py) - Operator's console.
+- [icli.py](icli.py) - Console's dependency.
+- [BOF-all.yaml](BOF-all.yaml) - BOFs' manuals.
 
 ## bof-launcher library
 
-Of course working horse of z-beac0n implant is bof-launcher library it exposes following, well thought and efficient interface/API:
+Of course working horse of z-beac0n implant is bof-launcher library. It exposes following, well thought and efficient interface/API:
 
 ```c
 int bofLauncherInit(void);
@@ -171,48 +193,4 @@ void bofArgsBegin(BofArgs* args);
 void bofArgsEnd(BofArgs* args);
 const char* bofArgsGetBuffer(BofArgs* args);
 int bofArgsGetBufferSize(BofArgs* args);
-```
-
-## cli4bofs tool
-
-[cli4bofs](https://github.com/The-Z-Labs/cli4bofs) (i.e. command line interface for running BOFs) is a swiss army knife tool for running and mainataining collection of BOFs files. Allows for running any BOF from a filesystem and for conveniently passing arguments to it. Defines simple YAML schema for essential information about BOF files, like: description, URL(s) of the source code, supported arguments, usage examples, etc. Handy also for testing, prototyping and developing your own BOFs.
-
-An example of complete YAML file for one of the BOFs:
-
-```
-name: cat
-description: "Print content of a file"
-author: Z-Labs
-tags: ['windows', 'linux','host-recon','z-labs']
-OS: cross
-sources:
-    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/cat.zig'
-examples: '
- cat /etc/passwd
- cat C:\Windows\System32\drivers\etc\hosts
-'
-arguments:
-- name: file_path
-  desc: "path to the file to be printed"
-  type: string
-  required: true
-errors:
-- name: AccessDenied
-  code: 0x1
-  message: "Failed to open provided file"
-- name: FileNotFound
-  code: 0x2
-  message: "File not found"
-- name: AntivirusInterference
-  code: 0x3
-  message: "Possible Antivirus Interference while opening the file"
-- name: FileNotProvided
-  code: 0x4
-  message: "No file provided"
-- name: StreamTooLong
-  code: 0x5
-  message: "File is very large"
-- name: UnknownError
-  code: 0x6
-  message: "Unknown error"
 ```
