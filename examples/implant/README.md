@@ -1,6 +1,6 @@
 # z-beac0n - Open Adversary Simulation Toolkit
 
-We follow DIY (do-it-yourself) philosophy when preparing C2 solution for a given mission objectives (i.e. professional adversary simulation engagements). Therefore we provide an open and flexible architectural solution together with reusable building blocks that can be quickly tailored to a given scenario.
+We follow DIY (do-it-yourself) philosophy when preparing C2 solution for a given mission objectives (i.e. red team exercise / adversary simulation engagement). Therefore we provide an open and flexible architectural solution together with reusable building blocks that can be quickly tailored to a given scenario.
 
 - [Architecture](#architecture)
 - [Deployment](#deployment)
@@ -11,7 +11,6 @@ The building blocks of the toolkit:
 - [backend components](#backend-components)
 - [bof-launcher library](#bof-launcher-library)
 - [Z-Labs BOFs collection](https://github.com/The-Z-Labs/bof-launcher/tree/main/bofs)
-- [cli4bofs tool](#cli4bofs-tool)
 
 ## Architecture
 
