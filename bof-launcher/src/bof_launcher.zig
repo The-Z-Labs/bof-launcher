@@ -2210,6 +2210,7 @@ fn initLauncher() !void {
     try gstate.func_lookup.put("BeaconGetValue", @intFromPtr(&BeaconGetValue));
     try gstate.func_lookup.put("BeaconAddValue", @intFromPtr(&BeaconAddValue));
     try gstate.func_lookup.put("BeaconRemoveValue", @intFromPtr(&BeaconRemoveValue));
+    try gstate.func_lookup.put("BeaconIsAdmin", @intFromPtr(&BeaconIsAdmin));
 
     try gstate.func_lookup.put("bofRun", @intFromPtr(&bofRun));
     try gstate.func_lookup.put("bofObjectInitFromMemory", @intFromPtr(&bofObjectInitFromMemory));
@@ -2482,6 +2483,43 @@ pub export fn BeaconRemoveValue(key: ?[*:0]const u8) callconv(.c) i32 {
     const hash = std.hash_map.hashString(std.mem.span(key.?));
     if (gstate.beacon_values.remove(hash)) return 1;
     return 0;
+}
+
+pub export fn BeaconIsAdmin() callconv(.c) bool {
+    if (!gstate.is_valid) return false;
+
+    if (@import("builtin").os.tag == .linux) {
+        const uid = std.posix.geteuid();
+
+        if(uid == 0)
+            return true;
+    }
+    else {
+
+        var NtAuthority: w32.SID_IDENTIFIER_AUTHORITY = .{
+           .Value = [6]u8{0,0,0,0,0,5}
+        };
+        var AdministratorsGroup: w32.PSID = undefined;
+
+        var b = w32.AllocateAndInitializeSid(
+            &NtAuthority,
+            2,
+            w32.SECURITY_BUILTIN_DOMAIN_RID,
+            w32.DOMAIN_ALIAS_RID_ADMINS,
+            0, 0, 0, 0, 0, 0,
+            &AdministratorsGroup);
+
+        if(b == w32.TRUE) {
+            if(w32.CheckTokenMembership(null, AdministratorsGroup, &b) == 0)
+                b = w32.FALSE;
+            _ = w32.FreeSid(AdministratorsGroup);
+        }
+
+        if(b == w32.TRUE)
+            return true;
+    }
+
+    return false;
 }
 
 fn memcpy(noalias dest: ?[*]u8, noalias src: ?[*]const u8, len: usize) callconv(.c) ?[*]u8 {

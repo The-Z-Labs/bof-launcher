@@ -19,6 +19,10 @@
 #define DECLSPEC_IMPORT
 #endif
 
+#ifndef BOOL
+#define BOOL int
+#endif
+
 #ifndef NULL
 #define NULL 0
 #endif
@@ -64,5 +68,6 @@ DECLSPEC_IMPORT void BeaconOutput(int type, char * data, int len);
 DECLSPEC_IMPORT int BeaconAddValue(const char * key, void * ptr);
 DECLSPEC_IMPORT void * BeaconGetValue(const char * key);
 DECLSPEC_IMPORT int BeaconRemoveValue(const char * key);
+DECLSPEC_IMPORT BOOL BeaconIsAdmin();
 
 #endif

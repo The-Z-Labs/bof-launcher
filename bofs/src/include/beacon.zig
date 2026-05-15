@@ -33,6 +33,7 @@ pub fn init() void {
     addValue = def(PFN_BeaconAddValue, "BeaconAddValue");
     getValue = def(PFN_BeaconGetValue, "BeaconGetValue");
     removeValue = def(PFN_BeaconRemoveValue, "BeaconRemoveValue");
+    isAdmin = def(PFN_BeaconIsAdmin, "BeaconIsAdmin");
 }
 
 pub var printf: PFN_BeaconPrintf = undefined;
@@ -55,6 +56,7 @@ pub var formatInt: PFN_BeaconFormatInt = undefined;
 pub var addValue: PFN_BeaconAddValue = undefined;
 pub var getValue: PFN_BeaconGetValue = undefined;
 pub var removeValue: PFN_BeaconRemoveValue = undefined;
+pub var isAdmin: PFN_BeaconIsAdmin = undefined;
 
 fn def(comptime T: type, comptime funcname: []const u8) T {
     return @extern(T, .{
@@ -92,3 +94,4 @@ const PFN_BeaconFormatInt = *const fn (format: ?*formatp, value: i32) callconv(.
 const PFN_BeaconAddValue = *const fn (key: ?[*:0]const u8, ptr: ?*anyopaque) callconv(.c) i32;
 const PFN_BeaconGetValue = *const fn (key: ?[*:0]const u8) callconv(.c) ?*anyopaque;
 const PFN_BeaconRemoveValue = *const fn (key: ?[*:0]const u8) callconv(.c) i32;
+const PFN_BeaconIsAdmin = *const fn () callconv(.c) bool;

@@ -3,6 +3,7 @@ const windows = std.os.windows;
 
 pub const ATTACH_PARENT_PROCESS = 0xffff_ffff;
 
+pub const BYTE = windows.BYTE;
 pub const OVERLAPPED = windows.OVERLAPPED;
 pub const Win32Error = windows.Win32Error;
 pub const ULONG = windows.ULONG;
@@ -16,11 +17,13 @@ pub const HANDLE = windows.HANDLE;
 pub const WORD = windows.WORD;
 pub const DWORD = windows.DWORD;
 pub const BOOL = windows.BOOL;
+pub const PBOOL = *BOOL;
 pub const TRUE = windows.TRUE;
 pub const FALSE = windows.FALSE;
 pub const OSVERSIONINFOW = windows.OSVERSIONINFOW;
 pub const RTL_OSVERSIONINFOW = windows.RTL_OSVERSIONINFOW;
 pub const PVOID = windows.PVOID;
+pub const PSID = PVOID;
 pub const LPVOID = windows.LPVOID;
 pub const PSECURITY_DESCRIPTOR = PVOID;
 pub const NTSTATUS = windows.NTSTATUS;
@@ -93,6 +96,10 @@ pub const PAGE_TARGETS_NO_UPDATE = windows.PAGE_TARGETS_NO_UPDATE;
 pub const PAGE_GUARD = windows.PAGE_GUARD;
 pub const PAGE_NOCACHE = windows.PAGE_NOCACHE;
 pub const PAGE_WRITECOMBINE = windows.PAGE_WRITECOMBINE;
+
+pub const SECURITY_NT_AUTHORITY = 5;
+pub const DOMAIN_ALIAS_RID_ADMINS = 544;
+pub const SECURITY_BUILTIN_DOMAIN_RID = 32;
 
 pub const READ_CONTROL = 0x00020000;
 
@@ -578,6 +585,12 @@ pub const IMAGE_SECTION_HEADER = extern struct {
     NumberOfLinenumbers: u16,
     Characteristics: u32,
 };
+
+pub const _SID_IDENTIFIER_AUTHORITY = extern struct {
+    Value: [6]UCHAR = @import("std").mem.zeroes([6]u8),
+};
+pub const SID_IDENTIFIER_AUTHORITY = _SID_IDENTIFIER_AUTHORITY;
+pub const PSID_IDENTIFIER_AUTHORITY = [*c]_SID_IDENTIFIER_AUTHORITY;
 
 comptime {
     std.debug.assert(@offsetOf(IMAGE_DOS_HEADER, "e_lfanew") == 60);
@@ -1102,6 +1115,30 @@ pub const PFN_GetTokenInformation = *const fn (
     ReturnLength: *DWORD,
 ) callconv(.winapi) BOOL;
 
+pub const PFN_CheckTokenMembership = *const fn (
+    TokenHandle: ?HANDLE,
+    SidToCheck: PSID,
+    IsMember: PBOOL,
+) callconv(.winapi) BOOL;
+
+pub const PFN_AllocateAndInitializeSid = *const fn (
+    pIdentifierAuthority: PSID_IDENTIFIER_AUTHORITY,
+    nSubAuthorityCount: BYTE,
+    nSubAuthority0: DWORD,
+    nSubAuthority1: DWORD,
+    nSubAuthority2: DWORD,
+    nSubAuthority3: DWORD,
+    nSubAuthority4: DWORD,
+    nSubAuthority5: DWORD,
+    nSubAuthority6: DWORD,
+    nSubAuthority7: DWORD,
+    pSid: *PSID,
+) callconv(.winapi) BOOL;
+
+pub const PFN_FreeSid = *const fn (
+    pSid: PSID,
+) callconv(.winapi) PVOID;
+
 //
 // USER32 function types
 //
@@ -1384,6 +1421,9 @@ pub fn init() void {
 
     OpenProcessToken = def(PFN_OpenProcessToken, "OpenProcessToken", "advapi32");
     GetTokenInformation = def(PFN_GetTokenInformation, "GetTokenInformation", "advapi32");
+    CheckTokenMembership = def(PFN_CheckTokenMembership, "CheckTokenMembership", "advapi32");
+    AllocateAndInitializeSid = def(PFN_AllocateAndInitializeSid, "AllocateAndInitializeSid", "advapi32");
+    FreeSid = def(PFN_FreeSid, "FreeSid", "advapi32");
 
     WSAStartup = def(PFN_WSAStartup, "WSAStartup", "ws2_32");
     WSACleanup = def(PFN_WSACleanup, "WSACleanup", "ws2_32");
@@ -1532,6 +1572,9 @@ pub var CoGetCallerTID: PFN_CoGetCallerTID = undefined;
 //
 pub var OpenProcessToken: PFN_OpenProcessToken = undefined;
 pub var GetTokenInformation: PFN_GetTokenInformation = undefined;
+pub var CheckTokenMembership: PFN_CheckTokenMembership = undefined;
+pub var AllocateAndInitializeSid: PFN_AllocateAndInitializeSid = undefined;
+pub var FreeSid: PFN_FreeSid = undefined;
 
 //
 // WS2_32 function definitions
