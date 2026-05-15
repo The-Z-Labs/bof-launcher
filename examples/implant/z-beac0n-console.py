@@ -468,7 +468,13 @@ class ArgumentParser(icli.ArgumentParser):
                 execBof("spawn", kwargs['bofName'], kwargs['implantSN'], argv)
 
         elif _object == 'shellcode':
-            print('exec_shellcode')
+            print('exec_shellcode: TODO')
+
+        elif _object == 'job':
+            print('jobs listing: TODO')
+
+        elif _object == 'link':
+            print('links (connection) listing: TODO')
 
         elif _object == 'implant':
             if _command == 'list' or _command == 'ls':
@@ -554,13 +560,6 @@ sp_task_info = sp_task.add_parser('info', help='Show details about the task')
 sp_task_info.add_argument(
     'taskID', metavar='TASK', help='Task ID')
 
-# Shellcode commands
-
-ap_shellcode = sp.add_parser('shellcode', help='Shellcode execution routines')
-sp_shellcode = ap_shellcode.add_subparsers(dest='_command',
-                                       metavar='command',
-                                       help='Command')
-
 # BOF commands
 
 ap_bof = sp.add_parser('bof', help='BOF execution routines')
@@ -617,6 +616,28 @@ sp_bof_exec_process.add_argument('--argv',
 
 
 sp_bof_exec = sp_bof.add_parser('inject', help='Injecting chosen BOF to a chosen (running) process')
+
+# Shellcode commands
+
+ap_shellcode = sp.add_parser('shellcode', help='Shellcode execution routines')
+sp_shellcode = ap_shellcode.add_subparsers(dest='_command',
+                                       metavar='command',
+                                       help='Command')
+
+# Job commands
+
+ap_job = sp.add_parser('job', help='Jobs management commands')
+sp_job = ap_job.add_subparsers(dest='_command',
+                                       metavar='command',
+                                       help='Command')
+
+# Link commands
+
+ap_link = sp.add_parser('link', help='Links (connections) management commands')
+sp_link = ap_link.add_subparsers(dest='_command',
+                                       metavar='command',
+                                       help='Command')
+
 
 ap.sections = {'implant': [], 'bof': [], 'task': []}
 
