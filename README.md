@@ -5,7 +5,7 @@
 This project provides:
 
 1. [bof-launcher](#bof-launcher-library) - programming library for BOF management
-2. [z-beacon](#z-beacon) - open adversary simulation toolkit
+2. [z-beacon](#z-beacon) - open adversary simulation toolkit for building custom stage-1 (aka pre-C2) solutions
 3. [Z-Labs BOFs collection](#z-Labs-bofs-collection) - growing collection of OS-specific and cross-platform BOFs handy to use during red teaming
 
 # bof-launcher library
@@ -23,14 +23,14 @@ Library features:
 - Capable of running [BOFs](https://hstechdocs.helpsystems.com/manuals/cobaltstrike/current/userguide/content/topics/beacon-object-files_main.htm) that adhere to [Windows BOF template](https://github.com/Cobalt-Strike/bof_template) and [Linux BOF template](https://github.com/outflanknl/nix_bof_template).
 - Fully integrable with programs written in C/C++/Zig/Go or Rust. See [examples](examples/) for sample integrations.
 - Adds capability to write BOFs in [Zig programming language](https://ziglang.org/) - which is a low-level langauge with a goal of being a "better C".
-- All the features of the language and rich standard library can be used in BOFs (hash maps and other data structures, cross-platform OS layer, http, networking, threading, crypto and more).
+- Access to [rich std library](https://ziglang.org/documentation/0.15.2/std/) during BOF development: lists, hash maps, cross-platform OS layer, http, networking, threading, crypto and compression.
 - Capability to implement cross-platform BOFs (see: [udpScanner]((bofs/src/udpScanner.zig)), [tcpScanner]((bofs/src/tcpScanner.zig)), [grep]((bofs/src/grep.zig)) and various other BOFs).
 - Provides modern sleepmasking functionality.
 - Capability to run asynchronous or long-running BOFs in a separate thread.
 - Pattern for launching more risky BOFs (i.e. privilege escalation exploits) inside of a sacrificial process.
 - Seamless support for either Windows COFF and UNIX/Linux ELF formats.
 - ARM and AARCH64 support on Linux.
-- Very flexible and efficient [API](bof-launcher/src/bof_launcher_api.h) allowing for so called BOF chaining.
+- Very flexible and efficient [API](bof-launcher/src/bof_launcher_api.h) allowing for so called BOF chaining/piping.
 
 bof-launcher C API:
 
@@ -95,8 +95,7 @@ In an addition to the bof-launcher library itself, we provide [a collection of B
     
 The build system will figure out the file extension and will build it (for all specified architectures) using proper compiler. This way you could also build any 3rd party BOF of choice.
 
-
-# Building project with Zig 0.15.2
+# Building all components
 
 Being a zero-dependency, drop-in C/C++ compiler that supports cross-compilation out-of-the-box, [Zig](https://ziglang.org/) can be used to build this project. To do so [Zig's tarball (0.15.2)](https://ziglang.org/download/#release-0.15.2) needs to be downloaded and dropped in the directory of choice. After adding that directory to the `PATH` environment variable, buliding the whole project is as easy as running:
 
