@@ -5,7 +5,7 @@
 This project provides:
 
 1. [bof-launcher](#bof-launcher-library) - programming library for BOF management
-2. [z-beac0n](#z-beac0n) - open adversary simulation toolkit for building custom stage-1 (aka pre-C2) solutions
+2. [z-beac0n](#z-beac0n) - a custom-built stage-1 (pre-C2) solution engineered with small footprint, stealth and modularity in mind
 3. [Z-Labs BOFs collection](#z-Labs-bofs-collection) - growing collection of OS-specific and cross-platform BOFs handy to use during red teaming
 
 # bof-launcher library
