@@ -6,7 +6,7 @@ This project provides:
 
 1. [bof-launcher](#bof-launcher-library) - programming library for BOF management
 2. [z-beacon](#z-beacon) - open adversary simulation toolkit
-3. [Z-Labs BOFs collection](#z-Labs-bofs-collection) - 
+3. [Z-Labs BOFs collection](#z-Labs-bofs-collection) - growing collection of OS-specific and cross-platform BOFs handy to use during red teaming
 
 # bof-launcher library
 
@@ -95,54 +95,6 @@ In an addition to the bof-launcher library itself, we provide [a collection of B
     
 The build system will figure out the file extension and will build it (for all specified architectures) using proper compiler. This way you could also build any 3rd party BOF of choice.
 
-Below you can see one of our BOFs in two versions: one written in Zig and the second one written in C. When compiled, Zig version weights 502 bytes, C version weights 562 bytes.
-
-```zig
-const w32 = @import("bof_api").win32;
-const beacon = @import("bof_api").beacon;
-
-pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
-    @import("bof_api").init(adata, alen, .{});
-
-    var version_info: w32.OSVERSIONINFOW = undefined;
-    version_info.dwOSVersionInfoSize = @sizeOf(@TypeOf(version_info));
-
-    if (w32.RtlGetVersion(&version_info) != .SUCCESS)
-        return 1;
-
-    _ = beacon.printf(
-        .output,
-        "Windows version: %d.%d, OS build number: %d\n",
-        version_info.dwMajorVersion,
-        version_info.dwMinorVersion,
-        version_info.dwBuildNumber,
-    );
-    return 0;
-}
-```
-```c
-#include <windows.h>
-#include "beacon.h"
-
-NTSYSAPI NTSTATUS NTAPI NTDLL$RtlGetVersion(OSVERSIONINFOW* lpVersionInformation);
-
-unsigned char go(unsigned char* arg_data, int arg_len) {
-    OSVERSIONINFOW version_info;
-    version_info.dwOSVersionInfoSize = sizeof(version_info);
-
-    if (NTDLL$RtlGetVersion(&version_info) != 0)
-        return 1;
-
-    BeaconPrintf(
-        CALLBACK_OUTPUT,
-        "Windows version: %d.%d, OS build number: %d\n",
-        version_info.dwMajorVersion,
-        version_info.dwMinorVersion,
-        version_info.dwBuildNumber
-    );
-    return 0;
-}
-```
 
 # Building project with Zig 0.15.2
 
