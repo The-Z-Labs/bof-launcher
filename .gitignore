@@ -26,6 +26,7 @@
 !bin/llvm-objcopy
 !bin/malasada.exe
 !bin/malasada
+!bin/ops.gif
 
 !.ignore
 !.gitkeep
