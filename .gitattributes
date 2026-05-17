@@ -12,5 +12,6 @@
 *.exe binary
 bin/llvm-objcopy binary
 bin/malasada binary
+bin/ops.gif binary
 *.o binary
 *.a binary
