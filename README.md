@@ -30,7 +30,7 @@ Library features:
 - Pattern for launching more risky BOFs (i.e. privilege escalation exploits) inside of a sacrificial process.
 - Seamless support for either Windows COFF and UNIX/Linux ELF formats.
 - ARM and AARCH64 support on Linux.
-- Flexible [API](bof-launcher/src/bof_launcher_api.h) allowing for BOF chaining/piping (works like `Bash` pipes but purely in-memory).
+- Flexible [API](bof-launcher/src/bof_launcher_api.h) allowing for BOF chaining (works like `Bash` pipes but purely in-memory) either on Linux and Windows.
 
 bof-launcher C API:
 
