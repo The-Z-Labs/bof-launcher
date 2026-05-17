@@ -85,6 +85,8 @@ int bofArgsGetBufferSize(BofArgs* args);
 
 # z-beac0n
 
+![z-beac0n in action](https://github.com/The-Z-Labs/bof-launcher/blob/main/bin/ops.gif)
+
 For details see here: [z-beac0n - Open Adversary Simulation Toolkit](https://github.com/The-Z-Labs/bof-launcher/tree/main/examples/implant)
 
 # Z-Labs BOFs collection
