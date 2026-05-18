@@ -30,6 +30,9 @@ for cat in bofs_categories:
     for key, val in cat.items():
         bofs_categories_compl.append(key)
 
+# BOF's tags list for auto completion purposes
+bofs_tags_compl = []
+
 bofs = []
 implants = []
 
@@ -356,7 +359,7 @@ def listingBof(bof_name):
 
     return bof_entry
 
-def listingBofs(chosen_category):
+def listingBofs(chosen_category, tag):
 
     misc = []
     bofs_cats = []
@@ -385,17 +388,19 @@ def listingBofs(chosen_category):
             print(key + " - " + value)
             print()
             for b in bofs:
+                if tag != "" and tag not in BOF_DOCS[b]['tags']:
+                    continue
                 if 'category' in BOF_DOCS[b]:
-                    if BOF_DOCS[b]['category'] == key:
-                        bof_entry = listingBof(b)
-                        tableObj.add_row(bof_entry)
+                        if BOF_DOCS[b]['category'] == key:
+                            bof_entry = listingBof(b)
+                            tableObj.add_row(bof_entry)
                 else:
                     if b not in misc:
                         misc.append(b)
 
         print(tableObj.draw())
 
-    # print remaining uncategorized BOFs (if no category was explicitly chosen):
+    # print remaining uncategorized BOFs (print only if no category was explicitly chosen):
     if chosen_category == "":
  
         tableObj = texttable.Texttable(140)
@@ -437,18 +442,20 @@ def showBofInfo(bof_name):
         print("Usage: ")
         print(BOF_DOCS[bof_name]['examples'])
 
-class ComplBofCategories():
 
+class ComplBofCategories():
     def __call__(self, prefix, **kwargs):
         return bofs_categories_compl
 
-class ComplImplants():
+class ComplBofTags():
+    def __call__(self, prefix, **kwargs):
+        return bofs_tags_compl
 
+class ComplImplants():
     def __call__(self, prefix, **kwargs):
         return implants
 
 class ComplBofs():
-
     def __call__(self, prefix, **kwargs):
         return bofs
 
@@ -458,9 +465,12 @@ class ArgumentParser(icli.ArgumentParser):
         if _object == 'bof':
             if _command == 'list' or _command == 'ls':
                 cat = ""
+                tag = ""
                 if kwargs['category']:
                     cat = kwargs['category']
-                listingBofs(cat)
+                if kwargs['tag']:
+                    tag = kwargs['tag']
+                listingBofs(cat, tag)
 
             if _command == 'info':
                 showBofInfo(kwargs['bofName'])
@@ -590,6 +600,12 @@ sp_bof_list.add_argument('--category', '-c',
 sp_bof_ls.add_argument('--category', '-c',
                                  metavar='CATEGORY',
                                  help='Implant serial number (SN)', required=False).completer = ComplBofCategories()
+sp_bof_list.add_argument('--tag', '-t',
+                                 metavar='TAG',
+                                 help='Implant serial number (SN)', required=False).completer = ComplBofTags()
+sp_bof_ls.add_argument('--tag', '-t',
+                                 metavar='TAG',
+                                 help='Implant serial number (SN)', required=False).completer = ComplBofTags()
 
 
 
@@ -667,7 +683,14 @@ zzzzz        bbbbbb   eeeee  aaa aa  ccccc  00000  nn   nn
 """
 )
 
+# load YAML manuals for BOFs
 processBofDocYaml()
+
+# prepare list of BOF tags for auto completion purposes:
+for key, bof_record in BOF_DOCS.items():
+    for tag in bof_record['tags']:
+        bofs_tags_compl.append(tag)
+bofs_tags_compl = list(set(bofs_tags_compl))
 
 if len(sys.argv) > 1:
     ap.launch()
