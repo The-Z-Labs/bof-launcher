@@ -2,9 +2,11 @@
 
 [Cobalt Strike 4.1](https://www.cobaltstrike.com/blog/cobalt-strike-4-1-the-mark-of-injection/) released on 25 June 2020, introduced a novel (for that time) capability of running so called [Beacon Object Files](https://hstechdocs.helpsystems.com/manuals/cobaltstrike/current/userguide/content/topics/beacon-object-files_main.htm) - *small post-ex capabilities that execute in [Beacon](https://www.cobaltstrike.com/), parse arguments, call a few Win32 APIs, report output, and exit*. Since that time BOFs became very popular and the demand to launch/execute them in other environments than [Cobalt Strike's Beacon](https://www.cobaltstrike.com/) has emerged.
 
-This project provides:
+We at [Z-Labs](https://z-labs.eu) saw a big potential in BOFs and decided to extend its capabilities, versatility and usefulness even further. That's how this project came to live.
 
-1. [bof-launcher](#bof-launcher-library) - programming library for BOF management.
+The repository provides:
+
+1. [bof-launcher](#bof-launcher-library) - programming library for BOFs in-memory management (loading, keeping track of loaded BOFs, execution, masking).
 2. [z-beac0n](#z-beac0n) - a custom-written stage-1 (aka pre-C2) solution featured bof-launcher. Engineered with small footprint, stealth and modularity in mind.
 3. [Z-Labs BOFs collection](#z-Labs-bofs-collection) - growing collection of OS-specific and cross-platform BOFs handy to use during red team engagements.
 
