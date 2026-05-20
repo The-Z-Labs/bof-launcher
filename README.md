@@ -7,7 +7,7 @@ We at [Z-Labs](https://z-labs.eu) saw a big potential in BOFs and decided to ext
 The repository provides:
 
 1. [bof-launcher](#bof-launcher-library) - programming library for BOFs in-memory management (loading, keeping track of loaded BOFs, execution, masking).
-2. [z-beac0n](#z-beac0n) - a custom-written stage-1 (aka pre-C2) solution featured bof-launcher. Engineered with small footprint, stealth and modularity in mind.
+2. [z-beac0n](#z-beac0n) - a custom-written stage-1 (aka pre-C2) solution featuring bof-launcher. Engineered with a small footprint, stealth and modularity in mind.
 3. [Z-Labs BOFs collection](#z-Labs-bofs-collection) - growing collection of OS-specific and cross-platform BOFs handy to use during red team engagements.
 
 See [here](#building-all-components) for bulding instructions.
