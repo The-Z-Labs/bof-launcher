@@ -95,7 +95,7 @@ For details see here: [z-beac0n - Open Adversary Simulation Toolkit](https://git
 
 ## Liability
 
-This tool is designed for AUTHORIZED security testing red team operations and for research purposes. Unauthorized use is strictly prohibited and may violate local and international laws.
+This is an open source project meant to be used with authorization to assess the security posture and for research purposes.
 
 # Z-Labs BOFs collection
 
