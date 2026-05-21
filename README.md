@@ -93,6 +93,10 @@ int bofArgsGetBufferSize(BofArgs* args);
 
 For details see here: [z-beac0n - Open Adversary Simulation Toolkit](https://github.com/The-Z-Labs/bof-launcher/tree/main/examples/implant)
 
+## Liability
+
+This tool is designed for AUTHORIZED security testing red team operations and for research purposes. Unauthorized use is strictly prohibited and may violate local and international laws.
+
 # Z-Labs BOFs collection
 
 ## Cross-platform BOFs
