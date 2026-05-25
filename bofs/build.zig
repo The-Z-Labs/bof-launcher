@@ -51,7 +51,7 @@ const bofs_included_in_launcher = [_]BofTableItem{
     .{ .name = "whereami", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86 } },
     .{ .name = "zcat", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "dirtypipe", .formats = &.{ .elf }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    .{ .name = "socat", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+    .{ .name = "socat", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_ianicTls },
     .{ .name = "sniffer", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_sniffer },
     .{ .name = "snifferBOF", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_sniffer },
     // alternative C2 communication channels implemented as BOFs and ready to use by z-beac0n implant (template):
@@ -416,6 +416,17 @@ fn build_regex(b: *std.Build, obj: *std.Build.Step.Compile, bof: Bof) []const []
     }).module("regex");
 
     obj.root_module.addImport("regex", zig_regex_module);
+
+    return &.{};
+}
+
+fn build_ianicTls(b: *std.Build, obj: *std.Build.Step.Compile, bof: Bof) []const []const u8 {
+    const zig_ianicTls_module = b.dependency("zig_ianicTls", .{
+        .target = bof.target,
+        .optimize = bof.optimize,
+    }).module("tls");
+
+    obj.root_module.addImport("ianicTls", zig_ianicTls_module);
 
     return &.{};
 }

