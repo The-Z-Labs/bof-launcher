@@ -11,8 +11,10 @@ comptime {
     @import("bof_api").embedFunctionCode("__stackprobe__");
     @import("bof_api").embedFunctionCode("__divti3");
     @import("bof_api").embedFunctionCode("__ashlti3");
+    @import("bof_api").embedFunctionCode("__divdi3");
     @import("bof_api").embedFunctionCode("__udivdi3");
     @import("bof_api").embedFunctionCode("__ashldi3");
+    @import("bof_api").embedFunctionCode("__modti3");
     @import("bof_api").embedFunctionCode("__aeabi_uldivmod");
     @import("bof_api").embedFunctionCode("__aeabi_uidivmod");
     @import("bof_api").embedFunctionCode("__aeabi_uidiv");
@@ -27,6 +29,7 @@ const BofErrors = enum(u8) {
     NotSupportedAddressType,
     ConnectionError,
     DataTransferError,
+    ReadFailedError,
     UnknownError,
 };
 
@@ -38,6 +41,64 @@ const AddressType = enum(u8) {
     TLS,
     UNRECOGNIZED,
 };
+
+const minica_pem =
+\\-----BEGIN CERTIFICATE-----
+\\MIIDPzCCAiegAwIBAgIIa/kXZJi16EYwDQYJKoZIhvcNAQELBQAwIDEeMBwGA1UE
+\\AxMVbWluaWNhIHJvb3QgY2EgNmJmOTE3MCAXDTI2MDUyNTEwMjMxMloYDzIxMjYw
+\\NTI1MTAyMzEyWjAgMR4wHAYDVQQDExVtaW5pY2Egcm9vdCBjYSA2YmY5MTcwggEi
+\\MA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDFguKvyy3iUvvLJDDlIiaIINh6
+\\kUxDNC25df7emhhTFUXJMfZAPjXlz6l9I63Im/TJqQE8Dv2oEtcwD2OmHIdMIk/i
+\\wSe/+8uC1QjqOBLSsfflfx2Say4OlvOCIrRy8QPqnRq3+U/I1wGIEe1ADH5UT+Dj
+\\hcDitJbgKLdCJXlDSClPj5cCGEAPiuyM+kGW4MmY/2Gd9BVo2VTixXUBexTsV8ts
+\\Lu3JRZqBzJuT4XZQ8qLRaXx/Xssgp+cxyoUsnFChWCBnev8uijJWTlSNkt/Rppt8
+\\rvE6PoIXqvLn8oZ3f+2fO6j3j1pI+uXoBZkKnAi84InZRpbSLBmNHgnRndt9AgMB
+\\AAGjezB5MA4GA1UdDwEB/wQEAwIChDATBgNVHSUEDDAKBggrBgEFBQcDATASBgNV
+\\HRMBAf8ECDAGAQH/AgEAMB0GA1UdDgQWBBRn8LqQx8ZriglHcRLfdriR6ibn/zAf
+\\BgNVHSMEGDAWgBRn8LqQx8ZriglHcRLfdriR6ibn/zANBgkqhkiG9w0BAQsFAAOC
+\\AQEATlkzeKYzFLNXmDBV8zC951SMBsD36Gi/plwMmK8Bp117t5OGIPgE1JGZZxZq
+\\ycVf/pejZlDkNl3VnbtWnnmQIzswpKoL59XJL/x/U/KBCmEURlQLAh6RlchL3rfj
+\\Mz3T4ImG6N5IJv7Z61wTWqtIK1/t3dedoMpte/3oyK43NNQfRkiW7x7HGZHSa+lq
+\\4ubgW+U9JSfdCDM7rgl6zXmpVZD8Ddo7IGuSiRULtIsSpAKEXOBzC63xB+QUCXta
+\\8xMY4HSQQ8uXNnZm4kURKOcoMXxXv8OLsknJ40GOTtkULU0m2RK4D1lQMC8w0RRe
+\\AO8i38yIm9foRIBxdVT/dDUG2w==
+\\-----END CERTIFICATE-----
+;
+
+fn addCertsFromMemory(cb: *std.crypto.Certificate.Bundle, alloc: std.mem.Allocator, cert_buf: []const u8) std.crypto.Certificate.Bundle.AddCertsFromFileError!void {
+
+    const size = cert_buf.len;
+    const decoded_size_upper_bound = size / 4 * 3;
+    const needed_capacity = std.math.cast(u32, decoded_size_upper_bound + size) orelse
+        return error.CertificateAuthorityBundleTooBig;
+    try cb.bytes.ensureUnusedCapacity(alloc, needed_capacity);
+    const end_reserved: u32 = @intCast(cb.bytes.items.len + decoded_size_upper_bound);
+    const buffer = cb.bytes.allocatedSlice()[end_reserved..];
+    @memcpy(buffer[0..size], cert_buf[0..size]);
+    const encoded_bytes = buffer[0..size];
+
+    const begin_marker = "-----BEGIN CERTIFICATE-----";
+    const end_marker = "-----END CERTIFICATE-----";
+
+    const b64_decoder = std.base64.Base64Decoder.init(std.base64.standard_alphabet_chars, '=');
+
+    const now_sec = std.time.timestamp();
+
+    var start_index: usize = 0;
+    while (std.mem.indexOfPos(u8, encoded_bytes, start_index, begin_marker)) |begin_marker_start| {
+        const cert_start = begin_marker_start + begin_marker.len;
+        const cert_end = std.mem.indexOfPos(u8, encoded_bytes, cert_start, end_marker) orelse
+            return error.MissingEndCertificateMarker;
+        start_index = cert_end + end_marker.len;
+        const encoded_cert = std.mem.trim(u8, encoded_bytes[cert_start..cert_end], " \t\r\n");
+        const decoded_start: u32 = @intCast(cb.bytes.items.len);
+        const dest_buf = cb.bytes.allocatedSlice()[decoded_start..];
+        //cb.bytes.items.len += try std.crypto.Certificate.Bundle.base64.decode(dest_buf, encoded_cert);
+        _ = try b64_decoder.decode(dest_buf, encoded_cert);
+        cb.bytes.items.len += try b64_decoder.calcSizeForSlice(encoded_cert);
+        try cb.parseCert(alloc, decoded_start, now_sec);
+    }
+}
 
 fn checkAddressType(addr_type: []const u8) AddressType {
     if(std.mem.eql(u8, "OPEN", addr_type)) {
@@ -94,6 +155,7 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
 
         const file_path = src_addr_iter.next() orelse return @intFromEnum(BofErrors.BadArgsProvided);
         const file = std.fs.openFileAbsolute(file_path, .{ .mode = .read_only }) catch return 1;
+        defer file.close();
 
         var recv_buffer: [4096]u8 = undefined;
         var file_r = file.reader(&recv_buffer);
@@ -114,15 +176,17 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
             const tcp = std.net.tcpConnectToHost(allocator, host, port) catch return @intFromEnum(BofErrors.ConnectionError);
             defer tcp.close();
 
-            var tcp_buf: [4096]u8 = undefined;
+            var tcp_buf: [tls.output_buffer_len]u8 = undefined;
             var tcp_w = tcp.writer(&tcp_buf);
 
             // Upgrade tcp connection to tls
             if (sinkAddrType == AddressType.TLS) {
-                var tcp_buf_r: [4096]u8 = undefined;
+                var tcp_buf_r: [tls.input_buffer_len]u8 = undefined;
                 var tcp_r = tcp.reader(&tcp_buf_r);
 
-                var root_ca = tls.config.cert.fromFilePathAbsolute(allocator, "/home/user/bf-bof-building/cert/minica.pem") catch return 94;
+                var root_ca: std.crypto.Certificate.Bundle = .{};
+                const s: []const u8 = minica_pem[0..minica_pem.len];
+                addCertsFromMemory(&root_ca, allocator, s) catch return 94;
                 defer root_ca.deinit(allocator);
 
                 var diagnostic: tls.config.Client.Diagnostic = .{};
@@ -133,10 +197,21 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
                     .diagnostic = &diagnostic,
                 }) catch return 98;
 
-                var buf: [64]u8 = undefined;
-                const req = std.fmt.bufPrint(&buf, "GET / HTTP/1.1\r\nHost: {s}\r\n\r\n", .{host}) catch return 96;
-                conn.writeAll(req) catch return 97;
-                //_ = pumpData(file_r_iface, &tcp_w.interface) catch @intFromEnum(BofErrors.DataTransferError);
+                var n: usize = 0;
+                var tls_buf: [tls.output_buffer_len]u8 = undefined;
+                while(true) {
+                    n = file_r_iface.readSliceShort(&tls_buf) catch return 33;
+                    if (n < tls_buf.len) {
+                        conn.writeAll(tls_buf[0..n]) catch return 97;
+                        break;
+                    }
+                    else
+                        conn.writeAll(&tls_buf) catch return 97;
+
+                }
+
+                std.Thread.sleep(1000000000);
+                tcp.close();
                 return 0;
             }
 
