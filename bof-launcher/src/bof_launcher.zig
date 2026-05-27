@@ -2236,6 +2236,7 @@ fn initLauncher() !void {
 
     if (@import("builtin").os.tag == .linux and with_libc) {
         try gstate.func_lookup.put("memfd_create", @intFromPtr(&zgate_memfd_create));
+        try gstate.func_lookup.put("pthread_atfork", @intFromPtr(&@import("std").c.pthread_atfork));
 
         gstate.libc = std.DynLib.open("libc.so.6") catch null;
 
