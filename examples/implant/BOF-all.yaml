@@ -2321,7 +2321,7 @@ arguments:
     required: true
 ---
 name: ping
-description: "Reimplementation of common Unix utilities as BOF: ping utility"
+description: "Test host reachability"
 author: Sebastian.Haas
 Arch: ["x64", "x86", "aarch64", "arm"]
 tags: ['linux', 'BusyBOF', 'cmprmsd']
@@ -2331,12 +2331,22 @@ entrypoint: "go"
 sources:
     - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-ping/ping.c'
     - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+arguments:
+  - name: hostname
+    desc: "Host to ping"
+    type: string
+    required: true
+  - name: count
+    desc: "Number of pings (default: 3)"
+    type: string
+    required: false
 examples: '
  ping 192.168.99.99
+ ping 192.168.99.99 1
 '
 ---
 name: traceroute
-description: "Reimplementation of common Unix utilities as BOF: traceroute utility"
+description: "Trace route to host"
 author: Sebastian.Haas
 Arch: ["x64", "x86", "aarch64", "arm"]
 tags: ['linux', 'BusyBOF', 'cmprmsd']
@@ -2346,11 +2356,17 @@ entrypoint: "go"
 sources:
     - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-traceroute/traceroute.c'
     - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+arguments:
+  - name: hostname
+    desc: "Target host"
+    type: string
+    required: true
 examples: '
+ traceroute 1.1.1.1
 '
 ---
 name: nslookup
-description: "Reimplementation of common Unix utilities as BOF: nslookup utility"
+description: "DNS lookup"
 author: Sebastian.Haas
 Arch: ["x64", "x86", "aarch64", "arm"]
 tags: ['linux', 'BusyBOF', 'cmprmsd']
@@ -2360,11 +2376,17 @@ entrypoint: "go"
 sources:
     - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-nslookup/nslookup.c'
     - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+arguments:
+  - name: hostname
+    desc: "Hostname to resolve"
+    type: string
+    required: true
 examples: '
+ nslookup google.com
 '
 ---
 name: wget
-description: "Reimplementation of common Unix utilities as BOF: wget utility"
+description: "HTTP GET download"
 author: Sebastian.Haas
 Arch: ["x64", "x86", "aarch64", "arm"]
 tags: ['linux', 'BusyBOF', 'cmprmsd']
@@ -2374,7 +2396,17 @@ entrypoint: "go"
 sources:
     - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/bf-wget/wget.c'
     - 'https://raw.githubusercontent.com/cmprmsd/BusyBOF/refs/heads/main/include/bofdefs.h'
+arguments:
+  - name: url
+    desc: "URL to download"
+    type: string
+    required: true
+  - name: output
+    desc: "Output file"
+    type: string
+    required: false
 examples: '
+ wget http://abc.com/index.html
 '
 ---
 name: cp
