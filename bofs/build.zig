@@ -141,6 +141,7 @@ pub fn build(b: *std.Build) !void {
                 debug_exe.root_module.linkSystemLibrary("ole32", .{});
                 debug_exe.root_module.linkSystemLibrary("user32", .{});
                 debug_exe.root_module.linkSystemLibrary("advapi32", .{});
+                debug_exe.root_module.linkSystemLibrary("secur32", .{});
             }
             debug_exe.root_module.addObject(debug_obj);
             b.installArtifact(debug_exe);

@@ -256,6 +256,7 @@ pub fn build(b: *std.Build) !void {
         exe.root_module.linkSystemLibrary("ole32", .{});
         exe.root_module.linkSystemLibrary("user32", .{});
         exe.root_module.linkSystemLibrary("advapi32", .{});
+        exe.root_module.linkSystemLibrary("secur32", .{});
 
         exe.root_module.addImport("bof_launcher_win32", win32_module);
         exe.root_module.addAnonymousImport("srdi", .{

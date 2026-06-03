@@ -12,6 +12,7 @@ pub const LPCSTR = windows.LPCSTR;
 pub const LPSTR = windows.LPSTR;
 pub const HMODULE = windows.HMODULE;
 pub const HINSTANCE = windows.HINSTANCE;
+pub const HLOCAL = windows.HLOCAL;
 pub const FARPROC = windows.FARPROC;
 pub const HANDLE = windows.HANDLE;
 pub const WORD = windows.WORD;
@@ -186,6 +187,10 @@ pub const TOKEN_INFORMATION_CLASS = enum(c_int) {
     TokenIsLessPrivilegedAppContainer,
     TokenIsSandboxed,
     MaxTokenInfoClass, // MaxTokenInfoClass should always be the last enum
+};
+
+pub const TOKEN_USER = extern struct {
+    User: SID_AND_ATTRIBUTES,
 };
 
 pub const SECTION_IMAGE_INFORMATION = extern struct {
@@ -592,6 +597,10 @@ pub const _SID_IDENTIFIER_AUTHORITY = extern struct {
 pub const SID_IDENTIFIER_AUTHORITY = _SID_IDENTIFIER_AUTHORITY;
 pub const PSID_IDENTIFIER_AUTHORITY = [*c]_SID_IDENTIFIER_AUTHORITY;
 
+pub const SID_AND_ATTRIBUTES = extern struct {
+    Sid: PSID,
+};
+
 comptime {
     std.debug.assert(@offsetOf(IMAGE_DOS_HEADER, "e_lfanew") == 60);
     std.debug.assert(@offsetOf(IMAGE_NT_HEADERS, "OptionalHeader") == 24);
@@ -603,6 +612,21 @@ comptime {
 }
 
 pub const IMAGE_DIRECTORY_ENTRY_EXPORT = 0;
+
+pub const EXTENDED_NAME_FORMAT = enum(u32) {
+    NameUnknown = 0,
+    NameFullyQualifiedDN = 1,
+    NameSamCompatible = 2,
+    NameDisplay = 3,
+    NameUniqueId = 6,
+    NameCanonical = 7,
+    NameUserPrincipal = 8,
+    NameCanonicalEx = 9,
+    NameServicePrincipal = 10,
+    NameDnsDomain = 12,
+    NameGivenName = 13,
+    NameSurname = 14
+};
 
 //
 // KERNEL32 function types
@@ -867,6 +891,8 @@ pub const PFN_SetFilePointerEx = *const fn (
     lpNewFilePointer: ?*LARGE_INTEGER,
     dwMoveMethod: DWORD,
 ) callconv(.winapi) BOOL;
+
+pub const PFN_LocalFree = *const fn (hMem: HLOCAL) callconv(.winapi) ?HLOCAL;
 
 //
 // NTDLL function types
@@ -1139,6 +1165,11 @@ pub const PFN_FreeSid = *const fn (
     pSid: PSID,
 ) callconv(.winapi) PVOID;
 
+pub const PFN_ConvertSidToStringSidA = *const fn (
+    pSid: PSID,
+    pStringSid: *LPSTR,
+) callconv(.winapi) BOOL;
+
 //
 // USER32 function types
 //
@@ -1301,6 +1332,15 @@ pub const PFN_setsockopt = *const fn (
 ) callconv(.winapi) i32;
 
 //
+// SECUR_32 function types
+//
+pub const PFN_GetUserNameExA = *const fn (
+    NameFormat: EXTENDED_NAME_FORMAT,
+    lpNameBuffer: ?LPSTR,
+    nSize: *ULONG,
+) callconv(.winapi) BOOLEAN;
+
+//
 // Define WIN32 function
 //
 const bof = @import("options").bof;
@@ -1372,6 +1412,7 @@ pub fn init() void {
     GetProcessHeap = def(PFN_GetProcessHeap, "GetProcessHeap", "kernel32");
     GetFileSizeEx = def(PFN_GetFileSizeEx, "GetFileSizeEx", "kernel32");
     SetFilePointerEx = def(PFN_SetFilePointerEx, "SetFilePointerEx", "kernel32");
+    LocalFree = def(PFN_LocalFree, "LocalFree", "kernel32");
 
     NtResumeThread = def(PFN_NtResumeThread, "NtResumeThread", "ntdll");
     NtSuspendThread = def(PFN_NtSuspendThread, "NtSuspendThread", "ntdll");
@@ -1424,6 +1465,7 @@ pub fn init() void {
     CheckTokenMembership = def(PFN_CheckTokenMembership, "CheckTokenMembership", "advapi32");
     AllocateAndInitializeSid = def(PFN_AllocateAndInitializeSid, "AllocateAndInitializeSid", "advapi32");
     FreeSid = def(PFN_FreeSid, "FreeSid", "advapi32");
+    ConvertSidToStringSidA = def(PFN_ConvertSidToStringSidA, "ConvertSidToStringSidA", "advapi32");
 
     WSAStartup = def(PFN_WSAStartup, "WSAStartup", "ws2_32");
     WSACleanup = def(PFN_WSACleanup, "WSACleanup", "ws2_32");
@@ -1442,6 +1484,8 @@ pub fn init() void {
     ioctlsocket = def(PFN_ioctlsocket, "ioctlsocket", "ws2_32");
     getsockopt = def(PFN_getsockopt, "getsockopt", "ws2_32");
     setsockopt = def(PFN_setsockopt, "setsockopt", "ws2_32");
+
+    GetUserNameExA = def(PFN_GetUserNameExA, "GetUserNameExA", "secur32");
 }
 
 //
@@ -1500,6 +1544,7 @@ pub var HeapFree: PFN_HeapFree = undefined;
 pub var GetProcessHeap: PFN_GetProcessHeap = undefined;
 pub var GetFileSizeEx: PFN_GetFileSizeEx = undefined;
 pub var SetFilePointerEx: PFN_SetFilePointerEx = undefined;
+pub var LocalFree: PFN_LocalFree = undefined;
 
 //
 // NTDLL function definitions
@@ -1575,6 +1620,7 @@ pub var GetTokenInformation: PFN_GetTokenInformation = undefined;
 pub var CheckTokenMembership: PFN_CheckTokenMembership = undefined;
 pub var AllocateAndInitializeSid: PFN_AllocateAndInitializeSid = undefined;
 pub var FreeSid: PFN_FreeSid = undefined;
+pub var ConvertSidToStringSidA: PFN_ConvertSidToStringSidA = undefined;
 
 //
 // WS2_32 function definitions
@@ -1597,6 +1643,11 @@ pub var connect: PFN_connect = undefined;
 pub var ioctlsocket: PFN_ioctlsocket = undefined;
 pub var getsockopt: PFN_getsockopt = undefined;
 pub var setsockopt: PFN_setsockopt = undefined;
+
+//
+// SECUR_32 function definitions
+//
+pub var GetUserNameExA: PFN_GetUserNameExA = undefined;
 
 //
 // "Redirectors"
