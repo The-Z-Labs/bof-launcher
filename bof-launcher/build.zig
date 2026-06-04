@@ -77,6 +77,7 @@ fn buildLib(
         lib.root_module.linkSystemLibrary("ole32", .{});
         lib.root_module.linkSystemLibrary("user32", .{});
         lib.root_module.linkSystemLibrary("advapi32", .{});
+        lib.root_module.linkSystemLibrary("secur32", .{});
     }
     lib.bundle_compiler_rt = true;
     lib.want_lto = false;

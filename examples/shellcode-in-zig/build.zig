@@ -68,6 +68,7 @@ pub fn build(b: *std.Build) void {
         shellcode_launcher_exe.root_module.linkSystemLibrary("ole32", .{});
         shellcode_launcher_exe.root_module.linkSystemLibrary("user32", .{});
         shellcode_launcher_exe.root_module.linkSystemLibrary("advapi32", .{});
+        shellcode_launcher_exe.root_module.linkSystemLibrary("secur32", .{});
     }
 
     if (target.result.os.tag == .windows) {
