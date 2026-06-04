@@ -51,7 +51,7 @@ const bofs_included_in_launcher = [_]BofTableItem{
     .{ .name = "whereami", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86 } },
     .{ .name = "zcat", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "dirtypipe", .formats = &.{ .elf }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    .{ .name = "socat", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_ianicTls },
+    .{ .name = "socat", .formats = &.{ .elf }, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_ianicTls },
     .{ .name = "sniffer", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_sniffer },
     .{ .name = "snifferBOF", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_sniffer },
     // alternative C2 communication channels implemented as BOFs and ready to use by z-beac0n implant (template):
