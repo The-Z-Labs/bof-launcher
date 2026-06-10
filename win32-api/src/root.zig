@@ -1170,6 +1170,11 @@ pub const PFN_ConvertSidToStringSidA = *const fn (
     pStringSid: *LPSTR,
 ) callconv(.winapi) BOOL;
 
+pub const PFN_RtlGenRandom = *const fn (
+    RandomBuffer: PVOID,
+    RandomBufferLength: ULONG,
+) callconv(.winapi) BOOL;
+
 //
 // USER32 function types
 //
@@ -1466,6 +1471,9 @@ pub fn init() void {
     AllocateAndInitializeSid = def(PFN_AllocateAndInitializeSid, "AllocateAndInitializeSid", "advapi32");
     FreeSid = def(PFN_FreeSid, "FreeSid", "advapi32");
     ConvertSidToStringSidA = def(PFN_ConvertSidToStringSidA, "ConvertSidToStringSidA", "advapi32");
+    //RtlGenRandom = def(PFN_RtlGenRandom, "RtlGenRandom", "advapi32");
+    SystemFunction036 = def(PFN_RtlGenRandom, "RtlGenRandom", "advapi32");
+    //_SystemFunction036 = def(PFN_RtlGenRandom, "RtlGenRandom", "advapi32");
 
     WSAStartup = def(PFN_WSAStartup, "WSAStartup", "ws2_32");
     WSACleanup = def(PFN_WSACleanup, "WSACleanup", "ws2_32");
@@ -1621,6 +1629,9 @@ pub var CheckTokenMembership: PFN_CheckTokenMembership = undefined;
 pub var AllocateAndInitializeSid: PFN_AllocateAndInitializeSid = undefined;
 pub var FreeSid: PFN_FreeSid = undefined;
 pub var ConvertSidToStringSidA: PFN_ConvertSidToStringSidA = undefined;
+//pub var RtlGenRandom: PFN_RtlGenRandom = undefined;
+pub var SystemFunction036: PFN_RtlGenRandom = undefined;
+pub var _SystemFunction036: PFN_RtlGenRandom = undefined;
 
 //
 // WS2_32 function definitions

