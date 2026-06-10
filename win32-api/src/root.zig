@@ -1471,9 +1471,7 @@ pub fn init() void {
     AllocateAndInitializeSid = def(PFN_AllocateAndInitializeSid, "AllocateAndInitializeSid", "advapi32");
     FreeSid = def(PFN_FreeSid, "FreeSid", "advapi32");
     ConvertSidToStringSidA = def(PFN_ConvertSidToStringSidA, "ConvertSidToStringSidA", "advapi32");
-    //RtlGenRandom = def(PFN_RtlGenRandom, "RtlGenRandom", "advapi32");
-    SystemFunction036 = def(PFN_RtlGenRandom, "RtlGenRandom", "advapi32");
-    //_SystemFunction036 = def(PFN_RtlGenRandom, "RtlGenRandom", "advapi32");
+    RtlGenRandom = def(PFN_RtlGenRandom, "SystemFunction036", "advapi32");
 
     WSAStartup = def(PFN_WSAStartup, "WSAStartup", "ws2_32");
     WSACleanup = def(PFN_WSACleanup, "WSACleanup", "ws2_32");
@@ -1629,9 +1627,7 @@ pub var CheckTokenMembership: PFN_CheckTokenMembership = undefined;
 pub var AllocateAndInitializeSid: PFN_AllocateAndInitializeSid = undefined;
 pub var FreeSid: PFN_FreeSid = undefined;
 pub var ConvertSidToStringSidA: PFN_ConvertSidToStringSidA = undefined;
-//pub var RtlGenRandom: PFN_RtlGenRandom = undefined;
-pub var SystemFunction036: PFN_RtlGenRandom = undefined;
-pub var _SystemFunction036: PFN_RtlGenRandom = undefined;
+pub var RtlGenRandom: PFN_RtlGenRandom = undefined;
 
 //
 // WS2_32 function definitions
@@ -1707,6 +1703,7 @@ comptime {
         @export(&RE_GetCurrentDirectoryW, .{ .name = "GetCurrentDirectoryW", .linkage = .strong });
         @export(&RE_GetFileSizeEx, .{ .name = "GetFileSizeEx", .linkage = .strong });
         @export(&RE_SetFilePointerEx, .{ .name = "SetFilePointerEx", .linkage = .strong });
+        @export(&RE_RtlGenRandom, .{ .name = "SystemFunction036", .linkage = .strong });
     }
 }
 
@@ -2035,4 +2032,10 @@ fn RE_NtQueryInformationFile(
     FileInformationClass: FILE_INFORMATION_CLASS,
 ) linksection(re_section) callconv(.winapi) NTSTATUS {
     return NtQueryInformationFile(FileHandle, IoStatusBlock, FileInformation, Length, FileInformationClass);
+}
+fn RE_RtlGenRandom(
+    RandomBuffer: PVOID,
+    RandomBufferLength: ULONG,
+) linksection(re_section) callconv(.winapi) BOOL {
+    return RtlGenRandom(RandomBuffer, RandomBufferLength);
 }
