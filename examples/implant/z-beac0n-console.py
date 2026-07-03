@@ -507,7 +507,7 @@ class ArgumentParser(icli.ArgumentParser):
                 resp = getImplantsList()
             if _command == 'info':
                 showImplantInfo(kwargs['implantSN'])
-            if _command == 'status':
+            if _command == 'last':
                 showImplantStatus(kwargs['implantSN'])
 
         elif _object == 'task':
@@ -561,7 +561,7 @@ sp_implant_info = sp_implant.add_parser('info', help='Show details about the imp
 sp_implant_info.add_argument(
     'implantSN', metavar='IMPLANT', help='Implant SN').completer = ComplImplants()
 
-sp_implant_status = sp_implant.add_parser('status', help='Show current status of selected IMPLANT')
+sp_implant_status = sp_implant.add_parser('last', help='Show status and output of recently completed task for a chosen IMPLANT')
 sp_implant_status.add_argument(
     'implantSN', metavar='IMPLANT', help='Implant SN').completer = ComplImplants()
 
