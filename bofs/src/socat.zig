@@ -7,8 +7,7 @@
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/socat.zig'
 ///examples: |
-/// Usage:
-///   socat <src-address> <sink-address>
+/// socat <src-address> <sink-address>
 ///
 /// <src-address> - an address that acts as data source
 /// <sink-address> - an address that acts as data sink
