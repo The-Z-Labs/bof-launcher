@@ -137,3 +137,13 @@ pub export fn BeaconFormatInt(format: ?*formatp, value: i32) callconv(.c) void {
     format.?.length += 4;
     format.?.buffer.? += @as(usize, 4);
 }
+
+pub export fn toWideChar(src: ?[*:0]const u8, dst: ?[*]u16, max: i32) callconv(.c) i32 {
+    if (src == null or dst == null) return 0;
+
+    const src_slice = std.mem.span(src.?);
+    const dst_slice: []u16 = dst.?[0..@intCast(max)];
+    const dst_end = std.unicode.utf8ToUtf16Le(dst_slice, src_slice) catch return 0;
+    dst.?[dst_end] = 0;
+    if (dst_end == max) return 1 else return 0;
+}
