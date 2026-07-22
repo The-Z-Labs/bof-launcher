@@ -2207,6 +2207,7 @@ fn initLauncher() !void {
     try gstate.func_lookup.put("BeaconFormatPrintf", @intFromPtr(&impl.BeaconFormatPrintf));
     try gstate.func_lookup.put("BeaconFormatToString", @intFromPtr(&impl.BeaconFormatToString));
     try gstate.func_lookup.put("BeaconFormatInt", @intFromPtr(&impl.BeaconFormatInt));
+    try gstate.func_lookup.put("toWideChar", @intFromPtr(&impl.toWideChar));
     try gstate.func_lookup.put("BeaconGetValue", @intFromPtr(&BeaconGetValue));
     try gstate.func_lookup.put("BeaconAddValue", @intFromPtr(&BeaconAddValue));
     try gstate.func_lookup.put("BeaconRemoveValue", @intFromPtr(&BeaconRemoveValue));

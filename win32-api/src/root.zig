@@ -9,6 +9,7 @@ pub const Win32Error = windows.Win32Error;
 pub const ULONG = windows.ULONG;
 pub const WCHAR = windows.WCHAR;
 pub const LPCSTR = windows.LPCSTR;
+pub const LPCWSTR = windows.LPCWSTR;
 pub const LPSTR = windows.LPSTR;
 pub const HMODULE = windows.HMODULE;
 pub const HINSTANCE = windows.HINSTANCE;
@@ -1185,6 +1186,13 @@ pub const PFN_MessageBoxA = *const fn (
     uType: UINT,
 ) callconv(.winapi) i32;
 
+pub const PFN_MessageBoxW = *const fn (
+    hWnd: ?HWND,
+    lpText: ?LPCWSTR,
+    lpCaption: ?LPCWSTR,
+    uType: UINT,
+) callconv(.winapi) i32;
+
 pub const PFN_EnumWindows = *const fn (
     lpEnumFunc: WNDENUMPROC,
     lParam: LPARAM,
@@ -1453,6 +1461,7 @@ pub fn init() void {
     NtFsControlFile = def(PFN_NtFsControlFile, "NtFsControlFile", "ntdll");
 
     MessageBoxA = def(PFN_MessageBoxA, "MessageBoxA", "user32");
+    MessageBoxW = def(PFN_MessageBoxW, "MessageBoxW", "user32");
     EnumWindows = def(PFN_EnumWindows, "EnumWindows", "user32");
     GetWindowThreadProcessId = def(PFN_GetWindowThreadProcessId, "GetWindowThreadProcessId", "user32");
     SetForegroundWindow = def(PFN_SetForegroundWindow, "SetForegroundWindow", "user32");
@@ -1603,6 +1612,7 @@ pub fn NtCurrentSession() HANDLE {
 // USER32 function definitions
 //
 pub var MessageBoxA: PFN_MessageBoxA = undefined;
+pub var MessageBoxW: PFN_MessageBoxW = undefined;
 pub var EnumWindows: PFN_EnumWindows = undefined;
 pub var GetWindowThreadProcessId: PFN_GetWindowThreadProcessId = undefined;
 pub var SetForegroundWindow: PFN_SetForegroundWindow = undefined;
