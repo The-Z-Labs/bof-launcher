@@ -58,8 +58,8 @@ const Bof = struct {
         var maybe_prev_context: ?*BofContext = null;
 
         {
-            gstate.output_contexts_mutex.lock();
-            defer gstate.output_contexts_mutex.unlock();
+            gstate.output_contexts_mutex.lock(gstate.io) catch unreachable;
+            defer gstate.output_contexts_mutex.unlock(gstate.io);
 
             maybe_prev_context = if (gstate.output_contexts.get(getCurrentThreadId())) |ctx| ctx else null;
 
@@ -72,8 +72,8 @@ const Bof = struct {
         );
         _ = context.exit_code.swap(exit_code, .seq_cst);
         {
-            gstate.output_contexts_mutex.lock();
-            defer gstate.output_contexts_mutex.unlock();
+            gstate.output_contexts_mutex.lock(gstate.io) catch unreachable;
+            defer gstate.output_contexts_mutex.unlock(gstate.io);
             gstate.output_contexts.put(tid, maybe_prev_context) catch @panic("OOM");
         }
 
@@ -154,7 +154,7 @@ const Bof = struct {
         defer arena_state.deinit();
         const arena = arena_state.allocator();
 
-        const header = parser.getCoffHeader();
+        const header = parser.getHeader();
         std.log.debug("COFF HEADER:", .{});
         std.log.debug("{any}\n\n", .{header});
 
@@ -590,7 +590,7 @@ const Bof = struct {
             const addr = linux.mmap(
                 null,
                 total_size,
-                linux.PROT.READ | linux.PROT.WRITE,
+                .{ .READ = true, .WRITE = true },
                 .{ .TYPE = .PRIVATE, .ANONYMOUS = true },
                 -1,
                 0,
@@ -1033,7 +1033,7 @@ const Bof = struct {
                 const ret = linux.mprotect(
                     section.mem.ptr,
                     section.mem.len,
-                    linux.PROT.READ | linux.PROT.EXEC,
+                    .{ .READ = true, .EXEC = true },
                 );
                 if (ret == std.math.maxInt(usize)) return error.MProtectFailed;
             }
@@ -1173,13 +1173,13 @@ export fn bofArgsInit(out_args: **pubapi.Args) callconv(.c) c_int {
 
 export fn bofArgsRelease(args: *pubapi.Args) callconv(.c) void {
     const bof_args = @as(*BofArgs, @ptrCast(@alignCast(args)));
-    if (bof_args.blob) |b| gstate.allocator.?.free(b[0..BofArgs.blob_size]);
+    if (bof_args.blob) |b| gstate.allocator.?.free(@as([]u8, b[0..BofArgs.blob_size]));
     gstate.allocator.?.destroy(bof_args);
 }
 
 export fn bofArgsBegin(args: *pubapi.Args) callconv(.c) void {
     const bof_args = @as(*BofArgs, @ptrCast(@alignCast(args)));
-    if (bof_args.blob) |b| gstate.allocator.?.free(b[0..BofArgs.blob_size]);
+    if (bof_args.blob) |b| gstate.allocator.?.free(@as([]u8, b[0..BofArgs.blob_size]));
     bof_args.* = .{};
 }
 
@@ -1241,8 +1241,8 @@ export fn bofArgsAdd(args: *pubapi.Args, arg: [*]const u8, arg_size: c_int) call
                 sArg_type = prefix;
 
                 // remove prefix from the argument:
-                sArg = std.mem.trimLeft(u8, sArg, sArg_type);
-                sArg = std.mem.trimLeft(u8, sArg, ":");
+                sArg = std.mem.trimStart(u8, sArg, sArg_type);
+                sArg = std.mem.trimStart(u8, sArg, ":");
                 break;
             }
         }
@@ -1456,7 +1456,7 @@ fn run(
             }
         }
         out_context.* = @ptrCast(context);
-        context.done_event.set();
+        context.done_event.set(gstate.io);
     } else unreachable;
 }
 
@@ -1482,7 +1482,7 @@ fn runDebug(
         if (arg_data_ptr) |ptr| ptr[0..@intCast(arg_data_len)] else null,
     );
     out_context.* = @ptrCast(context);
-    context.done_event.set();
+    context.done_event.set(gstate.io);
 }
 
 export fn bofObjectRun(
@@ -1542,7 +1542,7 @@ else
     if (in.arg_data) |ad| gstate.allocator.?.free(ad);
     gstate.allocator.?.destroy(in);
 
-    context.done_event.set();
+    context.done_event.set(gstate.io);
 
     return if (@import("builtin").os.tag == .windows) 0 else null;
 }
@@ -1574,7 +1574,7 @@ fn threadFuncCloneProcessLinux(bof: *Bof, arg_data: ?[]u8, context: *BofContext)
         }
         file_writer.interface.flush() catch @panic("flush() failed");
 
-        std.posix.exit(0);
+        std.process.exit(0);
     }
 
     // parent process
@@ -1712,14 +1712,14 @@ const BofContext = struct {
 
     allocator: std.mem.Allocator,
 
-    done_event: std.Thread.ResetEvent = .{},
+    done_event: std.Io.Event = .unset,
     handle: BofHandle,
     exit_code: std.atomic.Value(u8) = .init(0xff),
 
     output: std.array_list.Managed(u8),
     output_ring: RingBuffer,
     output_ring_num_written_bytes: usize = 0,
-    output_mutex: std.Thread.Mutex = .{},
+    output_mutex: std.Io.Mutex = .init,
 
     fn init(allocator: std.mem.Allocator, handle: BofHandle) BofContext {
         return .{
@@ -1876,7 +1876,7 @@ export fn bofContextRelease(context: *pubapi.Context) callconv(.c) void {
     // TODO: This will block. Is this a good decision? As an alternative we could
     // mark for deletion and delete later, but when exactly?
     if (!ctx.done_event.isSet()) {
-        ctx.done_event.wait();
+        ctx.done_event.wait(gstate.io) catch {};
     }
 
     ctx.deinit();
@@ -1912,14 +1912,14 @@ export fn bofContextGetExitCode(context: *pubapi.Context) callconv(.c) u8 {
 export fn bofContextWait(context: *pubapi.Context) callconv(.c) void {
     if (!gstate.is_valid) return;
     const ctx = @as(*BofContext, @ptrCast(@alignCast(context)));
-    ctx.done_event.wait();
+    ctx.done_event.wait(gstate.io) catch {};
 }
 
 export fn bofContextGetOutput(context: *BofContext, len: ?*c_int) callconv(.c) ?[*:0]const u8 {
     if (!gstate.is_valid) return null;
 
-    context.output_mutex.lock();
-    defer context.output_mutex.unlock();
+    context.output_mutex.lock(gstate.io) catch return null;
+    defer context.output_mutex.unlock(gstate.io);
 
     const output_len = @min(context.output_ring_num_written_bytes, BofContext.max_output_len);
     if (len != null) len.?.* = @intCast(output_len);
@@ -2017,8 +2017,8 @@ const R_ARM_NONE = 0;
 const R_ARM_PREL31 = 42;
 
 export fn bofLauncherAllocateMemory(size: usize) callconv(.c) ?*anyopaque {
-    gstate.allocator_mutex.lock();
-    defer gstate.allocator_mutex.unlock();
+    gstate.allocator_mutex.lock(gstate.io) catch return null;
+    defer gstate.allocator_mutex.unlock(gstate.io);
 
     const mem = gstate.allocator.?.alignedAlloc(
         u8,
@@ -2036,8 +2036,8 @@ export fn bofLauncherAllocateMemory(size: usize) callconv(.c) ?*anyopaque {
 
 export fn bofLauncherFreeMemory(maybe_ptr: ?*anyopaque) callconv(.c) void {
     if (maybe_ptr) |ptr| {
-        gstate.allocator_mutex.lock();
-        defer gstate.allocator_mutex.unlock();
+        gstate.allocator_mutex.lock(gstate.io) catch return;
+        defer gstate.allocator_mutex.unlock(gstate.io);
 
         if (gstate.allocations.?.fetchRemove(@intFromPtr(ptr))) |kv| {
             const size = kv.value;
@@ -2085,8 +2085,8 @@ export fn outputBofData(_: i32, data: [*]u8, len: i32, free_mem: i32) void {
     defer if (free_mem != 0) bofLauncherFreeMemory(data);
 
     var context = context: {
-        gstate.output_contexts_mutex.lock();
-        defer gstate.output_contexts_mutex.unlock();
+        gstate.output_contexts_mutex.lock(gstate.io) catch return;
+        defer gstate.output_contexts_mutex.unlock(gstate.io);
 
         const maybe_context = gstate.output_contexts.get(getCurrentThreadId());
 
@@ -2097,8 +2097,8 @@ export fn outputBofData(_: i32, data: [*]u8, len: i32, free_mem: i32) void {
         break :context maybe_context.?.?;
     };
 
-    context.output_mutex.lock();
-    defer context.output_mutex.unlock();
+    context.output_mutex.lock(gstate.io) catch return;
+    defer context.output_mutex.unlock(gstate.io);
 
     const slice = data[0..@intCast(len)];
 
@@ -2113,9 +2113,11 @@ const pthread_t = *opaque {};
 const gstate = struct {
     var is_valid: bool = false;
 
-    var gpa: ?std.heap.GeneralPurposeAllocator(.{ .stack_trace_frames = 0 }) = null;
+    var io: std.Io = undefined;
+
+    var gpa: ?std.heap.DebugAllocator(.{ .stack_trace_frames = 0 }) = null;
     var allocator: ?std.mem.Allocator = null;
-    var allocator_mutex: std.Thread.Mutex = .{};
+    var allocator_mutex: std.Io.Mutex = .init;
     var allocations: ?std.AutoHashMap(usize, usize) = null;
 
     var func_lookup: std.StringHashMap(usize) = undefined;
@@ -2133,7 +2135,7 @@ const gstate = struct {
 
     var async_contexts: std.array_list.Managed(*BofContext) = undefined;
     var output_contexts: std.AutoHashMap(u32, ?*BofContext) = undefined;
-    var output_contexts_mutex: std.Thread.Mutex = .{};
+    var output_contexts_mutex: std.Io.Mutex = .init;
 
     var mask_key_data: [32]u8 linksection(zgate_dsection) = undefined;
     var mask_key: []const u8 linksection(zgate_dsection) = mask_key_data[0..13];
@@ -2157,17 +2159,22 @@ const gstate = struct {
     // BeaconGetValue()
     // BeaconRemoveValue()
     var beacon_values: std.AutoHashMap(u64, ?*anyopaque) = undefined;
-    var beacon_values_mutex: std.Thread.Mutex = .{};
+    var beacon_values_mutex: std.Io.Mutex = .init;
 };
 
 fn initLauncher() !void {
     if (gstate.is_valid)
         return; // Already initialized
 
-    gstate.gpa = std.heap.GeneralPurposeAllocator(.{ .stack_trace_frames = 0 }){};
+    gstate.gpa = std.heap.DebugAllocator(.{ .stack_trace_frames = 0 }){};
     errdefer {
         _ = gstate.gpa.?.deinit();
         gstate.gpa = null;
+    }
+
+    {
+        var threaded: std.Io.Threaded = .init_single_threaded;
+        gstate.io = threaded.io();
     }
 
     gstate.allocator = gstate.gpa.?.allocator();
@@ -2454,8 +2461,8 @@ pub export fn BeaconAddValue(key: ?[*:0]const u8, ptr: ?*anyopaque) callconv(.c)
     if (!gstate.is_valid) return 0;
     if (key == null) return 0;
 
-    gstate.beacon_values_mutex.lock();
-    defer gstate.beacon_values_mutex.unlock();
+    gstate.beacon_values_mutex.lock(gstate.io) catch return 0;
+    defer gstate.beacon_values_mutex.unlock(gstate.io);
 
     const hash = std.hash_map.hashString(std.mem.span(key.?));
     if (gstate.beacon_values.contains(hash)) return 0;
@@ -2467,8 +2474,8 @@ pub export fn BeaconGetValue(key: ?[*:0]const u8) callconv(.c) ?*anyopaque {
     if (!gstate.is_valid) return null;
     if (key == null) return null;
 
-    gstate.beacon_values_mutex.lock();
-    defer gstate.beacon_values_mutex.unlock();
+    gstate.beacon_values_mutex.lock(gstate.io) catch return null;
+    defer gstate.beacon_values_mutex.unlock(gstate.io);
 
     const hash = std.hash_map.hashString(std.mem.span(key.?));
     const value = gstate.beacon_values.get(hash) orelse return null;
@@ -2479,8 +2486,8 @@ pub export fn BeaconRemoveValue(key: ?[*:0]const u8) callconv(.c) i32 {
     if (!gstate.is_valid) return 0;
     if (key == null) return 0;
 
-    gstate.beacon_values_mutex.lock();
-    defer gstate.beacon_values_mutex.unlock();
+    gstate.beacon_values_mutex.lock(gstate.io) catch return 0;
+    defer gstate.beacon_values_mutex.unlock(gstate.io);
 
     const hash = std.hash_map.hashString(std.mem.span(key.?));
     if (gstate.beacon_values.remove(hash)) return 1;
@@ -2491,13 +2498,8 @@ pub export fn BeaconIsAdmin() callconv(.c) bool {
     if (!gstate.is_valid) return false;
 
     if (@import("builtin").os.tag == .linux) {
-        const uid = std.posix.geteuid();
-
-        if(uid == 0)
-            return true;
-    }
-    else {
-
+        if (linux.geteuid() == 0) return true;
+    } else {
         var NtAuthority: w32.SID_IDENTIFIER_AUTHORITY = .{
            .Value = [6]u8{0,0,0,0,0,5}
         };
@@ -2511,14 +2513,13 @@ pub export fn BeaconIsAdmin() callconv(.c) bool {
             0, 0, 0, 0, 0, 0,
             &AdministratorsGroup);
 
-        if(b == w32.TRUE) {
-            if(w32.CheckTokenMembership(null, AdministratorsGroup, &b) == 0)
+        if (b == w32.TRUE) {
+            if (w32.CheckTokenMembership(null, AdministratorsGroup, &b) == 0)
                 b = w32.FALSE;
             _ = w32.FreeSid(AdministratorsGroup);
         }
 
-        if(b == w32.TRUE)
-            return true;
+        if (b == w32.TRUE) return true;
     }
 
     return false;
@@ -2607,7 +2608,7 @@ fn zgateBegin(func: ZGateSysApiCall) linksection(zgate_csection) bool {
 
     if (false) std.debug.print("API mask: {s}\n", .{@tagName(func)});
 
-    gstate.allocator_mutex.lock();
+    gstate.allocator_mutex.lock(gstate.io) catch return false;
 
     zgateXorAllocations();
 
@@ -2641,7 +2642,7 @@ fn zgateEnd() linksection(zgate_csection) void {
 
     zgateXorAllocations();
 
-    gstate.allocator_mutex.unlock();
+    gstate.allocator_mutex.unlock(gstate.io);
 }
 
 fn zgateXorBytes(bytes: []u8) linksection(zgate_csection) void {
@@ -2704,13 +2705,13 @@ fn zgateSetCodeProtect(section: []u8, new_protect: w32.DWORD) linksection(zgate_
             section.ptr,
             section.len,
             if (new_protect == w32.PAGE_EXECUTE_READ)
-                linux.PROT.READ | linux.PROT.EXEC
+                .{ .READ = true, .EXEC = true }
             else
-                linux.PROT.READ | linux.PROT.WRITE,
+                .{ .READ = true, .WRITE = true },
         );
         if (ret == std.math.maxInt(usize)) {
             std.log.err("zgateCodeSetProtect: Fatal error. mprotect() failed.", .{});
-            std.posix.exit(1);
+            std.process.exit(1);
         }
     }
 }

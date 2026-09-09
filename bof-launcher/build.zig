@@ -80,7 +80,7 @@ fn buildLib(
         lib.root_module.linkSystemLibrary("secur32", .{});
     }
     lib.bundle_compiler_rt = true;
-    lib.want_lto = false;
+    //lib.want_lto = false;
     b.installArtifact(lib);
 }
 

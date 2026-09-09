@@ -52,8 +52,8 @@ const bofs_included_in_launcher = [_]BofTableItem{
     .{ .name = "zcat", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "dirtypipe", .formats = &.{ .elf }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "socat", .formats = &.{ .elf }, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_ianicTls },
-    .{ .name = "sniffer", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_sniffer },
-    .{ .name = "snifferBOF", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_sniffer },
+    //.{ .name = "sniffer", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_sniffer },
+    //.{ .name = "snifferBOF", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_sniffer },
     // alternative C2 communication channels implemented as BOFs and ready to use by z-beac0n implant (template):
     .{ .name = "C2channelUDP", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "C2channelHTTPS", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
@@ -190,6 +190,9 @@ pub const Bof = struct {
     source_file_path: []const u8,
 
     fn init(b: *std.Build, item: BofTableItem, format: BofFormat, arch: BofArch, optimize: std.builtin.OptimizeMode) Bof {
+        var threaded: std.Io.Threaded = .init_single_threaded;
+        const io = threaded.io();
+
         const bof_src_path = std.mem.join(
             b.allocator,
             "",
@@ -201,8 +204,8 @@ pub const Bof = struct {
         ) catch @panic("OOM");
 
         const lang: BofLang = blk: {
-            std.fs.cwd().access(b.fmt("{s}.zig", .{b.pathFromRoot(bof_src_path)}), .{}) catch {
-                std.fs.cwd().access(b.fmt("{s}.s", .{b.pathFromRoot(bof_src_path)}), .{}) catch break :blk .c;
+            std.Io.Dir.cwd().access(io, b.fmt("{s}.zig", .{b.pathFromRoot(bof_src_path)}), .{}) catch {
+                std.Io.Dir.cwd().access(io, b.fmt("{s}.s", .{b.pathFromRoot(bof_src_path)}), .{}) catch break :blk .c;
                 break :blk .@"asm";
             };
             break :blk .zig;
@@ -623,17 +626,22 @@ fn build_sniffer(b: *std.Build, obj: *std.Build.Step.Compile, bof: Bof) []const 
 }
 
 fn generateBofCollectionYaml(b: *std.Build) !void {
-    var doc_file: std.io.Writer.Allocating = .init(b.allocator);
+    var doc_file: std.Io.Writer.Allocating = .init(b.allocator);
     defer doc_file.deinit();
+
+    var threaded: std.Io.Threaded = .init_single_threaded;
+    const io = threaded.io();
 
     for (bof_tables) |item| {
         const bof = Bof.init(b, item, item.formats[0], item.archs[0], .ReleaseSmall);
         if (bof.lang == .@"asm") continue;
 
-        const source_file = try std.fs.cwd().openFile(b.pathFromRoot(bof.source_file_path), .{});
-        defer source_file.close();
+        const source_file = try std.Io.Dir.cwd().openFile(io, b.pathFromRoot(bof.source_file_path), .{});
+        defer source_file.close(io);
 
-        const source = try source_file.readToEndAlloc(b.allocator, std.math.maxInt(u32));
+        var source_file_reader = source_file.reader(io, &.{});
+
+        const source = try source_file_reader.interface.allocRemaining(b.allocator, .unlimited);
         defer b.allocator.free(source);
 
         _ = std.mem.replace(u8, source, "\r\n", "\n", source);
