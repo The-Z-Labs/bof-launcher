@@ -19,6 +19,8 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .link_libc = target.result.os.tag == .linux,
+            .single_threaded = true,
+            //.strip = true,
         }),
     });
     static_lib.root_module.addImport("bof_launcher_win32", win32_module);
@@ -32,6 +34,8 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .link_libc = target.result.os.tag == .linux,
+            .single_threaded = true,
+            //.strip = true,
         }),
     });
     shared_lib.root_module.addImport("bof_launcher_win32", win32_module);
@@ -46,6 +50,8 @@ pub fn build(b: *std.Build) void {
                 .target = target,
                 .optimize = optimize,
                 .link_libc = false,
+                .single_threaded = true,
+                //.strip = true,
             }),
         });
         shared_nolibc_lib.root_module.addImport("bof_launcher_win32", win32_module);
