@@ -11,7 +11,7 @@ pub fn build(b: *std.Build) !void {
     std.Io.Dir.cwd().deleteTree(io, "zig-out") catch {};
 
     const supported_targets: []const std.Target.Query = &.{
-        //.{ .cpu_arch = .x86, .os_tag = .windows, .abi = .gnu },
+        .{ .cpu_arch = .x86, .os_tag = .windows, .abi = .gnu },
         //.{ .cpu_arch = .x86, .os_tag = .linux, .abi = .gnu },
         .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu },
         //.{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
