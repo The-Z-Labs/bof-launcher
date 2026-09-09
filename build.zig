@@ -49,7 +49,6 @@ pub fn build(b: *std.Build) !void {
             libFileName(b.allocator, target, null),
         ));
 
-        if (false) {
         // TODO: Shared library fails to build on Linux x86.
         if (target.result.cpu.arch == .x86 and target.result.os.tag == .linux) continue;
 
@@ -60,7 +59,6 @@ pub fn build(b: *std.Build) !void {
             b.installArtifact(bof_launcher_dep.artifact(
                 libFileName(b.allocator, target, "shared_nolibc"),
             ));
-        }
         }
     }
 }

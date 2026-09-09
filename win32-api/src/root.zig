@@ -3,8 +3,55 @@ const windows = std.os.windows;
 
 pub const ATTACH_PARENT_PROCESS = 0xffff_ffff;
 
-pub const BYTE = windows.BYTE;
-pub const OVERLAPPED = windows.OVERLAPPED;
+pub const BYTE = u8;
+pub const SHORT = i16;
+pub const OVERLAPPED = extern struct {
+    Internal: ULONG_PTR,
+    InternalHigh: ULONG_PTR,
+    DUMMYUNIONNAME: extern union {
+        DUMMYSTRUCTNAME: extern struct {
+            Offset: DWORD,
+            OffsetHigh: DWORD,
+        },
+        Pointer: ?PVOID,
+    },
+    hEvent: ?HANDLE,
+};
+pub const MEMORY_BASIC_INFORMATION = extern struct {
+    BaseAddress: PVOID,
+    AllocationBase: PVOID,
+    AllocationProtect: DWORD,
+    PartitionId: WORD,
+    RegionSize: SIZE_T,
+    State: DWORD,
+    Protect: DWORD,
+    Type: DWORD,
+};
+pub const SYSTEM_INFO = extern struct {
+    anon1: extern union {
+        dwOemId: DWORD,
+        anon2: extern struct {
+            wProcessorArchitecture: WORD,
+            wReserved: WORD,
+        },
+    },
+    dwPageSize: DWORD,
+    lpMinimumApplicationAddress: LPVOID,
+    lpMaximumApplicationAddress: LPVOID,
+    dwActiveProcessorMask: DWORD_PTR,
+    dwNumberOfProcessors: DWORD,
+    dwProcessorType: DWORD,
+    dwAllocationGranularity: DWORD,
+    wProcessorLevel: WORD,
+    wProcessorRevision: WORD,
+};
+pub const GUID = extern struct {
+    Data1: u32,
+    Data2: u16,
+    Data3: u16,
+    Data4: [8]u8,
+};
+pub const PMEMORY_BASIC_INFORMATION = *MEMORY_BASIC_INFORMATION;
 pub const Win32Error = windows.Win32Error;
 pub const ULONG = windows.ULONG;
 pub const WCHAR = windows.WCHAR;
@@ -13,12 +60,11 @@ pub const LPCWSTR = windows.LPCWSTR;
 pub const LPSTR = windows.LPSTR;
 pub const HMODULE = windows.HMODULE;
 pub const HINSTANCE = windows.HINSTANCE;
-pub const HLOCAL = windows.HLOCAL;
 pub const FARPROC = windows.FARPROC;
 pub const HANDLE = windows.HANDLE;
 pub const WORD = windows.WORD;
 pub const DWORD = windows.DWORD;
-pub const BOOL = windows.BOOL;
+pub const BOOL = c_int;
 pub const PBOOL = *BOOL;
 pub const TRUE = 1;
 pub const FALSE = 0;
@@ -35,55 +81,138 @@ pub const CLIENT_ID = extern struct {
 };
 pub const UNICODE_STRING = windows.UNICODE_STRING;
 pub const USHORT = windows.USHORT;
+pub const INFINITE = 4294967295;
 pub const BOOLEAN = windows.BOOLEAN;
 pub const SIZE_T = windows.SIZE_T;
 pub const UCHAR = windows.UCHAR;
-pub const HRESULT = windows.HRESULT;
-pub const ACCESS_MASK = windows.ACCESS_MASK;
+pub const HRESULT = c_long;
+pub const ACCESS_MASK = DWORD;
 pub const LARGE_INTEGER = windows.LARGE_INTEGER;
 pub const ULONG_PTR = windows.ULONG_PTR;
 pub const ULONGLONG = windows.ULONGLONG;
 pub const LPCVOID = windows.LPCVOID;
 pub const HWND = windows.HWND;
 pub const UINT = windows.UINT;
+pub const HLOCAL = HANDLE;
+pub const DWORD_PTR = ULONG_PTR;
 pub const CONTEXT = windows.CONTEXT;
-pub const LPTHREAD_START_ROUTINE = windows.LPTHREAD_START_ROUTINE;
-pub const PMEMORY_BASIC_INFORMATION = windows.PMEMORY_BASIC_INFORMATION;
-pub const SYSTEM_INFO = windows.SYSTEM_INFO;
+pub const LPTHREAD_START_ROUTINE = *const fn (LPVOID) callconv(.winapi) DWORD;
 pub const LPARAM = windows.LPARAM;
 pub const WNDENUMPROC = *const fn (HWND, LPARAM) callconv(.winapi) BOOL;
 pub const FILE_BOTH_DIR_INFORMATION = windows.FILE_BOTH_DIR_INFORMATION;
 pub const FILE_BOTH_DIRECTORY_INFORMATION = windows.FILE_BOTH_DIRECTORY_INFORMATION;
-pub const WinsockError = windows.ws2_32.WinsockError;
-pub const WSAPROTOCOL_INFOW = windows.ws2_32.WSAPROTOCOL_INFOW;
-pub const SOCKET = windows.ws2_32.SOCKET;
-pub const addrinfo = windows.ws2_32.addrinfo;
-pub const addrinfoa = windows.ws2_32.addrinfoa;
-pub const sockaddr = windows.ws2_32.sockaddr;
-pub const WSABUF = windows.ws2_32.WSABUF;
-pub const LPWSAOVERLAPPED_COMPLETION_ROUTINE = windows.ws2_32.LPWSAOVERLAPPED_COMPLETION_ROUTINE;
-pub const WSAPOLLFD = windows.ws2_32.WSAPOLLFD;
+
+pub const AI = packed struct(u32) {
+    PASSIVE: bool = false,
+    CANONNAME: bool = false,
+    NUMERICHOST: bool = false,
+    NUMERICSERV: bool = false,
+    DNS_ONLY: bool = false,
+    _5: u3 = 0,
+    ALL: bool = false,
+    _9: u1 = 0,
+    ADDRCONFIG: bool = false,
+    V4MAPPED: bool = false,
+    _12: u2 = 0,
+    NON_AUTHORITATIVE: bool = false,
+    SECURE: bool = false,
+    RETURN_PREFERRED_NAMES: bool = false,
+    FQDN: bool = false,
+    FILESERVER: bool = false,
+    DISABLE_IDN_ENCODING: bool = false,
+    _20: u10 = 0,
+    RESOLUTION_HANDLE: bool = false,
+    EXTENDED: bool = false,
+};
+
+pub const ADDRESS_FAMILY = u16;
+pub const sockaddr = extern struct {
+    family: ADDRESS_FAMILY,
+    data: [14]u8,
+
+    pub const SS_MAXSIZE = 128;
+    pub const storage = extern struct {
+        family: ADDRESS_FAMILY align(8),
+        padding: [SS_MAXSIZE - @sizeOf(ADDRESS_FAMILY)]u8 = undefined,
+    };
+
+    /// IPv4 socket address
+    pub const in = extern struct {
+        family: ADDRESS_FAMILY = AF.INET,
+        port: USHORT,
+        addr: u32,
+        zero: [8]u8 = [8]u8{ 0, 0, 0, 0, 0, 0, 0, 0 },
+    };
+
+    /// IPv6 socket address
+    pub const in6 = extern struct {
+        family: ADDRESS_FAMILY = AF.INET6,
+        port: USHORT,
+        flowinfo: u32,
+        addr: [16]u8,
+        scope_id: u32,
+    };
+
+    /// UNIX domain socket address
+    pub const un = extern struct {
+        family: ADDRESS_FAMILY = AF.UNIX,
+        path: [108]u8,
+    };
+};
+
+pub const addrinfo = addrinfoa;
+
+pub const addrinfoa = extern struct {
+    flags: AI,
+    family: i32,
+    socktype: i32,
+    protocol: i32,
+    addrlen: usize,
+    canonname: ?[*:0]u8,
+    addr: ?*sockaddr,
+    next: ?*addrinfo,
+};
+pub const WSABUF = extern struct {
+    len: ULONG,
+    buf: [*]u8,
+};
+pub const LPWSAOVERLAPPED_COMPLETION_ROUTINE = *const fn (
+    dwError: u32,
+    cbTransferred: u32,
+    lpOverlapped: *OVERLAPPED,
+    dwFlags: u32,
+) callconv(.winapi) void;
+
+pub const WSAPOLLFD = pollfd;
+
+pub const pollfd = extern struct {
+    fd: SOCKET,
+    events: SHORT,
+    revents: SHORT,
+};
 pub const IO_STATUS_BLOCK = windows.IO_STATUS_BLOCK;
 pub const IO_APC_ROUTINE = windows.IO_APC_ROUTINE;
-pub const FILE_INFORMATION_CLASS = windows.FILE_INFORMATION_CLASS;
-pub const OBJECT_INFORMATION_CLASS = windows.OBJECT_INFORMATION_CLASS;
 
-pub const INFINITE = windows.INFINITE;
+pub const WinsockError = u16;
+
 pub const WAIT_FAILED = windows.WAIT_FAILED;
 
-pub const MEM_COMMIT = windows.MEM_COMMIT;
-pub const MEM_RESERVE = windows.MEM_RESERVE;
-pub const MEM_FREE = windows.MEM_FREE;
-pub const MEM_RESET = windows.MEM_RESET;
-pub const MEM_RESET_UNDO = windows.MEM_RESET_UNDO;
-pub const MEM_LARGE_PAGES = windows.MEM_LARGE_PAGES;
-pub const MEM_PHYSICAL = windows.MEM_PHYSICAL;
-pub const MEM_TOP_DOWN = windows.MEM_TOP_DOWN;
-pub const MEM_WRITE_WATCH = windows.MEM_WRITE_WATCH;
-pub const MEM_COALESCE_PLACEHOLDERS = windows.MEM_COALESCE_PLACEHOLDERS;
-pub const MEM_RESERVE_PLACEHOLDERS = windows.MEM_RESERVE_PLACEHOLDERS;
-pub const MEM_DECOMMIT = windows.MEM_DECOMMIT;
-pub const MEM_RELEASE = windows.MEM_RELEASE;
+pub const MEM_COMMIT = 0x1000;
+pub const MEM_RESERVE = 0x2000;
+pub const MEM_FREE = 0x10000;
+pub const MEM_RESET = 0x80000;
+pub const MEM_RESET_UNDO = 0x1000000;
+pub const MEM_LARGE_PAGES = 0x20000000;
+pub const MEM_PHYSICAL = 0x400000;
+pub const MEM_TOP_DOWN = 0x100000;
+pub const MEM_WRITE_WATCH = 0x200000;
+pub const MEM_RESERVE_PLACEHOLDER = 0x00040000;
+pub const MEM_PRESERVE_PLACEHOLDER = 0x00000400;
+
+pub const MEM_COALESCE_PLACEHOLDERS = 0x1;
+pub const MEM_RESERVE_PLACEHOLDERS = 0x2;
+pub const MEM_DECOMMIT = 0x4000;
+pub const MEM_RELEASE = 0x8000;
 
 pub const PAGE_EXECUTE = 0x10;
 pub const PAGE_EXECUTE_READ = 0x20;
@@ -126,6 +255,95 @@ pub const SPECIFIC_RIGHTS_ALL = 0x0000FFFF;
 
 pub const PROCESS_CREATE_FLAGS_INHERIT_HANDLES = 0x00000004;
 pub const PROCESS_CREATE_FLAGS_INHERIT_FROM_PARENT = 0x00000100;
+
+pub const OBJECT_INFORMATION_CLASS = enum(c_int) {
+    ObjectBasicInformation = 0,
+    ObjectNameInformation = 1,
+    ObjectTypeInformation = 2,
+    ObjectTypesInformation = 3,
+    ObjectHandleFlagInformation = 4,
+    ObjectSessionInformation = 5,
+    MaxObjectInfoClass,
+};
+
+pub const FILE_INFORMATION_CLASS = enum(c_int) {
+    FileDirectoryInformation = 1,
+    FileFullDirectoryInformation,
+    FileBothDirectoryInformation,
+    FileBasicInformation,
+    FileStandardInformation,
+    FileInternalInformation,
+    FileEaInformation,
+    FileAccessInformation,
+    FileNameInformation,
+    FileRenameInformation,
+    FileLinkInformation,
+    FileNamesInformation,
+    FileDispositionInformation,
+    FilePositionInformation,
+    FileFullEaInformation,
+    FileModeInformation,
+    FileAlignmentInformation,
+    FileAllInformation,
+    FileAllocationInformation,
+    FileEndOfFileInformation,
+    FileAlternateNameInformation,
+    FileStreamInformation,
+    FilePipeInformation,
+    FilePipeLocalInformation,
+    FilePipeRemoteInformation,
+    FileMailslotQueryInformation,
+    FileMailslotSetInformation,
+    FileCompressionInformation,
+    FileObjectIdInformation,
+    FileCompletionInformation,
+    FileMoveClusterInformation,
+    FileQuotaInformation,
+    FileReparsePointInformation,
+    FileNetworkOpenInformation,
+    FileAttributeTagInformation,
+    FileTrackingInformation,
+    FileIdBothDirectoryInformation,
+    FileIdFullDirectoryInformation,
+    FileValidDataLengthInformation,
+    FileShortNameInformation,
+    FileIoCompletionNotificationInformation,
+    FileIoStatusBlockRangeInformation,
+    FileIoPriorityHintInformation,
+    FileSfioReserveInformation,
+    FileSfioVolumeInformation,
+    FileHardLinkInformation,
+    FileProcessIdsUsingFileInformation,
+    FileNormalizedNameInformation,
+    FileNetworkPhysicalNameInformation,
+    FileIdGlobalTxDirectoryInformation,
+    FileIsRemoteDeviceInformation,
+    FileUnusedInformation,
+    FileNumaNodeInformation,
+    FileStandardLinkInformation,
+    FileRemoteProtocolInformation,
+    FileRenameInformationBypassAccessCheck,
+    FileLinkInformationBypassAccessCheck,
+    FileVolumeNameInformation,
+    FileIdInformation,
+    FileIdExtdDirectoryInformation,
+    FileReplaceCompletionInformation,
+    FileHardLinkFullIdInformation,
+    FileIdExtdBothDirectoryInformation,
+    FileDispositionInformationEx,
+    FileRenameInformationEx,
+    FileRenameInformationExBypassAccessCheck,
+    FileDesiredStorageClassInformation,
+    FileStatInformation,
+    FileMemoryPartitionInformation,
+    FileStatLxInformation,
+    FileCaseSensitiveInformation,
+    FileLinkInformationEx,
+    FileLinkInformationExBypassAccessCheck,
+    FileStorageReserveIdInformation,
+    FileCaseSensitiveInformationForceAccessCheck,
+    FileMaximumInformation,
+};
 
 pub const TOKEN_ASSIGN_PRIMARY = 0x0001;
 pub const TOKEN_DUPLICATE = 0x0002;
@@ -194,6 +412,61 @@ pub const TOKEN_USER = extern struct {
     User: SID_AND_ATTRIBUTES,
 };
 
+pub const MAX_PROTOCOL_CHAIN = 7;
+pub const WSAPROTOCOLCHAIN = extern struct {
+    ChainLen: c_int,
+    ChainEntries: [MAX_PROTOCOL_CHAIN]DWORD,
+};
+
+pub const SOCKET = *opaque {};
+
+pub const WSAPROTOCOL_LEN = 255;
+pub const WSAPROTOCOL_INFOW = extern struct {
+    dwServiceFlags1: DWORD,
+    dwServiceFlags2: DWORD,
+    dwServiceFlags3: DWORD,
+    dwServiceFlags4: DWORD,
+    dwProviderFlags: DWORD,
+    ProviderId: GUID,
+    dwCatalogEntryId: DWORD,
+    ProtocolChain: WSAPROTOCOLCHAIN,
+    iVersion: c_int,
+    iAddressFamily: c_int,
+    iMaxSockAddr: c_int,
+    iMinSockAddr: c_int,
+    iSocketType: c_int,
+    iProtocol: c_int,
+    iProtocolMaxOffset: c_int,
+    iNetworkByteOrder: c_int,
+    iSecurityScheme: c_int,
+    dwMessageSize: DWORD,
+    dwProviderReserved: DWORD,
+    szProtocol: [WSAPROTOCOL_LEN + 1]WCHAR,
+};
+
+pub const WSADESCRIPTION_LEN = 256;
+pub const WSASYS_STATUS_LEN = 128;
+pub const WSADATA = if (@sizeOf(usize) == @sizeOf(u64))
+    extern struct {
+        wVersion: WORD,
+        wHighVersion: WORD,
+        iMaxSockets: u16,
+        iMaxUdpDg: u16,
+        lpVendorInfo: *u8,
+        szDescription: [WSADESCRIPTION_LEN + 1]u8,
+        szSystemStatus: [WSASYS_STATUS_LEN + 1]u8,
+    }
+else
+    extern struct {
+        wVersion: WORD,
+        wHighVersion: WORD,
+        szDescription: [WSADESCRIPTION_LEN + 1]u8,
+        szSystemStatus: [WSASYS_STATUS_LEN + 1]u8,
+        iMaxSockets: u16,
+        iMaxUdpDg: u16,
+        lpVendorInfo: *u8,
+    };
+
 pub const SECTION_IMAGE_INFORMATION = extern struct {
     TransferAddress: ?PVOID,
     ZeroBits: ULONG,
@@ -250,13 +523,59 @@ pub const RTL_CLONE_PROCESS_FLAGS_NO_SYNCHRONIZE = 0x00000004; // don't update s
 pub const THREADINFOCLASS = windows.THREADINFOCLASS;
 pub const PROCESSINFOCLASS = windows.PROCESSINFOCLASS;
 pub const PROCESS_BASIC_INFORMATION = windows.PROCESS_BASIC_INFORMATION;
-pub const SECURITY_ATTRIBUTES = windows.SECURITY_ATTRIBUTES;
+pub const SECURITY_ATTRIBUTES = extern struct {
+    nLength: DWORD,
+    lpSecurityDescriptor: ?*anyopaque,
+    bInheritHandle: BOOL,
+};
 pub const SYSTEM_INFORMATION_CLASS = windows.SYSTEM_INFORMATION_CLASS;
 pub const SYSTEM_BASIC_INFORMATION = windows.SYSTEM_BASIC_INFORMATION;
 
-pub const WSADATA = windows.ws2_32.WSADATA;
-pub const AF = windows.ws2_32.AF;
-pub const SOCK = windows.ws2_32.SOCK;
+pub const AF = struct {
+    pub const UNSPEC = 0;
+    pub const UNIX = 1;
+    pub const INET = 2;
+    pub const IMPLINK = 3;
+    pub const PUP = 4;
+    pub const CHAOS = 5;
+    pub const NS = 6;
+    pub const IPX = 6;
+    pub const ISO = 7;
+    pub const ECMA = 8;
+    pub const DATAKIT = 9;
+    pub const CCITT = 10;
+    pub const SNA = 11;
+    pub const DECnet = 12;
+    pub const DLI = 13;
+    pub const LAT = 14;
+    pub const HYLINK = 15;
+    pub const APPLETALK = 16;
+    pub const NETBIOS = 17;
+    pub const VOICEVIEW = 18;
+    pub const FIREFOX = 19;
+    pub const UNKNOWN1 = 20;
+    pub const BAN = 21;
+    pub const ATM = 22;
+    pub const INET6 = 23;
+    pub const CLUSTER = 24;
+    pub const @"12844" = 25;
+    pub const IRDA = 26;
+    pub const NETDES = 28;
+    pub const MAX = 29;
+    pub const TCNPROCESS = 29;
+    pub const TCNMESSAGE = 30;
+    pub const ICLFXBM = 31;
+    pub const LINK = 33;
+    pub const HYPERV = 34;
+};
+
+pub const SOCK = struct {
+    pub const STREAM = 1;
+    pub const DGRAM = 2;
+    pub const RAW = 3;
+    pub const RDM = 4;
+    pub const SEQPACKET = 5;
+};
 
 pub const COINIT_MULTITHREADED = 0x0;
 pub const COINIT_APARTMENTTHREADED = 0x2;

@@ -36,4 +36,5 @@
 # Ignore some special directories and files
 .zig-cache
 zig-out
+zig-pkg
 backup

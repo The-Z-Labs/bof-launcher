@@ -1683,8 +1683,8 @@ fn threadFuncCloneProcessWindows(bof: *Bof, arg_data: ?[]u8, context: *BofContex
                 _ = w32.ReadFile(read_pipe, std.mem.asBytes(&output_len), 4, null, null);
 
                 if (output_len > 0) {
-                    context.output_mutex.lock();
-                    defer context.output_mutex.unlock();
+                    context.output_mutex.lock(gstate.io) catch unreachable;
+                    defer context.output_mutex.unlock(gstate.io);
 
                     var read_len: w32.DWORD = 0;
                     _ = w32.ReadFile(read_pipe, context.output_ring.data.ptr, output_len, &read_len, null);
@@ -2566,12 +2566,12 @@ pub fn DllMain(
     hinstDLL: w32.HINSTANCE,
     fdwReason: w32.DWORD,
     lpvReserved: w32.LPVOID,
-) callconv(.winapi) w32.BOOL {
+) callconv(.winapi) std.os.windows.BOOL {
     _ = lpvReserved;
     if (fdwReason == w32.DLL_PROCESS_ATTACH) {
         gstate.dll.base_address = @intFromPtr(hinstDLL);
     }
-    return w32.TRUE;
+    return .TRUE;
 }
 
 const ZGateSysApiCall = enum(u32) {
