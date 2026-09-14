@@ -6,8 +6,7 @@ pub fn encodeAsReq(buffer: []u8, user_name: []const u8, realm: []const u8) ![]co
     std.debug.assert(user_name.len <= 100);
     std.debug.assert(realm.len <= 100);
 
-    var fbs_write = std.io.fixedBufferStream(buffer);
-    const w = fbs_write.writer();
+    var w: std.Io.Writer = .fixed(buffer);
 
     // Length of the entire packet
     try w.writeInt(u32, 0xffff_ffff, .big); // Dummy value, computed later
@@ -133,12 +132,12 @@ pub fn encodeAsReq(buffer: []u8, user_name: []const u8, realm: []const u8) ![]co
     try w.writeByte(23); //      { ['rc4-hmac'] = 23 },
 
     // Fixups
-    const total_len: u32 = @intCast(fbs_write.getWritten().len);
+    const total_len: u32 = @intCast(w.end);
     std.mem.writeInt(u32, buffer[0..4], total_len - 4, .big);
     std.mem.writeInt(u16, buffer[6..8], @intCast(total_len - 8), .big);
     std.mem.writeInt(u16, buffer[10..12], @intCast(total_len - 12), .big);
     std.mem.writeInt(u16, buffer[24..26], @intCast(total_len - 26), .big);
     std.mem.writeInt(u16, buffer[28..30], @intCast(total_len - 30), .big);
 
-    return fbs_write.getWritten();
+    return w.buffered();
 }

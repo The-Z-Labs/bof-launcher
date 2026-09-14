@@ -5,6 +5,7 @@ const krb = @import("bof_api").kerberos;
 comptime {
     @import("bof_api").embedFunctionCode("memcpy");
     @import("bof_api").embedFunctionCode("memmove");
+    @import("bof_api").embedFunctionCode("memset");
 }
 
 pub export fn func(msg: [*:0]const u8) callconv(.c) u8 {
@@ -26,10 +27,10 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
     const packet = krb.encodeAsReq(buf[0..], "aaaaaaaa", "bbbbbbbb") catch unreachable;
     _ = packet;
 
-    var fbs = std.io.fixedBufferStream(&buf);
+    var w: std.Io.Writer = .fixed(&buf);
 
-    fbs.writer().print("Hello, {s}!\n", .{"go"}) catch unreachable;
-    fbs.writer().writeByte(0) catch unreachable;
+    w.print("Hello, {s}!\n", .{"go"}) catch unreachable;
+    w.writeByte(0) catch unreachable;
 
     _ = beacon.printf(.output, "%s", &buf);
 

@@ -13,15 +13,15 @@ const BofTableItem = struct {
 };
 
 const bofs_included_in_launcher = [_]BofTableItem{
-    //.{ .name = "helloBof", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    //.{ .name = "wProcessInfoMessageBox", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    .{ .name = "helloBof", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+    .{ .name = "wProcessInfoMessageBox", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     //.{ .name = "wProcessInjectionSrdi", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
-    //.{ .name = "runBofFromBof", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    .{ .name = "runBofFromBof", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "misc", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     //.{ .name = "udpScanner", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     //.{ .name = "tcpScanner", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "simple", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    //.{ .name = "wWinver", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    .{ .name = "wWinver", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 }, .custom_build_fn = build_wWinverC },
     //.{ .name = "whoami", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "wAsmTest", .formats = &.{.coff}, .archs = &.{.x64} },
@@ -62,7 +62,7 @@ const bofs_included_in_launcher = [_]BofTableItem{
 };
 
 const bofs_for_testing = [_]BofTableItem{
-    //.{ .name = "test_obj0", .dir = "tests/", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+    .{ .name = "test_obj0", .dir = "tests/", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     //.{ .name = "test_obj1", .dir = "tests/", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "test_obj2", .dir = "tests/", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     //.{ .name = "test_obj3", .dir = "tests/", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },

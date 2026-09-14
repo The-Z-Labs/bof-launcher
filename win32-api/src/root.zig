@@ -190,8 +190,16 @@ pub const pollfd = extern struct {
     events: SHORT,
     revents: SHORT,
 };
-pub const IO_STATUS_BLOCK = windows.IO_STATUS_BLOCK;
-pub const IO_APC_ROUTINE = windows.IO_APC_ROUTINE;
+
+pub const IO_STATUS_BLOCK = extern struct {
+    // "DUMMYUNIONNAME" expands to "u"
+    u: extern union {
+        Status: NTSTATUS,
+        Pointer: ?*anyopaque,
+    },
+    Information: ULONG_PTR,
+};
+pub const IO_APC_ROUTINE = *const fn (PVOID, *IO_STATUS_BLOCK, ULONG) callconv(.winapi) void;
 
 pub const WinsockError = u16;
 
