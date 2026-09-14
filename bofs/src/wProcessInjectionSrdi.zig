@@ -80,9 +80,12 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
     defer srdi.freeShellcode(shellcode_bytes);
 
     if (dump_shellcode) {
-        const file = std.fs.cwd().createFile("shellcode.bin", .{}) catch return 0xff;
-        defer file.close();
-        var writer = file.writer(&.{});
+        var threaded: std.Io.Threaded = .init_single_threaded;
+        const io = threaded.io();
+
+        const file = std.Io.Dir.cwd().createFile(io, "shellcode.bin", .{}) catch return 0xff;
+        defer file.close(io);
+        var writer = file.writer(io, &.{});
         writer.interface.writeAll(shellcode_bytes) catch return 0xff;
         writer.interface.flush() catch return 0xff;
     }

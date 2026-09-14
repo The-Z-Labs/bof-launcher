@@ -126,7 +126,7 @@ fn filesProcess(allocator: std.mem.Allocator, files_list: []u8, test_type: [*:0]
 
     var re: Regex = undefined;
     var testType: TestType = .FileType;
-    var fileKind: std.fs.File.Kind = .file;
+    var fileKind: std.Io.File.Kind = .file;
     var req_perm: u32 = undefined;
 
     // initial file processing preparation
@@ -226,46 +226,50 @@ fn filesProcess(allocator: std.mem.Allocator, files_list: []u8, test_type: [*:0]
     return aw.toOwnedSlice();
 }
 
-fn filesList(allocator: std.mem.Allocator, dir_path: [*:0]u8) ![]u8 {
+fn filesList(allocator: std.mem.Allocator, dir_path: []const u8) ![]u8 {
 
     var aw: std.Io.Writer.Allocating = .init(allocator);
     defer aw.deinit();
 
-    var dir = std.fs.openDirAbsoluteZ(dir_path, .{ .access_sub_paths = true, .iterate = true }) catch |err| switch (err) {
+    var threaded: std.Io.Threaded = .init_single_threaded;
+    const io = threaded.io();
+
+    var dir = std.Io.Dir.openDirAbsolute(io, dir_path,
+        .{ .access_sub_paths = true, .iterate = true }) catch |err| switch (err) {
         error.AccessDenied => return error.AccessDenied,
         error.PermissionDenied => return error.AccessDenied,
         else => return error.UnknownError,
     };
-    defer dir.close();
+    defer dir.close(io);
 
     var iter = dir.iterate();
-    while (try iter.next()) |ent| {
+    while (try iter.next(io)) |ent| {
         try aw.writer.print("{s}/{s}\n", .{dir_path, ent.name});
 
         if (ent.kind == .directory) {
 
-            var sub_dir = dir.openDir(ent.name, .{ .access_sub_paths = true, .iterate = true }) catch |err| switch (err) {
+            var sub_dir = dir.openDir(io, ent.name, .{ .access_sub_paths = true, .iterate = true }) catch |err| switch (err) {
                 error.AccessDenied => continue,
                 error.PermissionDenied => continue,
                 else => break,
             };
-            defer sub_dir.close();
+            defer sub_dir.close(io);
 
             var sub_iter = sub_dir.iterate();
-            while (try sub_iter.next()) |sub_entry| {
+            while (try sub_iter.next(io)) |sub_entry| {
                 try aw.writer.print("{s}/{s}/{s}\n", .{dir_path, ent.name, sub_entry.name});
 
                 if (sub_entry.kind == .directory) {
 
-                    var sub2_dir = sub_dir.openDir(sub_entry.name, .{ .access_sub_paths = true, .iterate = true }) catch |err| switch (err) {
+                    var sub2_dir = sub_dir.openDir(io, sub_entry.name, .{ .access_sub_paths = true, .iterate = true }) catch |err| switch (err) {
                         error.AccessDenied => continue,
                         error.PermissionDenied => continue,
                         else => break,
                     };
-                    defer sub2_dir.close();
+                    defer sub2_dir.close(io);
 
                     var sub2_iter = sub2_dir.iterate();
-                    while (try sub2_iter.next()) |sub2_entry| {
+                    while (try sub2_iter.next(io)) |sub2_entry| {
                         try aw.writer.print("{s}/{s}/{s}/{s}\n", .{dir_path, ent.name, sub_entry.name, sub2_entry.name});
                     }
                 }
@@ -288,7 +292,7 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
 
     if (beacon.dataExtract(&parser, null)) |dir_path| {
 
-        const files = filesList(allocator, dir_path) catch |err| switch (err) {
+        const files = filesList(allocator, std.mem.span(dir_path)) catch |err| switch (err) {
             error.AccessDenied => return @intFromEnum(BofErrors.AccessDenied),
             else => return @intFromEnum(BofErrors.UnknownError),
         };
