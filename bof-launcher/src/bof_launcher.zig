@@ -1548,20 +1548,23 @@ else
 }
 
 fn threadFuncCloneProcessLinux(bof: *Bof, arg_data: ?[]u8, context: *BofContext) void {
-    const pipe = std.posix.pipe() catch @panic("pipe() failed");
+    var pipe: [2]i32 = undefined;
+    if (std.os.linux.pipe(&pipe) == std.math.maxInt(usize)) @panic("pipe() failed");
     defer {
-        std.posix.close(pipe[0]);
-        std.posix.close(pipe[1]);
+        _ = std.os.linux.close(pipe[0]);
+        _ = std.os.linux.close(pipe[1]);
     }
 
-    const pid = std.posix.fork() catch @panic("fork() failed");
+    const pid: i32 = @intCast(std.os.linux.fork());
+    if (pid == -1) @panic("fork() failed");
+
     if (pid == 0) {
         // child process
         bof.run(context, arg_data);
 
-        const file = std.fs.File{ .handle = pipe[1] };
+        const file = std.Io.File{ .handle = pipe[1], .flags = .{ .nonblocking = false }};
 
-        var file_writer = file.writer(&.{});
+        var file_writer = file.writer(gstate.io, &.{});
         file_writer.interface.writeByte(context.exit_code.load(.seq_cst)) catch @panic("OOM");
 
         var output_len: i32 = undefined;
@@ -1578,11 +1581,13 @@ fn threadFuncCloneProcessLinux(bof: *Bof, arg_data: ?[]u8, context: *BofContext)
     }
 
     // parent process
-    const child_result = std.posix.waitpid(pid, 0);
-    if (child_result.status == 0) {
-        const file = std.fs.File{ .handle = pipe[0] };
+    var child_result: u32 = undefined;
+    if (std.os.linux.waitpid(pid, &child_result, 0) == std.math.maxInt(usize)) @panic("waitpid() filed");
 
-        var file_reader = file.reader(&.{});
+    if (child_result == 0) {
+        const file = std.Io.File{ .handle = pipe[0], .flags = .{ .nonblocking = false }};
+
+        var file_reader = file.reader(gstate.io, &.{});
 
         const exit_code = file_reader.interface.takeByte() catch @panic("OOM");
         _ = context.exit_code.swap(exit_code, .seq_cst);
@@ -1590,8 +1595,8 @@ fn threadFuncCloneProcessLinux(bof: *Bof, arg_data: ?[]u8, context: *BofContext)
         const output_len = file_reader.interface.takeInt(u32, .little) catch @panic("OOM");
 
         if (output_len > 0) {
-            context.output_mutex.lock();
-            defer context.output_mutex.unlock();
+            context.output_mutex.lock(gstate.io) catch unreachable;
+            defer context.output_mutex.unlock(gstate.io);
 
             const read_len = file_reader.interface.readSliceShort(context.output_ring.data[0..output_len]) catch @panic("OOM");
 
@@ -1600,7 +1605,7 @@ fn threadFuncCloneProcessLinux(bof: *Bof, arg_data: ?[]u8, context: *BofContext)
             context.output_ring_num_written_bytes = read_len;
         }
     } else {
-        std.log.err("Child process crashed with status code 0x{x}\n", .{child_result.status});
+        std.log.err("Child process crashed with status code 0x{x}\n", .{child_result});
         _ = context.exit_code.swap(0xff, .seq_cst); // error
     }
 }

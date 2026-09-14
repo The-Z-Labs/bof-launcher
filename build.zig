@@ -12,16 +12,16 @@ pub fn build(b: *std.Build) !void {
 
     const supported_targets: []const std.Target.Query = &.{
         .{ .cpu_arch = .x86, .os_tag = .windows, .abi = .gnu },
-        //.{ .cpu_arch = .x86, .os_tag = .linux, .abi = .gnu },
+        .{ .cpu_arch = .x86, .os_tag = .linux, .abi = .gnu },
         .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu },
-        //.{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
-        //.{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .gnu },
-        //.{
-        //    .cpu_arch = .arm,
-        //    .os_tag = .linux,
-        //    .abi = .gnueabihf,
-        //    .cpu_model = .{ .explicit = &std.Target.arm.cpu.arm1176jz_s }, // ARMv6kz
-        //},
+        .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
+        .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .gnu },
+        .{
+            .cpu_arch = .arm,
+            .os_tag = .linux,
+            .abi = .gnueabihf,
+            .cpu_model = .{ .explicit = &std.Target.arm.cpu.arm1176jz_s }, // ARMv6kz
+        },
     };
 
     const optimize = b.option(
@@ -48,9 +48,6 @@ pub fn build(b: *std.Build) !void {
         b.installArtifact(bof_launcher_dep.artifact(
             libFileName(b.allocator, target, null),
         ));
-
-        // TODO: Shared library fails to build on Linux x86.
-        if (target.result.cpu.arch == .x86 and target.result.os.tag == .linux) continue;
 
         b.installArtifact(bof_launcher_dep.artifact(
             libFileName(b.allocator, target, "shared"),
