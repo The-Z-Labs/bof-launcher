@@ -26,12 +26,6 @@
 const std = @import("std");
 const beacon = @import("bof_api").beacon;
 
-comptime {
-    @import("bof_api").embedFunctionCode("__aeabi_uldivmod");
-    @import("bof_api").embedFunctionCode("__aeabi_uidiv");
-    @import("bof_api").embedFunctionCode("__aeabi_llsl");
-}
-
 pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
     @import("bof_api").init(adata, alen, .{});
 
@@ -51,8 +45,6 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
     beacon.dataParse(&parser, adata, alen);
     const opt = beacon.dataExtract(&parser, &opt_size);
     const optS = opt.?[0..@as(usize, @intCast(opt_size - 1))];
-    std.debug.print("[uname] optS: {s} opt_size: {d}", .{ optS, opt_size });
-    //const optS = std.mem.sliceTo(opt, 0);
 
     if (std.mem.eql(u8, optS, "-a")) {
         _ = printf(.output, "%s %s %s %s %s\n", &utsn.sysname, &utsn.nodename, &utsn.release, &utsn.version, &utsn.machine);
