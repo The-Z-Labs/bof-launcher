@@ -23,7 +23,7 @@ const bofs_included_in_launcher = [_]BofTableItem{
     .{ .name = "simple", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "wWinver", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wWinverC", .formats = &.{.coff}, .archs = &.{ .x64, .x86 }, .custom_build_fn = build_wWinverC },
-    //.{ .name = "whoami", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+    .{ .name = "whoami", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "wAsmTest", .formats = &.{.coff}, .archs = &.{.x64} },
     .{ .name = "lAsmTest", .formats = &.{.elf}, .archs = &.{.x64} },
     .{ .name = "uname", .dir = "coreutils/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
