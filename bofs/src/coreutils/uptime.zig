@@ -40,12 +40,14 @@ const BofErrors = enum(u8) {
 fn getUptimeLinux() !u8 {
     const printf = beacon.printf;
 
+    var threaded: std.Io.Threaded = .init_single_threaded;
+    const io = threaded.io();
     var buffer = [_]u8{0} ** 100;
 
-    const f = try std.fs.openFileAbsoluteZ(UPTIME_FILE, .{ .mode = .read_only });
-    defer f.close();
+    const f = try std.Io.Dir.openFileAbsolute(io, UPTIME_FILE, .{ .mode = .read_only });
+    defer f.close(io);
 
-    var f_reader = f.reader(buffer[0..]);
+    var f_reader = f.reader(io, buffer[0..]);
 
     const uptimeStr = try f_reader.interface.takeDelimiter('.') orelse return error.Unknown;
 
