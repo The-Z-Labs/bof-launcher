@@ -102,6 +102,15 @@ pub const WNDENUMPROC = *const fn (HWND, LPARAM) callconv(.winapi) BOOL;
 pub const FILE_BOTH_DIR_INFORMATION = windows.FILE_BOTH_DIR_INFORMATION;
 pub const FILE_BOTH_DIRECTORY_INFORMATION = windows.FILE_BOTH_DIRECTORY_INFORMATION;
 
+pub const OBJ_INHERIT = 0x00000002;
+pub const OBJ_PERMANENT = 0x00000010;
+pub const OBJ_EXCLUSIVE = 0x00000020;
+pub const OBJ_CASE_INSENSITIVE = 0x00000040;
+pub const OBJ_OPENIF = 0x00000080;
+pub const OBJ_OPENLINK = 0x00000100;
+pub const OBJ_KERNEL_HANDLE = 0x00000200;
+pub const OBJ_VALID_ATTRIBUTES = 0x000003F2;
+
 pub const AI = packed struct(u32) {
     PASSIVE: bool = false,
     CANONNAME: bool = false,
@@ -603,15 +612,6 @@ pub const OBJECT_ATTRIBUTES = extern struct {
     SecurityDescriptor: ?*anyopaque,
     SecurityQualityOfService: ?*anyopaque,
 };
-
-pub const OBJ_INHERIT = windows.OBJ_INHERIT;
-pub const OBJ_PERMANENT = windows.OBJ_PERMANENT;
-pub const OBJ_EXCLUSIVE = windows.OBJ_EXCLUSIVE;
-pub const OBJ_CASE_INSENSITIVE = windows.OBJ_CASE_INSENSITIVE;
-pub const OBJ_OPENIF = windows.OBJ_OPENIF;
-pub const OBJ_OPENLINK = windows.OBJ_OPENLINK;
-pub const OBJ_KERNEL_HANDLE = windows.OBJ_KERNEL_HANDLE;
-pub const OBJ_VALID_ATTRIBUTES = windows.OBJ_VALID_ATTRIBUTES;
 
 pub const JOBOBJECTINFOCLASS = enum(c_int) {
     JobObjectBasicAccountingInformation = 1, // JOBOBJECT_BASIC_ACCOUNTING_INFORMATION
