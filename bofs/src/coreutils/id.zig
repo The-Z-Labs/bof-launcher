@@ -46,9 +46,7 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
     var egid: c.gid_t = undefined;
     var ngroups: i32 = NGROUPS_MAX;
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    var allocator = std.heap.page_allocator;
 
     var groups_gids: [NGROUPS_MAX]c.gid_t = undefined;
     var groups_names = std.array_list.Managed([]const u8).init(allocator);
