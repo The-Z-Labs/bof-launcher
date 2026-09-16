@@ -60,7 +60,10 @@ pub const RTL_OSVERSIONINFOW = windows.RTL_OSVERSIONINFOW;
 pub const PSID = PVOID;
 pub const PSECURITY_DESCRIPTOR = PVOID;
 pub const NTSTATUS = windows.NTSTATUS;
-pub const CLIENT_ID = windows.CLIENT_ID;
+pub const CLIENT_ID = extern struct {
+    UniqueProcess: ?HANDLE,
+    UniqueThread: ?HANDLE,
+};
 pub const OBJECT = windows.OBJECT;
 pub const FILE = windows.FILE;
 pub const UNICODE_STRING = windows.UNICODE_STRING;
@@ -1283,12 +1286,15 @@ pub const PFN_NtTerminateThread = *const fn (
     ExitStatus: NTSTATUS,
 ) callconv(.winapi) NTSTATUS;
 
-pub const PFN_NtOpenProcess = *const fn (
+pub fn NtOpenProcess(
     ProcessHandle: *HANDLE,
     DesiredAccess: ACCESS_MASK,
-    ObjectAttributes: *const OBJECT.ATTRIBUTES,
-    ClientId: *const CLIENT_ID,
-) callconv(.winapi) NTSTATUS;
+    ObjectAttributes: ?*OBJECT.ATTRIBUTES,
+    ClientId: ?*CLIENT_ID,
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtOpenProcess), "NtOpenProcess", "ntdll");
+    return f(ProcessHandle, DesiredAccess, ObjectAttributes, ClientId);
+}
 
 pub const PFN_NtResumeProcess = *const fn (ProcessHandle: HANDLE) callconv(.winapi) NTSTATUS;
 
@@ -1752,7 +1758,6 @@ pub fn init() void {
     NtSuspendThread = def(PFN_NtSuspendThread, "NtSuspendThread", "ntdll");
     NtTerminateThread = def(PFN_NtTerminateThread, "NtTerminateThread", "ntdll");
     NtTerminateProcess = def(PFN_NtTerminateProcess, "NtTerminateProcess", "ntdll");
-    NtOpenProcess = def(PFN_NtOpenProcess, "NtOpenProcess", "ntdll");
     NtResumeProcess = def(PFN_NtResumeProcess, "NtResumeProcess", "ntdll");
     NtSuspendProcess = def(PFN_NtSuspendProcess, "NtSuspendProcess", "ntdll");
     NtCreateJobObject = def(PFN_NtCreateJobObject, "NtCreateJobObject", "ntdll");
@@ -1888,7 +1893,6 @@ pub var NtResumeThread: PFN_NtResumeThread = undefined;
 pub var NtSuspendThread: PFN_NtSuspendThread = undefined;
 pub var NtTerminateThread: PFN_NtTerminateThread = undefined;
 pub var NtTerminateProcess: PFN_NtTerminateProcess = undefined;
-pub var NtOpenProcess: PFN_NtOpenProcess = undefined;
 pub var NtResumeProcess: PFN_NtResumeProcess = undefined;
 pub var NtSuspendProcess: PFN_NtSuspendProcess = undefined;
 pub var NtCreateJobObject: PFN_NtCreateJobObject = undefined;
@@ -2036,6 +2040,7 @@ comptime {
         //@export(&NtFsControlFile, .{ .name = "NtFsControlFile", .linkage = .strong });
         @export(&NtAllocateVirtualMemory, .{ .name = "NtAllocateVirtualMemory", .linkage = .strong, .visibility = .hidden });
         @export(&NtFreeVirtualMemory, .{ .name = "NtFreeVirtualMemory", .linkage = .strong, .visibility = .hidden });
+        @export(&NtOpenProcess, .{ .name = "NtOpenProcess", .linkage = .strong, .visibility = .hidden });
         //@export(&NtQueryInformationFile, .{ .name = "NtQueryInformationFile", .linkage = .strong });
         //@export(&GetCurrentDirectoryW, .{ .name = "GetCurrentDirectoryW", .linkage = .strong });
         //@export(&GetFileSizeEx, .{ .name = "GetFileSizeEx", .linkage = .strong });

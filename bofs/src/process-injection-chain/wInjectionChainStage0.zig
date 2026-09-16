@@ -14,13 +14,9 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
         break :blk @ptrFromInt(std.mem.readInt(usize, mem, .little));
     };
 
-    var obj_attribs = w32.OBJECT_ATTRIBUTES{
-        .Length = @sizeOf(w32.OBJECT_ATTRIBUTES),
-        .RootDirectory = null,
+    var obj_attribs = w32.OBJECT.ATTRIBUTES{
         .ObjectName = null,
-        .Attributes = w32.OBJ_INHERIT,
-        .SecurityDescriptor = null,
-        .SecurityQualityOfService = null,
+        .Attributes = .{ .INHERIT = true },
     };
     var client_id = w32.CLIENT_ID{
         .UniqueProcess = @ptrFromInt(state.process_id),
@@ -28,7 +24,7 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
     };
     state.nt_status = w32.NtOpenProcess(
         &state.process_handle,
-        w32.PROCESS_CREATE_THREAD | w32.PROCESS_VM_OPERATION | w32.PROCESS_VM_WRITE,
+        .{ .SPECIFIC = .{ .PROCESS = .{ .CREATE_THREAD = true, .VM_OPERATION = true, .VM_WRITE = true } } },
         &obj_attribs,
         &client_id,
     );
