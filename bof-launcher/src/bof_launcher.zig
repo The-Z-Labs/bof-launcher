@@ -1625,7 +1625,8 @@ fn threadFuncCloneProcessWindows(bof: *Bof, arg_data: ?[]u8, context: *BofContex
     }
 
     var job_handle: w32.HANDLE = undefined;
-    _ = w32.NtCreateJobObject(&job_handle, w32.JOB_OBJECT_ALL_ACCESS, null);
+    //_ = w32.NtCreateJobObject(&job_handle, w32.JOB_OBJECT_ALL_ACCESS, null);
+    _ = w32.NtCreateJobObject(&job_handle, w32.ACCESS_MASK.Specific.JobObject.ALL_ACCESS, null);
     defer _ = w32.NtClose(job_handle);
 
     var job_limits = std.mem.zeroes(w32.JOBOBJECT_EXTENDED_LIMIT_INFORMATION);

@@ -3,8 +3,6 @@ const windows = std.os.windows;
 
 pub const ATTACH_PARENT_PROCESS = 0xffff_ffff;
 
-pub const BYTE = u8;
-pub const SHORT = i16;
 pub const OVERLAPPED = extern struct {
     Internal: ULONG_PTR,
     InternalHigh: ULONG_PTR,
@@ -53,54 +51,86 @@ pub const GUID = extern struct {
 };
 pub const PMEMORY_BASIC_INFORMATION = *MEMORY_BASIC_INFORMATION;
 pub const Win32Error = windows.Win32Error;
-pub const ULONG = windows.ULONG;
-pub const WCHAR = windows.WCHAR;
-pub const LPCSTR = windows.LPCSTR;
-pub const LPCWSTR = windows.LPCWSTR;
-pub const LPSTR = windows.LPSTR;
-pub const HMODULE = windows.HMODULE;
-pub const HINSTANCE = windows.HINSTANCE;
-pub const FARPROC = windows.FARPROC;
-pub const HANDLE = windows.HANDLE;
-pub const WORD = windows.WORD;
-pub const DWORD = windows.DWORD;
 pub const BOOL = c_int;
 pub const PBOOL = *BOOL;
 pub const TRUE = 1;
 pub const FALSE = 0;
 pub const OSVERSIONINFOW = windows.OSVERSIONINFOW;
 pub const RTL_OSVERSIONINFOW = windows.RTL_OSVERSIONINFOW;
-pub const PVOID = windows.PVOID;
 pub const PSID = PVOID;
-pub const LPVOID = windows.LPVOID;
 pub const PSECURITY_DESCRIPTOR = PVOID;
 pub const NTSTATUS = windows.NTSTATUS;
-pub const CLIENT_ID = extern struct {
-    UniqueProcess: ?HANDLE,
-    UniqueThread: ?HANDLE,
-};
+pub const CLIENT_ID = windows.CLIENT_ID;
+pub const OBJECT = windows.OBJECT;
+pub const FILE = windows.FILE;
 pub const UNICODE_STRING = windows.UNICODE_STRING;
-pub const USHORT = windows.USHORT;
 pub const INFINITE = 4294967295;
 pub const BOOLEAN = BYTE;
-pub const SIZE_T = windows.SIZE_T;
-pub const UCHAR = windows.UCHAR;
 pub const HRESULT = c_long;
-pub const ACCESS_MASK = DWORD;
-pub const LARGE_INTEGER = windows.LARGE_INTEGER;
-pub const ULONG_PTR = windows.ULONG_PTR;
-pub const ULONGLONG = windows.ULONGLONG;
-pub const LPCVOID = windows.LPCVOID;
-pub const HWND = windows.HWND;
-pub const UINT = windows.UINT;
+pub const ACCESS_MASK = windows.ACCESS_MASK;
 pub const HLOCAL = HANDLE;
-pub const DWORD_PTR = ULONG_PTR;
 pub const CONTEXT = windows.CONTEXT;
 pub const LPTHREAD_START_ROUTINE = *const fn (LPVOID) callconv(.winapi) DWORD;
-pub const LPARAM = windows.LPARAM;
 pub const WNDENUMPROC = *const fn (HWND, LPARAM) callconv(.winapi) BOOL;
 pub const FILE_BOTH_DIR_INFORMATION = windows.FILE_BOTH_DIR_INFORMATION;
 pub const FILE_BOTH_DIRECTORY_INFORMATION = windows.FILE_BOTH_DIRECTORY_INFORMATION;
+pub const SECTION_INHERIT = windows.SECTION_INHERIT;
+pub const PAGE = windows.PAGE;
+pub const MEM = windows.MEM;
+pub const SEC = windows.SEC;
+
+pub const BYTE = u8;
+pub const CHAR = u8;
+pub const UCHAR = u8;
+pub const FLOAT = f32;
+pub const HANDLE = *anyopaque;
+pub const HCRYPTPROV = ULONG_PTR;
+pub const ATOM = u16;
+pub const HBRUSH = *opaque {};
+pub const HCURSOR = *opaque {};
+pub const HICON = *opaque {};
+pub const HINSTANCE = windows.HINSTANCE;
+pub const HMENU = *opaque {};
+pub const HMODULE = *opaque {};
+pub const HWND = *opaque {};
+pub const HDC = *opaque {};
+pub const HGLRC = *opaque {};
+pub const FARPROC = *opaque {};
+pub const PROC = *opaque {};
+pub const INT = c_int;
+pub const LPCSTR = [*:0]const CHAR;
+pub const LPCVOID = *const anyopaque;
+pub const LPSTR = [*:0]CHAR;
+pub const LPVOID = *anyopaque;
+pub const LPWSTR = [*:0]WCHAR;
+pub const LPCWSTR = [*:0]const WCHAR;
+pub const PVOID = *anyopaque;
+pub const PWSTR = [*:0]WCHAR;
+pub const PCWSTR = [*:0]const WCHAR;
+/// Allocated by SysAllocString, freed by SysFreeString
+pub const BSTR = [*:0]WCHAR;
+pub const SIZE_T = usize;
+pub const UINT = c_uint;
+pub const ULONG_PTR = usize;
+pub const LONG_PTR = isize;
+pub const DWORD_PTR = ULONG_PTR;
+pub const WCHAR = u16;
+pub const WORD = u16;
+pub const DWORD = u32;
+pub const DWORD64 = u64;
+pub const LARGE_INTEGER = i64;
+pub const ULARGE_INTEGER = u64;
+pub const USHORT = u16;
+pub const SHORT = i16;
+pub const ULONG = u32;
+pub const LONG = i32;
+pub const ULONG64 = u64;
+pub const ULONGLONG = u64;
+pub const LONGLONG = i64;
+pub const LANGID = c_ushort;
+pub const COLORREF = DWORD;
+
+pub const LPARAM = LONG_PTR;
 
 pub const OBJ_INHERIT = 0x00000002;
 pub const OBJ_PERMANENT = 0x00000010;
@@ -200,14 +230,7 @@ pub const pollfd = extern struct {
     revents: SHORT,
 };
 
-pub const IO_STATUS_BLOCK = extern struct {
-    // "DUMMYUNIONNAME" expands to "u"
-    u: extern union {
-        Status: NTSTATUS,
-        Pointer: ?*anyopaque,
-    },
-    Information: ULONG_PTR,
-};
+pub const IO_STATUS_BLOCK = windows.IO_STATUS_BLOCK;
 pub const IO_APC_ROUTINE = *const fn (PVOID, *IO_STATUS_BLOCK, ULONG) callconv(.winapi) void;
 
 pub const WinsockError = u16;
@@ -258,11 +281,11 @@ pub const STANDARD_RIGHTS_READ = READ_CONTROL;
 pub const STANDARD_RIGHTS_WRITE = READ_CONTROL;
 pub const STANDARD_RIGHTS_EXECUTE = READ_CONTROL;
 
-pub const PROCESS_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0xffff;
-pub const PROCESS_CREATE_THREAD = 0x0002;
-pub const PROCESS_VM_OPERATION = 0x0008;
-pub const PROCESS_VM_READ = 0x0010;
-pub const PROCESS_VM_WRITE = 0x0020;
+//pub const PROCESS_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0xffff;
+//pub const PROCESS_CREATE_THREAD = 0x0002;
+//pub const PROCESS_VM_OPERATION = 0x0008;
+//pub const PROCESS_VM_READ = 0x0010;
+//pub const PROCESS_VM_WRITE = 0x0020;
 
 pub const JOB_OBJECT_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0x3F;
 
@@ -1225,19 +1248,12 @@ pub const PFN_LocalFree = *const fn (hMem: HLOCAL) callconv(.winapi) ?HLOCAL;
 //
 // NTDLL function types
 //
-pub const PFN_RtlGetVersion = *const fn (lpVersionInformation: *RTL_OSVERSIONINFOW) callconv(.winapi) NTSTATUS;
-
 pub const PFN_RtlCloneUserProcess = *const fn (
     ProcessFlags: ULONG,
     ProcessSecurityDescriptor: ?PSECURITY_DESCRIPTOR,
     ThreadSecurityDescriptor: ?PSECURITY_DESCRIPTOR,
     DebugPort: ?HANDLE,
     ProcessInformation: *RTL_USER_PROCESS_INFORMATION,
-) callconv(.winapi) NTSTATUS;
-
-pub const PFN_NtResumeThread = *const fn (
-    ThreadHandle: HANDLE,
-    PreviousSuspendCount: ?*ULONG,
 ) callconv(.winapi) NTSTATUS;
 
 pub const PFN_NtSuspendThread = *const fn (
@@ -1250,16 +1266,11 @@ pub const PFN_NtTerminateThread = *const fn (
     ExitStatus: NTSTATUS,
 ) callconv(.winapi) NTSTATUS;
 
-pub const PFN_NtTerminateProcess = *const fn (
-    ProcessHandle: ?HANDLE,
-    ExitStatus: NTSTATUS,
-) callconv(.winapi) NTSTATUS;
-
 pub const PFN_NtOpenProcess = *const fn (
     ProcessHandle: *HANDLE,
     DesiredAccess: ACCESS_MASK,
-    ObjectAttributes: *OBJECT_ATTRIBUTES,
-    ClientId: ?*CLIENT_ID,
+    ObjectAttributes: *const OBJECT.ATTRIBUTES,
+    ClientId: *const CLIENT_ID,
 ) callconv(.winapi) NTSTATUS;
 
 pub const PFN_NtResumeProcess = *const fn (ProcessHandle: HANDLE) callconv(.winapi) NTSTATUS;
@@ -1294,55 +1305,7 @@ pub const PFN_NtSetInformationJobObject = *const fn (
     JobObjectInformationLength: ULONG,
 ) callconv(.winapi) NTSTATUS;
 
-pub const PFN_NtClose = *const fn (hHandle: HANDLE) callconv(.winapi) NTSTATUS;
-
 pub const PFN_RtlWow64EnableFsRedirection = *const fn (Wow64FsEnableRedirection: BOOLEAN) callconv(.winapi) NTSTATUS;
-
-pub const PFN_NtAllocateVirtualMemory = *const fn (
-    ProcessHandle: HANDLE,
-    BaseAddress: *PVOID,
-    ZeroBits: ULONG_PTR,
-    RegionSize: *SIZE_T,
-    AllocationType: ULONG,
-    Protect: ULONG,
-) callconv(.winapi) NTSTATUS;
-
-pub const PFN_NtFreeVirtualMemory = *const fn (
-    ProcessHandle: HANDLE,
-    BaseAddress: *PVOID,
-    RegionSize: *SIZE_T,
-    FreeType: ULONG,
-) callconv(.winapi) NTSTATUS;
-
-pub const PFN_NtWriteVirtualMemory = *const fn (
-    ProcessHandle: HANDLE,
-    BaseAddress: ?PVOID,
-    Buffer: LPCVOID,
-    NumberOfBytesToWrite: SIZE_T,
-    NumberOfBytesWritten: ?*SIZE_T,
-) callconv(.winapi) NTSTATUS;
-
-pub const PFN_NtProtectVirtualMemory = *const fn (
-    ProcessHandle: HANDLE,
-    BaseAddress: *?PVOID,
-    NumberOfBytesToProtect: *SIZE_T,
-    NewAccessProtection: ULONG,
-    OldAccessProtection: *ULONG,
-) callconv(.winapi) NTSTATUS;
-
-pub const PFN_NtCreateThreadEx = *const fn (
-    ThreadHandle: *HANDLE,
-    DesiredAccess: ACCESS_MASK,
-    ObjectAttributes: ?*OBJECT_ATTRIBUTES,
-    ProcessHandle: HANDLE,
-    StartRoutine: PVOID,
-    Argument: ?PVOID,
-    CreateFlags: ULONG,
-    ZeroBits: SIZE_T,
-    StackSize: SIZE_T,
-    MaximumStackSize: SIZE_T,
-    AttributeList: ?*anyopaque, // TODO: ?*PS_ATTRIBUTE_LIST,
-) callconv(.winapi) NTSTATUS;
 
 pub const PFN_NtCreateUserProcess = *const fn (
     ProcessHandle: *HANDLE,
@@ -1358,99 +1321,118 @@ pub const PFN_NtCreateUserProcess = *const fn (
     AttributeList: ?*anyopaque, // TODO: ?*PS_ATTRIBUTE_LIST,
 ) callconv(.winapi) NTSTATUS;
 
-pub const PFN_NtCreateFile = *const fn (
-    FileHandle: *HANDLE,
-    DesiredAccess: ACCESS_MASK,
-    ObjectAttributes: *OBJECT_ATTRIBUTES,
-    IoStatusBlock: *IO_STATUS_BLOCK,
-    AllocationSize: ?*LARGE_INTEGER,
-    FileAttributes: ULONG,
-    ShareAccess: ULONG,
-    CreateDisposition: ULONG,
-    CreateOptions: ULONG,
-    EaBuffer: ?*anyopaque,
-    EaLength: ULONG,
-) callconv(.winapi) NTSTATUS;
-
-pub const PFN_RtlSetCurrentDirectory_U = *const fn (PathName: *UNICODE_STRING) callconv(.winapi) NTSTATUS;
-
-pub const PFN_RtlGetSystemTimePrecise = *const fn () callconv(.winapi) LARGE_INTEGER;
-
-pub const PFN_RtlGetFullPathName_U = *const fn (
-    FileName: [*:0]const u16,
-    BufferByteLength: ULONG,
-    Buffer: [*]u16,
-    ShortName: ?*[*:0]const u16,
-) callconv(.winapi) ULONG;
-
-pub const PFN_NtQueryDirectoryFile = *const fn (
-    FileHandle: HANDLE,
-    Event: ?HANDLE,
-    ApcRoutine: ?IO_APC_ROUTINE,
-    ApcContext: ?*anyopaque,
-    IoStatusBlock: *IO_STATUS_BLOCK,
-    FileInformation: *anyopaque,
-    Length: ULONG,
-    FileInformationClass: FILE_INFORMATION_CLASS,
-    ReturnSingleEntry: BOOLEAN,
-    FileName: ?*UNICODE_STRING,
-    RestartScan: BOOLEAN,
-) callconv(.winapi) NTSTATUS;
-
-pub const PFN_NtQueryObject = *const fn (
-    Handle: HANDLE,
-    ObjectInformationClass: OBJECT_INFORMATION_CLASS,
-    ObjectInformation: PVOID,
-    ObjectInformationLength: ULONG,
-    ReturnLength: ?*ULONG,
-) callconv(.winapi) NTSTATUS;
-
-pub const PFN_NtLockFile = *const fn (
-    FileHandle: HANDLE,
-    Event: ?HANDLE,
-    ApcRoutine: ?*IO_APC_ROUTINE,
-    ApcContext: ?*anyopaque,
-    IoStatusBlock: *IO_STATUS_BLOCK,
-    ByteOffset: *const LARGE_INTEGER,
-    Length: *const LARGE_INTEGER,
-    Key: ?*ULONG,
-    FailImmediately: BOOLEAN,
-    ExclusiveLock: BOOLEAN,
-) callconv(.winapi) NTSTATUS;
-
-pub const PFN_NtDeviceIoControlFile = *const fn (
-    FileHandle: HANDLE,
-    Event: ?HANDLE,
-    ApcRoutine: ?IO_APC_ROUTINE,
-    ApcContext: ?*anyopaque,
-    IoStatusBlock: *IO_STATUS_BLOCK,
-    IoControlCode: ULONG,
-    InputBuffer: ?*const anyopaque,
-    InputBufferLength: ULONG,
-    OutputBuffer: ?PVOID,
-    OutputBufferLength: ULONG,
-) callconv(.winapi) NTSTATUS;
-
-pub const PFN_NtFsControlFile = *const fn (
-    FileHandle: HANDLE,
-    Event: ?HANDLE,
-    ApcRoutine: ?IO_APC_ROUTINE,
-    ApcContext: ?*anyopaque,
-    IoStatusBlock: *IO_STATUS_BLOCK,
-    FsControlCode: ULONG,
-    InputBuffer: ?*const anyopaque,
-    InputBufferLength: ULONG,
-    OutputBuffer: ?PVOID,
-    OutputBufferLength: ULONG,
-) callconv(.winapi) NTSTATUS;
-
-pub const PFN_NtQueryInformationFile = *const fn (
-    FileHandle: HANDLE,
-    IoStatusBlock: *IO_STATUS_BLOCK,
-    FileInformation: *anyopaque,
-    Length: ULONG,
-    FileInformationClass: FILE_INFORMATION_CLASS,
-) callconv(.winapi) NTSTATUS;
+pub const PFN_RtlCreateHeap = *const @TypeOf(std.os.windows.ntdll.RtlCreateHeap);
+pub const PFN_RtlDestroyHeap = *const @TypeOf(std.os.windows.ntdll.RtlDestroyHeap);
+pub const PFN_RtlAllocateHeap = *const @TypeOf(std.os.windows.ntdll.RtlAllocateHeap);
+pub const PFN_RtlFreeHeap = *const @TypeOf(std.os.windows.ntdll.RtlFreeHeap);
+pub const PFN_RtlCaptureStackBackTrace = *const @TypeOf(std.os.windows.ntdll.RtlCaptureStackBackTrace);
+pub const PFN_RtlCaptureContext = *const @TypeOf(std.os.windows.ntdll.RtlCaptureContext);
+pub const PFN_NtSetInformationThread = *const @TypeOf(std.os.windows.ntdll.NtSetInformationThread);
+pub const PFN_NtCreateFile = *const @TypeOf(std.os.windows.ntdll.NtCreateFile);
+pub const PFN_NtDeviceIoControlFile = *const @TypeOf(std.os.windows.ntdll.NtDeviceIoControlFile);
+pub const PFN_NtFsControlFile = *const @TypeOf(std.os.windows.ntdll.NtFsControlFile);
+pub const PFN_NtLockFile = *const @TypeOf(std.os.windows.ntdll.NtLockFile);
+pub const PFN_NtOpenFile = *const @TypeOf(std.os.windows.ntdll.NtOpenFile);
+pub const PFN_NtQueryDirectoryFile = *const @TypeOf(std.os.windows.ntdll.NtQueryDirectoryFile);
+pub const PFN_NtQueryInformationFile = *const @TypeOf(std.os.windows.ntdll.NtQueryInformationFile);
+pub const PFN_NtQueryVolumeInformationFile = *const @TypeOf(std.os.windows.ntdll.NtQueryVolumeInformationFile);
+pub const PFN_NtReadFile = *const @TypeOf(std.os.windows.ntdll.NtReadFile);
+pub const PFN_NtSetInformationFile = *const @TypeOf(std.os.windows.ntdll.NtSetInformationFile);
+pub const PFN_NtWriteFile = *const @TypeOf(std.os.windows.ntdll.NtWriteFile);
+pub const PFN_NtUnlockFile = *const @TypeOf(std.os.windows.ntdll.NtUnlockFile);
+pub const PFN_NtQueryObject = *const @TypeOf(std.os.windows.ntdll.NtQueryObject);
+pub const PFN_NtClose = *const @TypeOf(std.os.windows.ntdll.NtClose);
+pub const PFN_NtCreateSection = *const @TypeOf(std.os.windows.ntdll.NtCreateSection);
+pub const PFN_NtExtendSection = *const @TypeOf(std.os.windows.ntdll.NtExtendSection);
+pub const PFN_NtAllocateVirtualMemory = *const @TypeOf(std.os.windows.ntdll.NtAllocateVirtualMemory);
+pub const PFN_NtFreeVirtualMemory = *const @TypeOf(std.os.windows.ntdll.NtFreeVirtualMemory);
+pub const PFN_RtlQueryRegistryValues = *const @TypeOf(std.os.windows.ntdll.RtlQueryRegistryValues);
+pub const PFN_RtlEqualUnicodeString = *const @TypeOf(std.os.windows.ntdll.RtlEqualUnicodeString);
+pub const PFN_RtlUpcaseUnicodeChar = *const @TypeOf(std.os.windows.ntdll.RtlUpcaseUnicodeChar);
+pub const PFN_RtlFreeUnicodeString = *const @TypeOf(std.os.windows.ntdll.RtlFreeUnicodeString);
+pub const PFN_RtlGetVersion = *const @TypeOf(std.os.windows.ntdll.RtlGetVersion);
+pub const PFN_RtlLookupFunctionEntry = *const @TypeOf(std.os.windows.ntdll.RtlLookupFunctionEntry);
+pub const PFN_RtlVirtualUnwind = *const @TypeOf(std.os.windows.ntdll.RtlVirtualUnwind);
+pub const PFN_NtWaitForSingleObject = *const @TypeOf(std.os.windows.ntdll.NtWaitForSingleObject);
+pub const PFN_NtQueryInformationProcess = *const @TypeOf(std.os.windows.ntdll.NtQueryInformationProcess);
+pub const PFN_NtQueryInformationThread = *const @TypeOf(std.os.windows.ntdll.NtQueryInformationThread);
+pub const PFN_NtQuerySystemInformation = *const @TypeOf(std.os.windows.ntdll.NtQuerySystemInformation);
+pub const PFN_RtlGetActiveActivationContext = *const @TypeOf(std.os.windows.ntdll.RtlGetActiveActivationContext);
+pub const PFN_RtlActivateActivationContextEx = *const @TypeOf(std.os.windows.ntdll.RtlActivateActivationContextEx);
+pub const PFN_RtlReleaseActivationContext = *const @TypeOf(std.os.windows.ntdll.RtlReleaseActivationContext);
+pub const PFN_LdrAddRefDll = *const @TypeOf(std.os.windows.ntdll.LdrAddRefDll);
+pub const PFN_LdrLoadDll = *const @TypeOf(std.os.windows.ntdll.LdrLoadDll);
+pub const PFN_LdrUnloadDll = *const @TypeOf(std.os.windows.ntdll.LdrUnloadDll);
+pub const PFN_LdrFindEntryForAddress = *const @TypeOf(std.os.windows.ntdll.LdrFindEntryForAddress);
+pub const PFN_LdrGetDllFullName = *const @TypeOf(std.os.windows.ntdll.LdrGetDllFullName);
+pub const PFN_LdrGetDllPath = *const @TypeOf(std.os.windows.ntdll.LdrGetDllPath);
+pub const PFN_LdrGetDllHandle = *const @TypeOf(std.os.windows.ntdll.LdrGetDllHandle);
+pub const PFN_LdrGetDllHandleByMapping = *const @TypeOf(std.os.windows.ntdll.LdrGetDllHandleByMapping);
+pub const PFN_LdrGetDllHandleByName = *const @TypeOf(std.os.windows.ntdll.LdrGetDllHandleByName);
+pub const PFN_LdrGetDllHandleEx = *const @TypeOf(std.os.windows.ntdll.LdrGetDllHandleEx);
+pub const PFN_LdrGetProcedureAddress = *const @TypeOf(std.os.windows.ntdll.LdrGetProcedureAddress);
+pub const PFN_LdrGetProcedureAddressEx = *const @TypeOf(std.os.windows.ntdll.LdrGetProcedureAddressEx);
+pub const PFN_LdrGetProcedureAddressForCaller = *const @TypeOf(std.os.windows.ntdll.LdrGetProcedureAddressForCaller);
+pub const PFN_LdrRegisterDllNotification = *const @TypeOf(std.os.windows.ntdll.LdrRegisterDllNotification);
+pub const PFN_LdrUnregisterDllNotification = *const @TypeOf(std.os.windows.ntdll.LdrUnregisterDllNotification);
+pub const PFN_NtQueryAttributesFile = *const @TypeOf(std.os.windows.ntdll.NtQueryAttributesFile);
+pub const PFN_NtCreateEvent = *const @TypeOf(std.os.windows.ntdll.NtCreateEvent);
+pub const PFN_NtSetEvent = *const @TypeOf(std.os.windows.ntdll.NtSetEvent);
+pub const PFN_NtCreateKeyedEvent = *const @TypeOf(std.os.windows.ntdll.NtCreateKeyedEvent);
+pub const PFN_NtReleaseKeyedEvent = *const @TypeOf(std.os.windows.ntdll.NtReleaseKeyedEvent);
+pub const PFN_NtWaitForKeyedEvent = *const @TypeOf(std.os.windows.ntdll.NtWaitForKeyedEvent);
+pub const PFN_NtCancelSynchronousIoFile = *const @TypeOf(std.os.windows.ntdll.NtCancelSynchronousIoFile);
+pub const PFN_NtCancelIoFile = *const @TypeOf(std.os.windows.ntdll.NtCancelIoFile);
+pub const PFN_NtCancelIoFileEx = *const @TypeOf(std.os.windows.ntdll.NtCancelIoFileEx);
+pub const PFN_NtDelayExecution = *const @TypeOf(std.os.windows.ntdll.NtDelayExecution);
+pub const PFN_NtNotifyChangeDirectoryFileEx = *const @TypeOf(std.os.windows.ntdll.NtNotifyChangeDirectoryFileEx);
+pub const PFN_NtOpenThread = *const @TypeOf(std.os.windows.ntdll.NtOpenThread);
+pub const PFN_NtCreateNamedPipeFile = *const @TypeOf(std.os.windows.ntdll.NtCreateNamedPipeFile);
+pub const PFN_NtFlushBuffersFile = *const @TypeOf(std.os.windows.ntdll.NtFlushBuffersFile);
+pub const PFN_NtMapViewOfSection = *const @TypeOf(std.os.windows.ntdll.NtMapViewOfSection);
+pub const PFN_NtUnmapViewOfSection = *const @TypeOf(std.os.windows.ntdll.NtUnmapViewOfSection);
+pub const PFN_NtUnmapViewOfSectionEx = *const @TypeOf(std.os.windows.ntdll.NtUnmapViewOfSectionEx);
+pub const PFN_NtOpenKey = *const @TypeOf(std.os.windows.ntdll.NtOpenKey);
+pub const PFN_NtQueueApcThread = *const @TypeOf(std.os.windows.ntdll.NtQueueApcThread);
+pub const PFN_NtReadVirtualMemory = *const @TypeOf(std.os.windows.ntdll.NtReadVirtualMemory);
+pub const PFN_NtWriteVirtualMemory = *const @TypeOf(std.os.windows.ntdll.NtWriteVirtualMemory);
+pub const PFN_NtProtectVirtualMemory = *const @TypeOf(std.os.windows.ntdll.NtProtectVirtualMemory);
+pub const PFN_NtWaitForAlertByThreadId = *const @TypeOf(std.os.windows.ntdll.NtWaitForAlertByThreadId);
+pub const PFN_NtAlertThreadByThreadId = *const @TypeOf(std.os.windows.ntdll.NtAlertThreadByThreadId);
+pub const PFN_NtAlertThread = *const @TypeOf(std.os.windows.ntdll.NtAlertThread);
+pub const PFN_NtAlertMultipleThreadByThreadId = *const @TypeOf(std.os.windows.ntdll.NtAlertMultipleThreadByThreadId);
+pub const PFN_NtYieldExecution = *const @TypeOf(std.os.windows.ntdll.NtYieldExecution);
+pub const PFN_RtlAddVectoredExceptionHandler = *const @TypeOf(std.os.windows.ntdll.RtlAddVectoredExceptionHandler);
+pub const PFN_RtlRemoveVectoredExceptionHandler = *const @TypeOf(std.os.windows.ntdll.RtlRemoveVectoredExceptionHandler);
+pub const PFN_RtlDosPathNameToNtPathName_U = *const @TypeOf(std.os.windows.ntdll.RtlDosPathNameToNtPathName_U);
+pub const PFN_RtlExitUserProcess = *const @TypeOf(std.os.windows.ntdll.RtlExitUserProcess);
+pub const PFN_RtlGetFullPathName_U = *const @TypeOf(std.os.windows.ntdll.RtlGetFullPathName_U);
+pub const PFN_RtlGetCurrentDirectory_U = *const @TypeOf(std.os.windows.ntdll.RtlGetCurrentDirectory_U);
+pub const PFN_RtlGetSystemTimePrecise = *const @TypeOf(std.os.windows.ntdll.RtlGetSystemTimePrecise);
+pub const PFN_RtlInitializeCriticalSection = *const @TypeOf(std.os.windows.ntdll.RtlInitializeCriticalSection);
+pub const PFN_RtlEnterCriticalSection = *const @TypeOf(std.os.windows.ntdll.RtlEnterCriticalSection);
+pub const PFN_RtlLeaveCriticalSection = *const @TypeOf(std.os.windows.ntdll.RtlLeaveCriticalSection);
+pub const PFN_RtlDeleteCriticalSection = *const @TypeOf(std.os.windows.ntdll.RtlDeleteCriticalSection);
+pub const PFN_RtlQueryPerformanceCounter = *const @TypeOf(std.os.windows.ntdll.RtlQueryPerformanceCounter);
+pub const PFN_RtlQueryPerformanceFrequency = *const @TypeOf(std.os.windows.ntdll.RtlQueryPerformanceFrequency);
+pub const PFN_RtlReAllocateHeap = *const @TypeOf(std.os.windows.ntdll.RtlReAllocateHeap);
+pub const PFN_RtlReportSilentProcessExit = *const @TypeOf(std.os.windows.ntdll.RtlReportSilentProcessExit);
+pub const PFN_NtTerminateProcess = *const @TypeOf(std.os.windows.ntdll.NtTerminateProcess);
+pub const PFN_RtlSetCurrentDirectory_U = *const @TypeOf(std.os.windows.ntdll.RtlSetCurrentDirectory_U);
+pub const PFN_RtlTryAcquireSRWLockExclusive = *const @TypeOf(std.os.windows.ntdll.RtlTryAcquireSRWLockExclusive);
+pub const PFN_RtlAcquireSRWLockExclusive = *const @TypeOf(std.os.windows.ntdll.RtlAcquireSRWLockExclusive);
+pub const PFN_RtlReleaseSRWLockExclusive = *const @TypeOf(std.os.windows.ntdll.RtlReleaseSRWLockExclusive);
+pub const PFN_RtlWakeAddressAll = *const @TypeOf(std.os.windows.ntdll.RtlWakeAddressAll);
+pub const PFN_RtlWakeAddressSingle = *const @TypeOf(std.os.windows.ntdll.RtlWakeAddressSingle);
+pub const PFN_RtlWaitOnAddress = *const @TypeOf(std.os.windows.ntdll.RtlWaitOnAddress);
+pub const PFN_RtlWakeConditionVariable = *const @TypeOf(std.os.windows.ntdll.RtlWakeConditionVariable);
+pub const PFN_RtlWakeAllConditionVariable = *const @TypeOf(std.os.windows.ntdll.RtlWakeAllConditionVariable);
+pub const PFN_NtOpenKeyEx = *const @TypeOf(std.os.windows.ntdll.NtOpenKeyEx);
+pub const PFN_RtlOpenCurrentUser = *const @TypeOf(std.os.windows.ntdll.RtlOpenCurrentUser);
+pub const PFN_NtQueryValueKey = *const @TypeOf(std.os.windows.ntdll.NtQueryValueKey);
+pub const PFN_NtLoadKeyEx = *const @TypeOf(std.os.windows.ntdll.NtLoadKeyEx);
+pub const PFN_NtCreateThreadEx = *const @TypeOf(std.os.windows.ntdll.NtCreateThreadEx);
+pub const PFN_NtResumeThread = *const @TypeOf(std.os.windows.ntdll.NtResumeThread);
 
 //
 // ADVAPI32 function types
@@ -1778,6 +1760,7 @@ pub fn init() void {
     RtlCloneUserProcess = def(PFN_RtlCloneUserProcess, "RtlCloneUserProcess", "ntdll");
     RtlWow64EnableFsRedirection = def(PFN_RtlWow64EnableFsRedirection, "RtlWow64EnableFsRedirection", "ntdll");
     NtCreateFile = def(PFN_NtCreateFile, "NtCreateFile", "ntdll");
+    NtCreateNamedPipeFile = def(PFN_NtCreateNamedPipeFile, "NtCreateNamedPipeFile", "ntdll");
     RtlSetCurrentDirectory_U = def(PFN_RtlSetCurrentDirectory_U, "RtlSetCurrentDirectory_U", "ntdll");
     RtlGetSystemTimePrecise = def(PFN_RtlGetSystemTimePrecise, "RtlGetSystemTimePrecise", "ntdll");
     RtlGetFullPathName_U = def(PFN_RtlGetFullPathName_U, "RtlGetFullPathName_U", "ntdll");
@@ -1786,6 +1769,9 @@ pub fn init() void {
     NtLockFile = def(PFN_NtLockFile, "NtLockFile", "ntdll");
     NtDeviceIoControlFile = def(PFN_NtDeviceIoControlFile, "NtDeviceIoControlFile", "ntdll");
     NtFsControlFile = def(PFN_NtFsControlFile, "NtFsControlFile", "ntdll");
+    NtReadFile = def(PFN_NtReadFile, "NtReadFile", "ntdll");
+    NtWriteFile = def(PFN_NtWriteFile, "NtWriteFile", "ntdll");
+    NtSetInformationFile = def(PFN_NtSetInformationFile, "NtSetInformationFile", "ntdll");
 
     MessageBoxA = def(PFN_MessageBoxA, "MessageBoxA", "user32");
     MessageBoxW = def(PFN_MessageBoxW, "MessageBoxW", "user32");
@@ -1907,7 +1893,6 @@ pub var NtClose: PFN_NtClose = undefined;
 pub var NtAllocateVirtualMemory: PFN_NtAllocateVirtualMemory = undefined;
 pub var NtFreeVirtualMemory: PFN_NtFreeVirtualMemory = undefined;
 pub var NtQueryInformationFile: PFN_NtQueryInformationFile = undefined;
-
 pub var NtWriteVirtualMemory: PFN_NtWriteVirtualMemory = undefined;
 pub var NtProtectVirtualMemory: PFN_NtProtectVirtualMemory = undefined;
 pub var NtCreateThreadEx: PFN_NtCreateThreadEx = undefined;
@@ -1916,6 +1901,7 @@ pub var RtlGetVersion: PFN_RtlGetVersion = undefined;
 pub var RtlCloneUserProcess: PFN_RtlCloneUserProcess = undefined;
 pub var RtlWow64EnableFsRedirection: PFN_RtlWow64EnableFsRedirection = undefined;
 pub var NtCreateFile: PFN_NtCreateFile = undefined;
+pub var NtCreateNamedPipeFile: PFN_NtCreateNamedPipeFile = undefined;
 pub var RtlSetCurrentDirectory_U: PFN_RtlSetCurrentDirectory_U = undefined;
 pub var RtlGetSystemTimePrecise: PFN_RtlGetSystemTimePrecise = undefined;
 pub var RtlGetFullPathName_U: PFN_RtlGetFullPathName_U = undefined;
@@ -1924,6 +1910,9 @@ pub var NtQueryObject: PFN_NtQueryObject = undefined;
 pub var NtLockFile: PFN_NtLockFile = undefined;
 pub var NtDeviceIoControlFile: PFN_NtDeviceIoControlFile = undefined;
 pub var NtFsControlFile: PFN_NtFsControlFile = undefined;
+pub var NtReadFile: PFN_NtReadFile = undefined;
+pub var NtWriteFile: PFN_NtWriteFile = undefined;
+pub var NtSetInformationFile: PFN_NtSetInformationFile = undefined;
 
 pub fn NtCurrentProcess() HANDLE {
     return @ptrFromInt(@as(usize, @bitCast(@as(isize, -1))));
@@ -2000,379 +1989,52 @@ pub var GetUserNameExA: PFN_GetUserNameExA = undefined;
 //
 comptime {
     if (@import("builtin").mode != .Debug and @import("builtin").os.tag == .windows and bof) {
-        @export(&RE_WriteFile, .{ .name = "WriteFile", .linkage = .strong });
-        @export(&RE_ReadFile, .{ .name = "ReadFile", .linkage = .strong });
-        @export(&RE_Sleep, .{ .name = "Sleep", .linkage = .strong });
-        @export(&RE_VirtualAlloc, .{ .name = "VirtualAlloc", .linkage = .strong });
-        @export(&RE_VirtualFree, .{ .name = "VirtualFree", .linkage = .strong });
-        @export(&RE_ExitProcess, .{ .name = "ExitProcess", .linkage = .strong });
-        @export(&RE_WSAStartup, .{ .name = "WSAStartup", .linkage = .strong });
-        @export(&RE_WSACleanup, .{ .name = "WSACleanup", .linkage = .strong });
-        @export(&RE_WSAGetLastError, .{ .name = "WSAGetLastError", .linkage = .strong });
-        @export(&RE_WSASocketW, .{ .name = "WSASocketW", .linkage = .strong });
-        @export(&RE_WSAPoll, .{ .name = "WSAPoll", .linkage = .strong });
-        @export(&RE_WSAGetOverlappedResult, .{ .name = "WSAGetOverlappedResult", .linkage = .strong });
-        @export(&RE_WSASend, .{ .name = "WSASend", .linkage = .strong });
-        @export(&RE_WSASendTo, .{ .name = "WSASendTo", .linkage = .strong });
-        @export(&RE_WSARecv, .{ .name = "WSARecv", .linkage = .strong });
-        @export(&RE_WSARecvFrom, .{ .name = "WSARecvFrom", .linkage = .strong });
-        @export(&RE_closesocket, .{ .name = "closesocket", .linkage = .strong });
-        @export(&RE_getaddrinfo, .{ .name = "getaddrinfo", .linkage = .strong });
-        @export(&RE_freeaddrinfo, .{ .name = "freeaddrinfo", .linkage = .strong });
-        @export(&RE_bind, .{ .name = "bind", .linkage = .strong });
-        @export(&RE_connect, .{ .name = "connect", .linkage = .strong });
-        @export(&RE_ioctlsocket, .{ .name = "ioctlsocket", .linkage = .strong });
-        @export(&RE_getsockopt, .{ .name = "getsockopt", .linkage = .strong });
-        @export(&RE_setsockopt, .{ .name = "setsockopt", .linkage = .strong });
-        @export(&RE_NtClose, .{ .name = "NtClose", .linkage = .strong });
-        @export(&RE_NtCreateFile, .{ .name = "NtCreateFile", .linkage = .strong });
-        @export(&RE_RtlSetCurrentDirectory_U, .{ .name = "RtlSetCurrentDirectory_U", .linkage = .strong });
-        @export(&RE_RtlGetSystemTimePrecise, .{ .name = "RtlGetSystemTimePrecise", .linkage = .strong });
-        @export(&RE_RtlGetFullPathName_U, .{ .name = "RtlGetFullPathName_U", .linkage = .strong });
-        @export(&RE_NtQueryDirectoryFile, .{ .name = "NtQueryDirectoryFile", .linkage = .strong });
-        @export(&RE_NtQueryObject, .{ .name = "NtQueryObject", .linkage = .strong });
-        @export(&RE_NtLockFile, .{ .name = "NtLockFile", .linkage = .strong });
-        @export(&RE_NtDeviceIoControlFile, .{ .name = "NtDeviceIoControlFile", .linkage = .strong });
-        @export(&RE_NtFsControlFile, .{ .name = "NtFsControlFile", .linkage = .strong });
-        @export(&RE_NtAllocateVirtualMemory, .{ .name = "NtAllocateVirtualMemory", .linkage = .strong });
-        @export(&RE_NtFreeVirtualMemory, .{ .name = "NtFreeVirtualMemory", .linkage = .strong });
-        @export(&RE_NtQueryInformationFile, .{ .name = "NtQueryInformationFile", .linkage = .strong });
-        @export(&RE_GetCurrentDirectoryW, .{ .name = "GetCurrentDirectoryW", .linkage = .strong });
-        @export(&RE_GetFileSizeEx, .{ .name = "GetFileSizeEx", .linkage = .strong });
-        @export(&RE_SetFilePointerEx, .{ .name = "SetFilePointerEx", .linkage = .strong });
-        @export(&RE_RtlGenRandom, .{ .name = "SystemFunction036", .linkage = .strong });
+        //@export(&RE_WriteFile, .{ .name = "WriteFile", .linkage = .strong });
+        //@export(&RE_ReadFile, .{ .name = "ReadFile", .linkage = .strong });
+        //@export(&Sleep, .{ .name = "Sleep", .linkage = .strong });
+        @export(&VirtualAlloc, .{ .name = "VirtualAlloc", .linkage = .strong, .section = ".red" });
+        @export(&VirtualFree, .{ .name = "VirtualFree", .linkage = .strong, .section = ".red" });
+        //@export(&ExitProcess, .{ .name = "ExitProcess", .linkage = .strong });
+        //@export(&WSAStartup, .{ .name = "WSAStartup", .linkage = .strong });
+        //@export(&WSACleanup, .{ .name = "WSACleanup", .linkage = .strong });
+        //@export(&WSAGetLastError, .{ .name = "WSAGetLastError", .linkage = .strong });
+        //@export(&WSASocketW, .{ .name = "WSASocketW", .linkage = .strong });
+        //@export(&WSAPoll, .{ .name = "WSAPoll", .linkage = .strong });
+        //@export(&WSAGetOverlappedResult, .{ .name = "WSAGetOverlappedResult", .linkage = .strong });
+        //@export(&WSASend, .{ .name = "WSASend", .linkage = .strong });
+        //@export(&WSASendTo, .{ .name = "WSASendTo", .linkage = .strong });
+        //@export(&WSARecv, .{ .name = "WSARecv", .linkage = .strong });
+        //@export(&WSARecvFrom, .{ .name = "WSARecvFrom", .linkage = .strong });
+        //@export(&closesocket, .{ .name = "closesocket", .linkage = .strong });
+        //@export(&getaddrinfo, .{ .name = "getaddrinfo", .linkage = .strong });
+        //@export(&freeaddrinfo, .{ .name = "freeaddrinfo", .linkage = .strong });
+        //@export(&bind, .{ .name = "bind", .linkage = .strong });
+        //@export(&connect, .{ .name = "connect", .linkage = .strong });
+        //@export(&ioctlsocket, .{ .name = "ioctlsocket", .linkage = .strong });
+        //@export(&getsockopt, .{ .name = "getsockopt", .linkage = .strong });
+        //@export(&setsockopt, .{ .name = "setsockopt", .linkage = .strong });
+        //@export(&NtClose, .{ .name = "NtClose", .linkage = .strong });
+        //@export(&NtCreateFile, .{ .name = "NtCreateFile", .linkage = .strong });
+        //@export(&NtCreateNamedPipeFile, .{ .name = "NtCreateNamedPipeFile", .linkage = .strong });
+        //@export(&NtReadFile, .{ .name = "NtReadFile", .linkage = .strong });
+        //@export(&NtWriteFile, .{ .name = "NtWriteFile", .linkage = .strong });
+        //@export(&NtSetInformationFile, .{ .name = "NtSetInformationFile", .linkage = .strong });
+        //@export(&RtlSetCurrentDirectory_U, .{ .name = "RtlSetCurrentDirectory_U", .linkage = .strong });
+        //@export(&RtlGetSystemTimePrecise, .{ .name = "RtlGetSystemTimePrecise", .linkage = .strong });
+        //@export(&RtlGetFullPathName_U, .{ .name = "RtlGetFullPathName_U", .linkage = .strong });
+        //@export(&NtQueryDirectoryFile, .{ .name = "NtQueryDirectoryFile", .linkage = .strong });
+        //@export(&NtQueryObject, .{ .name = "NtQueryObject", .linkage = .strong });
+        //@export(&NtLockFile, .{ .name = "NtLockFile", .linkage = .strong });
+        //@export(&NtDeviceIoControlFile, .{ .name = "NtDeviceIoControlFile", .linkage = .strong });
+        //@export(&RE_NtDeviceIoControlFile, .{ .name = "NtDeviceIoControlFile", .linkage = .strong });
+        //@export(&RE_NtFsControlFile, .{ .name = "NtFsControlFile", .linkage = .strong });
+        //@export(&NtFsControlFile, .{ .name = "NtFsControlFile", .linkage = .strong });
+        @export(&NtAllocateVirtualMemory, .{ .name = "NtAllocateVirtualMemory", .linkage = .strong, .section = ".red" });
+        @export(&NtFreeVirtualMemory, .{ .name = "NtFreeVirtualMemory", .linkage = .strong, .section = ".red" });
+        //@export(&NtQueryInformationFile, .{ .name = "NtQueryInformationFile", .linkage = .strong });
+        //@export(&GetCurrentDirectoryW, .{ .name = "GetCurrentDirectoryW", .linkage = .strong });
+        //@export(&GetFileSizeEx, .{ .name = "GetFileSizeEx", .linkage = .strong });
+        //@export(&SetFilePointerEx, .{ .name = "SetFilePointerEx", .linkage = .strong });
+        //@export(&RtlGenRandom, .{ .name = "SystemFunction036", .linkage = .strong });
     }
-}
-
-// We remove this section with llvm-objcopy
-const re_section = ".red";
-
-fn RE_WriteFile(
-    hFile: HANDLE,
-    lpBuffer: LPCVOID,
-    nNumberOfBytesToWrite: DWORD,
-    lpNumberOfBytesWritten: ?*DWORD,
-    lpOverlapped: ?*OVERLAPPED,
-) linksection(re_section) callconv(.winapi) BOOL {
-    return WriteFile(hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped);
-}
-fn RE_ReadFile(
-    hFile: HANDLE,
-    lpBuffer: LPVOID,
-    nNumberOfBytesToRead: DWORD,
-    lpNumberOfBytesRead: ?*DWORD,
-    lpOverlapped: ?*OVERLAPPED,
-) linksection(re_section) callconv(.winapi) BOOL {
-    return ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
-}
-fn RE_Sleep(dwMilliseconds: DWORD) linksection(re_section) callconv(.winapi) void {
-    Sleep(dwMilliseconds);
-}
-fn RE_VirtualAlloc(
-    lpAddress: ?LPVOID,
-    dwSize: SIZE_T,
-    flAllocationType: DWORD,
-    flProtect: DWORD,
-) linksection(re_section) callconv(.winapi) ?LPVOID {
-    return VirtualAlloc(lpAddress, dwSize, flAllocationType, flProtect);
-}
-fn RE_VirtualFree(
-    lpAddress: ?LPVOID,
-    dwSize: SIZE_T,
-    dwFreeType: DWORD,
-) linksection(re_section) callconv(.winapi) BOOL {
-    return VirtualFree(lpAddress, dwSize, dwFreeType);
-}
-fn RE_ExitProcess(uExitCode: UINT) linksection(re_section) callconv(.winapi) noreturn {
-    ExitProcess(uExitCode);
-}
-fn RE_WSAStartup(
-    wVersionRequired: WORD,
-    lpWSAData: *WSADATA,
-) linksection(re_section) callconv(.winapi) i32 {
-    return WSAStartup(wVersionRequired, lpWSAData);
-}
-fn RE_WSACleanup() linksection(re_section) callconv(.winapi) i32 {
-    return WSACleanup();
-}
-fn RE_WSAGetLastError() linksection(re_section) callconv(.winapi) WinsockError {
-    return WSAGetLastError();
-}
-fn RE_WSASocketW(
-    af: i32,
-    @"type": i32,
-    protocol: i32,
-    lpProtocolInfo: ?*WSAPROTOCOL_INFOW,
-    g: u32,
-    dwFlags: u32,
-) linksection(re_section) callconv(.winapi) SOCKET {
-    return WSASocketW(af, @"type", protocol, lpProtocolInfo, g, dwFlags);
-}
-fn RE_WSAPoll(
-    fdArray: [*]WSAPOLLFD,
-    fds: u32,
-    timeout: i32,
-) linksection(re_section) callconv(.winapi) i32 {
-    return WSAPoll(fdArray, fds, timeout);
-}
-fn RE_WSAGetOverlappedResult(
-    s: SOCKET,
-    lpOverlapped: *OVERLAPPED,
-    lpcbTransfer: *DWORD,
-    fWait: BOOL,
-    lpdwFlags: *DWORD,
-) linksection(re_section) callconv(.winapi) BOOL {
-    return WSAGetOverlappedResult(s, lpOverlapped, lpcbTransfer, fWait, lpdwFlags);
-}
-fn RE_WSASend(
-    s: SOCKET,
-    lpBuffers: [*]WSABUF,
-    dwBufferCount: u32,
-    lpNumberOfBytesSent: ?*u32,
-    dwFlags: u32,
-    lpOverlapped: ?*OVERLAPPED,
-    lpCompletionRounte: ?LPWSAOVERLAPPED_COMPLETION_ROUTINE,
-) linksection(re_section) callconv(.winapi) i32 {
-    return WSASend(s, lpBuffers, dwBufferCount, lpNumberOfBytesSent, dwFlags, lpOverlapped, lpCompletionRounte);
-}
-fn RE_WSASendTo(
-    s: SOCKET,
-    lpBuffers: [*]WSABUF,
-    dwBufferCount: u32,
-    lpNumberOfBytesSent: ?*u32,
-    dwFlags: u32,
-    lpTo: ?*const sockaddr,
-    iToLen: i32,
-    lpOverlapped: ?*OVERLAPPED,
-    lpCompletionRounte: ?LPWSAOVERLAPPED_COMPLETION_ROUTINE,
-) linksection(re_section) callconv(.winapi) i32 {
-    return WSASendTo(s, lpBuffers, dwBufferCount, lpNumberOfBytesSent, dwFlags, lpTo, iToLen, lpOverlapped, lpCompletionRounte);
-}
-fn RE_WSARecv(
-    s: SOCKET,
-    lpBuffers: [*]WSABUF,
-    dwBufferCount: u32,
-    lpNumberOfBytesRecvd: ?*u32,
-    lpFlags: *u32,
-    lpOverlapped: ?*OVERLAPPED,
-    lpCompletionRoutine: ?LPWSAOVERLAPPED_COMPLETION_ROUTINE,
-) linksection(re_section) callconv(.winapi) i32 {
-    return WSARecv(s, lpBuffers, dwBufferCount, lpNumberOfBytesRecvd, lpFlags, lpOverlapped, lpCompletionRoutine);
-}
-fn RE_WSARecvFrom(
-    s: SOCKET,
-    lpBuffers: [*]WSABUF,
-    dwBufferCount: u32,
-    lpNumberOfBytesRecvd: ?*u32,
-    lpFlags: *u32,
-    lpFrom: ?*sockaddr,
-    lpFromLen: ?*i32,
-    lpOverlapped: ?*OVERLAPPED,
-    lpCompletionRoutine: ?LPWSAOVERLAPPED_COMPLETION_ROUTINE,
-) linksection(re_section) callconv(.winapi) i32 {
-    return WSARecvFrom(s, lpBuffers, dwBufferCount, lpNumberOfBytesRecvd, lpFlags, lpFrom, lpFromLen, lpOverlapped, lpCompletionRoutine);
-}
-fn RE_closesocket(s: SOCKET) linksection(re_section) callconv(.winapi) i32 {
-    return closesocket(s);
-}
-fn RE_getaddrinfo(
-    pNodeName: ?[*:0]const u8,
-    pServiceName: ?[*:0]const u8,
-    pHints: ?*const addrinfoa,
-    ppResult: *?*addrinfoa,
-) linksection(re_section) callconv(.winapi) i32 {
-    return getaddrinfo(pNodeName, pServiceName, pHints, ppResult);
-}
-fn RE_freeaddrinfo(pAddrInfo: ?*addrinfoa) linksection(re_section) callconv(.winapi) void {
-    freeaddrinfo(pAddrInfo);
-}
-fn RE_bind(
-    s: SOCKET,
-    name: *const sockaddr,
-    namelen: i32,
-) linksection(re_section) callconv(.winapi) i32 {
-    return bind(s, name, namelen);
-}
-fn RE_connect(
-    s: SOCKET,
-    name: *const sockaddr,
-    namelen: i32,
-) linksection(re_section) callconv(.winapi) i32 {
-    return connect(s, name, namelen);
-}
-fn RE_ioctlsocket(
-    s: SOCKET,
-    cmd: i32,
-    argp: *u32,
-) linksection(re_section) callconv(.winapi) i32 {
-    return ioctlsocket(s, cmd, argp);
-}
-fn RE_getsockopt(
-    s: SOCKET,
-    level: i32,
-    optname: i32,
-    optval: [*]u8,
-    optlen: *i32,
-) linksection(re_section) callconv(.winapi) i32 {
-    return getsockopt(s, level, optname, optval, optlen);
-}
-fn RE_setsockopt(
-    s: SOCKET,
-    level: i32,
-    optname: i32,
-    optval: ?[*]const u8,
-    optlen: i32,
-) linksection(re_section) callconv(.winapi) i32 {
-    return setsockopt(s, level, optname, optval, optlen);
-}
-fn RE_NtClose(hHandle: HANDLE) linksection(re_section) callconv(.winapi) NTSTATUS {
-    return NtClose(hHandle);
-}
-fn RE_NtCreateFile(
-    FileHandle: *HANDLE,
-    DesiredAccess: ACCESS_MASK,
-    ObjectAttributes: *OBJECT_ATTRIBUTES,
-    IoStatusBlock: *IO_STATUS_BLOCK,
-    AllocationSize: ?*LARGE_INTEGER,
-    FileAttributes: ULONG,
-    ShareAccess: ULONG,
-    CreateDisposition: ULONG,
-    CreateOptions: ULONG,
-    EaBuffer: ?*anyopaque,
-    EaLength: ULONG,
-) linksection(re_section) callconv(.winapi) NTSTATUS {
-    return NtCreateFile(FileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, AllocationSize, FileAttributes, ShareAccess, CreateDisposition, CreateOptions, EaBuffer, EaLength);
-}
-fn RE_RtlSetCurrentDirectory_U(PathName: *UNICODE_STRING) linksection(re_section) callconv(.winapi) NTSTATUS {
-    return RtlSetCurrentDirectory_U(PathName);
-}
-fn RE_RtlGetSystemTimePrecise() linksection(re_section) callconv(.winapi) LARGE_INTEGER {
-    return RtlGetSystemTimePrecise();
-}
-fn RE_RtlGetFullPathName_U(
-    FileName: [*:0]const u16,
-    BufferByteLength: ULONG,
-    Buffer: [*]u16,
-    ShortName: ?*[*:0]const u16,
-) linksection(re_section) callconv(.winapi) ULONG {
-    return RtlGetFullPathName_U(FileName, BufferByteLength, Buffer, ShortName);
-}
-fn RE_NtQueryDirectoryFile(
-    FileHandle: HANDLE,
-    Event: ?HANDLE,
-    ApcRoutine: ?IO_APC_ROUTINE,
-    ApcContext: ?*anyopaque,
-    IoStatusBlock: *IO_STATUS_BLOCK,
-    FileInformation: *anyopaque,
-    Length: ULONG,
-    FileInformationClass: FILE_INFORMATION_CLASS,
-    ReturnSingleEntry: BOOLEAN,
-    FileName: ?*UNICODE_STRING,
-    RestartScan: BOOLEAN,
-) linksection(re_section) callconv(.winapi) NTSTATUS {
-    return NtQueryDirectoryFile(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, FileInformation, Length, FileInformationClass, ReturnSingleEntry, FileName, RestartScan);
-}
-fn RE_NtQueryObject(
-    Handle: HANDLE,
-    ObjectInformationClass: OBJECT_INFORMATION_CLASS,
-    ObjectInformation: PVOID,
-    ObjectInformationLength: ULONG,
-    ReturnLength: ?*ULONG,
-) linksection(re_section) callconv(.winapi) NTSTATUS {
-    return NtQueryObject(Handle, ObjectInformationClass, ObjectInformation, ObjectInformationLength, ReturnLength);
-}
-fn RE_NtLockFile(
-    FileHandle: HANDLE,
-    Event: ?HANDLE,
-    ApcRoutine: ?*IO_APC_ROUTINE,
-    ApcContext: ?*anyopaque,
-    IoStatusBlock: *IO_STATUS_BLOCK,
-    ByteOffset: *const LARGE_INTEGER,
-    Length: *const LARGE_INTEGER,
-    Key: ?*ULONG,
-    FailImmediately: BOOLEAN,
-    ExclusiveLock: BOOLEAN,
-) linksection(re_section) callconv(.winapi) NTSTATUS {
-    return NtLockFile(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, ByteOffset, Length, Key, FailImmediately, ExclusiveLock);
-}
-fn RE_NtDeviceIoControlFile(
-    FileHandle: HANDLE,
-    Event: ?HANDLE,
-    ApcRoutine: ?IO_APC_ROUTINE,
-    ApcContext: ?*anyopaque,
-    IoStatusBlock: *IO_STATUS_BLOCK,
-    IoControlCode: ULONG,
-    InputBuffer: ?*const anyopaque,
-    InputBufferLength: ULONG,
-    OutputBuffer: ?PVOID,
-    OutputBufferLength: ULONG,
-) linksection(re_section) callconv(.winapi) NTSTATUS {
-    return NtDeviceIoControlFile(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, IoControlCode, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength);
-}
-fn RE_NtFsControlFile(
-    FileHandle: HANDLE,
-    Event: ?HANDLE,
-    ApcRoutine: ?IO_APC_ROUTINE,
-    ApcContext: ?*anyopaque,
-    IoStatusBlock: *IO_STATUS_BLOCK,
-    FsControlCode: ULONG,
-    InputBuffer: ?*const anyopaque,
-    InputBufferLength: ULONG,
-    OutputBuffer: ?PVOID,
-    OutputBufferLength: ULONG,
-) linksection(re_section) callconv(.winapi) NTSTATUS {
-    return NtFsControlFile(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, FsControlCode, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength);
-}
-fn RE_GetCurrentDirectoryW(
-    nBufferLength: DWORD,
-    lpBuffer: ?[*]WCHAR,
-) linksection(re_section) callconv(.winapi) DWORD {
-    return GetCurrentDirectoryW(nBufferLength, lpBuffer);
-}
-fn RE_NtAllocateVirtualMemory(
-    ProcessHandle: HANDLE,
-    BaseAddress: *PVOID,
-    ZeroBits: ULONG_PTR,
-    RegionSize: *SIZE_T,
-    AllocationType: ULONG,
-    Protect: ULONG,
-) linksection(re_section) callconv(.winapi) NTSTATUS {
-    return NtAllocateVirtualMemory(ProcessHandle, BaseAddress, ZeroBits, RegionSize, AllocationType, Protect);
-}
-fn RE_NtFreeVirtualMemory(
-    ProcessHandle: HANDLE,
-    BaseAddress: *PVOID,
-    RegionSize: *SIZE_T,
-    FreeType: ULONG,
-) linksection(re_section) callconv(.winapi) NTSTATUS {
-    return NtFreeVirtualMemory(ProcessHandle, BaseAddress, RegionSize, FreeType);
-}
-fn RE_GetFileSizeEx(
-    hFile: HANDLE,
-    lpFileSize: *LARGE_INTEGER,
-) linksection(re_section) callconv(.winapi) BOOL {
-    return GetFileSizeEx(hFile, lpFileSize);
-}
-fn RE_SetFilePointerEx(
-    hFile: HANDLE,
-    liDistanceToMove: LARGE_INTEGER,
-    lpNewFilePointer: ?*LARGE_INTEGER,
-    dwMoveMethod: DWORD,
-) linksection(re_section) callconv(.winapi) BOOL {
-    return SetFilePointerEx(hFile, liDistanceToMove, lpNewFilePointer, dwMoveMethod);
-}
-fn RE_NtQueryInformationFile(
-    FileHandle: HANDLE,
-    IoStatusBlock: *IO_STATUS_BLOCK,
-    FileInformation: *anyopaque,
-    Length: ULONG,
-    FileInformationClass: FILE_INFORMATION_CLASS,
-) linksection(re_section) callconv(.winapi) NTSTATUS {
-    return NtQueryInformationFile(FileHandle, IoStatusBlock, FileInformation, Length, FileInformationClass);
-}
-fn RE_RtlGenRandom(
-    RandomBuffer: PVOID,
-    RandomBufferLength: ULONG,
-) linksection(re_section) callconv(.winapi) BOOL {
-    return RtlGenRandom(RandomBuffer, RandomBufferLength);
 }

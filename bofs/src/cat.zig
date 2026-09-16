@@ -59,16 +59,19 @@ const BofErrors = enum(u8) {
     UnknownError,
 };
 
-fn getFileContent(allocator: std.mem.Allocator, file_path: [*:0]u8) !u8 {
-    const file = try std.fs.openFileAbsoluteZ(file_path, .{});
-    defer file.close();
+fn getFileContent(allocator: std.mem.Allocator, file_path: []const u8) !u8 {
+    var threaded: std.Io.Threaded = .init_single_threaded;
+    const io = threaded.io();
 
-    const file_stat = try file.stat();
+    const file = try std.Io.Dir.openFileAbsolute(io, file_path, .{});
+    defer file.close(io);
+
+    const file_stat = try file.stat(io);
 
     const file_data = try allocator.alloc(u8, @intCast(file_stat.size));
     defer allocator.free(file_data);
 
-    var file_reader = file.reader(&.{});
+    var file_reader = file.reader(io, &.{});
     try file_reader.interface.readSliceAll(file_data);
 
     bofapi.print(.output, "{s}", .{file_data});
@@ -85,7 +88,7 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
     beacon.dataParse(&parser, adata, alen);
 
     if (beacon.dataExtract(&parser, null)) |file_path| {
-        return getFileContent(allocator, file_path) catch |err| switch (err) {
+        return getFileContent(allocator, std.mem.span(file_path)) catch |err| switch (err) {
             error.AccessDenied => @intFromEnum(BofErrors.AccessDenied),
             error.FileNotFound => @intFromEnum(BofErrors.FileNotFound),
             error.AntivirusInterference => @intFromEnum(BofErrors.AntivirusInterference),

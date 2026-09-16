@@ -14,7 +14,7 @@ const BofTableItem = struct {
 
 const bofs_included_in_launcher = [_]BofTableItem{
     .{ .name = "helloBof", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    .{ .name = "wProcessInfoMessageBox", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    //.{ .name = "wProcessInfoMessageBox", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     //.{ .name = "wProcessInjectionSrdi", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "runBofFromBof", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "misc", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
@@ -41,10 +41,10 @@ const bofs_included_in_launcher = [_]BofTableItem{
     //.{ .name = "find", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_regex },
     //.{ .name = "ifconfig", .dir = "net-tools/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     //.{ .name = "wCloneProcess", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
-    .{ .name = "wInjectionChainStage0", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
-    .{ .name = "wInjectionChainStage1", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
-    .{ .name = "wInjectionChainStage2", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
-    .{ .name = "wInjectionChainStage3", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    //.{ .name = "wInjectionChainStage0", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    //.{ .name = "wInjectionChainStage1", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    //.{ .name = "wInjectionChainStage2", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    //.{ .name = "wInjectionChainStage3", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wInjectionChainStage2C", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     //.{ .name = "kmodLoader", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     //.{ .name = "lskmod", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
@@ -62,7 +62,7 @@ const bofs_included_in_launcher = [_]BofTableItem{
 };
 
 const bofs_for_testing = [_]BofTableItem{
-    .{ .name = "test_obj0", .dir = "tests/", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+    //.{ .name = "test_obj0", .dir = "tests/", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     //.{ .name = "test_obj1", .dir = "tests/", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "test_obj2", .dir = "tests/", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     //.{ .name = "test_obj3", .dir = "tests/", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },

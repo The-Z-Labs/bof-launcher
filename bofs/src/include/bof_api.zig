@@ -24,12 +24,11 @@ pub fn print(@"type": beacon.CallbackType, comptime fmt: []const u8, args: anyty
         const str = std.fmt.bufPrintZ(buf[0..], fmt, args) catch unreachable;
         _ = beacon.printf(@"type", "%s", str.ptr);
     } else {
-        var a: std.io.Writer.Allocating = .init(std.heap.page_allocator);
+        var a: std.Io.Writer.Allocating = .init(std.heap.page_allocator);
         defer a.deinit();
-        const w = &a.writer;
 
-        w.print(fmt, args) catch unreachable;
-        w.writeByte(0) catch unreachable;
+        a.writer.print(fmt, args) catch unreachable;
+        a.writer.writeByte(0) catch unreachable;
 
         //const str = std.fmt.allocPrintZ(std.heap.page_allocator, fmt, args) catch unreachable;
         //defer std.heap.page_allocator.free(str);
