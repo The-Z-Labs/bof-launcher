@@ -1008,7 +1008,12 @@ pub const PFN_VirtualFree = *const fn (
     dwFreeType: DWORD,
 ) callconv(.winapi) BOOL;
 
-pub const PFN_GetLastError = *const fn () callconv(.winapi) Win32Error;
+const section_name = ".winapi";
+
+pub fn GetLastError() linksection(section_name) callconv(.winapi) Win32Error {
+    const f = def(*const @TypeOf(GetLastError), "GetLastError", "kernel32");
+    return f();
+}
 
 pub const PFN_SetLastError = *const fn (dwErrCode: Win32Error) callconv(.winapi) void;
 
@@ -1685,7 +1690,6 @@ pub fn init() void {
     VirtualQuery = def(PFN_VirtualQuery, "VirtualQuery", "kernel32");
     VirtualProtect = def(PFN_VirtualProtect, "VirtualProtect", "kernel32");
     VirtualFree = def(PFN_VirtualFree, "VirtualFree", "kernel32");
-    GetLastError = def(PFN_GetLastError, "GetLastError", "kernel32");
     SetLastError = def(PFN_SetLastError, "SetLastError", "kernel32");
     Sleep = def(PFN_Sleep, "Sleep", "kernel32");
     ExitProcess = def(PFN_ExitProcess, "ExitProcess", "kernel32");
@@ -1749,8 +1753,8 @@ pub fn init() void {
     NtIsProcessInJob = def(PFN_NtIsProcessInJob, "NtIsProcessInJob", "ntdll");
     NtSetInformationJobObject = def(PFN_NtSetInformationJobObject, "NtSetInformationJobObject", "ntdll");
     NtClose = def(PFN_NtClose, "NtClose", "ntdll");
-    NtAllocateVirtualMemory = def(PFN_NtAllocateVirtualMemory, "NtAllocateVirtualMemory", "ntdll");
-    NtFreeVirtualMemory = def(PFN_NtFreeVirtualMemory, "NtFreeVirtualMemory", "ntdll");
+    //NtAllocateVirtualMemory = def(PFN_NtAllocateVirtualMemory, "NtAllocateVirtualMemory", "ntdll");
+    //NtFreeVirtualMemory = def(PFN_NtFreeVirtualMemory, "NtFreeVirtualMemory", "ntdll");
     NtQueryInformationFile = def(PFN_NtQueryInformationFile, "NtQueryInformationFile", "ntdll");
     NtWriteVirtualMemory = def(PFN_NtWriteVirtualMemory, "NtWriteVirtualMemory", "ntdll");
     NtProtectVirtualMemory = def(PFN_NtProtectVirtualMemory, "NtProtectVirtualMemory", "ntdll");
@@ -1823,7 +1827,6 @@ pub var VirtualAlloc: PFN_VirtualAlloc = undefined;
 pub var VirtualQuery: PFN_VirtualQuery = undefined;
 pub var VirtualProtect: PFN_VirtualProtect = undefined;
 pub var VirtualFree: PFN_VirtualFree = undefined;
-pub var GetLastError: PFN_GetLastError = undefined;
 pub var SetLastError: PFN_SetLastError = undefined;
 pub var Sleep: PFN_Sleep = undefined;
 pub var ExitProcess: PFN_ExitProcess = undefined;
@@ -1890,8 +1893,8 @@ pub var NtTerminateJobObject: PFN_NtTerminateJobObject = undefined;
 pub var NtIsProcessInJob: PFN_NtIsProcessInJob = undefined;
 pub var NtSetInformationJobObject: PFN_NtSetInformationJobObject = undefined;
 pub var NtClose: PFN_NtClose = undefined;
-pub var NtAllocateVirtualMemory: PFN_NtAllocateVirtualMemory = undefined;
-pub var NtFreeVirtualMemory: PFN_NtFreeVirtualMemory = undefined;
+//pub var NtAllocateVirtualMemory: PFN_NtAllocateVirtualMemory = undefined;
+//pub var NtFreeVirtualMemory: PFN_NtFreeVirtualMemory = undefined;
 pub var NtQueryInformationFile: PFN_NtQueryInformationFile = undefined;
 pub var NtWriteVirtualMemory: PFN_NtWriteVirtualMemory = undefined;
 pub var NtProtectVirtualMemory: PFN_NtProtectVirtualMemory = undefined;
@@ -1992,8 +1995,8 @@ comptime {
         //@export(&RE_WriteFile, .{ .name = "WriteFile", .linkage = .strong });
         //@export(&RE_ReadFile, .{ .name = "ReadFile", .linkage = .strong });
         //@export(&Sleep, .{ .name = "Sleep", .linkage = .strong });
-        @export(&VirtualAlloc, .{ .name = "VirtualAlloc", .linkage = .strong, .section = ".red" });
-        @export(&VirtualFree, .{ .name = "VirtualFree", .linkage = .strong, .section = ".red" });
+        //@export(&VirtualAlloc, .{ .name = "VirtualAlloc", .linkage = .strong });
+        //@export(&VirtualFree, .{ .name = "VirtualFree", .linkage = .strong });
         //@export(&ExitProcess, .{ .name = "ExitProcess", .linkage = .strong });
         //@export(&WSAStartup, .{ .name = "WSAStartup", .linkage = .strong });
         //@export(&WSACleanup, .{ .name = "WSACleanup", .linkage = .strong });
@@ -2029,12 +2032,34 @@ comptime {
         //@export(&RE_NtDeviceIoControlFile, .{ .name = "NtDeviceIoControlFile", .linkage = .strong });
         //@export(&RE_NtFsControlFile, .{ .name = "NtFsControlFile", .linkage = .strong });
         //@export(&NtFsControlFile, .{ .name = "NtFsControlFile", .linkage = .strong });
-        @export(&NtAllocateVirtualMemory, .{ .name = "NtAllocateVirtualMemory", .linkage = .strong, .section = ".red" });
-        @export(&NtFreeVirtualMemory, .{ .name = "NtFreeVirtualMemory", .linkage = .strong, .section = ".red" });
+        @export(&NtAllocateVirtualMemory, .{ .name = "NtAllocateVirtualMemory", .linkage = .strong, .visibility = .hidden });
+        @export(&NtFreeVirtualMemory, .{ .name = "NtFreeVirtualMemory", .linkage = .strong, .visibility = .hidden });
         //@export(&NtQueryInformationFile, .{ .name = "NtQueryInformationFile", .linkage = .strong });
         //@export(&GetCurrentDirectoryW, .{ .name = "GetCurrentDirectoryW", .linkage = .strong });
         //@export(&GetFileSizeEx, .{ .name = "GetFileSizeEx", .linkage = .strong });
         //@export(&SetFilePointerEx, .{ .name = "SetFilePointerEx", .linkage = .strong });
         //@export(&RtlGenRandom, .{ .name = "SystemFunction036", .linkage = .strong });
     }
+}
+
+pub fn NtAllocateVirtualMemory(
+    ProcessHandle: HANDLE,
+    BaseAddress: *PVOID,
+    ZeroBits: ULONG_PTR,
+    RegionSize: *SIZE_T,
+    AllocationType: MEM.ALLOCATE,
+    Protect: PAGE,
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtAllocateVirtualMemory), "NtAllocateVirtualMemory", "ntdll");
+    return f(ProcessHandle, BaseAddress, ZeroBits, RegionSize, AllocationType, Protect);
+}
+
+pub fn NtFreeVirtualMemory(
+    ProcessHandle: HANDLE,
+    BaseAddress: *PVOID,
+    RegionSize: *SIZE_T,
+    FreeType: MEM.FREE,
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtFreeVirtualMemory), "NtFreeVirtualMemory", "ntdll");
+    return f(ProcessHandle, BaseAddress, RegionSize, FreeType);
 }
