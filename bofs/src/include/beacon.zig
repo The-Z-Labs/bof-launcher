@@ -16,8 +16,6 @@ pub fn init() void {
     printf = def(PFN_BeaconPrintf, "BeaconPrintf");
     output = def(PFN_BeaconOutput, "BeaconOutput");
 
-    dataParse = def(PFN_BeaconDataParse, "BeaconDataParse");
-    dataExtract = def(PFN_BeaconDataExtract, "BeaconDataExtract");
     dataInt = def(PFN_BeaconDataInt, "BeaconDataInt");
     dataShort = def(PFN_BeaconDataShort, "BeaconDataShort");
     dataLength = def(PFN_BeaconDataLength, "BeaconDataLength");
@@ -40,8 +38,6 @@ pub fn init() void {
 pub var printf: PFN_BeaconPrintf = undefined;
 pub var output: PFN_BeaconOutput = undefined;
 
-pub var dataParse: PFN_BeaconDataParse = undefined;
-pub var dataExtract: PFN_BeaconDataExtract = undefined;
 pub var dataInt: PFN_BeaconDataInt = undefined;
 pub var dataShort: PFN_BeaconDataShort = undefined;
 pub var dataLength: PFN_BeaconDataLength = undefined;
@@ -79,8 +75,16 @@ pub const CallbackType = enum(i32) {
 const PFN_BeaconPrintf = *const fn (@"type": CallbackType, fmt: [*:0]const u8, ...) callconv(.c) i32;
 const PFN_BeaconOutput = *const fn (@"type": CallbackType, data: ?[*]u8, len: i32) callconv(.c) void;
 
-const PFN_BeaconDataParse = *const fn (parser: ?*datap, buffer: ?[*]u8, size: i32) callconv(.c) void;
-const PFN_BeaconDataExtract = *const fn (parser: ?*datap, size: ?*i32) callconv(.c) ?[*:0]u8;
+pub fn dataParse(parser: ?*datap, buffer: ?[*]u8, size: i32) callconv(.c) void {
+    const f = def(*const @TypeOf(dataParse), "BeaconDataParse");
+    f(parser, buffer, size);
+}
+
+pub fn dataExtract(parser: ?*datap, size: ?*i32) callconv(.c) ?[*:0]u8 {
+    const f = def(*const @TypeOf(dataExtract), "BeaconDataExtract");
+    return f(parser, size);
+}
+
 const PFN_BeaconDataInt = *const fn (parser: *datap) callconv(.c) i32;
 const PFN_BeaconDataShort = *const fn (parser: *datap) callconv(.c) i16;
 const PFN_BeaconDataLength = *const fn (parser: *datap) callconv(.c) i32;

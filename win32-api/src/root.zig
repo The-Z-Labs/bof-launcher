@@ -2040,7 +2040,7 @@ comptime {
         //@export(&NtFsControlFile, .{ .name = "NtFsControlFile", .linkage = .strong });
         @export(&NtAllocateVirtualMemory, .{ .name = "NtAllocateVirtualMemory", .linkage = .strong, .visibility = .hidden });
         @export(&NtFreeVirtualMemory, .{ .name = "NtFreeVirtualMemory", .linkage = .strong, .visibility = .hidden });
-        @export(&NtOpenProcess, .{ .name = "NtOpenProcess", .linkage = .strong, .visibility = .hidden });
+        //@export(&NtOpenProcess, .{ .name = "NtOpenProcess", .linkage = .strong, .visibility = .hidden });
         //@export(&NtQueryInformationFile, .{ .name = "NtQueryInformationFile", .linkage = .strong });
         //@export(&GetCurrentDirectoryW, .{ .name = "GetCurrentDirectoryW", .linkage = .strong });
         //@export(&GetFileSizeEx, .{ .name = "GetFileSizeEx", .linkage = .strong });
