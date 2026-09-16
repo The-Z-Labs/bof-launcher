@@ -49,7 +49,7 @@ pub const GUID = extern struct {
     Data3: u16,
     Data4: [8]u8,
 };
-pub const PMEMORY_BASIC_INFORMATION = *MEMORY_BASIC_INFORMATION;
+pub const MEMORY = windows.MEMORY;
 pub const Win32Error = windows.Win32Error;
 pub const BOOL = c_int;
 pub const PBOOL = *BOOL;
@@ -982,31 +982,43 @@ pub const EXTENDED_NAME_FORMAT = enum(u32) {
 //
 // KERNEL32 function types
 //
-pub const PFN_VirtualAlloc = *const fn (
+pub fn VirtualAlloc(
     lpAddress: ?LPVOID,
     dwSize: SIZE_T,
-    flAllocationType: DWORD,
-    flProtect: DWORD,
-) callconv(.winapi) ?LPVOID;
+    flAllocationType: MEM.ALLOCATE,
+    flProtect: PAGE,
+) linksection(section_name) callconv(.winapi) ?LPVOID {
+    const f = def(*const @TypeOf(VirtualAlloc), "VirtualAlloc", "kernel32");
+    return f(lpAddress, dwSize, flAllocationType, flProtect);
+}
 
-pub const PFN_VirtualQuery = *const fn (
+pub fn VirtualQuery(
     lpAddress: ?LPVOID,
-    lpBuffer: PMEMORY_BASIC_INFORMATION,
+    lpBuffer: *MEMORY.BASIC_INFORMATION,
     dwLength: SIZE_T,
-) callconv(.winapi) SIZE_T;
+) linksection(section_name) callconv(.winapi) SIZE_T {
+    const f = def(*const @TypeOf(VirtualQuery), "VirtualQuery", "kernel32");
+    return f(lpAddress, lpBuffer, dwLength);
+}
 
-pub const PFN_VirtualProtect = *const fn (
+pub fn VirtualProtect(
     lpAddress: LPVOID,
     dwSize: SIZE_T,
-    flNewProtect: DWORD,
-    lpflOldProtect: *DWORD,
-) callconv(.winapi) BOOL;
+    flNewProtect: PAGE,
+    lpflOldProtect: *PAGE,
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(VirtualProtect), "VirtualProtect", "kernel32");
+    return f(lpAddress, dwSize, flNewProtect, lpflOldProtect);
+}
 
-pub const PFN_VirtualFree = *const fn (
+pub fn VirtualFree(
     lpAddress: ?LPVOID,
     dwSize: SIZE_T,
-    dwFreeType: DWORD,
-) callconv(.winapi) BOOL;
+    dwFreeType: MEM.FREE,
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(VirtualFree), "VirtualFree", "kernel32");
+    return f(lpAddress, dwSize, dwFreeType);
+}
 
 const section_name = ".winapi";
 
@@ -1686,10 +1698,6 @@ pub fn def(
 }
 
 pub fn init() void {
-    VirtualAlloc = def(PFN_VirtualAlloc, "VirtualAlloc", "kernel32");
-    VirtualQuery = def(PFN_VirtualQuery, "VirtualQuery", "kernel32");
-    VirtualProtect = def(PFN_VirtualProtect, "VirtualProtect", "kernel32");
-    VirtualFree = def(PFN_VirtualFree, "VirtualFree", "kernel32");
     SetLastError = def(PFN_SetLastError, "SetLastError", "kernel32");
     Sleep = def(PFN_Sleep, "Sleep", "kernel32");
     ExitProcess = def(PFN_ExitProcess, "ExitProcess", "kernel32");
@@ -1823,10 +1831,6 @@ pub fn init() void {
 //
 // KERNEL32 function definitions
 //
-pub var VirtualAlloc: PFN_VirtualAlloc = undefined;
-pub var VirtualQuery: PFN_VirtualQuery = undefined;
-pub var VirtualProtect: PFN_VirtualProtect = undefined;
-pub var VirtualFree: PFN_VirtualFree = undefined;
 pub var SetLastError: PFN_SetLastError = undefined;
 pub var Sleep: PFN_Sleep = undefined;
 pub var ExitProcess: PFN_ExitProcess = undefined;
@@ -1995,8 +1999,6 @@ comptime {
         //@export(&RE_WriteFile, .{ .name = "WriteFile", .linkage = .strong });
         //@export(&RE_ReadFile, .{ .name = "ReadFile", .linkage = .strong });
         //@export(&Sleep, .{ .name = "Sleep", .linkage = .strong });
-        //@export(&VirtualAlloc, .{ .name = "VirtualAlloc", .linkage = .strong });
-        //@export(&VirtualFree, .{ .name = "VirtualFree", .linkage = .strong });
         //@export(&ExitProcess, .{ .name = "ExitProcess", .linkage = .strong });
         //@export(&WSAStartup, .{ .name = "WSAStartup", .linkage = .strong });
         //@export(&WSACleanup, .{ .name = "WSACleanup", .linkage = .strong });
