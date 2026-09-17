@@ -1030,7 +1030,10 @@ pub fn GetLastError() linksection(section_name) callconv(.winapi) Win32Error {
     return f();
 }
 
-pub const PFN_SetLastError = *const fn (dwErrCode: Win32Error) callconv(.winapi) void;
+pub fn SetLastError(dwErrCode: Win32Error) callconv(.winapi) void {
+    const f = def(*const @TypeOf(SetLastError), "SetLastError", "kernel32");
+    f(dwErrCode);
+}
 
 pub const PFN_Sleep = *const fn (dwMilliseconds: DWORD) callconv(.winapi) void;
 
@@ -1704,7 +1707,6 @@ pub fn def(
 }
 
 pub fn init() void {
-    SetLastError = def(PFN_SetLastError, "SetLastError", "kernel32");
     Sleep = def(PFN_Sleep, "Sleep", "kernel32");
     ExitProcess = def(PFN_ExitProcess, "ExitProcess", "kernel32");
     GetCurrentProcess = def(PFN_GetCurrentProcess, "GetCurrentProcess", "kernel32");
@@ -1836,7 +1838,6 @@ pub fn init() void {
 //
 // KERNEL32 function definitions
 //
-pub var SetLastError: PFN_SetLastError = undefined;
 pub var Sleep: PFN_Sleep = undefined;
 pub var ExitProcess: PFN_ExitProcess = undefined;
 pub var GetCurrentProcess: PFN_GetCurrentProcess = undefined;

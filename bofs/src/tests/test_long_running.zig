@@ -31,11 +31,11 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
                 w32.Sleep(0);
             }
             {
-                const addr = w32.VirtualAlloc(null, 1024 + i * 1024, w32.MEM_COMMIT | w32.MEM_RESERVE, w32.PAGE_READWRITE);
+                const addr = w32.VirtualAlloc(null, 1024 + i * 1024, .{ .COMMIT = true, .RESERVE = true }, .{ .READWRITE = true });
                 if (addr == null) return 2;
                 _ = printf(.output, "VirtualAlloc() returned: 0x%x\n", @intFromPtr(addr));
                 w32.Sleep(0);
-                _ = w32.VirtualFree(addr, 0, w32.MEM_RELEASE);
+                _ = w32.VirtualFree(addr, 0, .{ .RELEASE = true });
             }
         }
     }

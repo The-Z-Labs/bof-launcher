@@ -12,20 +12,20 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
 
     const id = beacon.dataInt(&parser);
 
-    for (0..10) |_| {
-        _ = beacon.printf(.output, "Async bof #%d is running...\n", id);
-        std.Thread.sleep(10e6);
-    }
-
     if (@import("builtin").os.tag == .windows) {
+        for (0..10) |_| {
+            _ = beacon.printf(.output, "Async bof #%d is running...\n", id);
+            w32.Sleep(100);
+        }
+
         const addr = w32.VirtualAlloc(
             null,
             1024,
-            w32.MEM_COMMIT | w32.MEM_RESERVE,
-            w32.PAGE_READWRITE,
+            .{ .COMMIT = true, .RESERVE = true },
+            .{ .READWRITE = true },
         );
         if (addr == null) return 255;
-        _ = w32.VirtualFree(addr, 0, w32.MEM_RELEASE);
+        _ = w32.VirtualFree(addr, 0, .{ .RELEASE = true });
     }
 
     return @intCast(id);

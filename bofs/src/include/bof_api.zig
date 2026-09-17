@@ -759,7 +759,15 @@ fn divwide_generic(comptime T: type, _u1: T, _u0: T, v_: T, r: *T) T {
     return q1 *% b +% q0;
 }
 
+fn strlen(s: [*:0]const u8) linksection(".bofapi") usize {
+    return std.mem.sliceTo(s, 0).len;
+}
+
 comptime {
+    if (@import("builtin").mode != .Debug) {
+        xexport(&strlen, "strlen");
+    }
+
     if (@import("builtin").mode != .Debug and @import("builtin").os.tag == .windows) {
         _ = win32;
     }

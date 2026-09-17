@@ -17,7 +17,7 @@ pub const panic = std.debug.no_panic;
 var global_var: i32 = 3;
 
 fn func() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
     var list = std.array_list.Managed(i32).init(allocator);

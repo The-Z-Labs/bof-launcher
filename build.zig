@@ -71,6 +71,7 @@ pub fn build(b: *std.Build) !void {
                 const run = b.addSystemCommand(&.{
                     "bin/llvm-objcopy",
                     "--remove-section=.winapi",
+                    "--remove-section=.bofapi",
                     "--remove-section=.drectve",
                     "--strip-unneeded",
                     "--discard-all",
