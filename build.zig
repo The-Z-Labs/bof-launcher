@@ -67,16 +67,32 @@ pub fn build(b: *std.Build) !void {
             //if (std.mem.containsAtLeast(u8, full_name, 1, "cat")) break :strip;
             //if (std.mem.containsAtLeast(u8, full_name, 1, "wProcessInjectionSrdi")) break :strip;
 
-            if (std.mem.containsAtLeast(u8, full_name, 1, "coff")) {
+            {
                 const run = b.addSystemCommand(&.{
                     "bin/llvm-objcopy",
-                    "--remove-section=.winapi",
                     "--remove-section=.bofapi",
                     "--remove-section=.drectve",
                     "--strip-unneeded",
                     "--discard-all",
                     b.fmt("zig-out/" ++ bofs_install_path ++ "{s}.o", .{full_name}),
                 });
+                run.stdio = .{ .check = .empty };
+                run.has_side_effects = true;
+                _ = run.captureStdErr(.{});
+                _ = run.captureStdOut(.{});
+                run.step.dependOn(prev_step);
+                prev_step = &run.step;
+            }
+            if (std.mem.containsAtLeast(u8, full_name, 1, "coff")) {
+                const run = b.addSystemCommand(&.{
+                    "bin/llvm-objcopy",
+                    "--remove-section=.winapi",
+                    b.fmt("zig-out/" ++ bofs_install_path ++ "{s}.o", .{full_name}),
+                });
+                run.stdio = .{ .check = .empty };
+                run.has_side_effects = true;
+                _ = run.captureStdErr(.{});
+                _ = run.captureStdOut(.{});
                 run.step.dependOn(prev_step);
                 prev_step = &run.step;
             }

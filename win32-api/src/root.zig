@@ -1030,12 +1030,15 @@ pub fn GetLastError() linksection(section_name) callconv(.winapi) Win32Error {
     return f();
 }
 
-pub fn SetLastError(dwErrCode: Win32Error) callconv(.winapi) void {
+pub fn SetLastError(dwErrCode: Win32Error) linksection(section_name) callconv(.winapi) void {
     const f = def(*const @TypeOf(SetLastError), "SetLastError", "kernel32");
     f(dwErrCode);
 }
 
-pub const PFN_Sleep = *const fn (dwMilliseconds: DWORD) callconv(.winapi) void;
+pub fn Sleep(dwMilliseconds: DWORD) linksection(section_name) callconv(.winapi) void {
+    const f = def(*const @TypeOf(Sleep), "Sleep", "kernel32");
+    f(dwMilliseconds);
+}
 
 pub const PFN_ExitProcess = *const fn (uExitCode: UINT) callconv(.winapi) noreturn;
 
@@ -1707,7 +1710,6 @@ pub fn def(
 }
 
 pub fn init() void {
-    Sleep = def(PFN_Sleep, "Sleep", "kernel32");
     ExitProcess = def(PFN_ExitProcess, "ExitProcess", "kernel32");
     GetCurrentProcess = def(PFN_GetCurrentProcess, "GetCurrentProcess", "kernel32");
     GetCurrentThreadId = def(PFN_GetCurrentThreadId, "GetCurrentThreadId", "kernel32");
@@ -1838,7 +1840,6 @@ pub fn init() void {
 //
 // KERNEL32 function definitions
 //
-pub var Sleep: PFN_Sleep = undefined;
 pub var ExitProcess: PFN_ExitProcess = undefined;
 pub var GetCurrentProcess: PFN_GetCurrentProcess = undefined;
 pub var GetCurrentThreadId: PFN_GetCurrentThreadId = undefined;
@@ -2003,7 +2004,6 @@ comptime {
     if (@import("builtin").mode != .Debug and @import("builtin").os.tag == .windows and bof) {
         //@export(&RE_WriteFile, .{ .name = "WriteFile", .linkage = .strong });
         //@export(&RE_ReadFile, .{ .name = "ReadFile", .linkage = .strong });
-        //@export(&Sleep, .{ .name = "Sleep", .linkage = .strong });
         //@export(&ExitProcess, .{ .name = "ExitProcess", .linkage = .strong });
         //@export(&WSAStartup, .{ .name = "WSAStartup", .linkage = .strong });
         //@export(&WSACleanup, .{ .name = "WSACleanup", .linkage = .strong });
@@ -2041,6 +2041,7 @@ comptime {
         //@export(&NtFsControlFile, .{ .name = "NtFsControlFile", .linkage = .strong });
         @export(&NtAllocateVirtualMemory, .{ .name = "NtAllocateVirtualMemory", .linkage = .strong, .visibility = .hidden });
         @export(&NtFreeVirtualMemory, .{ .name = "NtFreeVirtualMemory", .linkage = .strong, .visibility = .hidden });
+        @export(&Sleep, .{ .name = "Sleep", .linkage = .strong, .visibility = .hidden });
         //@export(&NtOpenProcess, .{ .name = "NtOpenProcess", .linkage = .strong, .visibility = .hidden });
         //@export(&NtQueryInformationFile, .{ .name = "NtQueryInformationFile", .linkage = .strong });
         //@export(&GetCurrentDirectoryW, .{ .name = "GetCurrentDirectoryW", .linkage = .strong });

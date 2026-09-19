@@ -14,7 +14,7 @@ pub fn init(adata: ?[*]u8, alen: i32, options: InitOptions) void {
     _ = alen;
     _ = options;
     beacon.init();
-    //if (@import("builtin").os.tag == .windows) win32.init();
+    if (@import("builtin").os.tag == .windows) win32.init();
 }
 
 pub fn print(@"type": beacon.CallbackType, comptime fmt: []const u8, args: anytype) void {
@@ -761,13 +761,13 @@ fn divwide_generic(comptime T: type, _u1: T, _u0: T, v_: T, r: *T) T {
 
 const section_name = ".bofapi";
 
-fn strlen(s: [*:0]const u8) linksection(section_name) usize {
+fn strlen(s: [*:0]const u8) linksection(section_name) callconv(.c) usize {
     return std.mem.sliceTo(s, 0).len;
 }
 
 comptime {
     if (@import("builtin").mode != .Debug) {
-        xexport(&strlen, "strlen");
+        @export(&strlen, .{ .name = "strlen", .linkage = .strong });
     }
 
     if (@import("builtin").mode != .Debug and @import("builtin").os.tag == .windows) {

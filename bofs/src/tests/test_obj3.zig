@@ -4,7 +4,7 @@ const beacon = bofapi.beacon;
 const w32 = bofapi.win32;
 
 comptime {
-    @import("bof_api").embedFunctionCode("memset");
+    //@import("bof_api").embedFunctionCode("memset");
 }
 
 pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
@@ -31,9 +31,9 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
             _ = w32.SetLastError(.SUCCESS);
             if (w32.GetModuleHandleA(null) == null) return 124;
             const dll = w32.LoadLibraryA("kernel32.dll") orelse return 125;
-            const sleep: w32.PFN_Sleep = @ptrCast(w32.GetProcAddress(dll, "Sleep") orelse return 126);
+            const sleep: *const fn (w32.DWORD) callconv(.winapi) void = @ptrCast(w32.GetProcAddress(dll, "Sleep") orelse return 126);
             const freeLibrary: w32.PFN_FreeLibrary = @ptrCast(w32.GetProcAddress(dll, "FreeLibrary") orelse return 127);
-            sleep(0);
+            sleep(1);
             _ = freeLibrary(dll);
             if (w32.GetLastError() != .SUCCESS) return 128;
         }
