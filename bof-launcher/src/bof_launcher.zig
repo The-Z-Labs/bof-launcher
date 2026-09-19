@@ -2721,7 +2721,7 @@ fn zgateSetCodeProtect(section: []u8, new_protect: w32.PAGE) linksection(zgate_c
 }
 
 var zgateOutputDebugStringAPtr: w32.PFN_OutputDebugStringA linksection(zgate_dsection) = undefined;
-var zgateExitProcessPtr: w32.PFN_ExitProcess linksection(zgate_dsection) = undefined;
+var zgateExitProcessPtr: *const @TypeOf(w32.ExitProcess) linksection(zgate_dsection) = undefined;
 var zgateFlushInstructionCachePtr: w32.PFN_FlushInstructionCache linksection(zgate_dsection) = undefined;
 var zgateVirtualAllocPtr: *const @TypeOf(w32.VirtualAlloc) linksection(zgate_dsection) = undefined;
 var zgateVirtualAllocExPtr: w32.PFN_VirtualAllocEx linksection(zgate_dsection) = undefined;

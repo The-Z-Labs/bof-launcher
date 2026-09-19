@@ -1040,14 +1040,23 @@ pub fn Sleep(dwMilliseconds: DWORD) linksection(section_name) callconv(.winapi) 
     f(dwMilliseconds);
 }
 
-pub const PFN_ExitProcess = *const fn (uExitCode: UINT) callconv(.winapi) noreturn;
+pub fn ExitProcess(uExitCode: UINT) callconv(.winapi) noreturn {
+    const f = def(*const @TypeOf(ExitProcess), "ExitProcess", "kernel32");
+    f(uExitCode);
+}
 
-pub const PFN_GetCurrentProcess = *const fn () callconv(.winapi) HANDLE;
+pub fn GetCurrentProcess() callconv(.winapi) HANDLE {
+    const f = def(*const @TypeOf(GetCurrentProcess), "GetCurrentProcess", "kernel32");
+    return f();
+}
 
-pub const PFN_WaitForSingleObject = *const fn (
+pub fn WaitForSingleObject(
     hHandle: HANDLE,
-    dwMilliseconds: DWORD,
-) callconv(.winapi) DWORD;
+    dwMilliseconds: DWORD
+) callconv(.winapi) DWORD {
+    const f = def(*const @TypeOf(WaitForSingleObject), "WaitForSingleObject", "kernel32");
+    return f(hHandle, dwMilliseconds);
+}
 
 pub const PFN_ReadFile = *const fn (
     hFile: HANDLE,
@@ -1710,8 +1719,6 @@ pub fn def(
 }
 
 pub fn init() void {
-    ExitProcess = def(PFN_ExitProcess, "ExitProcess", "kernel32");
-    GetCurrentProcess = def(PFN_GetCurrentProcess, "GetCurrentProcess", "kernel32");
     GetCurrentThreadId = def(PFN_GetCurrentThreadId, "GetCurrentThreadId", "kernel32");
     FreeLibrary = def(PFN_FreeLibrary, "FreeLibrary", "kernel32");
     CreateThread = def(PFN_CreateThread, "CreateThread", "kernel32");
@@ -1720,7 +1727,6 @@ pub fn init() void {
     WriteFile = def(PFN_WriteFile, "WriteFile", "kernel32");
     DuplicateHandle = def(PFN_DuplicateHandle, "DuplicateHandle", "kernel32");
     ReadFile = def(PFN_ReadFile, "ReadFile", "kernel32");
-    WaitForSingleObject = def(PFN_WaitForSingleObject, "WaitForSingleObject", "kernel32");
     GetModuleFileNameA = def(PFN_GetModuleFileNameA, "GetModuleFileNameA", "kernel32");
     GetCurrentProcessId = def(PFN_GetCurrentProcessId, "GetCurrentProcessId", "kernel32");
     GetProcessId = def(PFN_GetProcessId, "GetProcessId", "kernel32");
@@ -1840,8 +1846,6 @@ pub fn init() void {
 //
 // KERNEL32 function definitions
 //
-pub var ExitProcess: PFN_ExitProcess = undefined;
-pub var GetCurrentProcess: PFN_GetCurrentProcess = undefined;
 pub var GetCurrentThreadId: PFN_GetCurrentThreadId = undefined;
 pub var FreeLibrary: PFN_FreeLibrary = undefined;
 pub var CreateThread: PFN_CreateThread = undefined;
@@ -1850,7 +1854,6 @@ pub var VirtualFreeEx: PFN_VirtualFreeEx = undefined;
 pub var WriteFile: PFN_WriteFile = undefined;
 pub var DuplicateHandle: PFN_DuplicateHandle = undefined;
 pub var ReadFile: PFN_ReadFile = undefined;
-pub var WaitForSingleObject: PFN_WaitForSingleObject = undefined;
 pub var GetModuleFileNameA: PFN_GetModuleFileNameA = undefined;
 pub var GetCurrentProcessId: PFN_GetCurrentProcessId = undefined;
 pub var GetProcessId: PFN_GetProcessId = undefined;
@@ -2004,7 +2007,6 @@ comptime {
     if (@import("builtin").mode != .Debug and @import("builtin").os.tag == .windows and bof) {
         //@export(&RE_WriteFile, .{ .name = "WriteFile", .linkage = .strong });
         //@export(&RE_ReadFile, .{ .name = "ReadFile", .linkage = .strong });
-        //@export(&ExitProcess, .{ .name = "ExitProcess", .linkage = .strong });
         //@export(&WSAStartup, .{ .name = "WSAStartup", .linkage = .strong });
         //@export(&WSACleanup, .{ .name = "WSACleanup", .linkage = .strong });
         //@export(&WSAGetLastError, .{ .name = "WSAGetLastError", .linkage = .strong });
@@ -2041,7 +2043,6 @@ comptime {
         //@export(&NtFsControlFile, .{ .name = "NtFsControlFile", .linkage = .strong });
         @export(&NtAllocateVirtualMemory, .{ .name = "NtAllocateVirtualMemory", .linkage = .strong, .visibility = .hidden });
         @export(&NtFreeVirtualMemory, .{ .name = "NtFreeVirtualMemory", .linkage = .strong, .visibility = .hidden });
-        @export(&Sleep, .{ .name = "Sleep", .linkage = .strong, .visibility = .hidden });
         //@export(&NtOpenProcess, .{ .name = "NtOpenProcess", .linkage = .strong, .visibility = .hidden });
         //@export(&NtQueryInformationFile, .{ .name = "NtQueryInformationFile", .linkage = .strong });
         //@export(&GetCurrentDirectoryW, .{ .name = "GetCurrentDirectoryW", .linkage = .strong });
