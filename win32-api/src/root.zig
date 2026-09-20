@@ -70,7 +70,6 @@ pub const UNICODE_STRING = windows.UNICODE_STRING;
 pub const INFINITE = 4294967295;
 pub const BOOLEAN = BYTE;
 pub const HRESULT = c_long;
-pub const ACCESS_MASK = windows.ACCESS_MASK;
 pub const HLOCAL = HANDLE;
 pub const CONTEXT = windows.CONTEXT;
 pub const LPTHREAD_START_ROUTINE = *const fn (LPVOID) callconv(.winapi) DWORD;
@@ -78,9 +77,6 @@ pub const WNDENUMPROC = *const fn (HWND, LPARAM) callconv(.winapi) BOOL;
 pub const FILE_BOTH_DIR_INFORMATION = windows.FILE_BOTH_DIR_INFORMATION;
 pub const FILE_BOTH_DIRECTORY_INFORMATION = windows.FILE_BOTH_DIRECTORY_INFORMATION;
 pub const SECTION_INHERIT = windows.SECTION_INHERIT;
-pub const PAGE = windows.PAGE;
-pub const MEM = windows.MEM;
-pub const SEC = windows.SEC;
 
 pub const BYTE = u8;
 pub const CHAR = u8;
@@ -284,11 +280,11 @@ pub const STANDARD_RIGHTS_READ = READ_CONTROL;
 pub const STANDARD_RIGHTS_WRITE = READ_CONTROL;
 pub const STANDARD_RIGHTS_EXECUTE = READ_CONTROL;
 
-//pub const PROCESS_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0xffff;
-//pub const PROCESS_CREATE_THREAD = 0x0002;
-//pub const PROCESS_VM_OPERATION = 0x0008;
-//pub const PROCESS_VM_READ = 0x0010;
-//pub const PROCESS_VM_WRITE = 0x0020;
+pub const PROCESS_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0xffff;
+pub const PROCESS_CREATE_THREAD = 0x0002;
+pub const PROCESS_VM_OPERATION = 0x0008;
+pub const PROCESS_VM_READ = 0x0010;
+pub const PROCESS_VM_WRITE = 0x0020;
 
 pub const JOB_OBJECT_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0x3F;
 
@@ -988,8 +984,8 @@ pub const EXTENDED_NAME_FORMAT = enum(u32) {
 pub fn VirtualAlloc(
     lpAddress: ?LPVOID,
     dwSize: SIZE_T,
-    flAllocationType: MEM.ALLOCATE,
-    flProtect: PAGE,
+    flAllocationType: DWORD,
+    flProtect: DWORD,
 ) linksection(section_name) callconv(.winapi) ?LPVOID {
     const f = def(*const @TypeOf(VirtualAlloc), "VirtualAlloc", "kernel32");
     return f(lpAddress, dwSize, flAllocationType, flProtect);
@@ -1007,8 +1003,8 @@ pub fn VirtualQuery(
 pub fn VirtualProtect(
     lpAddress: LPVOID,
     dwSize: SIZE_T,
-    flNewProtect: PAGE,
-    lpflOldProtect: *PAGE,
+    flNewProtect: DWORD,
+    lpflOldProtect: *DWORD,
 ) linksection(section_name) callconv(.winapi) BOOL {
     const f = def(*const @TypeOf(VirtualProtect), "VirtualProtect", "kernel32");
     return f(lpAddress, dwSize, flNewProtect, lpflOldProtect);
@@ -1017,7 +1013,7 @@ pub fn VirtualProtect(
 pub fn VirtualFree(
     lpAddress: ?LPVOID,
     dwSize: SIZE_T,
-    dwFreeType: MEM.FREE,
+    dwFreeType: DWORD,
 ) linksection(section_name) callconv(.winapi) BOOL {
     const f = def(*const @TypeOf(VirtualFree), "VirtualFree", "kernel32");
     return f(lpAddress, dwSize, dwFreeType);
@@ -1040,12 +1036,12 @@ pub fn Sleep(dwMilliseconds: DWORD) linksection(section_name) callconv(.winapi) 
     f(dwMilliseconds);
 }
 
-pub fn ExitProcess(uExitCode: UINT) callconv(.winapi) noreturn {
+pub fn ExitProcess(uExitCode: UINT) linksection(section_name) callconv(.winapi) noreturn {
     const f = def(*const @TypeOf(ExitProcess), "ExitProcess", "kernel32");
     f(uExitCode);
 }
 
-pub fn GetCurrentProcess() callconv(.winapi) HANDLE {
+pub fn GetCurrentProcess() linksection(section_name) callconv(.winapi) HANDLE {
     const f = def(*const @TypeOf(GetCurrentProcess), "GetCurrentProcess", "kernel32");
     return f();
 }
@@ -1053,7 +1049,7 @@ pub fn GetCurrentProcess() callconv(.winapi) HANDLE {
 pub fn WaitForSingleObject(
     hHandle: HANDLE,
     dwMilliseconds: DWORD
-) callconv(.winapi) DWORD {
+) linksection(section_name) callconv(.winapi) DWORD {
     const f = def(*const @TypeOf(WaitForSingleObject), "WaitForSingleObject", "kernel32");
     return f(hHandle, dwMilliseconds);
 }
@@ -1303,7 +1299,7 @@ pub const PFN_NtTerminateThread = *const fn (
 
 pub fn NtOpenProcess(
     ProcessHandle: *HANDLE,
-    DesiredAccess: ACCESS_MASK,
+    DesiredAccess: DWORD,
     ObjectAttributes: ?*OBJECT.ATTRIBUTES,
     ClientId: ?*CLIENT_ID,
 ) linksection(section_name) callconv(.winapi) NTSTATUS {
@@ -1317,7 +1313,7 @@ pub const PFN_NtSuspendProcess = *const fn (ProcessHandle: HANDLE) callconv(.win
 
 pub const PFN_NtCreateJobObject = *const fn (
     JobHandle: *HANDLE,
-    DesiredAccess: ACCESS_MASK,
+    DesiredAccess: DWORD,
     ObjectAttributes: ?*OBJECT_ATTRIBUTES,
 ) callconv(.winapi) NTSTATUS;
 
@@ -1348,8 +1344,8 @@ pub const PFN_RtlWow64EnableFsRedirection = *const fn (Wow64FsEnableRedirection:
 pub const PFN_NtCreateUserProcess = *const fn (
     ProcessHandle: *HANDLE,
     ThreadHandle: *HANDLE,
-    ProcessDesiredAccess: ACCESS_MASK,
-    ThreadDesiredAccess: ACCESS_MASK,
+    ProcessDesiredAccess: DWORD,
+    ThreadDesiredAccess: DWORD,
     ProcessObjectAttributes: ?*OBJECT_ATTRIBUTES,
     ThreadObjectAttributes: ?*OBJECT_ATTRIBUTES,
     ProcessFlags: ULONG,
@@ -2041,8 +2037,8 @@ comptime {
         //@export(&RE_NtDeviceIoControlFile, .{ .name = "NtDeviceIoControlFile", .linkage = .strong });
         //@export(&RE_NtFsControlFile, .{ .name = "NtFsControlFile", .linkage = .strong });
         //@export(&NtFsControlFile, .{ .name = "NtFsControlFile", .linkage = .strong });
-        @export(&NtAllocateVirtualMemory, .{ .name = "NtAllocateVirtualMemory", .linkage = .strong, .visibility = .hidden });
-        @export(&NtFreeVirtualMemory, .{ .name = "NtFreeVirtualMemory", .linkage = .strong, .visibility = .hidden });
+        @export(&NtAllocateVirtualMemory, .{ .name = "NtAllocateVirtualMemory", .linkage = .strong });
+        @export(&NtFreeVirtualMemory, .{ .name = "NtFreeVirtualMemory", .linkage = .strong });
         //@export(&NtOpenProcess, .{ .name = "NtOpenProcess", .linkage = .strong, .visibility = .hidden });
         //@export(&NtQueryInformationFile, .{ .name = "NtQueryInformationFile", .linkage = .strong });
         //@export(&GetCurrentDirectoryW, .{ .name = "GetCurrentDirectoryW", .linkage = .strong });
@@ -2057,8 +2053,8 @@ pub fn NtAllocateVirtualMemory(
     BaseAddress: *PVOID,
     ZeroBits: ULONG_PTR,
     RegionSize: *SIZE_T,
-    AllocationType: MEM.ALLOCATE,
-    Protect: PAGE,
+    AllocationType: DWORD,
+    Protect: DWORD,
 ) linksection(section_name) callconv(.winapi) NTSTATUS {
     const f = def(*const @TypeOf(NtAllocateVirtualMemory), "NtAllocateVirtualMemory", "ntdll");
     return f(ProcessHandle, BaseAddress, ZeroBits, RegionSize, AllocationType, Protect);
@@ -2068,7 +2064,7 @@ pub fn NtFreeVirtualMemory(
     ProcessHandle: HANDLE,
     BaseAddress: *PVOID,
     RegionSize: *SIZE_T,
-    FreeType: MEM.FREE,
+    FreeType: DWORD,
 ) linksection(section_name) callconv(.winapi) NTSTATUS {
     const f = def(*const @TypeOf(NtFreeVirtualMemory), "NtFreeVirtualMemory", "ntdll");
     return f(ProcessHandle, BaseAddress, RegionSize, FreeType);

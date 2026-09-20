@@ -22,7 +22,7 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
     };
     state.nt_status = w32.NtOpenProcess(
         &state.process_handle,
-        .{ .SPECIFIC = .{ .PROCESS = .{ .CREATE_THREAD = true, .VM_OPERATION = true, .VM_WRITE = true } } },
+        w32.PROCESS_CREATE_THREAD + w32.PROCESS_VM_OPERATION + w32.PROCESS_VM_WRITE,
         &obj_attribs,
         &client_id,
     );

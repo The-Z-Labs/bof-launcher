@@ -117,7 +117,7 @@ const Bof = struct {
 
             if (bof.sections_mem) |slice| {
                 if (@import("builtin").os.tag == .windows) {
-                    _ = w32.VirtualFree(slice.ptr, 0, .{ .RELEASE = true });
+                    _ = w32.VirtualFree(slice.ptr, 0, w32.MEM_RELEASE);
                 } else if (@import("builtin").os.tag == .linux) {
                     _ = linux.munmap(slice.ptr, slice.len);
                 }
@@ -174,8 +174,8 @@ const Bof = struct {
             const addr = w32.VirtualAlloc(
                 null,
                 total_size,
-                .{ .COMMIT = true, .RESERVE = true, .TOP_DOWN = true },
-                .{ .READWRITE = true },
+                w32.MEM_COMMIT + w32.MEM_RESERVE + w32.MEM_TOP_DOWN,
+                w32.PAGE_READWRITE,
             );
             if (addr == null) return error.VirtualAllocFailed;
             break :blk @as([*]u8, @ptrCast(addr))[0..total_size];
@@ -446,11 +446,11 @@ const Bof = struct {
 
         for (bof.sections[0..bof.sections_num]) |section| {
             if (section.is_code) {
-                var old_protection: w32.PAGE = undefined;
+                var old_protection: w32.DWORD = 0;
                 if (w32.VirtualProtect(
                     section.mem.ptr,
                     section.mem.len,
-                    .{ .EXECUTE_READ = true },
+                    w32.PAGE_EXECUTE_READ,
                     &old_protection,
                 ) == w32.FALSE) return error.VirtualProtectFailed;
 
@@ -1625,8 +1625,7 @@ fn threadFuncCloneProcessWindows(bof: *Bof, arg_data: ?[]u8, context: *BofContex
     }
 
     var job_handle: w32.HANDLE = undefined;
-    //_ = w32.NtCreateJobObject(&job_handle, w32.JOB_OBJECT_ALL_ACCESS, null);
-    _ = w32.NtCreateJobObject(&job_handle, w32.ACCESS_MASK.Specific.JobObject.ALL_ACCESS, null);
+    _ = w32.NtCreateJobObject(&job_handle, w32.JOB_OBJECT_ALL_ACCESS, null);
     defer _ = w32.NtClose(job_handle);
 
     var job_limits = std.mem.zeroes(w32.JOBOBJECT_EXTENDED_LIMIT_INFORMATION);
@@ -2401,7 +2400,7 @@ fn initLauncher() !void {
                     @ptrFromInt(dll_base + section_headers[i].VirtualAddress),
                 )[0..section_headers[i].SizeOfRawData];
 
-                zgateSetCodeProtect(mem, .{ .READWRITE = true });
+                zgateSetCodeProtect(mem, w32.PAGE_READWRITE);
 
                 gstate.dll.sections_to_mask[num_sections] = .{ .mem = mem, .is_code = false };
 
@@ -2623,7 +2622,7 @@ fn zgateBegin(func: ZGateSysApiCall) linksection(zgate_csection) bool {
     if (gstate.dll.base_address != 0) {
         for (0..gstate.dll.sections_to_mask_num) |i| {
             const section = &gstate.dll.sections_to_mask[i];
-            if (section.is_code) zgateSetCodeProtect(section.mem, .{ .READWRITE = true });
+            if (section.is_code) zgateSetCodeProtect(section.mem, w32.PAGE_READWRITE);
             zgateXorBytes(section.mem);
         }
     }
@@ -2636,7 +2635,7 @@ fn zgateEnd() linksection(zgate_csection) void {
         for (0..gstate.dll.sections_to_mask_num) |i| {
             const section = &gstate.dll.sections_to_mask[i];
             zgateXorBytes(section.mem);
-            if (section.is_code) zgateSetCodeProtect(section.mem, .{ .EXECUTE_READ = true });
+            if (section.is_code) zgateSetCodeProtect(section.mem, w32.PAGE_EXECUTE_READ);
         }
     }
 
@@ -2663,11 +2662,11 @@ fn zgateXorBof(bof: *Bof) linksection(zgate_csection) void {
             zgateXorBytes(section.mem);
         }
         for (bof.sections[0..bof.sections_num]) |section| {
-            if (section.is_code) zgateSetCodeProtect(section.mem, .{ .EXECUTE_READ = true });
+            if (section.is_code) zgateSetCodeProtect(section.mem, w32.PAGE_EXECUTE_READ);
         }
     } else {
         for (bof.sections[0..bof.sections_num]) |section| {
-            if (section.is_code) zgateSetCodeProtect(section.mem, .{ .READWRITE = true });
+            if (section.is_code) zgateSetCodeProtect(section.mem, w32.PAGE_READWRITE);
         }
         for (bof.sections[0..bof.sections_num]) |section| {
             zgateXorBytes(section.mem);
@@ -2688,10 +2687,10 @@ fn zgateXorAllocations() linksection(zgate_csection) void {
     }
 }
 
-fn zgateSetCodeProtect(section: []u8, new_protect: w32.PAGE) linksection(zgate_csection) void {
+fn zgateSetCodeProtect(section: []u8, new_protect: w32.DWORD) linksection(zgate_csection) void {
     if (@import("builtin").os.tag == .windows) {
         var res: w32.BOOL = undefined;
-        var old_protect: w32.PAGE = undefined;
+        var old_protect: w32.DWORD = 0;
 
         res = zgateVirtualProtectPtr(@ptrCast(section.ptr), section.len, new_protect, &old_protect);
         if (res == w32.FALSE) {
@@ -2708,7 +2707,7 @@ fn zgateSetCodeProtect(section: []u8, new_protect: w32.PAGE) linksection(zgate_c
         const ret = linux.mprotect(
             section.ptr,
             section.len,
-            if (new_protect.EXECUTE_READ)
+            if (new_protect == w32.PAGE_EXECUTE_READ)
                 .{ .READ = true, .EXEC = true }
             else
                 .{ .READ = true, .WRITE = true },
@@ -2762,8 +2761,8 @@ fn zgate_memfd_create(
 fn zgateVirtualAlloc(
     lpAddress: ?w32.LPVOID,
     dwSize: w32.SIZE_T,
-    flAllocationType: w32.MEM.ALLOCATE,
-    flProtect: w32.PAGE,
+    flAllocationType: w32.DWORD,
+    flProtect: w32.DWORD,
 ) linksection(zgate_csection) callconv(.winapi) ?w32.LPVOID {
     const do_mask = zgateBegin(.VirtualAlloc);
     const ret = zgateVirtualAllocPtr(lpAddress, dwSize, flAllocationType, flProtect);
@@ -2787,7 +2786,7 @@ fn zgateVirtualAllocEx(
 fn zgateVirtualFree(
     lpAddress: ?w32.LPVOID,
     dwSize: w32.SIZE_T,
-    dwFreeType: w32.MEM.FREE,
+    dwFreeType: w32.DWORD,
 ) linksection(zgate_csection) callconv(.winapi) w32.BOOL {
     const do_mask = zgateBegin(.VirtualFree);
     const ret = zgateVirtualFreePtr(lpAddress, dwSize, dwFreeType);
@@ -2809,8 +2808,8 @@ fn zgateVirtualQuery(
 fn zgateVirtualProtect(
     lpAddress: w32.LPVOID,
     dwSize: w32.SIZE_T,
-    flNewProtect: w32.PAGE,
-    lpflOldProtect: *w32.PAGE,
+    flNewProtect: w32.DWORD,
+    lpflOldProtect: *w32.DWORD,
 ) linksection(zgate_csection) callconv(.winapi) w32.BOOL {
     const do_mask = zgateBegin(.VirtualProtect);
     const ret = zgateVirtualProtectPtr(lpAddress, dwSize, flNewProtect, lpflOldProtect);

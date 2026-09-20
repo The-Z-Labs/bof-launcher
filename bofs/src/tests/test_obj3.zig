@@ -53,8 +53,8 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
             const addr = w32.VirtualAlloc(
                 null,
                 1024,
-                .{ .COMMIT = true, .RESERVE = true },
-                .{ .READWRITE = true },
+                w32.MEM_COMMIT + w32.MEM_RESERVE,
+                w32.PAGE_READWRITE,
             );
             if (addr == null) return 255;
 
@@ -62,7 +62,7 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
 
             mem[100] += 10;
 
-            _ = w32.VirtualFree(addr, 0, .{ .RELEASE = true });
+            _ = w32.VirtualFree(addr, 0, w32.MEM_RELEASE);
 
             if (mem[100] != 133) return 155;
         }
@@ -83,8 +83,8 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
             const addr = w32.VirtualAlloc(
                 null,
                 1024,
-                .{ .COMMIT = true, .RESERVE = true },
-                .{ .READWRITE = true },
+                w32.MEM_COMMIT + w32.MEM_RESERVE,
+                w32.PAGE_READWRITE,
             );
             if (addr == null) return 255;
 
@@ -93,7 +93,7 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
             if (mem.?[30] != 3) return 254;
             if (mem.?[90] != 7) return 254;
 
-            _ = w32.VirtualFree(addr, 0, .{ .RELEASE = true });
+            _ = w32.VirtualFree(addr, 0, w32.MEM_RELEASE);
 
             if (mem.?[10] != 1) return 252;
             if (mem.?[20] != 2) return 252;

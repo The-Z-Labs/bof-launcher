@@ -25,8 +25,8 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
         @ptrCast(base_address_ptr),
         0,
         &size,
-        .{ .COMMIT = true, .RESERVE = true },
-        .{ .READWRITE = true },
+        w32.MEM_COMMIT + w32.MEM_RESERVE,
+        w32.PAGE_READWRITE,
     );
 
     //std.debug.print("0x{x}\n", .{base_address_ptr.*});

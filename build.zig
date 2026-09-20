@@ -59,14 +59,6 @@ pub fn build(b: *std.Build) !void {
             // Always skip debug exe
             if (std.mem.containsAtLeast(u8, full_name, 1, "debug")) break :strip;
 
-            // Blacklist (llvm-objcopy can't remove section for some reason)
-            //if (std.mem.containsAtLeast(u8, full_name, 1, "udpScanner")) break :strip;
-            //if (std.mem.containsAtLeast(u8, full_name, 1, "tcpScanner")) break :strip;
-            //if (std.mem.containsAtLeast(u8, full_name, 1, "grep")) break :strip;
-            //if (std.mem.containsAtLeast(u8, full_name, 1, "find")) break :strip;
-            //if (std.mem.containsAtLeast(u8, full_name, 1, "cat")) break :strip;
-            //if (std.mem.containsAtLeast(u8, full_name, 1, "wProcessInjectionSrdi")) break :strip;
-
             {
                 const run = b.addSystemCommand(&.{
                     "bin/llvm-objcopy",
