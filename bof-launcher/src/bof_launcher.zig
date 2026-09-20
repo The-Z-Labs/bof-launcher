@@ -2796,7 +2796,7 @@ fn zgateVirtualFree(
 
 fn zgateVirtualQuery(
     lpAddress: ?w32.LPVOID,
-    lpBuffer: *w32.MEMORY.BASIC_INFORMATION,
+    lpBuffer: *w32.MEMORY_BASIC_INFORMATION,
     dwLength: w32.SIZE_T,
 ) linksection(zgate_csection) callconv(.winapi) w32.SIZE_T {
     const do_mask = zgateBegin(.VirtualQuery);

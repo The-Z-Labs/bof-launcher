@@ -49,7 +49,6 @@ pub const GUID = extern struct {
     Data3: u16,
     Data4: [8]u8,
 };
-pub const MEMORY = windows.MEMORY;
 pub const Win32Error = windows.Win32Error;
 pub const BOOL = c_int;
 pub const PBOOL = *BOOL;
@@ -64,8 +63,6 @@ pub const CLIENT_ID = extern struct {
     UniqueProcess: ?HANDLE,
     UniqueThread: ?HANDLE,
 };
-pub const OBJECT = windows.OBJECT;
-pub const FILE = windows.FILE;
 pub const UNICODE_STRING = windows.UNICODE_STRING;
 pub const INFINITE = 4294967295;
 pub const BOOLEAN = BYTE;
@@ -993,7 +990,7 @@ pub fn VirtualAlloc(
 
 pub fn VirtualQuery(
     lpAddress: ?LPVOID,
-    lpBuffer: *MEMORY.BASIC_INFORMATION,
+    lpBuffer: *MEMORY_BASIC_INFORMATION,
     dwLength: SIZE_T,
 ) linksection(section_name) callconv(.winapi) SIZE_T {
     const f = def(*const @TypeOf(VirtualQuery), "VirtualQuery", "kernel32");
@@ -1300,7 +1297,7 @@ pub const PFN_NtTerminateThread = *const fn (
 pub fn NtOpenProcess(
     ProcessHandle: *HANDLE,
     DesiredAccess: DWORD,
-    ObjectAttributes: ?*OBJECT.ATTRIBUTES,
+    ObjectAttributes: ?*OBJECT_ATTRIBUTES,
     ClientId: ?*CLIENT_ID,
 ) linksection(section_name) callconv(.winapi) NTSTATUS {
     const f = def(*const @TypeOf(NtOpenProcess), "NtOpenProcess", "ntdll");

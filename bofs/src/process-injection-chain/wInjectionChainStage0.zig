@@ -12,9 +12,13 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
         break :blk @ptrFromInt(std.mem.readInt(usize, mem, .little));
     };
 
-    var obj_attribs = w32.OBJECT.ATTRIBUTES{
+    var obj_attribs = w32.OBJECT_ATTRIBUTES{
+        .Length = @sizeOf(w32.OBJECT_ATTRIBUTES),
+        .RootDirectory = null,
         .ObjectName = null,
-        .Attributes = .{ .INHERIT = true },
+        .Attributes = w32.OBJ_INHERIT,
+        .SecurityDescriptor = null,
+        .SecurityQualityOfService = null,
     };
     var client_id = w32.CLIENT_ID{
         .UniqueProcess = @ptrFromInt(state.process_id),
