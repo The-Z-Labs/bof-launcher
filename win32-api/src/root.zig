@@ -3,6 +3,11 @@ const windows = std.os.windows;
 
 pub const ATTACH_PARENT_PROCESS = 0xffff_ffff;
 
+pub const ERROR_SUCCESS = 0;
+pub const ERROR_INVALID_FUNCTION = 1;
+pub const ERROR_INSUFFICIENT_BUFFER = 122;
+pub const ERROR_MORE_DATA = 234;
+
 pub const OVERLAPPED = extern struct {
     Internal: ULONG_PTR,
     InternalHigh: ULONG_PTR,
@@ -49,7 +54,6 @@ pub const GUID = extern struct {
     Data3: u16,
     Data4: [8]u8,
 };
-pub const Win32Error = windows.Win32Error;
 pub const BOOL = c_int;
 pub const PBOOL = *BOOL;
 pub const TRUE = 1;
@@ -1018,12 +1022,12 @@ pub fn VirtualFree(
 
 const section_name = ".winapi";
 
-pub fn GetLastError() linksection(section_name) callconv(.winapi) Win32Error {
+pub fn GetLastError() linksection(section_name) callconv(.winapi) DWORD {
     const f = def(*const @TypeOf(GetLastError), "GetLastError", "kernel32");
     return f();
 }
 
-pub fn SetLastError(dwErrCode: Win32Error) linksection(section_name) callconv(.winapi) void {
+pub fn SetLastError(dwErrCode: DWORD) linksection(section_name) callconv(.winapi) void {
     const f = def(*const @TypeOf(SetLastError), "SetLastError", "kernel32");
     f(dwErrCode);
 }
