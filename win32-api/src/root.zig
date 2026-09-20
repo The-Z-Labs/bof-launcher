@@ -8,6 +8,9 @@ pub const ERROR_INVALID_FUNCTION = 1;
 pub const ERROR_INSUFFICIENT_BUFFER = 122;
 pub const ERROR_MORE_DATA = 234;
 
+pub const STATUS_SUCCESS = 0x00000000;
+pub const STATUS_PROCESS_CLONED = 0x00000129;
+
 pub const OVERLAPPED = extern struct {
     Internal: ULONG_PTR,
     InternalHigh: ULONG_PTR,
@@ -58,16 +61,27 @@ pub const BOOL = c_int;
 pub const PBOOL = *BOOL;
 pub const TRUE = 1;
 pub const FALSE = 0;
-pub const OSVERSIONINFOW = windows.OSVERSIONINFOW;
-pub const RTL_OSVERSIONINFOW = windows.RTL_OSVERSIONINFOW;
+pub const OSVERSIONINFOW = extern struct {
+    dwOSVersionInfoSize: ULONG,
+    dwMajorVersion: ULONG,
+    dwMinorVersion: ULONG,
+    dwBuildNumber: ULONG,
+    dwPlatformId: ULONG,
+    szCSDVersion: [128]WCHAR,
+};
+pub const RTL_OSVERSIONINFOW = OSVERSIONINFOW;
 pub const PSID = PVOID;
 pub const PSECURITY_DESCRIPTOR = PVOID;
-pub const NTSTATUS = windows.NTSTATUS;
+pub const NTSTATUS = u32;
 pub const CLIENT_ID = extern struct {
     UniqueProcess: ?HANDLE,
     UniqueThread: ?HANDLE,
 };
-pub const UNICODE_STRING = windows.UNICODE_STRING;
+pub const UNICODE_STRING = extern struct {
+    Length: USHORT,
+    MaximumLength: USHORT,
+    Buffer: ?[*]WCHAR,
+};
 pub const INFINITE = 4294967295;
 pub const BOOLEAN = BYTE;
 pub const HRESULT = c_long;
@@ -75,10 +89,23 @@ pub const HLOCAL = HANDLE;
 pub const CONTEXT = windows.CONTEXT;
 pub const LPTHREAD_START_ROUTINE = *const fn (LPVOID) callconv(.winapi) DWORD;
 pub const WNDENUMPROC = *const fn (HWND, LPARAM) callconv(.winapi) BOOL;
-pub const FILE_BOTH_DIR_INFORMATION = windows.FILE_BOTH_DIR_INFORMATION;
-pub const FILE_BOTH_DIRECTORY_INFORMATION = windows.FILE_BOTH_DIRECTORY_INFORMATION;
-pub const SECTION_INHERIT = windows.SECTION_INHERIT;
-
+pub const FILE_BOTH_DIR_INFORMATION = extern struct {
+    NextEntryOffset: ULONG,
+    FileIndex: ULONG,
+    CreationTime: LARGE_INTEGER,
+    LastAccessTime: LARGE_INTEGER,
+    LastWriteTime: LARGE_INTEGER,
+    ChangeTime: LARGE_INTEGER,
+    EndOfFile: LARGE_INTEGER,
+    AllocationSize: LARGE_INTEGER,
+    FileAttributes: ULONG,
+    FileNameLength: ULONG,
+    EaSize: ULONG,
+    ShortNameLength: CHAR,
+    ShortName: [12]WCHAR,
+    FileName: [1]WCHAR,
+};
+pub const FILE_BOTH_DIRECTORY_INFORMATION = FILE_BOTH_DIR_INFORMATION;
 pub const BYTE = u8;
 pub const CHAR = u8;
 pub const UCHAR = u8;
@@ -89,7 +116,7 @@ pub const ATOM = u16;
 pub const HBRUSH = *opaque {};
 pub const HCURSOR = *opaque {};
 pub const HICON = *opaque {};
-pub const HINSTANCE = windows.HINSTANCE;
+pub const HINSTANCE = *opaque {};
 pub const HMENU = *opaque {};
 pub const HMODULE = *opaque {};
 pub const HWND = *opaque {};
@@ -229,13 +256,17 @@ pub const pollfd = extern struct {
     events: SHORT,
     revents: SHORT,
 };
-
-pub const IO_STATUS_BLOCK = windows.IO_STATUS_BLOCK;
+pub const IO_STATUS_BLOCK = extern struct {
+    // "DUMMYUNIONNAME" expands to "u"
+    u: extern union {
+        Status: NTSTATUS,
+        Pointer: ?*anyopaque,
+    },
+    Information: ULONG_PTR,
+};
 pub const IO_APC_ROUTINE = *const fn (PVOID, *IO_STATUS_BLOCK, ULONG) callconv(.winapi) void;
-
 pub const WinsockError = u16;
-
-pub const WAIT_FAILED = windows.WAIT_FAILED;
+pub const WAIT_FAILED = 0xffff_ffff;
 
 pub const MEM_COMMIT = 0x1000;
 pub const MEM_RESERVE = 0x2000;
@@ -560,16 +591,11 @@ pub const RTL_CLONE_PROCESS_FLAGS_CREATE_SUSPENDED = 0x00000001;
 pub const RTL_CLONE_PROCESS_FLAGS_INHERIT_HANDLES = 0x00000002;
 pub const RTL_CLONE_PROCESS_FLAGS_NO_SYNCHRONIZE = 0x00000004; // don't update synchronization objects
 
-pub const THREADINFOCLASS = windows.THREADINFOCLASS;
-pub const PROCESSINFOCLASS = windows.PROCESSINFOCLASS;
-pub const PROCESS_BASIC_INFORMATION = windows.PROCESS_BASIC_INFORMATION;
 pub const SECURITY_ATTRIBUTES = extern struct {
     nLength: DWORD,
     lpSecurityDescriptor: ?*anyopaque,
     bInheritHandle: BOOL,
 };
-pub const SYSTEM_INFORMATION_CLASS = windows.SYSTEM_INFORMATION_CLASS;
-pub const SYSTEM_BASIC_INFORMATION = windows.SYSTEM_BASIC_INFORMATION;
 
 pub const AF = struct {
     pub const UNSPEC = 0;
@@ -1288,6 +1314,13 @@ pub const PFN_RtlCloneUserProcess = *const fn (
     ProcessInformation: *RTL_USER_PROCESS_INFORMATION,
 ) callconv(.winapi) NTSTATUS;
 
+pub fn RtlGetVersion(
+    lpVersionInformation: *RTL_OSVERSIONINFOW,
+) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(RtlGetVersion), "RtlGetVersion", "ntdll");
+    return f(lpVersionInformation);
+}
+
 pub const PFN_NtSuspendThread = *const fn (
     ThreadHandle: HANDLE,
     PreviousSuspendCount: ?*ULONG,
@@ -1385,7 +1418,6 @@ pub const PFN_RtlQueryRegistryValues = *const @TypeOf(std.os.windows.ntdll.RtlQu
 pub const PFN_RtlEqualUnicodeString = *const @TypeOf(std.os.windows.ntdll.RtlEqualUnicodeString);
 pub const PFN_RtlUpcaseUnicodeChar = *const @TypeOf(std.os.windows.ntdll.RtlUpcaseUnicodeChar);
 pub const PFN_RtlFreeUnicodeString = *const @TypeOf(std.os.windows.ntdll.RtlFreeUnicodeString);
-pub const PFN_RtlGetVersion = *const @TypeOf(std.os.windows.ntdll.RtlGetVersion);
 pub const PFN_RtlLookupFunctionEntry = *const @TypeOf(std.os.windows.ntdll.RtlLookupFunctionEntry);
 pub const PFN_RtlVirtualUnwind = *const @TypeOf(std.os.windows.ntdll.RtlVirtualUnwind);
 pub const PFN_NtWaitForSingleObject = *const @TypeOf(std.os.windows.ntdll.NtWaitForSingleObject);
@@ -1780,7 +1812,6 @@ pub fn init() void {
     NtProtectVirtualMemory = def(PFN_NtProtectVirtualMemory, "NtProtectVirtualMemory", "ntdll");
     NtCreateThreadEx = def(PFN_NtCreateThreadEx, "NtCreateThreadEx", "ntdll");
     NtCreateUserProcess = def(PFN_NtCreateUserProcess, "NtCreateUserProcess", "ntdll");
-    RtlGetVersion = def(PFN_RtlGetVersion, "RtlGetVersion", "ntdll");
     RtlCloneUserProcess = def(PFN_RtlCloneUserProcess, "RtlCloneUserProcess", "ntdll");
     RtlWow64EnableFsRedirection = def(PFN_RtlWow64EnableFsRedirection, "RtlWow64EnableFsRedirection", "ntdll");
     NtCreateFile = def(PFN_NtCreateFile, "NtCreateFile", "ntdll");
@@ -1910,7 +1941,6 @@ pub var NtWriteVirtualMemory: PFN_NtWriteVirtualMemory = undefined;
 pub var NtProtectVirtualMemory: PFN_NtProtectVirtualMemory = undefined;
 pub var NtCreateThreadEx: PFN_NtCreateThreadEx = undefined;
 pub var NtCreateUserProcess: PFN_NtCreateUserProcess = undefined;
-pub var RtlGetVersion: PFN_RtlGetVersion = undefined;
 pub var RtlCloneUserProcess: PFN_RtlCloneUserProcess = undefined;
 pub var RtlWow64EnableFsRedirection: PFN_RtlWow64EnableFsRedirection = undefined;
 pub var NtCreateFile: PFN_NtCreateFile = undefined;
@@ -2002,50 +2032,8 @@ pub var GetUserNameExA: PFN_GetUserNameExA = undefined;
 //
 comptime {
     if (@import("builtin").mode != .Debug and @import("builtin").os.tag == .windows and bof) {
-        //@export(&RE_WriteFile, .{ .name = "WriteFile", .linkage = .strong });
-        //@export(&RE_ReadFile, .{ .name = "ReadFile", .linkage = .strong });
-        //@export(&WSAStartup, .{ .name = "WSAStartup", .linkage = .strong });
-        //@export(&WSACleanup, .{ .name = "WSACleanup", .linkage = .strong });
-        //@export(&WSAGetLastError, .{ .name = "WSAGetLastError", .linkage = .strong });
-        //@export(&WSASocketW, .{ .name = "WSASocketW", .linkage = .strong });
-        //@export(&WSAPoll, .{ .name = "WSAPoll", .linkage = .strong });
-        //@export(&WSAGetOverlappedResult, .{ .name = "WSAGetOverlappedResult", .linkage = .strong });
-        //@export(&WSASend, .{ .name = "WSASend", .linkage = .strong });
-        //@export(&WSASendTo, .{ .name = "WSASendTo", .linkage = .strong });
-        //@export(&WSARecv, .{ .name = "WSARecv", .linkage = .strong });
-        //@export(&WSARecvFrom, .{ .name = "WSARecvFrom", .linkage = .strong });
-        //@export(&closesocket, .{ .name = "closesocket", .linkage = .strong });
-        //@export(&getaddrinfo, .{ .name = "getaddrinfo", .linkage = .strong });
-        //@export(&freeaddrinfo, .{ .name = "freeaddrinfo", .linkage = .strong });
-        //@export(&bind, .{ .name = "bind", .linkage = .strong });
-        //@export(&connect, .{ .name = "connect", .linkage = .strong });
-        //@export(&ioctlsocket, .{ .name = "ioctlsocket", .linkage = .strong });
-        //@export(&getsockopt, .{ .name = "getsockopt", .linkage = .strong });
-        //@export(&setsockopt, .{ .name = "setsockopt", .linkage = .strong });
-        //@export(&NtClose, .{ .name = "NtClose", .linkage = .strong });
-        //@export(&NtCreateFile, .{ .name = "NtCreateFile", .linkage = .strong });
-        //@export(&NtCreateNamedPipeFile, .{ .name = "NtCreateNamedPipeFile", .linkage = .strong });
-        //@export(&NtReadFile, .{ .name = "NtReadFile", .linkage = .strong });
-        //@export(&NtWriteFile, .{ .name = "NtWriteFile", .linkage = .strong });
-        //@export(&NtSetInformationFile, .{ .name = "NtSetInformationFile", .linkage = .strong });
-        //@export(&RtlSetCurrentDirectory_U, .{ .name = "RtlSetCurrentDirectory_U", .linkage = .strong });
-        //@export(&RtlGetSystemTimePrecise, .{ .name = "RtlGetSystemTimePrecise", .linkage = .strong });
-        //@export(&RtlGetFullPathName_U, .{ .name = "RtlGetFullPathName_U", .linkage = .strong });
-        //@export(&NtQueryDirectoryFile, .{ .name = "NtQueryDirectoryFile", .linkage = .strong });
-        //@export(&NtQueryObject, .{ .name = "NtQueryObject", .linkage = .strong });
-        //@export(&NtLockFile, .{ .name = "NtLockFile", .linkage = .strong });
-        //@export(&NtDeviceIoControlFile, .{ .name = "NtDeviceIoControlFile", .linkage = .strong });
-        //@export(&RE_NtDeviceIoControlFile, .{ .name = "NtDeviceIoControlFile", .linkage = .strong });
-        //@export(&RE_NtFsControlFile, .{ .name = "NtFsControlFile", .linkage = .strong });
-        //@export(&NtFsControlFile, .{ .name = "NtFsControlFile", .linkage = .strong });
         @export(&NtAllocateVirtualMemory, .{ .name = "NtAllocateVirtualMemory", .linkage = .strong });
         @export(&NtFreeVirtualMemory, .{ .name = "NtFreeVirtualMemory", .linkage = .strong });
-        //@export(&NtOpenProcess, .{ .name = "NtOpenProcess", .linkage = .strong, .visibility = .hidden });
-        //@export(&NtQueryInformationFile, .{ .name = "NtQueryInformationFile", .linkage = .strong });
-        //@export(&GetCurrentDirectoryW, .{ .name = "GetCurrentDirectoryW", .linkage = .strong });
-        //@export(&GetFileSizeEx, .{ .name = "GetFileSizeEx", .linkage = .strong });
-        //@export(&SetFilePointerEx, .{ .name = "SetFilePointerEx", .linkage = .strong });
-        //@export(&RtlGenRandom, .{ .name = "SystemFunction036", .linkage = .strong });
     }
 }
 

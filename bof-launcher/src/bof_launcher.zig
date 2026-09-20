@@ -1651,7 +1651,7 @@ fn threadFuncCloneProcessWindows(bof: *Bof, arg_data: ?[]u8, context: *BofContex
         &info,
     );
     switch (status) {
-        .PROCESS_CLONED => {
+        w32.STATUS_PROCESS_CLONED => {
             // child process
             bof.run(context, arg_data);
 
@@ -1669,7 +1669,7 @@ fn threadFuncCloneProcessWindows(bof: *Bof, arg_data: ?[]u8, context: *BofContex
 
             _ = w32.NtTerminateProcess(w32.NtCurrentProcess(), .SUCCESS);
         },
-        .SUCCESS => {
+        w32.STATUS_SUCCESS => {
             // parent process
             _ = w32.NtAssignProcessToJobObject(job_handle, info.ProcessHandle.?);
             _ = w32.NtResumeThread(info.ThreadHandle.?, null);
@@ -2568,9 +2568,9 @@ fn memmove(opt_dest: ?[*]u8, opt_src: ?[*]const u8, len: usize) callconv(.c) ?[*
 }
 
 pub fn DllMain(
-    hinstDLL: w32.HINSTANCE,
-    fdwReason: w32.DWORD,
-    lpvReserved: w32.LPVOID,
+    hinstDLL: std.os.windows.HINSTANCE,
+    fdwReason: std.os.windows.DWORD,
+    lpvReserved: std.os.windows.LPVOID,
 ) callconv(.winapi) std.os.windows.BOOL {
     _ = lpvReserved;
     if (fdwReason == w32.DLL_PROCESS_ATTACH) {

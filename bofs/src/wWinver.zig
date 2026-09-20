@@ -7,7 +7,7 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
     var version_info: w32.OSVERSIONINFOW = undefined;
     version_info.dwOSVersionInfoSize = @sizeOf(@TypeOf(version_info));
 
-    if (w32.RtlGetVersion(&version_info) != .SUCCESS)
+    if (w32.RtlGetVersion(&version_info) != w32.STATUS_SUCCESS)
         return 1;
 
     _ = beacon.printf(
