@@ -174,7 +174,7 @@ const Bof = struct {
             const addr = w32.VirtualAlloc(
                 null,
                 total_size,
-                w32.MEM_COMMIT + w32.MEM_RESERVE + w32.MEM_TOP_DOWN,
+                w32.MEM_COMMIT | w32.MEM_RESERVE | w32.MEM_TOP_DOWN,
                 w32.PAGE_READWRITE,
             );
             if (addr == null) return error.VirtualAllocFailed;

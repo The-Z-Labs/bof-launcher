@@ -13,6 +13,7 @@ pub const ERROR_MORE_DATA = 234;
 pub const STATUS_SUCCESS = 0x00000000;
 pub const STATUS_PROCESS_CLONED = 0x00000129;
 
+pub const ACCESS_MASK = DWORD;
 pub const OVERLAPPED = extern struct {
     Internal: ULONG_PTR,
     InternalHigh: ULONG_PTR,
@@ -511,7 +512,7 @@ pub const IO_STATUS_BLOCK = extern struct {
     },
     Information: ULONG_PTR,
 };
-pub const IO_APC_ROUTINE = *const fn (PVOID, *IO_STATUS_BLOCK, ULONG) callconv(.winapi) void;
+pub const PIO_APC_ROUTINE = *const fn (PVOID, *IO_STATUS_BLOCK, ULONG) callconv(.winapi) void;
 pub const WinsockError = u16;
 pub const WAIT_FAILED = 0xffff_ffff;
 
@@ -1636,8 +1637,39 @@ pub const PFN_NtCreateUserProcess = *const fn (
     AttributeList: ?*anyopaque, // TODO: ?*PS_ATTRIBUTE_LIST,
 ) callconv(.winapi) NTSTATUS;
 
-pub const PFN_NtCreateFile = *const @TypeOf(std.os.windows.ntdll.NtCreateFile);
-pub const PFN_NtDeviceIoControlFile = *const @TypeOf(std.os.windows.ntdll.NtDeviceIoControlFile);
+pub fn NtCreateFile(
+    FileHandle: *HANDLE,
+    DesiredAccess: ACCESS_MASK,
+    ObjectAttributes: *const OBJECT_ATTRIBUTES,
+    IoStatusBlock: *IO_STATUS_BLOCK,
+    AllocationSize: ?*const LARGE_INTEGER,
+    FileAttributes: ULONG,
+    ShareAccess: ULONG,
+    CreateDisposition: ULONG,
+    CreateOptions: ULONG,
+    EaBuffer: ?LPCVOID,
+    EaLength: ULONG,
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtCreateFile), "NtCreateFile", "ntdll");
+    return f(FileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, AllocationSize, FileAttributes, ShareAccess, CreateDisposition, CreateOptions, EaBuffer, EaLength);
+}
+
+pub fn NtDeviceIoControlFile(
+    FileHandle: HANDLE,
+    Event: ?HANDLE,
+    ApcRoutine: ?PIO_APC_ROUTINE,
+    ApcContext: ?PVOID,
+    IoStatusBlock: *IO_STATUS_BLOCK,
+    IoControlCode: ULONG,
+    InputBuffer: ?LPCVOID,
+    InputBufferLength: ULONG,
+    OutputBuffer: ?PVOID,
+    OutputBufferLength: ULONG,
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtDeviceIoControlFile), "NtDeviceIoControlFile", "ntdll");
+    return f(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, IoControlCode, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength);
+}
+
 pub const PFN_NtFsControlFile = *const @TypeOf(std.os.windows.ntdll.NtFsControlFile);
 pub const PFN_NtLockFile = *const @TypeOf(std.os.windows.ntdll.NtLockFile);
 pub const PFN_NtQueryDirectoryFile = *const @TypeOf(std.os.windows.ntdll.NtQueryDirectoryFile);
@@ -1968,7 +2000,6 @@ pub fn init() void {
     NtCreateUserProcess = def(PFN_NtCreateUserProcess, "NtCreateUserProcess", "ntdll");
     RtlCloneUserProcess = def(PFN_RtlCloneUserProcess, "RtlCloneUserProcess", "ntdll");
     RtlWow64EnableFsRedirection = def(PFN_RtlWow64EnableFsRedirection, "RtlWow64EnableFsRedirection", "ntdll");
-    NtCreateFile = def(PFN_NtCreateFile, "NtCreateFile", "ntdll");
     NtCreateNamedPipeFile = def(PFN_NtCreateNamedPipeFile, "NtCreateNamedPipeFile", "ntdll");
     RtlSetCurrentDirectory_U = def(PFN_RtlSetCurrentDirectory_U, "RtlSetCurrentDirectory_U", "ntdll");
     RtlGetSystemTimePrecise = def(PFN_RtlGetSystemTimePrecise, "RtlGetSystemTimePrecise", "ntdll");
@@ -1976,7 +2007,6 @@ pub fn init() void {
     NtQueryDirectoryFile = def(PFN_NtQueryDirectoryFile, "NtQueryDirectoryFile", "ntdll");
     NtQueryObject = def(PFN_NtQueryObject, "NtQueryObject", "ntdll");
     NtLockFile = def(PFN_NtLockFile, "NtLockFile", "ntdll");
-    NtDeviceIoControlFile = def(PFN_NtDeviceIoControlFile, "NtDeviceIoControlFile", "ntdll");
     NtFsControlFile = def(PFN_NtFsControlFile, "NtFsControlFile", "ntdll");
     NtReadFile = def(PFN_NtReadFile, "NtReadFile", "ntdll");
     NtWriteFile = def(PFN_NtWriteFile, "NtWriteFile", "ntdll");
@@ -2095,7 +2125,6 @@ pub var NtCreateThreadEx: PFN_NtCreateThreadEx = undefined;
 pub var NtCreateUserProcess: PFN_NtCreateUserProcess = undefined;
 pub var RtlCloneUserProcess: PFN_RtlCloneUserProcess = undefined;
 pub var RtlWow64EnableFsRedirection: PFN_RtlWow64EnableFsRedirection = undefined;
-pub var NtCreateFile: PFN_NtCreateFile = undefined;
 pub var NtCreateNamedPipeFile: PFN_NtCreateNamedPipeFile = undefined;
 pub var RtlSetCurrentDirectory_U: PFN_RtlSetCurrentDirectory_U = undefined;
 pub var RtlGetSystemTimePrecise: PFN_RtlGetSystemTimePrecise = undefined;
@@ -2103,7 +2132,6 @@ pub var RtlGetFullPathName_U: PFN_RtlGetFullPathName_U = undefined;
 pub var NtQueryDirectoryFile: PFN_NtQueryDirectoryFile = undefined;
 pub var NtQueryObject: PFN_NtQueryObject = undefined;
 pub var NtLockFile: PFN_NtLockFile = undefined;
-pub var NtDeviceIoControlFile: PFN_NtDeviceIoControlFile = undefined;
 pub var NtFsControlFile: PFN_NtFsControlFile = undefined;
 pub var NtReadFile: PFN_NtReadFile = undefined;
 pub var NtWriteFile: PFN_NtWriteFile = undefined;
