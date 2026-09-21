@@ -1,5 +1,7 @@
 const std = @import("std");
 const windows = std.os.windows;
+const builtin = @import("builtin");
+const native_arch = builtin.cpu.arch;
 
 pub const ATTACH_PARENT_PROCESS = 0xffff_ffff;
 
@@ -86,7 +88,252 @@ pub const INFINITE = 4294967295;
 pub const BOOLEAN = BYTE;
 pub const HRESULT = c_long;
 pub const HLOCAL = HANDLE;
-pub const CONTEXT = windows.CONTEXT;
+
+pub const FLOATING_SAVE_AREA = switch (native_arch) {
+    .x86 => extern struct {
+        ControlWord: DWORD,
+        StatusWord: DWORD,
+        TagWord: DWORD,
+        ErrorOffset: DWORD,
+        ErrorSelector: DWORD,
+        DataOffset: DWORD,
+        DataSelector: DWORD,
+        RegisterArea: [80]BYTE,
+        Cr0NpxState: DWORD,
+    },
+    else => @compileError("FLOATING_SAVE_AREA only defined on x86"),
+};
+
+pub const M128A = switch (native_arch) {
+    .x86_64 => extern struct {
+        Low: ULONGLONG,
+        High: LONGLONG,
+    },
+    else => @compileError("M128A only defined on x86_64"),
+};
+
+pub const XMM_SAVE_AREA32 = switch (native_arch) {
+    .x86_64 => extern struct {
+        ControlWord: WORD,
+        StatusWord: WORD,
+        TagWord: BYTE,
+        Reserved1: BYTE,
+        ErrorOpcode: WORD,
+        ErrorOffset: DWORD,
+        ErrorSelector: WORD,
+        Reserved2: WORD,
+        DataOffset: DWORD,
+        DataSelector: WORD,
+        Reserved3: WORD,
+        MxCsr: DWORD,
+        MxCsr_Mask: DWORD,
+        FloatRegisters: [8]M128A,
+        XmmRegisters: [16]M128A,
+        Reserved4: [96]BYTE,
+    },
+    else => @compileError("XMM_SAVE_AREA32 only defined on x86_64"),
+};
+
+pub const NEON128 = switch (native_arch) {
+    .thumb => extern struct {
+        Low: ULONGLONG,
+        High: LONGLONG,
+    },
+    .aarch64 => extern union {
+        DUMMYSTRUCTNAME: extern struct {
+            Low: ULONGLONG,
+            High: LONGLONG,
+        },
+        D: [2]f64,
+        S: [4]f32,
+        H: [8]WORD,
+        B: [16]BYTE,
+    },
+    else => @compileError("NEON128 only defined on aarch64"),
+};
+
+pub const CONTEXT = switch (native_arch) {
+    .x86 => extern struct {
+        ContextFlags: DWORD,
+        Dr0: DWORD,
+        Dr1: DWORD,
+        Dr2: DWORD,
+        Dr3: DWORD,
+        Dr6: DWORD,
+        Dr7: DWORD,
+        FloatSave: FLOATING_SAVE_AREA,
+        SegGs: DWORD,
+        SegFs: DWORD,
+        SegEs: DWORD,
+        SegDs: DWORD,
+        Edi: DWORD,
+        Esi: DWORD,
+        Ebx: DWORD,
+        Edx: DWORD,
+        Ecx: DWORD,
+        Eax: DWORD,
+        Ebp: DWORD,
+        Eip: DWORD,
+        SegCs: DWORD,
+        EFlags: DWORD,
+        Esp: DWORD,
+        SegSs: DWORD,
+        ExtendedRegisters: [512]BYTE,
+    },
+    .x86_64 => extern struct {
+        P1Home: DWORD64 align(16),
+        P2Home: DWORD64,
+        P3Home: DWORD64,
+        P4Home: DWORD64,
+        P5Home: DWORD64,
+        P6Home: DWORD64,
+        ContextFlags: DWORD,
+        MxCsr: DWORD,
+        SegCs: WORD,
+        SegDs: WORD,
+        SegEs: WORD,
+        SegFs: WORD,
+        SegGs: WORD,
+        SegSs: WORD,
+        EFlags: DWORD,
+        Dr0: DWORD64,
+        Dr1: DWORD64,
+        Dr2: DWORD64,
+        Dr3: DWORD64,
+        Dr6: DWORD64,
+        Dr7: DWORD64,
+        Rax: DWORD64,
+        Rcx: DWORD64,
+        Rdx: DWORD64,
+        Rbx: DWORD64,
+        Rsp: DWORD64,
+        Rbp: DWORD64,
+        Rsi: DWORD64,
+        Rdi: DWORD64,
+        R8: DWORD64,
+        R9: DWORD64,
+        R10: DWORD64,
+        R11: DWORD64,
+        R12: DWORD64,
+        R13: DWORD64,
+        R14: DWORD64,
+        R15: DWORD64,
+        Rip: DWORD64,
+        DUMMYUNIONNAME: extern union {
+            FltSave: XMM_SAVE_AREA32,
+            FloatSave: XMM_SAVE_AREA32,
+            DUMMYSTRUCTNAME: extern struct {
+                Header: [2]M128A,
+                Legacy: [8]M128A,
+                Xmm0: M128A,
+                Xmm1: M128A,
+                Xmm2: M128A,
+                Xmm3: M128A,
+                Xmm4: M128A,
+                Xmm5: M128A,
+                Xmm6: M128A,
+                Xmm7: M128A,
+                Xmm8: M128A,
+                Xmm9: M128A,
+                Xmm10: M128A,
+                Xmm11: M128A,
+                Xmm12: M128A,
+                Xmm13: M128A,
+                Xmm14: M128A,
+                Xmm15: M128A,
+            },
+        },
+        VectorRegister: [26]M128A,
+        VectorControl: DWORD64,
+        DebugControl: DWORD64,
+        LastBranchToRip: DWORD64,
+        LastBranchFromRip: DWORD64,
+        LastExceptionToRip: DWORD64,
+        LastExceptionFromRip: DWORD64,
+    },
+    .thumb => extern struct {
+        ContextFlags: ULONG,
+        R0: ULONG,
+        R1: ULONG,
+        R2: ULONG,
+        R3: ULONG,
+        R4: ULONG,
+        R5: ULONG,
+        R6: ULONG,
+        R7: ULONG,
+        R8: ULONG,
+        R9: ULONG,
+        R10: ULONG,
+        R11: ULONG,
+        R12: ULONG,
+        Sp: ULONG,
+        Lr: ULONG,
+        Pc: ULONG,
+        Cpsr: ULONG,
+        Fpcsr: ULONG,
+        Padding: ULONG,
+        DUMMYUNIONNAME: extern union {
+            Q: [16]NEON128,
+            D: [32]ULONGLONG,
+            S: [32]ULONG,
+        },
+        Bvr: [8]ULONG,
+        Bcr: [8]ULONG,
+        Wvr: [1]ULONG,
+        Wcr: [1]ULONG,
+        Padding2: [2]ULONG,
+    },
+    .aarch64 => extern struct {
+        ContextFlags: ULONG align(16),
+        Cpsr: ULONG,
+        DUMMYUNIONNAME: extern union {
+            DUMMYSTRUCTNAME: extern struct {
+                X0: DWORD64,
+                X1: DWORD64,
+                X2: DWORD64,
+                X3: DWORD64,
+                X4: DWORD64,
+                X5: DWORD64,
+                X6: DWORD64,
+                X7: DWORD64,
+                X8: DWORD64,
+                X9: DWORD64,
+                X10: DWORD64,
+                X11: DWORD64,
+                X12: DWORD64,
+                X13: DWORD64,
+                X14: DWORD64,
+                X15: DWORD64,
+                X16: DWORD64,
+                X17: DWORD64,
+                X18: DWORD64,
+                X19: DWORD64,
+                X20: DWORD64,
+                X21: DWORD64,
+                X22: DWORD64,
+                X23: DWORD64,
+                X24: DWORD64,
+                X25: DWORD64,
+                X26: DWORD64,
+                X27: DWORD64,
+                X28: DWORD64,
+                Fp: DWORD64,
+                Lr: DWORD64,
+            },
+            X: [31]DWORD64,
+        },
+        Sp: DWORD64,
+        Pc: DWORD64,
+        V: [32]NEON128,
+        Fpcr: DWORD,
+        Fpsr: DWORD,
+        Bcr: [8]DWORD,
+        Bvr: [8]DWORD64,
+        Wcr: [2]DWORD,
+        Wvr: [2]DWORD64,
+    },
+    else => @compileError("CONTEXT is not defined for this architecture"),
+};
 pub const LPTHREAD_START_ROUTINE = *const fn (LPVOID) callconv(.winapi) DWORD;
 pub const WNDENUMPROC = *const fn (HWND, LPARAM) callconv(.winapi) BOOL;
 pub const FILE_BOTH_DIR_INFORMATION = extern struct {
@@ -1389,115 +1636,24 @@ pub const PFN_NtCreateUserProcess = *const fn (
     AttributeList: ?*anyopaque, // TODO: ?*PS_ATTRIBUTE_LIST,
 ) callconv(.winapi) NTSTATUS;
 
-pub const PFN_RtlCreateHeap = *const @TypeOf(std.os.windows.ntdll.RtlCreateHeap);
-pub const PFN_RtlDestroyHeap = *const @TypeOf(std.os.windows.ntdll.RtlDestroyHeap);
-pub const PFN_RtlAllocateHeap = *const @TypeOf(std.os.windows.ntdll.RtlAllocateHeap);
-pub const PFN_RtlFreeHeap = *const @TypeOf(std.os.windows.ntdll.RtlFreeHeap);
-pub const PFN_RtlCaptureStackBackTrace = *const @TypeOf(std.os.windows.ntdll.RtlCaptureStackBackTrace);
-pub const PFN_RtlCaptureContext = *const @TypeOf(std.os.windows.ntdll.RtlCaptureContext);
-pub const PFN_NtSetInformationThread = *const @TypeOf(std.os.windows.ntdll.NtSetInformationThread);
 pub const PFN_NtCreateFile = *const @TypeOf(std.os.windows.ntdll.NtCreateFile);
 pub const PFN_NtDeviceIoControlFile = *const @TypeOf(std.os.windows.ntdll.NtDeviceIoControlFile);
 pub const PFN_NtFsControlFile = *const @TypeOf(std.os.windows.ntdll.NtFsControlFile);
 pub const PFN_NtLockFile = *const @TypeOf(std.os.windows.ntdll.NtLockFile);
-pub const PFN_NtOpenFile = *const @TypeOf(std.os.windows.ntdll.NtOpenFile);
 pub const PFN_NtQueryDirectoryFile = *const @TypeOf(std.os.windows.ntdll.NtQueryDirectoryFile);
 pub const PFN_NtQueryInformationFile = *const @TypeOf(std.os.windows.ntdll.NtQueryInformationFile);
-pub const PFN_NtQueryVolumeInformationFile = *const @TypeOf(std.os.windows.ntdll.NtQueryVolumeInformationFile);
 pub const PFN_NtReadFile = *const @TypeOf(std.os.windows.ntdll.NtReadFile);
 pub const PFN_NtSetInformationFile = *const @TypeOf(std.os.windows.ntdll.NtSetInformationFile);
 pub const PFN_NtWriteFile = *const @TypeOf(std.os.windows.ntdll.NtWriteFile);
-pub const PFN_NtUnlockFile = *const @TypeOf(std.os.windows.ntdll.NtUnlockFile);
 pub const PFN_NtQueryObject = *const @TypeOf(std.os.windows.ntdll.NtQueryObject);
 pub const PFN_NtClose = *const @TypeOf(std.os.windows.ntdll.NtClose);
-pub const PFN_NtCreateSection = *const @TypeOf(std.os.windows.ntdll.NtCreateSection);
-pub const PFN_NtExtendSection = *const @TypeOf(std.os.windows.ntdll.NtExtendSection);
-pub const PFN_NtAllocateVirtualMemory = *const @TypeOf(std.os.windows.ntdll.NtAllocateVirtualMemory);
-pub const PFN_NtFreeVirtualMemory = *const @TypeOf(std.os.windows.ntdll.NtFreeVirtualMemory);
-pub const PFN_RtlQueryRegistryValues = *const @TypeOf(std.os.windows.ntdll.RtlQueryRegistryValues);
-pub const PFN_RtlEqualUnicodeString = *const @TypeOf(std.os.windows.ntdll.RtlEqualUnicodeString);
-pub const PFN_RtlUpcaseUnicodeChar = *const @TypeOf(std.os.windows.ntdll.RtlUpcaseUnicodeChar);
-pub const PFN_RtlFreeUnicodeString = *const @TypeOf(std.os.windows.ntdll.RtlFreeUnicodeString);
-pub const PFN_RtlLookupFunctionEntry = *const @TypeOf(std.os.windows.ntdll.RtlLookupFunctionEntry);
-pub const PFN_RtlVirtualUnwind = *const @TypeOf(std.os.windows.ntdll.RtlVirtualUnwind);
-pub const PFN_NtWaitForSingleObject = *const @TypeOf(std.os.windows.ntdll.NtWaitForSingleObject);
-pub const PFN_NtQueryInformationProcess = *const @TypeOf(std.os.windows.ntdll.NtQueryInformationProcess);
-pub const PFN_NtQueryInformationThread = *const @TypeOf(std.os.windows.ntdll.NtQueryInformationThread);
-pub const PFN_NtQuerySystemInformation = *const @TypeOf(std.os.windows.ntdll.NtQuerySystemInformation);
-pub const PFN_RtlGetActiveActivationContext = *const @TypeOf(std.os.windows.ntdll.RtlGetActiveActivationContext);
-pub const PFN_RtlActivateActivationContextEx = *const @TypeOf(std.os.windows.ntdll.RtlActivateActivationContextEx);
-pub const PFN_RtlReleaseActivationContext = *const @TypeOf(std.os.windows.ntdll.RtlReleaseActivationContext);
-pub const PFN_LdrAddRefDll = *const @TypeOf(std.os.windows.ntdll.LdrAddRefDll);
-pub const PFN_LdrLoadDll = *const @TypeOf(std.os.windows.ntdll.LdrLoadDll);
-pub const PFN_LdrUnloadDll = *const @TypeOf(std.os.windows.ntdll.LdrUnloadDll);
-pub const PFN_LdrFindEntryForAddress = *const @TypeOf(std.os.windows.ntdll.LdrFindEntryForAddress);
-pub const PFN_LdrGetDllFullName = *const @TypeOf(std.os.windows.ntdll.LdrGetDllFullName);
-pub const PFN_LdrGetDllPath = *const @TypeOf(std.os.windows.ntdll.LdrGetDllPath);
-pub const PFN_LdrGetDllHandle = *const @TypeOf(std.os.windows.ntdll.LdrGetDllHandle);
-pub const PFN_LdrGetDllHandleByMapping = *const @TypeOf(std.os.windows.ntdll.LdrGetDllHandleByMapping);
-pub const PFN_LdrGetDllHandleByName = *const @TypeOf(std.os.windows.ntdll.LdrGetDllHandleByName);
-pub const PFN_LdrGetDllHandleEx = *const @TypeOf(std.os.windows.ntdll.LdrGetDllHandleEx);
-pub const PFN_LdrGetProcedureAddress = *const @TypeOf(std.os.windows.ntdll.LdrGetProcedureAddress);
-pub const PFN_LdrGetProcedureAddressEx = *const @TypeOf(std.os.windows.ntdll.LdrGetProcedureAddressEx);
-pub const PFN_LdrGetProcedureAddressForCaller = *const @TypeOf(std.os.windows.ntdll.LdrGetProcedureAddressForCaller);
-pub const PFN_LdrRegisterDllNotification = *const @TypeOf(std.os.windows.ntdll.LdrRegisterDllNotification);
-pub const PFN_LdrUnregisterDllNotification = *const @TypeOf(std.os.windows.ntdll.LdrUnregisterDllNotification);
-pub const PFN_NtQueryAttributesFile = *const @TypeOf(std.os.windows.ntdll.NtQueryAttributesFile);
-pub const PFN_NtCreateEvent = *const @TypeOf(std.os.windows.ntdll.NtCreateEvent);
-pub const PFN_NtSetEvent = *const @TypeOf(std.os.windows.ntdll.NtSetEvent);
-pub const PFN_NtCreateKeyedEvent = *const @TypeOf(std.os.windows.ntdll.NtCreateKeyedEvent);
-pub const PFN_NtReleaseKeyedEvent = *const @TypeOf(std.os.windows.ntdll.NtReleaseKeyedEvent);
-pub const PFN_NtWaitForKeyedEvent = *const @TypeOf(std.os.windows.ntdll.NtWaitForKeyedEvent);
-pub const PFN_NtCancelSynchronousIoFile = *const @TypeOf(std.os.windows.ntdll.NtCancelSynchronousIoFile);
-pub const PFN_NtCancelIoFile = *const @TypeOf(std.os.windows.ntdll.NtCancelIoFile);
-pub const PFN_NtCancelIoFileEx = *const @TypeOf(std.os.windows.ntdll.NtCancelIoFileEx);
-pub const PFN_NtDelayExecution = *const @TypeOf(std.os.windows.ntdll.NtDelayExecution);
-pub const PFN_NtNotifyChangeDirectoryFileEx = *const @TypeOf(std.os.windows.ntdll.NtNotifyChangeDirectoryFileEx);
-pub const PFN_NtOpenThread = *const @TypeOf(std.os.windows.ntdll.NtOpenThread);
 pub const PFN_NtCreateNamedPipeFile = *const @TypeOf(std.os.windows.ntdll.NtCreateNamedPipeFile);
-pub const PFN_NtFlushBuffersFile = *const @TypeOf(std.os.windows.ntdll.NtFlushBuffersFile);
-pub const PFN_NtMapViewOfSection = *const @TypeOf(std.os.windows.ntdll.NtMapViewOfSection);
-pub const PFN_NtUnmapViewOfSection = *const @TypeOf(std.os.windows.ntdll.NtUnmapViewOfSection);
-pub const PFN_NtUnmapViewOfSectionEx = *const @TypeOf(std.os.windows.ntdll.NtUnmapViewOfSectionEx);
-pub const PFN_NtOpenKey = *const @TypeOf(std.os.windows.ntdll.NtOpenKey);
-pub const PFN_NtQueueApcThread = *const @TypeOf(std.os.windows.ntdll.NtQueueApcThread);
-pub const PFN_NtReadVirtualMemory = *const @TypeOf(std.os.windows.ntdll.NtReadVirtualMemory);
 pub const PFN_NtWriteVirtualMemory = *const @TypeOf(std.os.windows.ntdll.NtWriteVirtualMemory);
 pub const PFN_NtProtectVirtualMemory = *const @TypeOf(std.os.windows.ntdll.NtProtectVirtualMemory);
-pub const PFN_NtWaitForAlertByThreadId = *const @TypeOf(std.os.windows.ntdll.NtWaitForAlertByThreadId);
-pub const PFN_NtAlertThreadByThreadId = *const @TypeOf(std.os.windows.ntdll.NtAlertThreadByThreadId);
-pub const PFN_NtAlertThread = *const @TypeOf(std.os.windows.ntdll.NtAlertThread);
-pub const PFN_NtAlertMultipleThreadByThreadId = *const @TypeOf(std.os.windows.ntdll.NtAlertMultipleThreadByThreadId);
-pub const PFN_NtYieldExecution = *const @TypeOf(std.os.windows.ntdll.NtYieldExecution);
-pub const PFN_RtlAddVectoredExceptionHandler = *const @TypeOf(std.os.windows.ntdll.RtlAddVectoredExceptionHandler);
-pub const PFN_RtlRemoveVectoredExceptionHandler = *const @TypeOf(std.os.windows.ntdll.RtlRemoveVectoredExceptionHandler);
-pub const PFN_RtlDosPathNameToNtPathName_U = *const @TypeOf(std.os.windows.ntdll.RtlDosPathNameToNtPathName_U);
-pub const PFN_RtlExitUserProcess = *const @TypeOf(std.os.windows.ntdll.RtlExitUserProcess);
 pub const PFN_RtlGetFullPathName_U = *const @TypeOf(std.os.windows.ntdll.RtlGetFullPathName_U);
-pub const PFN_RtlGetCurrentDirectory_U = *const @TypeOf(std.os.windows.ntdll.RtlGetCurrentDirectory_U);
 pub const PFN_RtlGetSystemTimePrecise = *const @TypeOf(std.os.windows.ntdll.RtlGetSystemTimePrecise);
-pub const PFN_RtlInitializeCriticalSection = *const @TypeOf(std.os.windows.ntdll.RtlInitializeCriticalSection);
-pub const PFN_RtlEnterCriticalSection = *const @TypeOf(std.os.windows.ntdll.RtlEnterCriticalSection);
-pub const PFN_RtlLeaveCriticalSection = *const @TypeOf(std.os.windows.ntdll.RtlLeaveCriticalSection);
-pub const PFN_RtlDeleteCriticalSection = *const @TypeOf(std.os.windows.ntdll.RtlDeleteCriticalSection);
-pub const PFN_RtlQueryPerformanceCounter = *const @TypeOf(std.os.windows.ntdll.RtlQueryPerformanceCounter);
-pub const PFN_RtlQueryPerformanceFrequency = *const @TypeOf(std.os.windows.ntdll.RtlQueryPerformanceFrequency);
-pub const PFN_RtlReAllocateHeap = *const @TypeOf(std.os.windows.ntdll.RtlReAllocateHeap);
-pub const PFN_RtlReportSilentProcessExit = *const @TypeOf(std.os.windows.ntdll.RtlReportSilentProcessExit);
 pub const PFN_NtTerminateProcess = *const @TypeOf(std.os.windows.ntdll.NtTerminateProcess);
 pub const PFN_RtlSetCurrentDirectory_U = *const @TypeOf(std.os.windows.ntdll.RtlSetCurrentDirectory_U);
-pub const PFN_RtlTryAcquireSRWLockExclusive = *const @TypeOf(std.os.windows.ntdll.RtlTryAcquireSRWLockExclusive);
-pub const PFN_RtlAcquireSRWLockExclusive = *const @TypeOf(std.os.windows.ntdll.RtlAcquireSRWLockExclusive);
-pub const PFN_RtlReleaseSRWLockExclusive = *const @TypeOf(std.os.windows.ntdll.RtlReleaseSRWLockExclusive);
-pub const PFN_RtlWakeAddressAll = *const @TypeOf(std.os.windows.ntdll.RtlWakeAddressAll);
-pub const PFN_RtlWakeAddressSingle = *const @TypeOf(std.os.windows.ntdll.RtlWakeAddressSingle);
-pub const PFN_RtlWaitOnAddress = *const @TypeOf(std.os.windows.ntdll.RtlWaitOnAddress);
-pub const PFN_RtlWakeConditionVariable = *const @TypeOf(std.os.windows.ntdll.RtlWakeConditionVariable);
-pub const PFN_RtlWakeAllConditionVariable = *const @TypeOf(std.os.windows.ntdll.RtlWakeAllConditionVariable);
-pub const PFN_NtOpenKeyEx = *const @TypeOf(std.os.windows.ntdll.NtOpenKeyEx);
-pub const PFN_RtlOpenCurrentUser = *const @TypeOf(std.os.windows.ntdll.RtlOpenCurrentUser);
-pub const PFN_NtQueryValueKey = *const @TypeOf(std.os.windows.ntdll.NtQueryValueKey);
-pub const PFN_NtLoadKeyEx = *const @TypeOf(std.os.windows.ntdll.NtLoadKeyEx);
 pub const PFN_NtCreateThreadEx = *const @TypeOf(std.os.windows.ntdll.NtCreateThreadEx);
 pub const PFN_NtResumeThread = *const @TypeOf(std.os.windows.ntdll.NtResumeThread);
 
@@ -1805,8 +1961,6 @@ pub fn init() void {
     NtIsProcessInJob = def(PFN_NtIsProcessInJob, "NtIsProcessInJob", "ntdll");
     NtSetInformationJobObject = def(PFN_NtSetInformationJobObject, "NtSetInformationJobObject", "ntdll");
     NtClose = def(PFN_NtClose, "NtClose", "ntdll");
-    //NtAllocateVirtualMemory = def(PFN_NtAllocateVirtualMemory, "NtAllocateVirtualMemory", "ntdll");
-    //NtFreeVirtualMemory = def(PFN_NtFreeVirtualMemory, "NtFreeVirtualMemory", "ntdll");
     NtQueryInformationFile = def(PFN_NtQueryInformationFile, "NtQueryInformationFile", "ntdll");
     NtWriteVirtualMemory = def(PFN_NtWriteVirtualMemory, "NtWriteVirtualMemory", "ntdll");
     NtProtectVirtualMemory = def(PFN_NtProtectVirtualMemory, "NtProtectVirtualMemory", "ntdll");
@@ -1934,8 +2088,6 @@ pub var NtTerminateJobObject: PFN_NtTerminateJobObject = undefined;
 pub var NtIsProcessInJob: PFN_NtIsProcessInJob = undefined;
 pub var NtSetInformationJobObject: PFN_NtSetInformationJobObject = undefined;
 pub var NtClose: PFN_NtClose = undefined;
-//pub var NtAllocateVirtualMemory: PFN_NtAllocateVirtualMemory = undefined;
-//pub var NtFreeVirtualMemory: PFN_NtFreeVirtualMemory = undefined;
 pub var NtQueryInformationFile: PFN_NtQueryInformationFile = undefined;
 pub var NtWriteVirtualMemory: PFN_NtWriteVirtualMemory = undefined;
 pub var NtProtectVirtualMemory: PFN_NtProtectVirtualMemory = undefined;
