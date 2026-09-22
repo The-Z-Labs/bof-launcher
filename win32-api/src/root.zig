@@ -585,6 +585,25 @@ pub const OBJECT_INFORMATION_CLASS = enum(c_int) {
     MaxObjectInfoClass,
 };
 
+pub const FS_INFORMATION_CLASS = enum(c_int) {
+    FileFsVolumeInformation = 1,
+    FileFsLabelInformation,
+    FileFsSizeInformation,
+    FileFsDeviceInformation,
+    FileFsAttributeInformation,
+    FileFsControlInformation,
+    FileFsFullSizeInformation,
+    FileFsObjectIdInformation,
+    FileFsDriverPathInformation,
+    FileFsVolumeFlagsInformation,
+    FileFsSectorSizeInformation,
+    FileFsDataCopyInformation,
+    FileFsMetadataSizeInformation,
+    FileFsFullSizeInformationEx,
+    FileFsGuidInformation,
+    FileFsMaximumInformation,
+};
+
 pub const FILE_INFORMATION_CLASS = enum(c_int) {
     FileDirectoryInformation = 1,
     FileFullDirectoryInformation,
@@ -1730,9 +1749,56 @@ pub fn NtQueryDirectoryFile(
     return f(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, FileInformation, Length, FileInformationClass, ReturnSingleEntry, FileName, RestartScan);
 }
 
-pub const PFN_NtQueryInformationFile = *const @TypeOf(std.os.windows.ntdll.NtQueryInformationFile);
+pub fn NtQueryInformationFile(
+    FileHandle: HANDLE,
+    IoStatusBlock: *IO_STATUS_BLOCK,
+    FileInformation: PVOID,
+    Length: ULONG,
+    FileInformationClass: FILE_INFORMATION_CLASS,
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtQueryInformationFile), "NtQueryInformationFile", "ntdll");
+    return f(FileHandle, IoStatusBlock, FileInformation, Length, FileInformationClass);
+}
+
+pub fn NtQueryVolumeInformationFile(
+    FileHandle: HANDLE,
+    IoStatusBlock: *IO_STATUS_BLOCK,
+    FsInformation: PVOID,
+    Length: ULONG,
+    FsInformationClass: FS_INFORMATION_CLASS,
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtQueryVolumeInformationFile), "NtQueryVolumeInformationFile", "ntdll");
+    return f(FileHandle, IoStatusBlock, FsInformation, Length, FsInformationClass);
+}
+
+pub const FILE_BASIC_INFORMATION = extern struct {
+    CreationTime: LARGE_INTEGER,
+    LastAccessTime: LARGE_INTEGER,
+    LastWriteTime: LARGE_INTEGER,
+    ChangeTime: LARGE_INTEGER,
+    FileAttributes: ULONG,
+};
+
+pub fn NtQueryAttributesFile(
+    ObjectAttributes: *const OBJECT_ATTRIBUTES,
+    FileAttributes: *FILE_BASIC_INFORMATION,
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtQueryAttributesFile), "NtQueryAttributesFile", "ntdll");
+    return f(ObjectAttributes, FileAttributes);
+}
+
+pub fn NtSetInformationFile(
+    FileHandle: HANDLE,
+    IoStatusBlock: *IO_STATUS_BLOCK,
+    FileInformation: PVOID,
+    Length: ULONG,
+    FileInformationClass: FILE_INFORMATION_CLASS,
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtSetInformationFile), "NtSetInformationFile", "ntdll");
+    return f(FileHandle, IoStatusBlock, FileInformation, Length, FileInformationClass);
+}
+
 pub const PFN_NtReadFile = *const @TypeOf(std.os.windows.ntdll.NtReadFile);
-pub const PFN_NtSetInformationFile = *const @TypeOf(std.os.windows.ntdll.NtSetInformationFile);
 pub const PFN_NtWriteFile = *const @TypeOf(std.os.windows.ntdll.NtWriteFile);
 pub const PFN_NtQueryObject = *const @TypeOf(std.os.windows.ntdll.NtQueryObject);
 pub const PFN_NtClose = *const @TypeOf(std.os.windows.ntdll.NtClose);
@@ -2050,7 +2116,6 @@ pub fn init() void {
     NtIsProcessInJob = def(PFN_NtIsProcessInJob, "NtIsProcessInJob", "ntdll");
     NtSetInformationJobObject = def(PFN_NtSetInformationJobObject, "NtSetInformationJobObject", "ntdll");
     NtClose = def(PFN_NtClose, "NtClose", "ntdll");
-    NtQueryInformationFile = def(PFN_NtQueryInformationFile, "NtQueryInformationFile", "ntdll");
     NtWriteVirtualMemory = def(PFN_NtWriteVirtualMemory, "NtWriteVirtualMemory", "ntdll");
     NtProtectVirtualMemory = def(PFN_NtProtectVirtualMemory, "NtProtectVirtualMemory", "ntdll");
     NtCreateThreadEx = def(PFN_NtCreateThreadEx, "NtCreateThreadEx", "ntdll");
@@ -2064,7 +2129,6 @@ pub fn init() void {
     NtQueryObject = def(PFN_NtQueryObject, "NtQueryObject", "ntdll");
     NtReadFile = def(PFN_NtReadFile, "NtReadFile", "ntdll");
     NtWriteFile = def(PFN_NtWriteFile, "NtWriteFile", "ntdll");
-    NtSetInformationFile = def(PFN_NtSetInformationFile, "NtSetInformationFile", "ntdll");
 
     MessageBoxA = def(PFN_MessageBoxA, "MessageBoxA", "user32");
     MessageBoxW = def(PFN_MessageBoxW, "MessageBoxW", "user32");
@@ -2172,7 +2236,6 @@ pub var NtTerminateJobObject: PFN_NtTerminateJobObject = undefined;
 pub var NtIsProcessInJob: PFN_NtIsProcessInJob = undefined;
 pub var NtSetInformationJobObject: PFN_NtSetInformationJobObject = undefined;
 pub var NtClose: PFN_NtClose = undefined;
-pub var NtQueryInformationFile: PFN_NtQueryInformationFile = undefined;
 pub var NtWriteVirtualMemory: PFN_NtWriteVirtualMemory = undefined;
 pub var NtProtectVirtualMemory: PFN_NtProtectVirtualMemory = undefined;
 pub var NtCreateThreadEx: PFN_NtCreateThreadEx = undefined;
@@ -2186,7 +2249,6 @@ pub var RtlGetFullPathName_U: PFN_RtlGetFullPathName_U = undefined;
 pub var NtQueryObject: PFN_NtQueryObject = undefined;
 pub var NtReadFile: PFN_NtReadFile = undefined;
 pub var NtWriteFile: PFN_NtWriteFile = undefined;
-pub var NtSetInformationFile: PFN_NtSetInformationFile = undefined;
 
 pub fn NtCurrentProcess() HANDLE {
     return @ptrFromInt(@as(usize, @bitCast(@as(isize, -1))));
@@ -2270,6 +2332,10 @@ comptime {
         @export(&NtLockFile, .{ .name = "NtLockFile", .linkage = .strong });
         @export(&NtUnlockFile, .{ .name = "NtUnlockFile", .linkage = .strong });
         @export(&NtQueryDirectoryFile, .{ .name = "NtQueryDirectoryFile", .linkage = .strong });
+        @export(&NtQueryInformationFile, .{ .name = "NtQueryInformationFile", .linkage = .strong });
+        @export(&NtQueryVolumeInformationFile, .{ .name = "NtQueryVolumeInformationFile", .linkage = .strong });
+        @export(&NtQueryAttributesFile, .{ .name = "NtQueryAttributesFile", .linkage = .strong });
+        @export(&NtSetInformationFile, .{ .name = "NtSetInformationFile", .linkage = .strong });
     }
 }
 
