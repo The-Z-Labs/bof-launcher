@@ -15,7 +15,7 @@ const BofTableItem = struct {
 const bofs_included_in_launcher = [_]BofTableItem{
     .{ .name = "helloBof", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "wProcessInfoMessageBox", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
-    //.{ .name = "wProcessInjectionSrdi", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    .{ .name = "wProcessInjectionSrdi", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "runBofFromBof", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "misc", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     //.{ .name = "udpScanner", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
@@ -338,6 +338,8 @@ fn addBofObj(
                     .link_libc = bof.target.result.os.tag == .linux,
                 }),
             });
+            // Put every function in its own section
+            //obj.link_function_sections = true;
             if (bof.custom_build_fn) |customBuild| _ = customBuild(b, obj, bof);
             break :blk obj;
         },

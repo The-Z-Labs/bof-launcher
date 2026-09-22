@@ -1670,9 +1670,66 @@ pub fn NtDeviceIoControlFile(
     return f(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, IoControlCode, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength);
 }
 
-pub const PFN_NtFsControlFile = *const @TypeOf(std.os.windows.ntdll.NtFsControlFile);
-pub const PFN_NtLockFile = *const @TypeOf(std.os.windows.ntdll.NtLockFile);
-pub const PFN_NtQueryDirectoryFile = *const @TypeOf(std.os.windows.ntdll.NtQueryDirectoryFile);
+pub fn NtFsControlFile(
+    FileHandle: HANDLE,
+    Event: ?HANDLE,
+    ApcRoutine: ?PIO_APC_ROUTINE,
+    ApcContext: ?PVOID,
+    IoStatusBlock: *IO_STATUS_BLOCK,
+    FsControlCode: ULONG,
+    InputBuffer: ?LPCVOID,
+    InputBufferLength: ULONG,
+    OutputBuffer: ?PVOID,
+    OutputBufferLength: ULONG,
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtFsControlFile), "NtFsControlFile", "ntdll");
+    return f(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, FsControlCode, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength);
+}
+
+pub fn NtLockFile(
+    FileHandle: HANDLE,
+    Event: ?HANDLE,
+    ApcRoutine: ?PIO_APC_ROUTINE,
+    ApcContext: ?PVOID,
+    IoStatusBlock: *IO_STATUS_BLOCK,
+    ByteOffset: *const LARGE_INTEGER,
+    Length: *const LARGE_INTEGER,
+    Key: ULONG,
+    FailImmediately: BOOLEAN,
+    ExclusiveLock: BOOLEAN,
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtLockFile), "NtLockFile", "ntdll");
+    return f(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, ByteOffset, Length, Key, FailImmediately, ExclusiveLock);
+}
+
+pub fn NtUnlockFile(
+    FileHandle: HANDLE,
+    IoStatusBlock: *IO_STATUS_BLOCK,
+    ByteOffset: *const LARGE_INTEGER,
+    Length: *const LARGE_INTEGER,
+    Key: ULONG,
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtUnlockFile), "NtUnlockFile", "ntdll");
+    return f(FileHandle, IoStatusBlock, ByteOffset, Length, Key);
+}
+
+pub fn NtQueryDirectoryFile(
+    FileHandle: HANDLE,
+    Event: ?HANDLE,
+    ApcRoutine: ?PIO_APC_ROUTINE,
+    ApcContext: ?PVOID,
+    IoStatusBlock: *IO_STATUS_BLOCK,
+    FileInformation: PVOID,
+    Length: ULONG,
+    FileInformationClass: FILE_INFORMATION_CLASS,
+    ReturnSingleEntry: BOOLEAN,
+    FileName: ?*const UNICODE_STRING,
+    RestartScan: BOOLEAN,
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtQueryDirectoryFile), "NtQueryDirectoryFile", "ntdll");
+    return f(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, FileInformation, Length, FileInformationClass, ReturnSingleEntry, FileName, RestartScan);
+}
+
 pub const PFN_NtQueryInformationFile = *const @TypeOf(std.os.windows.ntdll.NtQueryInformationFile);
 pub const PFN_NtReadFile = *const @TypeOf(std.os.windows.ntdll.NtReadFile);
 pub const PFN_NtSetInformationFile = *const @TypeOf(std.os.windows.ntdll.NtSetInformationFile);
@@ -2004,10 +2061,7 @@ pub fn init() void {
     RtlSetCurrentDirectory_U = def(PFN_RtlSetCurrentDirectory_U, "RtlSetCurrentDirectory_U", "ntdll");
     RtlGetSystemTimePrecise = def(PFN_RtlGetSystemTimePrecise, "RtlGetSystemTimePrecise", "ntdll");
     RtlGetFullPathName_U = def(PFN_RtlGetFullPathName_U, "RtlGetFullPathName_U", "ntdll");
-    NtQueryDirectoryFile = def(PFN_NtQueryDirectoryFile, "NtQueryDirectoryFile", "ntdll");
     NtQueryObject = def(PFN_NtQueryObject, "NtQueryObject", "ntdll");
-    NtLockFile = def(PFN_NtLockFile, "NtLockFile", "ntdll");
-    NtFsControlFile = def(PFN_NtFsControlFile, "NtFsControlFile", "ntdll");
     NtReadFile = def(PFN_NtReadFile, "NtReadFile", "ntdll");
     NtWriteFile = def(PFN_NtWriteFile, "NtWriteFile", "ntdll");
     NtSetInformationFile = def(PFN_NtSetInformationFile, "NtSetInformationFile", "ntdll");
@@ -2129,10 +2183,7 @@ pub var NtCreateNamedPipeFile: PFN_NtCreateNamedPipeFile = undefined;
 pub var RtlSetCurrentDirectory_U: PFN_RtlSetCurrentDirectory_U = undefined;
 pub var RtlGetSystemTimePrecise: PFN_RtlGetSystemTimePrecise = undefined;
 pub var RtlGetFullPathName_U: PFN_RtlGetFullPathName_U = undefined;
-pub var NtQueryDirectoryFile: PFN_NtQueryDirectoryFile = undefined;
 pub var NtQueryObject: PFN_NtQueryObject = undefined;
-pub var NtLockFile: PFN_NtLockFile = undefined;
-pub var NtFsControlFile: PFN_NtFsControlFile = undefined;
 pub var NtReadFile: PFN_NtReadFile = undefined;
 pub var NtWriteFile: PFN_NtWriteFile = undefined;
 pub var NtSetInformationFile: PFN_NtSetInformationFile = undefined;
@@ -2214,6 +2265,11 @@ comptime {
     if (@import("builtin").mode != .Debug and @import("builtin").os.tag == .windows and bof) {
         @export(&NtAllocateVirtualMemory, .{ .name = "NtAllocateVirtualMemory", .linkage = .strong });
         @export(&NtFreeVirtualMemory, .{ .name = "NtFreeVirtualMemory", .linkage = .strong });
+        @export(&NtDeviceIoControlFile, .{ .name = "NtDeviceIoControlFile", .linkage = .strong });
+        @export(&NtFsControlFile, .{ .name = "NtFsControlFile", .linkage = .strong });
+        @export(&NtLockFile, .{ .name = "NtLockFile", .linkage = .strong });
+        @export(&NtUnlockFile, .{ .name = "NtUnlockFile", .linkage = .strong });
+        @export(&NtQueryDirectoryFile, .{ .name = "NtQueryDirectoryFile", .linkage = .strong });
     }
 }
 
