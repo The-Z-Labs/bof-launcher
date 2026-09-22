@@ -1806,8 +1806,36 @@ pub fn NtSetInformationFile(
     return f(FileHandle, IoStatusBlock, FileInformation, Length, FileInformationClass);
 }
 
-pub const PFN_NtReadFile = *const @TypeOf(std.os.windows.ntdll.NtReadFile);
-pub const PFN_NtWriteFile = *const @TypeOf(std.os.windows.ntdll.NtWriteFile);
+pub fn NtReadFile(
+    FileHandle: HANDLE, // _In_
+    Event: ?HANDLE, // _In_opt_
+    ApcRoutine: ?PIO_APC_ROUTINE, // _In_opt_
+    ApcContext: ?PVOID, // _In_opt_
+    IoStatusBlock: PIO_STATUS_BLOCK, // _Out_
+    Buffer: PVOID, // _Out_writes_bytes_(Length)
+    Length: ULONG, // _In_
+    ByteOffset: ?PLARGE_INTEGER, // _In_opt_
+    Key: ?PULONG, // _In_opt_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtReadFile), "NtReadFile", "ntdll");
+    return f(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, Buffer, Length, ByteOffset, Key);
+}
+
+pub fn NtWriteFile(
+    FileHandle: HANDLE, // _In_
+    Event: ?HANDLE, // _In_opt_
+    ApcRoutine: ?PIO_APC_ROUTINE, // _In_opt_
+    ApcContext: ?PVOID, // _In_opt_
+    IoStatusBlock: PIO_STATUS_BLOCK, // _Out_
+    Buffer: PVOID, // _In_reads_bytes_(Length)
+    Length: ULONG, // _In_
+    ByteOffset: ?PLARGE_INTEGER, // _In_opt_
+    Key: ?PULONG, // _In_opt_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtWriteFile), "NtWriteFile", "ntdll");
+    return f(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, Buffer, Length, ByteOffset, Key);
+}
+
 pub const PFN_NtQueryObject = *const @TypeOf(std.os.windows.ntdll.NtQueryObject);
 pub const PFN_NtClose = *const @TypeOf(std.os.windows.ntdll.NtClose);
 pub const PFN_NtCreateNamedPipeFile = *const @TypeOf(std.os.windows.ntdll.NtCreateNamedPipeFile);
@@ -2135,8 +2163,6 @@ pub fn init() void {
     RtlGetSystemTimePrecise = def(PFN_RtlGetSystemTimePrecise, "RtlGetSystemTimePrecise", "ntdll");
     RtlGetFullPathName_U = def(PFN_RtlGetFullPathName_U, "RtlGetFullPathName_U", "ntdll");
     NtQueryObject = def(PFN_NtQueryObject, "NtQueryObject", "ntdll");
-    NtReadFile = def(PFN_NtReadFile, "NtReadFile", "ntdll");
-    NtWriteFile = def(PFN_NtWriteFile, "NtWriteFile", "ntdll");
 
     MessageBoxA = def(PFN_MessageBoxA, "MessageBoxA", "user32");
     MessageBoxW = def(PFN_MessageBoxW, "MessageBoxW", "user32");
@@ -2255,8 +2281,6 @@ pub var RtlSetCurrentDirectory_U: PFN_RtlSetCurrentDirectory_U = undefined;
 pub var RtlGetSystemTimePrecise: PFN_RtlGetSystemTimePrecise = undefined;
 pub var RtlGetFullPathName_U: PFN_RtlGetFullPathName_U = undefined;
 pub var NtQueryObject: PFN_NtQueryObject = undefined;
-pub var NtReadFile: PFN_NtReadFile = undefined;
-pub var NtWriteFile: PFN_NtWriteFile = undefined;
 
 pub fn NtCurrentProcess() HANDLE {
     return @ptrFromInt(@as(usize, @bitCast(@as(isize, -1))));
@@ -2344,6 +2368,8 @@ comptime {
         @export(&NtQueryVolumeInformationFile, .{ .name = "NtQueryVolumeInformationFile", .linkage = .strong });
         @export(&NtQueryAttributesFile, .{ .name = "NtQueryAttributesFile", .linkage = .strong });
         @export(&NtSetInformationFile, .{ .name = "NtSetInformationFile", .linkage = .strong });
+        @export(&NtReadFile, .{ .name = "NtReadFile", .linkage = .strong });
+        @export(&NtWriteFile, .{ .name = "NtWriteFile", .linkage = .strong });
     }
 }
 
