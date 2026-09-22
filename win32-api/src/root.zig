@@ -359,6 +359,7 @@ pub const CHAR = u8;
 pub const UCHAR = u8;
 pub const FLOAT = f32;
 pub const HANDLE = *anyopaque;
+pub const PHANDLE = *HANDLE;
 pub const HCRYPTPROV = ULONG_PTR;
 pub const ATOM = u16;
 pub const HBRUSH = *opaque {};
@@ -394,10 +395,12 @@ pub const WORD = u16;
 pub const DWORD = u32;
 pub const DWORD64 = u64;
 pub const LARGE_INTEGER = i64;
+pub const PLARGE_INTEGER = *LARGE_INTEGER;
 pub const ULARGE_INTEGER = u64;
 pub const USHORT = u16;
 pub const SHORT = i16;
 pub const ULONG = u32;
+pub const PULONG = *ULONG;
 pub const LONG = i32;
 pub const ULONG64 = u64;
 pub const ULONGLONG = u64;
@@ -512,6 +515,7 @@ pub const IO_STATUS_BLOCK = extern struct {
     },
     Information: ULONG_PTR,
 };
+pub const PIO_STATUS_BLOCK = *IO_STATUS_BLOCK;
 pub const PIO_APC_ROUTINE = *const fn (PVOID, *IO_STATUS_BLOCK, ULONG) callconv(.winapi) void;
 pub const WinsockError = u16;
 pub const WAIT_FAILED = 0xffff_ffff;
@@ -928,6 +932,8 @@ pub const OBJECT_ATTRIBUTES = extern struct {
     SecurityDescriptor: ?*anyopaque,
     SecurityQualityOfService: ?*anyopaque,
 };
+pub const POBJECT_ATTRIBUTES = *OBJECT_ATTRIBUTES;
+pub const PCOBJECT_ATTRIBUTES = *const OBJECT_ATTRIBUTES;
 
 pub const JOBOBJECTINFOCLASS = enum(c_int) {
     JobObjectBasicAccountingInformation = 1, // JOBOBJECT_BASIC_ACCOUNTING_INFORMATION
@@ -1657,76 +1663,76 @@ pub const PFN_NtCreateUserProcess = *const fn (
 ) callconv(.winapi) NTSTATUS;
 
 pub fn NtCreateFile(
-    FileHandle: *HANDLE,
-    DesiredAccess: ACCESS_MASK,
-    ObjectAttributes: *const OBJECT_ATTRIBUTES,
-    IoStatusBlock: *IO_STATUS_BLOCK,
-    AllocationSize: ?*const LARGE_INTEGER,
-    FileAttributes: ULONG,
-    ShareAccess: ULONG,
-    CreateDisposition: ULONG,
-    CreateOptions: ULONG,
-    EaBuffer: ?LPCVOID,
-    EaLength: ULONG,
+    FileHandle: PHANDLE, // _Out_
+    DesiredAccess: ACCESS_MASK, // _In_
+    ObjectAttributes: PCOBJECT_ATTRIBUTES, // _In_
+    IoStatusBlock: PIO_STATUS_BLOCK, // _Out_
+    AllocationSize: ?PLARGE_INTEGER, // _In_opt_
+    FileAttributes: ULONG, // _In_
+    ShareAccess: ULONG, // _In_
+    CreateDisposition: ULONG, // _In_
+    CreateOptions: ULONG, // _In_
+    EaBuffer: ?PVOID, // _In_reads_bytes_opt_(EaLength)
+    EaLength: ULONG, // _In_
 ) linksection(section_name) callconv(.winapi) NTSTATUS {
     const f = def(*const @TypeOf(NtCreateFile), "NtCreateFile", "ntdll");
     return f(FileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, AllocationSize, FileAttributes, ShareAccess, CreateDisposition, CreateOptions, EaBuffer, EaLength);
 }
 
 pub fn NtDeviceIoControlFile(
-    FileHandle: HANDLE,
-    Event: ?HANDLE,
-    ApcRoutine: ?PIO_APC_ROUTINE,
-    ApcContext: ?PVOID,
-    IoStatusBlock: *IO_STATUS_BLOCK,
-    IoControlCode: ULONG,
-    InputBuffer: ?LPCVOID,
-    InputBufferLength: ULONG,
-    OutputBuffer: ?PVOID,
-    OutputBufferLength: ULONG,
+    FileHandle: HANDLE, // _In_
+    Event: ?HANDLE, // _In_opt_
+    ApcRoutine: ?PIO_APC_ROUTINE, // _In_opt_
+    ApcContext: ?PVOID, // _In_opt_
+    IoStatusBlock: PIO_STATUS_BLOCK, // _Out_
+    IoControlCode: ULONG, // _In_
+    InputBuffer: ?PVOID, // _In_reads_bytes_opt_(InputBufferLength)
+    InputBufferLength: ULONG, // _In_
+    OutputBuffer: ?PVOID, // _Out_writes_bytes_opt_(OutputBufferLength)
+    OutputBufferLength: ULONG, // _In_
 ) linksection(section_name) callconv(.winapi) NTSTATUS {
     const f = def(*const @TypeOf(NtDeviceIoControlFile), "NtDeviceIoControlFile", "ntdll");
     return f(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, IoControlCode, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength);
 }
 
 pub fn NtFsControlFile(
-    FileHandle: HANDLE,
-    Event: ?HANDLE,
-    ApcRoutine: ?PIO_APC_ROUTINE,
-    ApcContext: ?PVOID,
-    IoStatusBlock: *IO_STATUS_BLOCK,
-    FsControlCode: ULONG,
-    InputBuffer: ?LPCVOID,
-    InputBufferLength: ULONG,
-    OutputBuffer: ?PVOID,
-    OutputBufferLength: ULONG,
+    FileHandle: HANDLE, // _In_
+    Event: ?HANDLE, // _In_opt_
+    ApcRoutine: ?PIO_APC_ROUTINE, // _In_opt_
+    ApcContext: ?PVOID, // _In_opt_
+    IoStatusBlock: PIO_STATUS_BLOCK, // _Out_
+    FsControlCode: ULONG, // _In_
+    InputBuffer: ?PVOID, // _In_reads_bytes_opt_(InputBufferLength)
+    InputBufferLength: ULONG, // _In_
+    OutputBuffer: ?PVOID, // _Out_writes_bytes_opt_(OutputBufferLength)
+    OutputBufferLength: ULONG, // _In_
 ) linksection(section_name) callconv(.winapi) NTSTATUS {
     const f = def(*const @TypeOf(NtFsControlFile), "NtFsControlFile", "ntdll");
     return f(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, FsControlCode, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength);
 }
 
 pub fn NtLockFile(
-    FileHandle: HANDLE,
-    Event: ?HANDLE,
-    ApcRoutine: ?PIO_APC_ROUTINE,
-    ApcContext: ?PVOID,
-    IoStatusBlock: *IO_STATUS_BLOCK,
-    ByteOffset: *const LARGE_INTEGER,
-    Length: *const LARGE_INTEGER,
-    Key: ULONG,
-    FailImmediately: BOOLEAN,
-    ExclusiveLock: BOOLEAN,
+    FileHandle: HANDLE, // _In_
+    Event: ?HANDLE, // _In_opt_
+    ApcRoutine: ?PIO_APC_ROUTINE, // _In_opt_
+    ApcContext: ?PVOID, // _In_opt_
+    IoStatusBlock: PIO_STATUS_BLOCK, // _Out_
+    ByteOffset: PLARGE_INTEGER, // _In_
+    Length: PLARGE_INTEGER, // _In_
+    Key: ULONG, // _In_
+    FailImmediately: BOOLEAN, // _In_
+    ExclusiveLock: BOOLEAN, // _In_
 ) linksection(section_name) callconv(.winapi) NTSTATUS {
     const f = def(*const @TypeOf(NtLockFile), "NtLockFile", "ntdll");
     return f(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, ByteOffset, Length, Key, FailImmediately, ExclusiveLock);
 }
 
 pub fn NtUnlockFile(
-    FileHandle: HANDLE,
-    IoStatusBlock: *IO_STATUS_BLOCK,
-    ByteOffset: *const LARGE_INTEGER,
-    Length: *const LARGE_INTEGER,
-    Key: ULONG,
+    FileHandle: HANDLE, // _In_
+    IoStatusBlock: PIO_STATUS_BLOCK, // _Out_
+    ByteOffset: PLARGE_INTEGER, // _In_
+    Length: PLARGE_INTEGER, // _In_
+    Key: ULONG, // _In_
 ) linksection(section_name) callconv(.winapi) NTSTATUS {
     const f = def(*const @TypeOf(NtUnlockFile), "NtUnlockFile", "ntdll");
     return f(FileHandle, IoStatusBlock, ByteOffset, Length, Key);
