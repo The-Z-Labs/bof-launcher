@@ -85,6 +85,7 @@ pub const UNICODE_STRING = extern struct {
     MaximumLength: USHORT,
     Buffer: ?[*]WCHAR,
 };
+pub const PCUNICODE_STRING = *const UNICODE_STRING;
 pub const INFINITE = 4294967295;
 pub const BOOLEAN = BYTE;
 pub const HRESULT = c_long;
@@ -1739,39 +1740,39 @@ pub fn NtUnlockFile(
 }
 
 pub fn NtQueryDirectoryFile(
-    FileHandle: HANDLE,
-    Event: ?HANDLE,
-    ApcRoutine: ?PIO_APC_ROUTINE,
-    ApcContext: ?PVOID,
-    IoStatusBlock: *IO_STATUS_BLOCK,
-    FileInformation: PVOID,
-    Length: ULONG,
-    FileInformationClass: FILE_INFORMATION_CLASS,
-    ReturnSingleEntry: BOOLEAN,
-    FileName: ?*const UNICODE_STRING,
-    RestartScan: BOOLEAN,
+    FileHandle: HANDLE, // _In_
+    Event: ?HANDLE, // _In_opt_
+    ApcRoutine: ?PIO_APC_ROUTINE, // _In_opt_
+    ApcContext: ?PVOID, // _In_opt_
+    IoStatusBlock: PIO_STATUS_BLOCK, // _Out_
+    FileInformation: PVOID, // _Out_writes_bytes_(Length)
+    Length: ULONG, // _In_
+    FileInformationClass: FILE_INFORMATION_CLASS, // _In_
+    ReturnSingleEntry: BOOLEAN, // _In_
+    FileName: ?PCUNICODE_STRING, // _In_opt_
+    RestartScan: BOOLEAN, // _In_
 ) linksection(section_name) callconv(.winapi) NTSTATUS {
     const f = def(*const @TypeOf(NtQueryDirectoryFile), "NtQueryDirectoryFile", "ntdll");
     return f(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, FileInformation, Length, FileInformationClass, ReturnSingleEntry, FileName, RestartScan);
 }
 
 pub fn NtQueryInformationFile(
-    FileHandle: HANDLE,
-    IoStatusBlock: *IO_STATUS_BLOCK,
-    FileInformation: PVOID,
-    Length: ULONG,
-    FileInformationClass: FILE_INFORMATION_CLASS,
+    FileHandle: HANDLE, // _In_
+    IoStatusBlock: PIO_STATUS_BLOCK, // _Out_
+    FileInformation: PVOID, // _Out_writes_bytes_(Length)
+    Length: ULONG, // _In_
+    FileInformationClass: FILE_INFORMATION_CLASS, // _In_
 ) linksection(section_name) callconv(.winapi) NTSTATUS {
     const f = def(*const @TypeOf(NtQueryInformationFile), "NtQueryInformationFile", "ntdll");
     return f(FileHandle, IoStatusBlock, FileInformation, Length, FileInformationClass);
 }
 
 pub fn NtQueryVolumeInformationFile(
-    FileHandle: HANDLE,
-    IoStatusBlock: *IO_STATUS_BLOCK,
-    FsInformation: PVOID,
-    Length: ULONG,
-    FsInformationClass: FS_INFORMATION_CLASS,
+    FileHandle: HANDLE, // _In_
+    IoStatusBlock: PIO_STATUS_BLOCK, // _Out_
+    FsInformation: PVOID, // _Out_writes_bytes_(Length)
+    Length: ULONG, // _In_
+    FsInformationClass: FS_INFORMATION_CLASS, // _In_
 ) linksection(section_name) callconv(.winapi) NTSTATUS {
     const f = def(*const @TypeOf(NtQueryVolumeInformationFile), "NtQueryVolumeInformationFile", "ntdll");
     return f(FileHandle, IoStatusBlock, FsInformation, Length, FsInformationClass);
@@ -1784,21 +1785,22 @@ pub const FILE_BASIC_INFORMATION = extern struct {
     ChangeTime: LARGE_INTEGER,
     FileAttributes: ULONG,
 };
+pub const PFILE_BASIC_INFORMATION = *FILE_BASIC_INFORMATION;
 
 pub fn NtQueryAttributesFile(
-    ObjectAttributes: *const OBJECT_ATTRIBUTES,
-    FileAttributes: *FILE_BASIC_INFORMATION,
+    ObjectAttributes: PCOBJECT_ATTRIBUTES, // _In_
+    FileAttributes: PFILE_BASIC_INFORMATION, // _Out_
 ) linksection(section_name) callconv(.winapi) NTSTATUS {
     const f = def(*const @TypeOf(NtQueryAttributesFile), "NtQueryAttributesFile", "ntdll");
     return f(ObjectAttributes, FileAttributes);
 }
 
 pub fn NtSetInformationFile(
-    FileHandle: HANDLE,
-    IoStatusBlock: *IO_STATUS_BLOCK,
-    FileInformation: PVOID,
-    Length: ULONG,
-    FileInformationClass: FILE_INFORMATION_CLASS,
+    FileHandle: HANDLE, // _In_
+    IoStatusBlock: PIO_STATUS_BLOCK, // _Out_
+    FileInformation: PVOID, // _In_reads_bytes_(Length)
+    Length: ULONG, // _In_
+    FileInformationClass: FILE_INFORMATION_CLASS, // _In_
 ) linksection(section_name) callconv(.winapi) NTSTATUS {
     const f = def(*const @TypeOf(NtSetInformationFile), "NtSetInformationFile", "ntdll");
     return f(FileHandle, IoStatusBlock, FileInformation, Length, FileInformationClass);
