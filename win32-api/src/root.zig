@@ -102,7 +102,6 @@ pub const OSVERSIONINFOW = extern struct {
 };
 pub const RTL_OSVERSIONINFOW = OSVERSIONINFOW;
 pub const PSID = PVOID;
-pub const PSECURITY_DESCRIPTOR = PVOID;
 pub const NTSTATUS = u32;
 pub const CLIENT_ID = extern struct {
     UniqueProcess: ?HANDLE,
@@ -421,6 +420,7 @@ pub const PCWSTR = [*:0]const WCHAR;
 /// Allocated by SysAllocString, freed by SysFreeString
 pub const BSTR = [*:0]WCHAR;
 pub const SIZE_T = usize;
+pub const PSIZE_T = *SIZE_T;
 pub const UINT = c_uint;
 pub const ULONG_PTR = usize;
 pub const LONG_PTR = isize;
@@ -445,14 +445,20 @@ pub const COLORREF = DWORD;
 
 pub const LPARAM = LONG_PTR;
 
+pub const OBJ_PROTECT_CLOSE = 0x00000001;
 pub const OBJ_INHERIT = 0x00000002;
+pub const OBJ_AUDIT_OBJECT_CLOSE = 0x00000004;
+pub const OBJ_NO_RIGHTS_UPGRADE = 0x00000008;
 pub const OBJ_PERMANENT = 0x00000010;
 pub const OBJ_EXCLUSIVE = 0x00000020;
 pub const OBJ_CASE_INSENSITIVE = 0x00000040;
 pub const OBJ_OPENIF = 0x00000080;
 pub const OBJ_OPENLINK = 0x00000100;
 pub const OBJ_KERNEL_HANDLE = 0x00000200;
-pub const OBJ_VALID_ATTRIBUTES = 0x000003F2;
+pub const OBJ_FORCE_ACCESS_CHECK = 0x00000400;
+pub const OBJ_IGNORE_IMPERSONATED_DEVICEMAP = 0x00000800;
+pub const OBJ_DONT_REPARSE = 0x00001000;
+pub const OBJ_VALID_ATTRIBUTES = 0x00001ff2;
 
 pub const AI = packed struct(u32) {
     PASSIVE: bool = false,
@@ -1154,15 +1160,18 @@ pub const COINIT_SPEED_OVER_MEMORY = 0x8;
 pub const DLL_PROCESS_ATTACH = 1;
 pub const DLL_PROCESS_DETACH = 0;
 
+pub const PSECURITY_DESCRIPTOR = *anyopaque;
+pub const PSECURITY_QUALITY_OF_SERVICE = *anyopaque;
+
 pub const CREATE_SUSPENDED = 0x4;
 
 pub const OBJECT_ATTRIBUTES = extern struct {
     Length: ULONG,
     RootDirectory: ?HANDLE,
-    ObjectName: ?*UNICODE_STRING,
+    ObjectName: ?PCUNICODE_STRING,
     Attributes: ULONG,
-    SecurityDescriptor: ?*anyopaque,
-    SecurityQualityOfService: ?*anyopaque,
+    SecurityDescriptor: ?PSECURITY_DESCRIPTOR,
+    SecurityQualityOfService: ?PSECURITY_QUALITY_OF_SERVICE,
 };
 pub const POBJECT_ATTRIBUTES = *OBJECT_ATTRIBUTES;
 pub const PCOBJECT_ATTRIBUTES = *const OBJECT_ATTRIBUTES;
@@ -2307,6 +2316,48 @@ pub fn NtCreateNamedPipeFile(
     return f(FileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, ShareAccess, CreateDisposition, CreateOptions, NamedPipeType, ReadMode, CompletionMode, MaximumInstances, InboundQuota, OutboundQuota, DefaultTimeout);
 }
 
+pub fn NtCreateSection(
+    SectionHandle: PHANDLE, // _Out_
+    DesiredAccess: ACCESS_MASK, // _In_
+    ObjectAttributes: ?PCOBJECT_ATTRIBUTES, // _In_opt_
+    MaximumSize: ?PLARGE_INTEGER, // _In_opt_
+    SectionPageProtection: ULONG, // _In_
+    AllocationAttributes: ULONG, // _In_
+    FileHandle: ?HANDLE, // _In_opt_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtCreateSection), "NtCreateSection", "ntdll");
+    return f(SectionHandle, DesiredAccess, ObjectAttributes, MaximumSize, SectionPageProtection, AllocationAttributes, FileHandle);
+}
+
+pub const SECTION_INHERIT = enum(c_int) {
+    Share = 1,
+    Unmap = 2,
+};
+
+pub fn NtMapViewOfSection(
+    SectionHandle: HANDLE, // _In_
+    ProcessHandle: HANDLE, // _In_
+    BaseAddress: ?*PVOID, // _Inout_
+    ZeroBits: ULONG_PTR, // _In_
+    CommitSize: SIZE_T, // _In_
+    SectionOffset: ?PLARGE_INTEGER, // _Inout_opt_
+    ViewSize: PSIZE_T, // _Inout_
+    InheritDispostion: SECTION_INHERIT, // _In_
+    AllocationType: ULONG, // _In_
+    PageProtection: ULONG, // _In_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtMapViewOfSection), "NtMapViewOfSection", "ntdll");
+    return f(SectionHandle, ProcessHandle, BaseAddress, ZeroBits, CommitSize, SectionOffset, ViewSize, InheritDispostion, AllocationType, PageProtection);
+}
+
+pub fn NtUnmapViewOfSection(
+    ProcessHandle: HANDLE, // _In_
+    BaseAddress: ?PVOID, // _In_opt_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtUnmapViewOfSection), "NtUnmapViewOfSection", "ntdll");
+    return f(ProcessHandle, BaseAddress);
+}
+
 pub const PFN_NtWriteVirtualMemory = *const @TypeOf(std.os.windows.ntdll.NtWriteVirtualMemory);
 pub const PFN_NtProtectVirtualMemory = *const @TypeOf(std.os.windows.ntdll.NtProtectVirtualMemory);
 pub const PFN_NtCreateThreadEx = *const @TypeOf(std.os.windows.ntdll.NtCreateThreadEx);
@@ -2847,6 +2898,9 @@ comptime {
         @export(&NtWaitForAlertByThreadId, .{ .name = "NtWaitForAlertByThreadId", .linkage = .strong });
         @export(&NtQueryInformationProcess, .{ .name = "NtQueryInformationProcess", .linkage = .strong });
         @export(&NtQueryInformationThread, .{ .name = "NtQueryInformationThread", .linkage = .strong });
+        @export(&NtCreateSection, .{ .name = "NtCreateSection", .linkage = .strong });
+        @export(&NtMapViewOfSection, .{ .name = "NtMapViewOfSection", .linkage = .strong });
+        @export(&NtUnmapViewOfSection, .{ .name = "NtUnmapViewOfSection", .linkage = .strong });
     }
 }
 
