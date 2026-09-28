@@ -54,6 +54,34 @@ pub const SYSTEM_INFO = extern struct {
     wProcessorLevel: WORD,
     wProcessorRevision: WORD,
 };
+pub const LIST_ENTRY = extern struct {
+    Flink: *LIST_ENTRY,
+    Blink: *LIST_ENTRY,
+};
+
+pub const RTL_CRITICAL_SECTION_DEBUG = extern struct {
+    Type: WORD,
+    CreatorBackTraceIndex: WORD,
+    CriticalSection: *RTL_CRITICAL_SECTION,
+    ProcessLocksList: LIST_ENTRY,
+    EntryCount: DWORD,
+    ContentionCount: DWORD,
+    Flags: DWORD,
+    CreatorBackTraceIndexHigh: WORD,
+    SpareWORD: WORD,
+};
+
+pub const RTL_CRITICAL_SECTION = extern struct {
+    DebugInfo: *RTL_CRITICAL_SECTION_DEBUG,
+    LockCount: LONG,
+    RecursionCount: LONG,
+    OwningThread: HANDLE,
+    LockSemaphore: HANDLE,
+    SpinCount: ULONG_PTR,
+};
+pub const PRTL_CRITICAL_SECTION = *RTL_CRITICAL_SECTION;
+pub const CRITICAL_SECTION = RTL_CRITICAL_SECTION;
+
 pub const GUID = extern struct {
     Data1: u32,
     Data2: u16,
@@ -1848,14 +1876,14 @@ pub fn RtlSetCurrentDirectory_U(
 }
 
 pub fn RtlQueryPerformanceCounter(
-    PerformanceCounter: PLARGE_INTEGER,
+    PerformanceCounter: PLARGE_INTEGER, // _Out_
 ) linksection(section_name) callconv(.winapi) BOOL {
     const f = def(*const @TypeOf(RtlQueryPerformanceCounter), "RtlQueryPerformanceCounter", "ntdll");
     return f(PerformanceCounter);
 }
 
 pub fn RtlQueryPerformanceFrequency(
-    PerformanceFrequency: PLARGE_INTEGER,
+    PerformanceFrequency: PLARGE_INTEGER, // _Out_
 ) linksection(section_name) callconv(.winapi) BOOL {
     const f = def(*const @TypeOf(RtlQueryPerformanceFrequency), "RtlQueryPerformanceFrequency", "ntdll");
     return f(PerformanceFrequency);
@@ -1864,6 +1892,54 @@ pub fn RtlQueryPerformanceFrequency(
 pub fn RtlGetSystemTimePrecise() linksection(section_name) callconv(.winapi) LARGE_INTEGER {
     const f = def(*const @TypeOf(RtlGetSystemTimePrecise), "RtlGetSystemTimePrecise", "ntdll");
     return f();
+}
+
+pub fn RtlGetFullPathName_U(
+    FileName: PCWSTR, // _In_
+    BufferLength: ULONG, // _In_
+    Buffer: PWSTR, // _Out_writes_bytes_(BufferLength)
+    ShortName: ?*PWSTR, // _Out_opt_
+) linksection(section_name) callconv(.winapi) ULONG {
+    const f = def(*const @TypeOf(RtlGetFullPathName_U), "RtlGetFullPathName_U", "ntdll");
+    return f(FileName, BufferLength, Buffer, ShortName);
+}
+
+pub fn RtlEqualUnicodeString(
+    String1: PCUNICODE_STRING, // _In_
+    String2: PCUNICODE_STRING, // _In_
+    CaseInSensitive: BOOLEAN, // _In_
+) linksection(section_name) callconv(.winapi) BOOLEAN {
+    const f = def(*const @TypeOf(RtlEqualUnicodeString), "RtlEqualUnicodeString", "ntdll");
+    return f(String1, String2, CaseInSensitive);
+}
+
+pub fn RtlUpcaseUnicodeChar(
+    SourceCharacter: u16, // _In_
+) linksection(section_name) callconv(.winapi) u16 {
+    const f = def(*const @TypeOf(RtlUpcaseUnicodeChar), "RtlUpcaseUnicodeChar", "ntdll");
+    return f(SourceCharacter);
+}
+
+pub fn RtlReportSilentProcessExit(
+    ProcessHandle: HANDLE, // _In_
+    ExitStatus: NTSTATUS, // _In_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(RtlReportSilentProcessExit), "RtlReportSilentProcessExit", "ntdll");
+    return f(ProcessHandle, ExitStatus);
+}
+
+pub fn RtlEnterCriticalSection(
+    lpCriticalSection: PRTL_CRITICAL_SECTION, // _Inout_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(RtlEnterCriticalSection), "RtlEnterCriticalSection", "ntdll");
+    return f(lpCriticalSection);
+}
+
+pub fn RtlLeaveCriticalSection(
+    lpCriticalSection: PRTL_CRITICAL_SECTION, // _Inout_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(RtlLeaveCriticalSection), "RtlLeaveCriticalSection", "ntdll");
+    return f(lpCriticalSection);
 }
 
 pub fn NtQueryInformationFile(
@@ -1970,7 +2046,6 @@ pub const PFN_NtQueryObject = *const @TypeOf(std.os.windows.ntdll.NtQueryObject)
 pub const PFN_NtClose = *const @TypeOf(std.os.windows.ntdll.NtClose);
 pub const PFN_NtWriteVirtualMemory = *const @TypeOf(std.os.windows.ntdll.NtWriteVirtualMemory);
 pub const PFN_NtProtectVirtualMemory = *const @TypeOf(std.os.windows.ntdll.NtProtectVirtualMemory);
-pub const PFN_RtlGetFullPathName_U = *const @TypeOf(std.os.windows.ntdll.RtlGetFullPathName_U);
 pub const PFN_NtTerminateProcess = *const @TypeOf(std.os.windows.ntdll.NtTerminateProcess);
 pub const PFN_NtCreateThreadEx = *const @TypeOf(std.os.windows.ntdll.NtCreateThreadEx);
 pub const PFN_NtResumeThread = *const @TypeOf(std.os.windows.ntdll.NtResumeThread);
@@ -2285,7 +2360,6 @@ pub fn init() void {
     NtCreateUserProcess = def(PFN_NtCreateUserProcess, "NtCreateUserProcess", "ntdll");
     RtlCloneUserProcess = def(PFN_RtlCloneUserProcess, "RtlCloneUserProcess", "ntdll");
     RtlWow64EnableFsRedirection = def(PFN_RtlWow64EnableFsRedirection, "RtlWow64EnableFsRedirection", "ntdll");
-    RtlGetFullPathName_U = def(PFN_RtlGetFullPathName_U, "RtlGetFullPathName_U", "ntdll");
     NtQueryObject = def(PFN_NtQueryObject, "NtQueryObject", "ntdll");
 
     MessageBoxA = def(PFN_MessageBoxA, "MessageBoxA", "user32");
@@ -2400,7 +2474,6 @@ pub var NtCreateThreadEx: PFN_NtCreateThreadEx = undefined;
 pub var NtCreateUserProcess: PFN_NtCreateUserProcess = undefined;
 pub var RtlCloneUserProcess: PFN_RtlCloneUserProcess = undefined;
 pub var RtlWow64EnableFsRedirection: PFN_RtlWow64EnableFsRedirection = undefined;
-pub var RtlGetFullPathName_U: PFN_RtlGetFullPathName_U = undefined;
 pub var NtQueryObject: PFN_NtQueryObject = undefined;
 
 pub fn NtCurrentProcess() HANDLE {
@@ -2505,6 +2578,12 @@ comptime {
         @export(&RtlQueryPerformanceCounter, .{ .name = "RtlQueryPerformanceCounter", .linkage = .strong });
         @export(&RtlQueryPerformanceFrequency, .{ .name = "RtlQueryPerformanceFrequency", .linkage = .strong });
         @export(&RtlGetSystemTimePrecise, .{ .name = "RtlGetSystemTimePrecise", .linkage = .strong });
+        @export(&RtlGetFullPathName_U, .{ .name = "RtlGetFullPathName_U", .linkage = .strong });
+        @export(&RtlEqualUnicodeString, .{ .name = "RtlEqualUnicodeString", .linkage = .strong });
+        @export(&RtlUpcaseUnicodeChar, .{ .name = "RtlUpcaseUnicodeChar", .linkage = .strong });
+        @export(&RtlReportSilentProcessExit, .{ .name = "RtlReportSilentProcessExit", .linkage = .strong });
+        @export(&RtlEnterCriticalSection, .{ .name = "RtlEnterCriticalSection", .linkage = .strong });
+        @export(&RtlLeaveCriticalSection, .{ .name = "RtlLeaveCriticalSection", .linkage = .strong });
     }
 }
 
