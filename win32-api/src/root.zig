@@ -1832,6 +1832,40 @@ pub fn NtQueryDirectoryFile(
     return f(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, FileInformation, Length, FileInformationClass, ReturnSingleEntry, FileName, RestartScan);
 }
 
+pub fn RtlGetCurrentDirectory_U(
+    BufferLength: ULONG, // _In_
+    Buffer: [*]u16, // _Out_writes_bytes_(BufferLength)
+) linksection(section_name) callconv(.winapi) ULONG {
+    const f = def(*const @TypeOf(RtlGetCurrentDirectory_U), "RtlGetCurrentDirectory_U", "ntdll");
+    return f(BufferLength, Buffer);
+}
+
+pub fn RtlSetCurrentDirectory_U(
+    PathName: PCUNICODE_STRING, // _In_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(RtlSetCurrentDirectory_U), "RtlSetCurrentDirectory_U", "ntdll");
+    return f(PathName);
+}
+
+pub fn RtlQueryPerformanceCounter(
+    PerformanceCounter: PLARGE_INTEGER,
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(RtlQueryPerformanceCounter), "RtlQueryPerformanceCounter", "ntdll");
+    return f(PerformanceCounter);
+}
+
+pub fn RtlQueryPerformanceFrequency(
+    PerformanceFrequency: PLARGE_INTEGER,
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(RtlQueryPerformanceFrequency), "RtlQueryPerformanceFrequency", "ntdll");
+    return f(PerformanceFrequency);
+}
+
+pub fn RtlGetSystemTimePrecise() linksection(section_name) callconv(.winapi) LARGE_INTEGER {
+    const f = def(*const @TypeOf(RtlGetSystemTimePrecise), "RtlGetSystemTimePrecise", "ntdll");
+    return f();
+}
+
 pub fn NtQueryInformationFile(
     FileHandle: HANDLE, // _In_
     IoStatusBlock: PIO_STATUS_BLOCK, // _Out_
@@ -1937,9 +1971,7 @@ pub const PFN_NtClose = *const @TypeOf(std.os.windows.ntdll.NtClose);
 pub const PFN_NtWriteVirtualMemory = *const @TypeOf(std.os.windows.ntdll.NtWriteVirtualMemory);
 pub const PFN_NtProtectVirtualMemory = *const @TypeOf(std.os.windows.ntdll.NtProtectVirtualMemory);
 pub const PFN_RtlGetFullPathName_U = *const @TypeOf(std.os.windows.ntdll.RtlGetFullPathName_U);
-pub const PFN_RtlGetSystemTimePrecise = *const @TypeOf(std.os.windows.ntdll.RtlGetSystemTimePrecise);
 pub const PFN_NtTerminateProcess = *const @TypeOf(std.os.windows.ntdll.NtTerminateProcess);
-pub const PFN_RtlSetCurrentDirectory_U = *const @TypeOf(std.os.windows.ntdll.RtlSetCurrentDirectory_U);
 pub const PFN_NtCreateThreadEx = *const @TypeOf(std.os.windows.ntdll.NtCreateThreadEx);
 pub const PFN_NtResumeThread = *const @TypeOf(std.os.windows.ntdll.NtResumeThread);
 
@@ -2253,8 +2285,6 @@ pub fn init() void {
     NtCreateUserProcess = def(PFN_NtCreateUserProcess, "NtCreateUserProcess", "ntdll");
     RtlCloneUserProcess = def(PFN_RtlCloneUserProcess, "RtlCloneUserProcess", "ntdll");
     RtlWow64EnableFsRedirection = def(PFN_RtlWow64EnableFsRedirection, "RtlWow64EnableFsRedirection", "ntdll");
-    RtlSetCurrentDirectory_U = def(PFN_RtlSetCurrentDirectory_U, "RtlSetCurrentDirectory_U", "ntdll");
-    RtlGetSystemTimePrecise = def(PFN_RtlGetSystemTimePrecise, "RtlGetSystemTimePrecise", "ntdll");
     RtlGetFullPathName_U = def(PFN_RtlGetFullPathName_U, "RtlGetFullPathName_U", "ntdll");
     NtQueryObject = def(PFN_NtQueryObject, "NtQueryObject", "ntdll");
 
@@ -2370,8 +2400,6 @@ pub var NtCreateThreadEx: PFN_NtCreateThreadEx = undefined;
 pub var NtCreateUserProcess: PFN_NtCreateUserProcess = undefined;
 pub var RtlCloneUserProcess: PFN_RtlCloneUserProcess = undefined;
 pub var RtlWow64EnableFsRedirection: PFN_RtlWow64EnableFsRedirection = undefined;
-pub var RtlSetCurrentDirectory_U: PFN_RtlSetCurrentDirectory_U = undefined;
-pub var RtlGetSystemTimePrecise: PFN_RtlGetSystemTimePrecise = undefined;
 pub var RtlGetFullPathName_U: PFN_RtlGetFullPathName_U = undefined;
 pub var NtQueryObject: PFN_NtQueryObject = undefined;
 
@@ -2472,6 +2500,11 @@ comptime {
         @export(&LdrGetProcedureAddress, .{ .name = "LdrGetProcedureAddress", .linkage = .strong });
         @export(&LdrGetProcedureAddressEx, .{ .name = "LdrGetProcedureAddressEx", .linkage = .strong });
         @export(&LdrGetProcedureAddressForCaller, .{ .name = "LdrGetProcedureAddressForCaller", .linkage = .strong });
+        @export(&RtlGetCurrentDirectory_U, .{ .name = "RtlGetCurrentDirectory_U", .linkage = .strong });
+        @export(&RtlSetCurrentDirectory_U, .{ .name = "RtlSetCurrentDirectory_U", .linkage = .strong });
+        @export(&RtlQueryPerformanceCounter, .{ .name = "RtlQueryPerformanceCounter", .linkage = .strong });
+        @export(&RtlQueryPerformanceFrequency, .{ .name = "RtlQueryPerformanceFrequency", .linkage = .strong });
+        @export(&RtlGetSystemTimePrecise, .{ .name = "RtlGetSystemTimePrecise", .linkage = .strong });
     }
 }
 
