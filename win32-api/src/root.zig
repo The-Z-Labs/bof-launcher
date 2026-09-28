@@ -1607,7 +1607,7 @@ pub const PFN_NtTerminateThread = *const fn (
 
 pub fn NtOpenProcess(
     ProcessHandle: *HANDLE,
-    DesiredAccess: DWORD,
+    DesiredAccess: ACCESS_MASK,
     ObjectAttributes: ?*OBJECT_ATTRIBUTES,
     ClientId: ?*CLIENT_ID,
 ) linksection(section_name) callconv(.winapi) NTSTATUS {
@@ -1678,6 +1678,18 @@ pub fn NtCreateFile(
 ) linksection(section_name) callconv(.winapi) NTSTATUS {
     const f = def(*const @TypeOf(NtCreateFile), "NtCreateFile", "ntdll");
     return f(FileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, AllocationSize, FileAttributes, ShareAccess, CreateDisposition, CreateOptions, EaBuffer, EaLength);
+}
+
+pub fn NtOpenFile(
+    FileHandle: *HANDLE, // _Out_
+    DesiredAccess: ACCESS_MASK, // _In_
+    ObjectAttributes: PCOBJECT_ATTRIBUTES, // _In_
+    IoStatusBlock: PIO_STATUS_BLOCK, // _Out_
+    ShareAccess: ULONG, // _In_
+    OpenOptions: ULONG, // _In_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtOpenFile), "NtOpenFile", "ntdll");
+    return f(FileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, ShareAccess, OpenOptions);
 }
 
 pub fn NtDeviceIoControlFile(
@@ -1836,9 +1848,28 @@ pub fn NtWriteFile(
     return f(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, Buffer, Length, ByteOffset, Key);
 }
 
+pub fn NtCreateNamedPipeFile(
+    FileHandle: *HANDLE, // _Out_
+    DesiredAccess: ACCESS_MASK, // _In_
+    ObjectAttributes: PCOBJECT_ATTRIBUTES, // _In_
+    IoStatusBlock: PIO_STATUS_BLOCK, // _Out_
+    ShareAccess: ULONG, // _In_
+    CreateDisposition: ULONG, // _In_
+    CreateOptions: ULONG, // _In_
+    NamedPipeType: ULONG, // _In_
+    ReadMode: ULONG, // _In_
+    CompletionMode: ULONG, // _In_
+    MaximumInstances: ULONG, // _In_
+    InboundQuota: ULONG, // _In_
+    OutboundQuota: ULONG, // _In_
+    DefaultTimeout: ?PLARGE_INTEGER, // _In_opt_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtCreateNamedPipeFile), "NtCreateNamedPipeFile", "ntdll");
+    return f(FileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, ShareAccess, CreateDisposition, CreateOptions, NamedPipeType, ReadMode, CompletionMode, MaximumInstances, InboundQuota, OutboundQuota, DefaultTimeout);
+}
+
 pub const PFN_NtQueryObject = *const @TypeOf(std.os.windows.ntdll.NtQueryObject);
 pub const PFN_NtClose = *const @TypeOf(std.os.windows.ntdll.NtClose);
-pub const PFN_NtCreateNamedPipeFile = *const @TypeOf(std.os.windows.ntdll.NtCreateNamedPipeFile);
 pub const PFN_NtWriteVirtualMemory = *const @TypeOf(std.os.windows.ntdll.NtWriteVirtualMemory);
 pub const PFN_NtProtectVirtualMemory = *const @TypeOf(std.os.windows.ntdll.NtProtectVirtualMemory);
 pub const PFN_RtlGetFullPathName_U = *const @TypeOf(std.os.windows.ntdll.RtlGetFullPathName_U);
@@ -2158,7 +2189,6 @@ pub fn init() void {
     NtCreateUserProcess = def(PFN_NtCreateUserProcess, "NtCreateUserProcess", "ntdll");
     RtlCloneUserProcess = def(PFN_RtlCloneUserProcess, "RtlCloneUserProcess", "ntdll");
     RtlWow64EnableFsRedirection = def(PFN_RtlWow64EnableFsRedirection, "RtlWow64EnableFsRedirection", "ntdll");
-    NtCreateNamedPipeFile = def(PFN_NtCreateNamedPipeFile, "NtCreateNamedPipeFile", "ntdll");
     RtlSetCurrentDirectory_U = def(PFN_RtlSetCurrentDirectory_U, "RtlSetCurrentDirectory_U", "ntdll");
     RtlGetSystemTimePrecise = def(PFN_RtlGetSystemTimePrecise, "RtlGetSystemTimePrecise", "ntdll");
     RtlGetFullPathName_U = def(PFN_RtlGetFullPathName_U, "RtlGetFullPathName_U", "ntdll");
@@ -2276,7 +2306,6 @@ pub var NtCreateThreadEx: PFN_NtCreateThreadEx = undefined;
 pub var NtCreateUserProcess: PFN_NtCreateUserProcess = undefined;
 pub var RtlCloneUserProcess: PFN_RtlCloneUserProcess = undefined;
 pub var RtlWow64EnableFsRedirection: PFN_RtlWow64EnableFsRedirection = undefined;
-pub var NtCreateNamedPipeFile: PFN_NtCreateNamedPipeFile = undefined;
 pub var RtlSetCurrentDirectory_U: PFN_RtlSetCurrentDirectory_U = undefined;
 pub var RtlGetSystemTimePrecise: PFN_RtlGetSystemTimePrecise = undefined;
 pub var RtlGetFullPathName_U: PFN_RtlGetFullPathName_U = undefined;
@@ -2370,6 +2399,9 @@ comptime {
         @export(&NtSetInformationFile, .{ .name = "NtSetInformationFile", .linkage = .strong });
         @export(&NtReadFile, .{ .name = "NtReadFile", .linkage = .strong });
         @export(&NtWriteFile, .{ .name = "NtWriteFile", .linkage = .strong });
+        @export(&NtCreateNamedPipeFile, .{ .name = "NtCreateNamedPipeFile", .linkage = .strong });
+        @export(&NtCreateFile, .{ .name = "NtCreateFile", .linkage = .strong });
+        @export(&NtOpenFile, .{ .name = "NtOpenFile", .linkage = .strong });
     }
 }
 
