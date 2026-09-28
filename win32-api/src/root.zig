@@ -615,111 +615,308 @@ pub const PROCESS_CREATE_FLAGS_INHERIT_HANDLES = 0x00000004;
 pub const PROCESS_CREATE_FLAGS_INHERIT_FROM_PARENT = 0x00000100;
 
 pub const OBJECT_INFORMATION_CLASS = enum(c_int) {
-    ObjectBasicInformation = 0,
-    ObjectNameInformation = 1,
-    ObjectTypeInformation = 2,
-    ObjectTypesInformation = 3,
-    ObjectHandleFlagInformation = 4,
-    ObjectSessionInformation = 5,
-    MaxObjectInfoClass,
+    ObjectBasicInformation, // q: OBJECT_BASIC_INFORMATION
+    ObjectNameInformation, // q: OBJECT_NAME_INFORMATION
+    ObjectTypeInformation, // q: OBJECT_TYPE_INFORMATION
+    ObjectTypesInformation, // q: OBJECT_TYPES_INFORMATION
+    ObjectHandleFlagInformation, // qs: OBJECT_HANDLE_FLAG_INFORMATION
+    ObjectSessionInformation, // s: void // change object session // (requires SeTcbPrivilege)
+    ObjectSessionObjectInformation, // s: void // change object session // (requires SeTcbPrivilege)
+    ObjectSetRefTraceInformation, // since 25H2
+    MaxObjectInfoClass
 };
 
-pub const FS_INFORMATION_CLASS = enum(c_int) {
-    FileFsVolumeInformation = 1,
-    FileFsLabelInformation,
-    FileFsSizeInformation,
-    FileFsDeviceInformation,
-    FileFsAttributeInformation,
-    FileFsControlInformation,
-    FileFsFullSizeInformation,
-    FileFsObjectIdInformation,
-    FileFsDriverPathInformation,
-    FileFsVolumeFlagsInformation,
-    FileFsSectorSizeInformation,
-    FileFsDataCopyInformation,
-    FileFsMetadataSizeInformation,
-    FileFsFullSizeInformationEx,
-    FileFsGuidInformation,
-    FileFsMaximumInformation,
+pub const FSINFOCLASS = enum(c_int) {
+    FileFsVolumeInformation = 1,            // q: FILE_FS_VOLUME_INFORMATION
+    FileFsLabelInformation,                 // s: FILE_FS_LABEL_INFORMATION // SeManageVolumePrivilege
+    FileFsSizeInformation,                  // q: FILE_FS_SIZE_INFORMATION
+    FileFsDeviceInformation,                // q: FILE_FS_DEVICE_INFORMATION
+    FileFsAttributeInformation,             // q: FILE_FS_ATTRIBUTE_INFORMATION
+    FileFsControlInformation,               // qs: FILE_FS_CONTROL_INFORMATION // SeManageVolumePrivilege
+    FileFsFullSizeInformation,              // q: FILE_FS_FULL_SIZE_INFORMATION
+    FileFsObjectIdInformation,              // qs: FILE_FS_OBJECTID_INFORMATION // SeRestorePrivilege
+    FileFsDriverPathInformation,            // q: FILE_FS_DRIVER_PATH_INFORMATION
+    FileFsVolumeFlagsInformation,           // qs: FILE_FS_VOLUME_FLAGS_INFORMATION // SeManageVolumePrivilege // 10
+    FileFsSectorSizeInformation,            // q: FILE_FS_SECTOR_SIZE_INFORMATION // since WIN8
+    FileFsDataCopyInformation,              // q: FILE_FS_DATA_COPY_INFORMATION
+    FileFsMetadataSizeInformation,          // q: FILE_FS_METADATA_SIZE_INFORMATION // since THRESHOLD
+    FileFsFullSizeInformationEx,            // q: FILE_FS_FULL_SIZE_INFORMATION_EX // since REDSTONE5
+    FileFsGuidInformation,                  // q: FILE_FS_GUID_INFORMATION // since 23H2
+    FileFsMaximumInformation
 };
+pub const FS_INFORMATION_CLASS = FSINFOCLASS;
 
 pub const FILE_INFORMATION_CLASS = enum(c_int) {
-    FileDirectoryInformation = 1,
-    FileFullDirectoryInformation,
-    FileBothDirectoryInformation,
-    FileBasicInformation,
-    FileStandardInformation,
-    FileInternalInformation,
-    FileEaInformation,
-    FileAccessInformation,
-    FileNameInformation,
-    FileRenameInformation,
-    FileLinkInformation,
-    FileNamesInformation,
-    FileDispositionInformation,
-    FilePositionInformation,
-    FileFullEaInformation,
-    FileModeInformation,
-    FileAlignmentInformation,
-    FileAllInformation,
-    FileAllocationInformation,
-    FileEndOfFileInformation,
-    FileAlternateNameInformation,
-    FileStreamInformation,
-    FilePipeInformation,
-    FilePipeLocalInformation,
-    FilePipeRemoteInformation,
-    FileMailslotQueryInformation,
-    FileMailslotSetInformation,
-    FileCompressionInformation,
-    FileObjectIdInformation,
-    FileCompletionInformation,
-    FileMoveClusterInformation,
-    FileQuotaInformation,
-    FileReparsePointInformation,
-    FileNetworkOpenInformation,
-    FileAttributeTagInformation,
-    FileTrackingInformation,
-    FileIdBothDirectoryInformation,
-    FileIdFullDirectoryInformation,
-    FileValidDataLengthInformation,
-    FileShortNameInformation,
-    FileIoCompletionNotificationInformation,
-    FileIoStatusBlockRangeInformation,
-    FileIoPriorityHintInformation,
-    FileSfioReserveInformation,
-    FileSfioVolumeInformation,
-    FileHardLinkInformation,
-    FileProcessIdsUsingFileInformation,
-    FileNormalizedNameInformation,
-    FileNetworkPhysicalNameInformation,
-    FileIdGlobalTxDirectoryInformation,
-    FileIsRemoteDeviceInformation,
-    FileUnusedInformation,
-    FileNumaNodeInformation,
-    FileStandardLinkInformation,
-    FileRemoteProtocolInformation,
-    FileRenameInformationBypassAccessCheck,
-    FileLinkInformationBypassAccessCheck,
-    FileVolumeNameInformation,
-    FileIdInformation,
-    FileIdExtdDirectoryInformation,
-    FileReplaceCompletionInformation,
-    FileHardLinkFullIdInformation,
-    FileIdExtdBothDirectoryInformation,
-    FileDispositionInformationEx,
-    FileRenameInformationEx,
-    FileRenameInformationExBypassAccessCheck,
-    FileDesiredStorageClassInformation,
-    FileStatInformation,
-    FileMemoryPartitionInformation,
-    FileStatLxInformation,
-    FileCaseSensitiveInformation,
-    FileLinkInformationEx,
-    FileLinkInformationExBypassAccessCheck,
-    FileStorageReserveIdInformation,
-    FileCaseSensitiveInformationForceAccessCheck,
-    FileMaximumInformation,
+    FileDirectoryInformation = 1,                   // q: FILE_DIRECTORY_INFORMATION (requires FILE_LIST_DIRECTORY) (NtQueryDirectoryFile[Ex])
+    FileFullDirectoryInformation,                   // q: FILE_FULL_DIR_INFORMATION (requires FILE_LIST_DIRECTORY) (NtQueryDirectoryFile[Ex])
+    FileBothDirectoryInformation,                   // q: FILE_BOTH_DIR_INFORMATION (requires FILE_LIST_DIRECTORY) (NtQueryDirectoryFile[Ex])
+    FileBasicInformation,                           // qs: FILE_BASIC_INFORMATION (q: requires FILE_READ_ATTRIBUTES; s: requires FILE_WRITE_ATTRIBUTES)
+    FileStandardInformation,                        // q: FILE_STANDARD_INFORMATION, FILE_STANDARD_INFORMATION_EX
+    FileInternalInformation,                        // q: FILE_INTERNAL_INFORMATION
+    FileEaInformation,                              // q: FILE_EA_INFORMATION (requires FILE_READ_EA)
+    FileAccessInformation,                          // q: FILE_ACCESS_INFORMATION
+    FileNameInformation,                            // q: FILE_NAME_INFORMATION
+    FileRenameInformation,                          // s: FILE_RENAME_INFORMATION (requires DELETE) // 10
+    FileLinkInformation,                            // s: FILE_LINK_INFORMATION
+    FileNamesInformation,                           // q: FILE_NAMES_INFORMATION (requires FILE_LIST_DIRECTORY) (NtQueryDirectoryFile[Ex])
+    FileDispositionInformation,                     // s: FILE_DISPOSITION_INFORMATION (requires DELETE)
+    FilePositionInformation,                        // qs: FILE_POSITION_INFORMATION (q: requires FILE_READ_ATTRIBUTES; s: requires FILE_WRITE_ATTRIBUTES)
+    FileFullEaInformation,                          // q: FILE_FULL_EA_INFORMATION (requires FILE_READ_EA)
+    FileModeInformation,                            // qs: FILE_MODE_INFORMATION (q: requires FILE_READ_ATTRIBUTES; s: requires FILE_WRITE_ATTRIBUTES)
+    FileAlignmentInformation,                       // q: FILE_ALIGNMENT_INFORMATION
+    FileAllInformation,                             // q: FILE_ALL_INFORMATION
+    FileAllocationInformation,                      // s: FILE_ALLOCATION_INFORMATION (requires FILE_WRITE_DATA)
+    FileEndOfFileInformation,                       // s: FILE_END_OF_FILE_INFORMATION (requires FILE_WRITE_DATA) // 20
+    FileAlternateNameInformation,                   // q: FILE_NAME_INFORMATION
+    FileStreamInformation,                          // q: FILE_STREAM_INFORMATION
+    FilePipeInformation,                            // qs: FILE_PIPE_INFORMATION (q: requires FILE_READ_ATTRIBUTES; s: requires FILE_WRITE_ATTRIBUTES)
+    FilePipeLocalInformation,                       // q: FILE_PIPE_LOCAL_INFORMATION
+    FilePipeRemoteInformation,                      // qs: FILE_PIPE_REMOTE_INFORMATION (q: requires FILE_READ_ATTRIBUTES; s: requires FILE_WRITE_ATTRIBUTES)
+    FileMailslotQueryInformation,                   // q: FILE_MAILSLOT_QUERY_INFORMATION
+    FileMailslotSetInformation,                     // s: FILE_MAILSLOT_SET_INFORMATION
+    FileCompressionInformation,                     // q: FILE_COMPRESSION_INFORMATION
+    FileObjectIdInformation,                        // q: FILE_OBJECTID_INFORMATION (requires FILE_LIST_DIRECTORY) (NtQueryDirectoryFile[Ex])
+    FileCompletionInformation,                      // s: FILE_COMPLETION_INFORMATION // 30
+    FileMoveClusterInformation,                     // s: FILE_MOVE_CLUSTER_INFORMATION (requires FILE_WRITE_DATA)
+    FileQuotaInformation,                           // q: FILE_QUOTA_INFORMATION (requires FILE_LIST_DIRECTORY) (NtQueryDirectoryFile[Ex])
+    FileReparsePointInformation,                    // q: FILE_REPARSE_POINT_INFORMATION (requires FILE_LIST_DIRECTORY) (NtQueryDirectoryFile[Ex])
+    FileNetworkOpenInformation,                     // q: FILE_NETWORK_OPEN_INFORMATION
+    FileAttributeTagInformation,                    // q: FILE_ATTRIBUTE_TAG_INFORMATION
+    FileTrackingInformation,                        // s: FILE_TRACKING_INFORMATION (requires FILE_WRITE_DATA)
+    FileIdBothDirectoryInformation,                 // q: FILE_ID_BOTH_DIR_INFORMATION (requires FILE_LIST_DIRECTORY) (NtQueryDirectoryFile[Ex])
+    FileIdFullDirectoryInformation,                 // q: FILE_ID_FULL_DIR_INFORMATION (requires FILE_LIST_DIRECTORY) (NtQueryDirectoryFile[Ex])
+    FileValidDataLengthInformation,                 // s: FILE_VALID_DATA_LENGTH_INFORMATION (requires FILE_WRITE_DATA and/or SeManageVolumePrivilege)
+    FileShortNameInformation,                       // s: FILE_NAME_INFORMATION (requires DELETE) // 40
+    FileIoCompletionNotificationInformation,        // qs: FILE_IO_COMPLETION_NOTIFICATION_INFORMATION (q: requires FILE_READ_ATTRIBUTES; s: requires FILE_WRITE_ATTRIBUTES) // since VISTA
+    FileIoStatusBlockRangeInformation,              // s: FILE_IOSTATUSBLOCK_RANGE_INFORMATION (requires SeLockMemoryPrivilege)
+    FileIoPriorityHintInformation,                  // qs: FILE_IO_PRIORITY_HINT_INFORMATION, FILE_IO_PRIORITY_HINT_INFORMATION_EX (q: requires FILE_READ_DATA)
+    FileSfioReserveInformation,                     // qs: FILE_SFIO_RESERVE_INFORMATION (q: requires FILE_READ_DATA)
+    FileSfioVolumeInformation,                      // q: FILE_SFIO_VOLUME_INFORMATION
+    FileHardLinkInformation,                        // q: FILE_LINKS_INFORMATION
+    FileProcessIdsUsingFileInformation,             // q: FILE_PROCESS_IDS_USING_FILE_INFORMATION
+    FileNormalizedNameInformation,                  // q: FILE_NAME_INFORMATION
+    FileNetworkPhysicalNameInformation,             // q: FILE_NETWORK_PHYSICAL_NAME_INFORMATION
+    FileIdGlobalTxDirectoryInformation,             // q: FILE_ID_GLOBAL_TX_DIR_INFORMATION (requires FILE_LIST_DIRECTORY) (NtQueryDirectoryFile[Ex]) // since WIN7 // 50
+    FileIsRemoteDeviceInformation,                  // q: FILE_IS_REMOTE_DEVICE_INFORMATION
+    FileUnusedInformation,                          // q:
+    FileNumaNodeInformation,                        // q: FILE_NUMA_NODE_INFORMATION
+    FileStandardLinkInformation,                    // q: FILE_STANDARD_LINK_INFORMATION
+    FileRemoteProtocolInformation,                  // q: FILE_REMOTE_PROTOCOL_INFORMATION
+    FileRenameInformationBypassAccessCheck,         // s: FILE_RENAME_INFORMATION // (kernel-mode only) // since WIN8
+    FileLinkInformationBypassAccessCheck,           // s: FILE_LINK_INFORMATION // (kernel-mode only)
+    FileVolumeNameInformation,                      // q: FILE_VOLUME_NAME_INFORMATION
+    FileIdInformation,                              // q: FILE_ID_INFORMATION
+    FileIdExtdDirectoryInformation,                 // q: FILE_ID_EXTD_DIR_INFORMATION (requires FILE_LIST_DIRECTORY) (NtQueryDirectoryFile[Ex]) // 60
+    FileReplaceCompletionInformation,               // s: FILE_COMPLETION_INFORMATION // since WINBLUE
+    FileHardLinkFullIdInformation,                  // q: FILE_LINK_ENTRY_FULL_ID_INFORMATION // FILE_LINKS_FULL_ID_INFORMATION
+    FileIdExtdBothDirectoryInformation,             // q: FILE_ID_EXTD_BOTH_DIR_INFORMATION (requires FILE_LIST_DIRECTORY) (NtQueryDirectoryFile[Ex]) // since THRESHOLD
+    FileDispositionInformationEx,                   // s: FILE_DISPOSITION_INFO_EX (requires DELETE) // since REDSTONE
+    FileRenameInformationEx,                        // s: FILE_RENAME_INFORMATION_EX
+    FileRenameInformationExBypassAccessCheck,       // s: FILE_RENAME_INFORMATION_EX // (kernel-mode only)
+    FileDesiredStorageClassInformation,             // qs: FILE_DESIRED_STORAGE_CLASS_INFORMATION // since REDSTONE2
+    FileStatInformation,                            // q: FILE_STAT_INFORMATION
+    FileMemoryPartitionInformation,                 // s: FILE_MEMORY_PARTITION_INFORMATION // since REDSTONE3
+    FileStatLxInformation,                          // q: FILE_STAT_LX_INFORMATION (requires FILE_READ_ATTRIBUTES and FILE_READ_EA) // since REDSTONE4 // 70
+    FileCaseSensitiveInformation,                   // qs: FILE_CASE_SENSITIVE_INFORMATION
+    FileLinkInformationEx,                          // s: FILE_LINK_INFORMATION_EX // since REDSTONE5
+    FileLinkInformationExBypassAccessCheck,         // s: FILE_LINK_INFORMATION_EX // (kernel-mode only)
+    FileStorageReserveIdInformation,                // qs: FILE_STORAGE_RESERVE_ID_INFORMATION
+    FileCaseSensitiveInformationForceAccessCheck,   // qs: FILE_CASE_SENSITIVE_INFORMATION
+    FileKnownFolderInformation,                     // qs: FILE_KNOWN_FOLDER_INFORMATION // since WIN11
+    FileStatBasicInformation,                       // qs: FILE_STAT_BASIC_INFORMATION // since 23H2
+    FileId64ExtdDirectoryInformation,               // q: FILE_ID_64_EXTD_DIR_INFORMATION
+    FileId64ExtdBothDirectoryInformation,           // q: FILE_ID_64_EXTD_BOTH_DIR_INFORMATION
+    FileIdAllExtdDirectoryInformation,              // q: FILE_ID_ALL_EXTD_DIR_INFORMATION
+    FileIdAllExtdBothDirectoryInformation,          // q: FILE_ID_ALL_EXTD_BOTH_DIR_INFORMATION
+    FileStreamReservationInformation,               // q: FILE_STREAM_RESERVATION_INFORMATION // since 24H2
+    FileMupProviderInfo,                            // qs: MUP_PROVIDER_INFORMATION
+    FileMaximumInformation
+};
+
+pub const PROCESSINFOCLASS = enum(c_int) {
+    ProcessBasicInformation = 0,                    // q: PROCESS_BASIC_INFORMATION, PROCESS_EXTENDED_BASIC_INFORMATION
+    ProcessQuotaLimits,                             // qs: QUOTA_LIMITS, QUOTA_LIMITS_EX
+    ProcessIoCounters,                              // q: IO_COUNTERS
+    ProcessVmCounters,                              // q: VM_COUNTERS, VM_COUNTERS_EX, VM_COUNTERS_EX2
+    ProcessTimes,                                   // q: KERNEL_USER_TIMES
+    ProcessBasePriority,                            // s: KPRIORITY
+    ProcessRaisePriority,                           // s: ULONG
+    ProcessDebugPort,                               // q: HANDLE
+    ProcessExceptionPort,                           // s: PROCESS_EXCEPTION_PORT (requires SeTcbPrivilege)
+    ProcessAccessToken,                             // s: PROCESS_ACCESS_TOKEN
+    ProcessLdtInformation,                          // qs: PROCESS_LDT_INFORMATION // 10
+    ProcessLdtSize,                                 // s: PROCESS_LDT_SIZE
+    ProcessDefaultHardErrorMode,                    // qs: ULONG
+    ProcessIoPortHandlers,                          // s: PROCESS_IO_PORT_HANDLER_INFORMATION // (kernel-mode only)
+    ProcessPooledUsageAndLimits,                    // q: POOLED_USAGE_AND_LIMITS
+    ProcessWorkingSetWatch,                         // q: PROCESS_WS_WATCH_INFORMATION[]; s: void
+    ProcessUserModeIOPL,                            // qs: ULONG (requires SeTcbPrivilege)
+    ProcessEnableAlignmentFaultFixup,               // s: BOOLEAN
+    ProcessPriorityClass,                           // qs: PROCESS_PRIORITY_CLASS
+    ProcessWx86Information,                         // qs: ULONG (requires SeTcbPrivilege) (VdmAllowed)
+    ProcessHandleCount,                             // q: ULONG, PROCESS_HANDLE_INFORMATION // 20
+    ProcessAffinityMask,                            // qs: KAFFINITY, qs: GROUP_AFFINITY
+    ProcessPriorityBoost,                           // qs: ULONG
+    ProcessDeviceMap,                               // qs: PROCESS_DEVICEMAP_INFORMATION, PROCESS_DEVICEMAP_INFORMATION_EX
+    ProcessSessionInformation,                      // q: PROCESS_SESSION_INFORMATION
+    ProcessForegroundInformation,                   // s: PROCESS_FOREGROUND_BACKGROUND
+    ProcessWow64Information,                        // q: ULONG_PTR
+    ProcessImageFileName,                           // q: UNICODE_STRING
+    ProcessLUIDDeviceMapsEnabled,                   // q: ULONG
+    ProcessBreakOnTermination,                      // qs: ULONG
+    ProcessDebugObjectHandle,                       // q: HANDLE // 30
+    ProcessDebugFlags,                              // qs: ULONG
+    ProcessHandleTracing,                           // q: PROCESS_HANDLE_TRACING_QUERY; s: PROCESS_HANDLE_TRACING_ENABLE[_EX] or void to disable
+    ProcessIoPriority,                              // qs: IO_PRIORITY_HINT
+    ProcessExecuteFlags,                            // qs: ULONG (MEM_EXECUTE_OPTION_*)
+    ProcessTlsInformation,                          // qs: PROCESS_TLS_INFORMATION // ProcessResourceManagement
+    ProcessCookie,                                  // q: ULONG
+    ProcessImageInformation,                        // q: SECTION_IMAGE_INFORMATION
+    ProcessCycleTime,                               // q: PROCESS_CYCLE_TIME_INFORMATION // since VISTA
+    ProcessPagePriority,                            // qs: PAGE_PRIORITY_INFORMATION
+    ProcessInstrumentationCallback,                 // s: PVOID or PROCESS_INSTRUMENTATION_CALLBACK_INFORMATION // 40
+    ProcessThreadStackAllocation,                   // s: PROCESS_STACK_ALLOCATION_INFORMATION, PROCESS_STACK_ALLOCATION_INFORMATION_EX
+    ProcessWorkingSetWatchEx,                       // q: PROCESS_WS_WATCH_INFORMATION_EX[]; s: void
+    ProcessImageFileNameWin32,                      // q: UNICODE_STRING
+    ProcessImageFileMapping,                        // q: HANDLE (input)
+    ProcessAffinityUpdateMode,                      // qs: PROCESS_AFFINITY_UPDATE_MODE
+    ProcessMemoryAllocationMode,                    // qs: PROCESS_MEMORY_ALLOCATION_MODE
+    ProcessGroupInformation,                        // q: USHORT[]
+    ProcessTokenVirtualizationEnabled,              // s: ULONG
+    ProcessConsoleHostProcess,                      // qs: ULONG_PTR // ProcessOwnerInformation
+    ProcessWindowInformation,                       // q: PROCESS_WINDOW_INFORMATION // 50
+    ProcessHandleInformation,                       // q: PROCESS_HANDLE_SNAPSHOT_INFORMATION // since WIN8
+    ProcessMitigationPolicy,                        // qs: PROCESS_MITIGATION_POLICY_INFORMATION
+    ProcessDynamicFunctionTableInformation,         // s: PROCESS_DYNAMIC_FUNCTION_TABLE_INFORMATION
+    ProcessHandleCheckingMode,                      // qs: ULONG; s: 0 disables, otherwise enables
+    ProcessKeepAliveCount,                          // q: PROCESS_KEEPALIVE_COUNT_INFORMATION
+    ProcessRevokeFileHandles,                       // s: PROCESS_REVOKE_FILE_HANDLES_INFORMATION
+    ProcessWorkingSetControl,                       // s: PROCESS_WORKING_SET_CONTROL
+    ProcessHandleTable,                             // q: ULONG[] // since WINBLUE
+    ProcessCheckStackExtentsMode,                   // qs: ULONG // KPROCESS->CheckStackExtents (CFG)
+    ProcessCommandLineInformation,                  // q: UNICODE_STRING // 60
+    ProcessProtectionInformation,                   // q: PS_PROTECTION
+    ProcessMemoryExhaustion,                        // s: PROCESS_MEMORY_EXHAUSTION_INFO // since THRESHOLD
+    ProcessFaultInformation,                        // s: PROCESS_FAULT_INFORMATION
+    ProcessTelemetryIdInformation,                  // q: PROCESS_TELEMETRY_ID_INFORMATION
+    ProcessCommitReleaseInformation,                // qs: PROCESS_COMMIT_RELEASE_INFORMATION
+    ProcessDefaultCpuSetsInformation,               // qs: SYSTEM_CPU_SET_INFORMATION[5] // ProcessReserved1Information
+    ProcessAllowedCpuSetsInformation,               // qs: SYSTEM_CPU_SET_INFORMATION[5] // ProcessReserved2Information
+    ProcessSubsystemProcess,                        // s: void // EPROCESS->SubsystemProcess
+    ProcessJobMemoryInformation,                    // q: PROCESS_JOB_MEMORY_INFO
+    ProcessInPrivate,                               // q: BOOLEAN; s: void // ETW // since THRESHOLD2 // 70
+    ProcessRaiseUMExceptionOnInvalidHandleClose,    // qs: ULONG; s: 0 disables, otherwise enables
+    ProcessIumChallengeResponse,                    // q: PROCESS_IUM_CHALLENGE_RESPONSE
+    ProcessChildProcessInformation,                 // q: PROCESS_CHILD_PROCESS_INFORMATION
+    ProcessHighGraphicsPriorityInformation,         // q: BOOLEAN; s: BOOLEAN (requires SeTcbPrivilege)
+    ProcessSubsystemInformation,                    // q: SUBSYSTEM_INFORMATION_TYPE // since REDSTONE2
+    ProcessEnergyValues,                            // q: PROCESS_ENERGY_VALUES, PROCESS_EXTENDED_ENERGY_VALUES, PROCESS_EXTENDED_ENERGY_VALUES_V1
+    ProcessPowerThrottlingState,                    // qs: POWER_THROTTLING_PROCESS_STATE
+    ProcessActivityThrottlePolicy,                  // qs: PROCESS_ACTIVITY_THROTTLE_POLICY // ProcessReserved3Information
+    ProcessWin32kSyscallFilterInformation,          // q: WIN32K_SYSCALL_FILTER
+    ProcessDisableSystemAllowedCpuSets,             // s: BOOLEAN // 80
+    ProcessWakeInformation,                         // q: PROCESS_WAKE_INFORMATION // (kernel-mode only)
+    ProcessEnergyTrackingState,                     // qs: PROCESS_ENERGY_TRACKING_STATE
+    ProcessManageWritesToExecutableMemory,          // s: MANAGE_WRITES_TO_EXECUTABLE_MEMORY // since REDSTONE3
+    ProcessCaptureTrustletLiveDump,                 // q: ULONG
+    ProcessTelemetryCoverage,                       // q: TELEMETRY_COVERAGE_HEADER; s: TELEMETRY_COVERAGE_POINT
+    ProcessEnclaveInformation,
+    ProcessEnableReadWriteVmLogging,                // qs: PROCESS_READWRITEVM_LOGGING_INFORMATION
+    ProcessUptimeInformation,                       // q: PROCESS_UPTIME_INFORMATION
+    ProcessImageSection,                            // q: HANDLE
+    ProcessDebugAuthInformation,                    // s: CiTool.exe --device-id // PplDebugAuthorization // since RS4 // 90
+    ProcessSystemResourceManagement,                // s: PROCESS_SYSTEM_RESOURCE_MANAGEMENT
+    ProcessSequenceNumber,                          // q: ULONGLONG
+    ProcessLoaderDetour,                            // qs: Obsolete // since RS5
+    ProcessSecurityDomainInformation,               // q: PROCESS_SECURITY_DOMAIN_INFORMATION
+    ProcessCombineSecurityDomainsInformation,       // s: PROCESS_COMBINE_SECURITY_DOMAINS_INFORMATION
+    ProcessEnableLogging,                           // qs: PROCESS_LOGGING_INFORMATION
+    ProcessLeapSecondInformation,                   // qs: PROCESS_LEAP_SECOND_INFORMATION
+    ProcessFiberShadowStackAllocation,              // s: PROCESS_FIBER_SHADOW_STACK_ALLOCATION_INFORMATION // since 19H1
+    ProcessFreeFiberShadowStackAllocation,          // s: PROCESS_FREE_FIBER_SHADOW_STACK_ALLOCATION_INFORMATION
+    ProcessAltSystemCallInformation,                // s: PROCESS_SYSCALL_PROVIDER_INFORMATION // since 20H1 // 100
+    ProcessDynamicEHContinuationTargets,            // s: PROCESS_DYNAMIC_EH_CONTINUATION_TARGETS_INFORMATION
+    ProcessDynamicEnforcedCetCompatibleRanges,      // s: PROCESS_DYNAMIC_ENFORCED_ADDRESS_RANGE_INFORMATION // since 20H2
+    ProcessCreateStateChange,                       // s: Obsolete // since WIN11
+    ProcessApplyStateChange,                        // s: Obsolete
+    ProcessEnableOptionalXStateFeatures,            // s: ULONG64 // EnableProcessOptionalXStateFeatures
+    ProcessAltPrefetchParam,                        // qs: OVERRIDE_PREFETCH_PARAMETER // App Launch Prefetch (ALPF) // since 22H1
+    ProcessAssignCpuPartitions,                     // s: HANDLE
+    ProcessPriorityClassEx,                         // s: PROCESS_PRIORITY_CLASS_EX
+    ProcessMembershipInformation,                   // q: PROCESS_MEMBERSHIP_INFORMATION
+    ProcessEffectiveIoPriority,                     // q: IO_PRIORITY_HINT // 110
+    ProcessEffectivePagePriority,                   // q: ULONG
+    ProcessSchedulerSharedData,                     // q: SCHEDULER_SHARED_DATA_SLOT_INFORMATION // since 24H2
+    ProcessSlistRollbackInformation,
+    ProcessNetworkIoCounters,                       // q: PROCESS_NETWORK_COUNTERS
+    ProcessFindFirstThreadByTebValue,               // q: PROCESS_TEB_VALUE_INFORMATION // NtCurrentProcess
+    ProcessEnclaveAddressSpaceRestriction,          // qs: // since 25H2
+    ProcessAvailableCpus,                           // q: PROCESS_AVAILABLE_CPUS_INFORMATION
+    MaxProcessInfoClass
+};
+
+pub const THREADINFOCLASS = enum(c_int) {
+    ThreadBasicInformation = 0,                     // q: THREAD_BASIC_INFORMATION
+    ThreadTimes,                                    // q: KERNEL_USER_TIMES
+    ThreadPriority,                                 // s: KPRIORITY (requires SeIncreaseBasePriorityPrivilege)
+    ThreadBasePriority,                             // s: KPRIORITY
+    ThreadAffinityMask,                             // s: KAFFINITY
+    ThreadImpersonationToken,                       // s: HANDLE
+    ThreadDescriptorTableEntry,                     // q: DESCRIPTOR_TABLE_ENTRY (or WOW64_DESCRIPTOR_TABLE_ENTRY)
+    ThreadEnableAlignmentFaultFixup,                // s: BOOLEAN
+    ThreadEventPair,                                // q: Obsolete
+    ThreadQuerySetWin32StartAddress,                // q: PVOID
+    ThreadZeroTlsCell,                              // s: ULONG // TlsIndex // 10
+    ThreadPerformanceCount,                         // q: LARGE_INTEGER
+    ThreadAmILastThread,                            // q: ULONG
+    ThreadIdealProcessor,                           // s: ULONG
+    ThreadPriorityBoost,                            // qs: ULONG
+    ThreadSetTlsArrayAddress,                       // s: ULONG_PTR
+    ThreadIsIoPending,                              // q: ULONG
+    ThreadHideFromDebugger,                         // q: BOOLEAN; s: void
+    ThreadBreakOnTermination,                       // qs: ULONG
+    ThreadSwitchLegacyState,                        // s: void // NtCurrentThread // NPX/FPU
+    ThreadIsTerminated,                             // q: ULONG // 20
+    ThreadLastSystemCall,                           // q: THREAD_LAST_SYSCALL_INFORMATION
+    ThreadIoPriority,                               // qs: IO_PRIORITY_HINT (requires SeIncreaseBasePriorityPrivilege)
+    ThreadCycleTime,                                // q: THREAD_CYCLE_TIME_INFORMATION (requires THREAD_QUERY_LIMITED_INFORMATION)
+    ThreadPagePriority,                             // qs: PAGE_PRIORITY_INFORMATION
+    ThreadActualBasePriority,                       // s: LONG (requires SeIncreaseBasePriorityPrivilege)
+    ThreadTebInformation,                           // q: THREAD_TEB_INFORMATION (requires THREAD_GET_CONTEXT + THREAD_SET_CONTEXT)
+    ThreadCSwitchMon,                               // q: Obsolete
+    ThreadCSwitchPmu,                               // q: Obsolete
+    ThreadWow64Context,                             // qs: WOW64_CONTEXT, ARM_NT_CONTEXT since 20H1
+    ThreadGroupInformation,                         // qs: GROUP_AFFINITY // 30
+    ThreadUmsInformation,                           // q: THREAD_UMS_INFORMATION // Obsolete
+    ThreadCounterProfiling,                         // q: BOOLEAN; s: THREAD_PROFILING_INFORMATION?
+    ThreadIdealProcessorEx,                         // qs: PROCESSOR_NUMBER; s: previous PROCESSOR_NUMBER on return
+    ThreadCpuAccountingInformation,                 // q: BOOLEAN; s: HANDLE (NtOpenSession) // NtCurrentThread // since WIN8
+    ThreadSuspendCount,                             // q: ULONG // since WINBLUE
+    ThreadHeterogeneousCpuPolicy,                   // q: KHETERO_CPU_POLICY // since THRESHOLD
+    ThreadContainerId,                              // q: GUID
+    ThreadNameInformation,                          // qs: THREAD_NAME_INFORMATION (requires THREAD_SET_LIMITED_INFORMATION)
+    ThreadSelectedCpuSets,                          // q: ULONG[]
+    ThreadSystemThreadInformation,                  // q: SYSTEM_THREAD_INFORMATION // 40
+    ThreadActualGroupAffinity,                      // q: GROUP_AFFINITY // since THRESHOLD2
+    ThreadDynamicCodePolicyInfo,                    // q: ULONG; s: ULONG (NtCurrentThread)
+    ThreadExplicitCaseSensitivity,                  // qs: ULONG; s: 0 disables, otherwise enables // (requires SeDebugPrivilege and PsProtectedSignerAntimalware)
+    ThreadWorkOnBehalfTicket,                       // q: ALPC_WORK_ON_BEHALF_TICKET // RTL_WORK_ON_BEHALF_TICKET_EX // NtCurrentThread
+    ThreadSubsystemInformation,                     // q: SUBSYSTEM_INFORMATION_TYPE // since REDSTONE2
+    ThreadDbgkWerReportActive,                      // s: ULONG; s: 0 disables, otherwise enables
+    ThreadAttachContainer,                          // s: HANDLE (job object) // NtCurrentThread
+    ThreadManageWritesToExecutableMemory,           // s: MANAGE_WRITES_TO_EXECUTABLE_MEMORY // since REDSTONE3
+    ThreadPowerThrottlingState,                     // qs: POWER_THROTTLING_THREAD_STATE // since REDSTONE3 (set), WIN11 22H2 (query)
+    ThreadWorkloadClass,                            // q: THREAD_WORKLOAD_CLASS // since REDSTONE5 // 50
+    ThreadCreateStateChange,                        // s: Obsolete // since WIN11
+    ThreadApplyStateChange,                         // s: Obsolete
+    ThreadStrongerBadHandleChecks,                  // s: ULONG // NtCurrentThread // since 22H1
+    ThreadEffectiveIoPriority,                      // q: IO_PRIORITY_HINT
+    ThreadEffectivePagePriority,                    // q: ULONG
+    ThreadUpdateLockOwnership,                      // s: THREAD_LOCK_OWNERSHIP // since 24H2
+    ThreadSchedulerSharedDataSlot,                  // q: SCHEDULER_SHARED_DATA_SLOT_INFORMATION
+    ThreadTebInformationAtomic,                     // q: THREAD_TEB_INFORMATION (requires THREAD_GET_CONTEXT + THREAD_QUERY_INFORMATION)
+    ThreadIndexInformation,                         // q: THREAD_INDEX_INFORMATION
+    MaxThreadInfoClass
 };
 
 pub const TOKEN_ASSIGN_PRIMARY = 0x0001;
@@ -971,55 +1168,58 @@ pub const POBJECT_ATTRIBUTES = *OBJECT_ATTRIBUTES;
 pub const PCOBJECT_ATTRIBUTES = *const OBJECT_ATTRIBUTES;
 
 pub const JOBOBJECTINFOCLASS = enum(c_int) {
-    JobObjectBasicAccountingInformation = 1, // JOBOBJECT_BASIC_ACCOUNTING_INFORMATION
-    JobObjectBasicLimitInformation, // JOBOBJECT_BASIC_LIMIT_INFORMATION
-    JobObjectBasicProcessIdList, // JOBOBJECT_BASIC_PROCESS_ID_LIST
-    JobObjectBasicUIRestrictions, // JOBOBJECT_BASIC_UI_RESTRICTIONS
-    JobObjectSecurityLimitInformation, // JOBOBJECT_SECURITY_LIMIT_INFORMATION
-    JobObjectEndOfJobTimeInformation, // JOBOBJECT_END_OF_JOB_TIME_INFORMATION
-    JobObjectAssociateCompletionPortInformation, // JOBOBJECT_ASSOCIATE_COMPLETION_PORT
-    JobObjectBasicAndIoAccountingInformation, // JOBOBJECT_BASIC_AND_IO_ACCOUNTING_INFORMATION
-    JobObjectExtendedLimitInformation, // JOBOBJECT_EXTENDED_LIMIT_INFORMATION
-    JobObjectJobSetInformation, // JOBOBJECT_JOBSET_INFORMATION
-    JobObjectGroupInformation, // USHORT
-    JobObjectNotificationLimitInformation, // JOBOBJECT_NOTIFICATION_LIMIT_INFORMATION
-    JobObjectLimitViolationInformation, // JOBOBJECT_LIMIT_VIOLATION_INFORMATION
-    JobObjectGroupInformationEx, // GROUP_AFFINITY (ARRAY)
-    JobObjectCpuRateControlInformation, // JOBOBJECT_CPU_RATE_CONTROL_INFORMATION
-    JobObjectCompletionFilter,
-    JobObjectCompletionCounter,
-    JobObjectFreezeInformation, // JOBOBJECT_FREEZE_INFORMATION
-    JobObjectExtendedAccountingInformation, // JOBOBJECT_EXTENDED_ACCOUNTING_INFORMATION
-    JobObjectWakeInformation, // JOBOBJECT_WAKE_INFORMATION
-    JobObjectBackgroundInformation,
-    JobObjectSchedulingRankBiasInformation,
-    JobObjectTimerVirtualizationInformation,
-    JobObjectCycleTimeNotification,
-    JobObjectClearEvent,
-    JobObjectInterferenceInformation, // JOBOBJECT_INTERFERENCE_INFORMATION
-    JobObjectClearPeakJobMemoryUsed,
-    JobObjectMemoryUsageInformation, // JOBOBJECT_MEMORY_USAGE_INFORMATION // JOBOBJECT_MEMORY_USAGE_INFORMATION_V2
-    JobObjectSharedCommit,
-    JobObjectContainerId,
-    JobObjectIoRateControlInformation,
-    JobObjectNetRateControlInformation, // JOBOBJECT_NET_RATE_CONTROL_INFORMATION
-    JobObjectNotificationLimitInformation2, // JOBOBJECT_NOTIFICATION_LIMIT_INFORMATION_2
-    JobObjectLimitViolationInformation2, // JOBOBJECT_LIMIT_VIOLATION_INFORMATION_2
-    JobObjectCreateSilo,
-    JobObjectSiloBasicInformation, // SILOOBJECT_BASIC_INFORMATION
-    JobObjectSiloRootDirectory, // SILOOBJECT_ROOT_DIRECTORY
-    JobObjectServerSiloBasicInformation, // SERVERSILO_BASIC_INFORMATION
-    JobObjectServerSiloUserSharedData, // SILO_USER_SHARED_DATA
-    JobObjectServerSiloInitialize,
-    JobObjectServerSiloRunningState,
-    JobObjectIoAttribution,
-    JobObjectMemoryPartitionInformation,
-    JobObjectContainerTelemetryId,
-    JobObjectSiloSystemRoot,
-    JobObjectEnergyTrackingState, // JOBOBJECT_ENERGY_TRACKING_STATE
-    JobObjectThreadImpersonationInformation,
-    JobObjectIoPriorityLimit,
-    JobObjectPagePriorityLimit,
+    JobObjectBasicAccountingInformation = 1,                  // q: JOBOBJECT_BASIC_ACCOUNTING_INFORMATION
+    JobObjectBasicLimitInformation,                           // qs: JOBOBJECT_BASIC_LIMIT_INFORMATION
+    JobObjectBasicProcessIdList,                              // q: JOBOBJECT_BASIC_PROCESS_ID_LIST
+    JobObjectBasicUIRestrictions,                             // qs: JOBOBJECT_BASIC_UI_RESTRICTIONS
+    JobObjectSecurityLimitInformation,                        // qs: JOBOBJECT_SECURITY_LIMIT_INFORMATION
+    JobObjectEndOfJobTimeInformation,                         // qs: JOBOBJECT_END_OF_JOB_TIME_INFORMATION
+    JobObjectAssociateCompletionPortInformation,              // s: JOBOBJECT_ASSOCIATE_COMPLETION_PORT
+    JobObjectBasicAndIoAccountingInformation,                 // q: JOBOBJECT_BASIC_AND_IO_ACCOUNTING_INFORMATION
+    JobObjectExtendedLimitInformation,                        // qs: JOBOBJECT_EXTENDED_LIMIT_INFORMATION[V2]
+    JobObjectJobSetInformation,                               // q: JOBOBJECT_JOBSET_INFORMATION
+    JobObjectGroupInformation,                                // q: USHORT
+    JobObjectNotificationLimitInformation,                    // q: JOBOBJECT_NOTIFICATION_LIMIT_INFORMATION
+    JobObjectLimitViolationInformation,                       // q: JOBOBJECT_LIMIT_VIOLATION_INFORMATION
+    JobObjectGroupInformationEx,                              // qs: GROUP_AFFINITY (ARRAY)
+    JobObjectCpuRateControlInformation,                       // qs: JOBOBJECT_CPU_RATE_CONTROL_INFORMATION
+    JobObjectCompletionFilter,                                // qs: ULONG
+    JobObjectCompletionCounter,                               // qs: ULONG
+    JobObjectFreezeInformation,                               // qs: JOBOBJECT_FREEZE_INFORMATION
+    JobObjectExtendedAccountingInformation,                   // qs: JOBOBJECT_EXTENDED_ACCOUNTING_INFORMATION
+    JobObjectWakeInformation,                                 // qs: JOBOBJECT_WAKE_INFORMATION
+    JobObjectBackgroundInformation,                           // s: BOOLEAN
+    JobObjectSchedulingRankBiasInformation,                   // s: JOBOBJECT_SCHEDULING_RANK_BIAS_INFORMATION
+    JobObjectTimerVirtualizationInformation,                  // s: JOBOBJECT_TIMER_VIRTUALIZATION_INFORMATION
+    JobObjectCycleTimeNotification,                           // s: JOBOBJECT_CYCLE_TIME_NOTIFICATION
+    JobObjectClearEvent,                                      // s: HANDLE
+    JobObjectInterferenceInformation,                         // q: JOBOBJECT_INTERFERENCE_INFORMATION
+    JobObjectClearPeakJobMemoryUsed,                          // s: NULL
+    JobObjectMemoryUsageInformation,                          // q: JOBOBJECT_MEMORY_USAGE_INFORMATION // JOBOBJECT_MEMORY_USAGE_INFORMATION_V2
+    JobObjectSharedCommit,                                    // q: JOBOBJECT_SHARED_COMMIT
+    JobObjectContainerId,                                     // q: JOBOBJECT_CONTAINER_IDENTIFIER_V2
+    JobObjectIoRateControlInformation,                        // qs: JOBOBJECT_IO_RATE_CONTROL_INFORMATION_NATIVE, JOBOBJECT_IO_RATE_CONTROL_INFORMATION_NATIVE_V2, JOBOBJECT_IO_RATE_CONTROL_INFORMATION_NATIVE_V3
+    JobObjectNetRateControlInformation,                       // qs: JOBOBJECT_NET_RATE_CONTROL_INFORMATION
+    JobObjectNotificationLimitInformation2,                   // qs: JOBOBJECT_NOTIFICATION_LIMIT_INFORMATION_2
+    JobObjectLimitViolationInformation2,                      // qs: JOBOBJECT_LIMIT_VIOLATION_INFORMATION_2
+    JobObjectCreateSilo,                                      // s: NULL
+    JobObjectSiloBasicInformation,                            // q: SILOOBJECT_BASIC_INFORMATION
+    JobObjectSiloRootDirectory,                               // q: SILOOBJECT_ROOT_DIRECTORY
+    JobObjectServerSiloBasicInformation,                      // q: SERVERSILO_BASIC_INFORMATION
+    JobObjectServerSiloUserSharedData,                        // q: SILO_USER_SHARED_DATA // NtQueryInformationJobObject(NULL, 39, Buffer, sizeof(SILO_USER_SHARED_DATA), 0);
+    JobObjectServerSiloInitialize,                            // qs: SERVERSILO_INIT_INFORMATION
+    JobObjectServerSiloRunningState,                          // s: BOOLEAN
+    JobObjectIoAttribution,                                   // q: JOBOBJECT_IO_ATTRIBUTION_INFORMATION
+    JobObjectMemoryPartitionInformation,                      // qs: JOBOBJECT_MEMORY_PARTITION_INFORMATION
+    JobObjectContainerTelemetryId,                            // s: GUID // NtSetInformationJobObject(_In_ PGUID, 44, _In_ PGUID, sizeof(GUID)); // daxexec
+    JobObjectSiloSystemRoot,                                  // s: UNICODE_STRING
+    JobObjectEnergyTrackingState,                             // q: JOBOBJECT_ENERGY_TRACKING_STATE
+    JobObjectThreadImpersonationInformation,                  // qs: BOOLEAN
+    JobObjectIoPriorityLimit,                                 // qs: JOBOBJECT_IO_PRIORITY_LIMIT
+    JobObjectPagePriorityLimit,                               // qs: JOBOBJECT_PAGE_PRIORITY_LIMIT
+    JobObjectServerSiloDiagnosticInformation,                 // q: SERVERSILO_DIAGNOSTIC_INFORMATION // since 24H2
+    JobObjectNetworkAccountingInformation,                    // q: JOBOBJECT_NETWORK_ACCOUNTING_INFORMATION
+    JobObjectCpuPartition,                                    // qs: JOBOBJECT_CPU_PARTITION_INFORMATION // since 25H2
     MaxJobObjectInfoClass,
 };
 
@@ -2007,6 +2207,28 @@ pub fn NtQueryVolumeInformationFile(
     return f(FileHandle, IoStatusBlock, FsInformation, Length, FsInformationClass);
 }
 
+pub fn NtQueryInformationProcess(
+    ProcessHandle: HANDLE, // _In_
+    ProcessInformationClass: PROCESSINFOCLASS, // _In_
+    ProcessInformation: PVOID, // _Out_writes_bytes_(ThreadInformationLength)
+    ProcessInformationLength: ULONG, // _In_
+    ReturnLength: ?PULONG, // _Out_opt_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtQueryInformationProcess), "NtQueryInformationProcess", "ntdll");
+    return f(ProcessHandle, ProcessInformationClass, ProcessInformation, ProcessInformationLength, ReturnLength);
+}
+
+pub fn NtQueryInformationThread(
+    ThreadHandle: HANDLE, // _In_
+    ThreadInformationClass: THREADINFOCLASS, // _In_
+    ThreadInformation: PVOID, // _Out_writes_bytes_(ThreadInformationLength)
+    ThreadInformationLength: ULONG, // _In_
+    ReturnLength: ?PULONG, // _Out_opt_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtQueryInformationThread), "NtQueryInformationThread", "ntdll");
+    return f(ThreadHandle, ThreadInformationClass, ThreadInformation, ThreadInformationLength, ReturnLength);
+}
+
 pub const FILE_BASIC_INFORMATION = extern struct {
     CreationTime: LARGE_INTEGER,
     LastAccessTime: LARGE_INTEGER,
@@ -2623,6 +2845,8 @@ comptime {
         @export(&NtTerminateProcess, .{ .name = "NtTerminateProcess", .linkage = .strong });
         @export(&NtWaitForSingleObject, .{ .name = "NtWaitForSingleObject", .linkage = .strong });
         @export(&NtWaitForAlertByThreadId, .{ .name = "NtWaitForAlertByThreadId", .linkage = .strong });
+        @export(&NtQueryInformationProcess, .{ .name = "NtQueryInformationProcess", .linkage = .strong });
+        @export(&NtQueryInformationThread, .{ .name = "NtQueryInformationThread", .linkage = .strong });
     }
 }
 
