@@ -1669,6 +1669,23 @@ pub const PFN_NtCreateUserProcess = *const fn (
     AttributeList: ?*anyopaque, // TODO: ?*PS_ATTRIBUTE_LIST,
 ) callconv(.winapi) NTSTATUS;
 
+pub fn LdrLoadDll(
+    DllPath: ?PCWSTR, // _In_opt_
+    DllCharacteristics: ?PULONG, // _In_opt_
+    DllName: PCUNICODE_STRING, // _In_
+    DllHandle: *PVOID, // _Out_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(LdrLoadDll), "LdrLoadDll", "ntdll");
+    return f(DllPath, DllCharacteristics, DllName, DllHandle);
+}
+
+pub fn LdrUnloadDll(
+    DllHandle: PVOID, // _In_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(LdrUnloadDll), "LdrUnloadDll", "ntdll");
+    return f(DllHandle);
+}
+
 pub fn LdrGetProcedureAddress(
     DllHandle: PVOID, // _In_
     ProcedureName: ?PCANSI_STRING, // _In_opt_
@@ -2450,6 +2467,8 @@ comptime {
         @export(&NtCreateFile, .{ .name = "NtCreateFile", .linkage = .strong });
         @export(&NtOpenFile, .{ .name = "NtOpenFile", .linkage = .strong });
         @export(&NtFlushBuffersFile, .{ .name = "NtFlushBuffersFile", .linkage = .strong });
+        @export(&LdrLoadDll, .{ .name = "LdrLoadDll", .linkage = .strong });
+        @export(&LdrUnloadDll, .{ .name = "LdrUnloadDll", .linkage = .strong });
         @export(&LdrGetProcedureAddress, .{ .name = "LdrGetProcedureAddress", .linkage = .strong });
         @export(&LdrGetProcedureAddressEx, .{ .name = "LdrGetProcedureAddressEx", .linkage = .strong });
         @export(&LdrGetProcedureAddressForCaller, .{ .name = "LdrGetProcedureAddressForCaller", .linkage = .strong });
