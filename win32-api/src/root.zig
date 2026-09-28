@@ -80,6 +80,12 @@ pub const CLIENT_ID = extern struct {
     UniqueProcess: ?HANDLE,
     UniqueThread: ?HANDLE,
 };
+pub const ANSI_STRING = extern struct {
+    Length: USHORT,
+    MaximumLength: USHORT,
+    Buffer: ?[*]CHAR,
+};
+pub const PCANSI_STRING = *const ANSI_STRING;
 pub const UNICODE_STRING = extern struct {
     Length: USHORT,
     MaximumLength: USHORT,
@@ -1663,6 +1669,39 @@ pub const PFN_NtCreateUserProcess = *const fn (
     AttributeList: ?*anyopaque, // TODO: ?*PS_ATTRIBUTE_LIST,
 ) callconv(.winapi) NTSTATUS;
 
+pub fn LdrGetProcedureAddress(
+    DllHandle: PVOID, // _In_
+    ProcedureName: ?PCANSI_STRING, // _In_opt_
+    ProcedureNumber: ULONG, // _In_opt_
+    ProcedureAddress: *PVOID, // _Out_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(LdrGetProcedureAddress), "LdrGetProcedureAddress", "ntdll");
+    return f(DllHandle, ProcedureName, ProcedureNumber, ProcedureAddress);
+}
+
+pub fn LdrGetProcedureAddressEx(
+    DllHandle: PVOID, // _In_
+    ProcedureName: ?PCANSI_STRING, // _In_opt_
+    ProcedureNumber: ULONG, // _In_opt_
+    ProcedureAddress: *PVOID, // _Out_
+    Flags: ULONG, // _In_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(LdrGetProcedureAddressEx), "LdrGetProcedureAddressEx", "ntdll");
+    return f(DllHandle, ProcedureName, ProcedureNumber, ProcedureAddress, Flags);
+}
+
+pub fn LdrGetProcedureAddressForCaller(
+    DllHandle: PVOID, // _In_
+    ProcedureName: ?PCANSI_STRING, // _In_opt_
+    ProcedureNumber: ULONG, // _In_opt_
+    ProcedureAddress: *PVOID, // _Out_
+    Flags: ULONG, // _In_
+    CallerAddress: PVOID, // _In_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(LdrGetProcedureAddressForCaller), "LdrGetProcedureAddressForCaller", "ntdll");
+    return f(DllHandle, ProcedureName, ProcedureNumber, ProcedureAddress, Flags, CallerAddress);
+}
+
 pub fn NtCreateFile(
     FileHandle: PHANDLE, // _Out_
     DesiredAccess: ACCESS_MASK, // _In_
@@ -1690,6 +1729,14 @@ pub fn NtOpenFile(
 ) linksection(section_name) callconv(.winapi) NTSTATUS {
     const f = def(*const @TypeOf(NtOpenFile), "NtOpenFile", "ntdll");
     return f(FileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, ShareAccess, OpenOptions);
+}
+
+pub fn NtFlushBuffersFile(
+    FileHandle: HANDLE, // _In_
+    IoStatusBlock: PIO_STATUS_BLOCK, // _Out_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtFlushBuffersFile), "NtFlushBuffersFile", "ntdll");
+    return f(FileHandle, IoStatusBlock);
 }
 
 pub fn NtDeviceIoControlFile(
@@ -2402,6 +2449,10 @@ comptime {
         @export(&NtCreateNamedPipeFile, .{ .name = "NtCreateNamedPipeFile", .linkage = .strong });
         @export(&NtCreateFile, .{ .name = "NtCreateFile", .linkage = .strong });
         @export(&NtOpenFile, .{ .name = "NtOpenFile", .linkage = .strong });
+        @export(&NtFlushBuffersFile, .{ .name = "NtFlushBuffersFile", .linkage = .strong });
+        @export(&LdrGetProcedureAddress, .{ .name = "LdrGetProcedureAddress", .linkage = .strong });
+        @export(&LdrGetProcedureAddressEx, .{ .name = "LdrGetProcedureAddressEx", .linkage = .strong });
+        @export(&LdrGetProcedureAddressForCaller, .{ .name = "LdrGetProcedureAddressForCaller", .linkage = .strong });
     }
 }
 
