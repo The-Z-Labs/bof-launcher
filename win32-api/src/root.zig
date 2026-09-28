@@ -2851,22 +2851,22 @@ comptime {
 }
 
 pub fn NtAllocateVirtualMemory(
-    ProcessHandle: HANDLE,
-    BaseAddress: *PVOID,
-    ZeroBits: ULONG_PTR,
-    RegionSize: *SIZE_T,
-    AllocationType: DWORD,
-    Protect: DWORD,
+    ProcessHandle: HANDLE, // _In_
+    BaseAddress: *PVOID, // _Inout_
+    ZeroBits: ULONG_PTR, // _In_
+    RegionSize: *SIZE_T, // _Inout_
+    AllocationType: ULONG, // _In_
+    Protect: ULONG, // _In_
 ) linksection(section_name) callconv(.winapi) NTSTATUS {
     const f = def(*const @TypeOf(NtAllocateVirtualMemory), "NtAllocateVirtualMemory", "ntdll");
     return f(ProcessHandle, BaseAddress, ZeroBits, RegionSize, AllocationType, Protect);
 }
 
 pub fn NtFreeVirtualMemory(
-    ProcessHandle: HANDLE,
-    BaseAddress: *PVOID,
-    RegionSize: *SIZE_T,
-    FreeType: DWORD,
+    ProcessHandle: HANDLE, // _In_
+    BaseAddress: *PVOID, // _Inout_
+    RegionSize: *SIZE_T, // _Inout_
+    FreeType: ULONG, // _In_
 ) linksection(section_name) callconv(.winapi) NTSTATUS {
     const f = def(*const @TypeOf(NtFreeVirtualMemory), "NtFreeVirtualMemory", "ntdll");
     return f(ProcessHandle, BaseAddress, RegionSize, FreeType);
