@@ -10,7 +10,9 @@ The repository provides:
 2. [z-beac0n](#z-beac0n) - a custom-written stage-1 (aka pre-C2) solution featuring bof-launcher. Engineered with a small footprint, stealth and modularity in mind.
 3. [Z-Labs BOFs collection](#z-Labs-bofs-collection) - growing collection of OS-specific and cross-platform BOFs for usage during a red team engagements.
 
-See [here](#building-all-components) for bulding instructions.
+See [here](ROADMAP.md) for project's roadmap.
+
+See [here](#building-all-components) for building instructions.
 
 # bof-launcher library
 
