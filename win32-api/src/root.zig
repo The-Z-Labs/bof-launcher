@@ -1942,6 +1942,49 @@ pub fn RtlLeaveCriticalSection(
     return f(lpCriticalSection);
 }
 
+pub fn NtClose(
+    Handle: HANDLE, // _In_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtClose), "NtClose", "ntdll");
+    return f(Handle);
+}
+
+pub fn NtTerminateProcess(
+    ProcessHandle: ?HANDLE, // _In_opt_
+    ExitStatus: NTSTATUS, // _In_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtTerminateProcess), "NtTerminateProcess", "ntdll");
+    return f(ProcessHandle, ExitStatus);
+}
+
+pub fn NtWaitForSingleObject(
+    Handle: HANDLE, // _In_
+    Alertable: BOOLEAN, // _In_
+    Timeout: ?PLARGE_INTEGER, // _In_opt_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtWaitForSingleObject), "NtWaitForSingleObject", "ntdll");
+    return f(Handle, Alertable, Timeout);
+}
+
+pub fn NtWaitForAlertByThreadId(
+    Address: ?PVOID, // _In_opt_
+    Timeout: ?PLARGE_INTEGER, // _In_opt_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtWaitForAlertByThreadId), "NtWaitForAlertByThreadId", "ntdll");
+    return f(Address, Timeout);
+}
+
+pub fn NtQueryObject(
+    Handle: ?HANDLE, // _In_opt_
+    ObjectInformationClass: OBJECT_INFORMATION_CLASS, // _In_
+    ObjectInformation: ?PVOID, // _Out_writes_bytes_opt_(ObjectInformationLength)
+    ObjectInformationLength: ULONG, // _In_
+    ReturnLength: ?PULONG, // _Out_opt_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtQueryObject), "NtQueryObject", "ntdll");
+    return f(Handle, ObjectInformationClass, ObjectInformation, ObjectInformationLength, ReturnLength);
+}
+
 pub fn NtQueryInformationFile(
     FileHandle: HANDLE, // _In_
     IoStatusBlock: PIO_STATUS_BLOCK, // _Out_
@@ -2042,11 +2085,8 @@ pub fn NtCreateNamedPipeFile(
     return f(FileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, ShareAccess, CreateDisposition, CreateOptions, NamedPipeType, ReadMode, CompletionMode, MaximumInstances, InboundQuota, OutboundQuota, DefaultTimeout);
 }
 
-pub const PFN_NtQueryObject = *const @TypeOf(std.os.windows.ntdll.NtQueryObject);
-pub const PFN_NtClose = *const @TypeOf(std.os.windows.ntdll.NtClose);
 pub const PFN_NtWriteVirtualMemory = *const @TypeOf(std.os.windows.ntdll.NtWriteVirtualMemory);
 pub const PFN_NtProtectVirtualMemory = *const @TypeOf(std.os.windows.ntdll.NtProtectVirtualMemory);
-pub const PFN_NtTerminateProcess = *const @TypeOf(std.os.windows.ntdll.NtTerminateProcess);
 pub const PFN_NtCreateThreadEx = *const @TypeOf(std.os.windows.ntdll.NtCreateThreadEx);
 pub const PFN_NtResumeThread = *const @TypeOf(std.os.windows.ntdll.NtResumeThread);
 
@@ -2345,7 +2385,6 @@ pub fn init() void {
     NtResumeThread = def(PFN_NtResumeThread, "NtResumeThread", "ntdll");
     NtSuspendThread = def(PFN_NtSuspendThread, "NtSuspendThread", "ntdll");
     NtTerminateThread = def(PFN_NtTerminateThread, "NtTerminateThread", "ntdll");
-    NtTerminateProcess = def(PFN_NtTerminateProcess, "NtTerminateProcess", "ntdll");
     NtResumeProcess = def(PFN_NtResumeProcess, "NtResumeProcess", "ntdll");
     NtSuspendProcess = def(PFN_NtSuspendProcess, "NtSuspendProcess", "ntdll");
     NtCreateJobObject = def(PFN_NtCreateJobObject, "NtCreateJobObject", "ntdll");
@@ -2353,14 +2392,12 @@ pub fn init() void {
     NtTerminateJobObject = def(PFN_NtTerminateJobObject, "NtTerminateJobObject", "ntdll");
     NtIsProcessInJob = def(PFN_NtIsProcessInJob, "NtIsProcessInJob", "ntdll");
     NtSetInformationJobObject = def(PFN_NtSetInformationJobObject, "NtSetInformationJobObject", "ntdll");
-    NtClose = def(PFN_NtClose, "NtClose", "ntdll");
     NtWriteVirtualMemory = def(PFN_NtWriteVirtualMemory, "NtWriteVirtualMemory", "ntdll");
     NtProtectVirtualMemory = def(PFN_NtProtectVirtualMemory, "NtProtectVirtualMemory", "ntdll");
     NtCreateThreadEx = def(PFN_NtCreateThreadEx, "NtCreateThreadEx", "ntdll");
     NtCreateUserProcess = def(PFN_NtCreateUserProcess, "NtCreateUserProcess", "ntdll");
     RtlCloneUserProcess = def(PFN_RtlCloneUserProcess, "RtlCloneUserProcess", "ntdll");
     RtlWow64EnableFsRedirection = def(PFN_RtlWow64EnableFsRedirection, "RtlWow64EnableFsRedirection", "ntdll");
-    NtQueryObject = def(PFN_NtQueryObject, "NtQueryObject", "ntdll");
 
     MessageBoxA = def(PFN_MessageBoxA, "MessageBoxA", "user32");
     MessageBoxW = def(PFN_MessageBoxW, "MessageBoxW", "user32");
@@ -2459,7 +2496,6 @@ pub var LocalFree: PFN_LocalFree = undefined;
 pub var NtResumeThread: PFN_NtResumeThread = undefined;
 pub var NtSuspendThread: PFN_NtSuspendThread = undefined;
 pub var NtTerminateThread: PFN_NtTerminateThread = undefined;
-pub var NtTerminateProcess: PFN_NtTerminateProcess = undefined;
 pub var NtResumeProcess: PFN_NtResumeProcess = undefined;
 pub var NtSuspendProcess: PFN_NtSuspendProcess = undefined;
 pub var NtCreateJobObject: PFN_NtCreateJobObject = undefined;
@@ -2467,14 +2503,12 @@ pub var NtAssignProcessToJobObject: PFN_NtAssignProcessToJobObject = undefined;
 pub var NtTerminateJobObject: PFN_NtTerminateJobObject = undefined;
 pub var NtIsProcessInJob: PFN_NtIsProcessInJob = undefined;
 pub var NtSetInformationJobObject: PFN_NtSetInformationJobObject = undefined;
-pub var NtClose: PFN_NtClose = undefined;
 pub var NtWriteVirtualMemory: PFN_NtWriteVirtualMemory = undefined;
 pub var NtProtectVirtualMemory: PFN_NtProtectVirtualMemory = undefined;
 pub var NtCreateThreadEx: PFN_NtCreateThreadEx = undefined;
 pub var NtCreateUserProcess: PFN_NtCreateUserProcess = undefined;
 pub var RtlCloneUserProcess: PFN_RtlCloneUserProcess = undefined;
 pub var RtlWow64EnableFsRedirection: PFN_RtlWow64EnableFsRedirection = undefined;
-pub var NtQueryObject: PFN_NtQueryObject = undefined;
 
 pub fn NtCurrentProcess() HANDLE {
     return @ptrFromInt(@as(usize, @bitCast(@as(isize, -1))));
@@ -2584,6 +2618,11 @@ comptime {
         @export(&RtlReportSilentProcessExit, .{ .name = "RtlReportSilentProcessExit", .linkage = .strong });
         @export(&RtlEnterCriticalSection, .{ .name = "RtlEnterCriticalSection", .linkage = .strong });
         @export(&RtlLeaveCriticalSection, .{ .name = "RtlLeaveCriticalSection", .linkage = .strong });
+        @export(&NtClose, .{ .name = "NtClose", .linkage = .strong });
+        @export(&NtQueryObject, .{ .name = "NtQueryObject", .linkage = .strong });
+        @export(&NtTerminateProcess, .{ .name = "NtTerminateProcess", .linkage = .strong });
+        @export(&NtWaitForSingleObject, .{ .name = "NtWaitForSingleObject", .linkage = .strong });
+        @export(&NtWaitForAlertByThreadId, .{ .name = "NtWaitForAlertByThreadId", .linkage = .strong });
     }
 }
 

@@ -1667,7 +1667,7 @@ fn threadFuncCloneProcessWindows(bof: *Bof, arg_data: ?[]u8, context: *BofContex
                 _ = w32.WriteFile(write_pipe, buf, @intCast(output_len), null, null);
             }
 
-            _ = w32.NtTerminateProcess(w32.NtCurrentProcess(), .SUCCESS);
+            _ = w32.NtTerminateProcess(w32.NtCurrentProcess(), w32.STATUS_SUCCESS);
         },
         w32.STATUS_SUCCESS => {
             // parent process
