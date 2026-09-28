@@ -1,5 +1,4 @@
 const std = @import("std");
-const windows = std.os.windows;
 const builtin = @import("builtin");
 const native_arch = builtin.cpu.arch;
 
@@ -2358,8 +2357,39 @@ pub fn NtUnmapViewOfSection(
     return f(ProcessHandle, BaseAddress);
 }
 
-pub const PFN_NtWriteVirtualMemory = *const @TypeOf(std.os.windows.ntdll.NtWriteVirtualMemory);
-pub const PFN_NtProtectVirtualMemory = *const @TypeOf(std.os.windows.ntdll.NtProtectVirtualMemory);
+pub fn NtReadVirtualMemory(
+    ProcessHandle: HANDLE, // _In_
+    BaseAddress: ?PVOID, // _In_opt_
+    Buffer: PVOID, // _Out_writes_bytes_to_(NumberOfBytesToRead, *NumberOfBytesRead)
+    NumberOfBytesToRead: SIZE_T, // _In_
+    NumberOfBytesRead: ?PSIZE_T, // _Out_opt_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtReadVirtualMemory), "NtReadVirtualMemory", "ntdll");
+    return f(ProcessHandle, BaseAddress, Buffer, NumberOfBytesToRead, NumberOfBytesRead);
+}
+
+pub fn NtWriteVirtualMemory(
+    ProcessHandle: HANDLE, // _In_
+    BaseAddress: ?PVOID, // _In_opt_
+    Buffer: PVOID, // _In_reads_bytes_(NumberOfBytesToWrite)
+    NumberOfBytesToWrite: SIZE_T, // _In_
+    NumberOfBytesWritten: ?PSIZE_T, // _Out_opt_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtWriteVirtualMemory), "NtWriteVirtualMemory", "ntdll");
+    return f(ProcessHandle, BaseAddress, Buffer, NumberOfBytesToWrite, NumberOfBytesWritten);
+}
+
+pub fn NtProtectVirtualMemory(
+    ProcessHandle: HANDLE, // _In_
+    BaseAddress: *PVOID, // _Inout_
+    NumberOfBytesToProtect: PSIZE_T, // _Inout_
+    NewAccessProtection: ULONG, // _In_
+    OldAccessProtection: PULONG, // _Out_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtProtectVirtualMemory), "NtProtectVirtualMemory", "ntdll");
+    return f(ProcessHandle, BaseAddress, NumberOfBytesToProtect, NewAccessProtection, OldAccessProtection);
+}
+
 pub const PFN_NtCreateThreadEx = *const @TypeOf(std.os.windows.ntdll.NtCreateThreadEx);
 pub const PFN_NtResumeThread = *const @TypeOf(std.os.windows.ntdll.NtResumeThread);
 
@@ -2665,8 +2695,6 @@ pub fn init() void {
     NtTerminateJobObject = def(PFN_NtTerminateJobObject, "NtTerminateJobObject", "ntdll");
     NtIsProcessInJob = def(PFN_NtIsProcessInJob, "NtIsProcessInJob", "ntdll");
     NtSetInformationJobObject = def(PFN_NtSetInformationJobObject, "NtSetInformationJobObject", "ntdll");
-    NtWriteVirtualMemory = def(PFN_NtWriteVirtualMemory, "NtWriteVirtualMemory", "ntdll");
-    NtProtectVirtualMemory = def(PFN_NtProtectVirtualMemory, "NtProtectVirtualMemory", "ntdll");
     NtCreateThreadEx = def(PFN_NtCreateThreadEx, "NtCreateThreadEx", "ntdll");
     NtCreateUserProcess = def(PFN_NtCreateUserProcess, "NtCreateUserProcess", "ntdll");
     RtlCloneUserProcess = def(PFN_RtlCloneUserProcess, "RtlCloneUserProcess", "ntdll");
@@ -2776,8 +2804,6 @@ pub var NtAssignProcessToJobObject: PFN_NtAssignProcessToJobObject = undefined;
 pub var NtTerminateJobObject: PFN_NtTerminateJobObject = undefined;
 pub var NtIsProcessInJob: PFN_NtIsProcessInJob = undefined;
 pub var NtSetInformationJobObject: PFN_NtSetInformationJobObject = undefined;
-pub var NtWriteVirtualMemory: PFN_NtWriteVirtualMemory = undefined;
-pub var NtProtectVirtualMemory: PFN_NtProtectVirtualMemory = undefined;
 pub var NtCreateThreadEx: PFN_NtCreateThreadEx = undefined;
 pub var NtCreateUserProcess: PFN_NtCreateUserProcess = undefined;
 pub var RtlCloneUserProcess: PFN_RtlCloneUserProcess = undefined;
