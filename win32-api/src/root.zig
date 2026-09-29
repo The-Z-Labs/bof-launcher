@@ -1988,82 +1988,130 @@ pub fn AttachConsole(dwProcessId: DWORD) linksection(section_name) callconv(.win
     return f(dwProcessId);
 }
 
-pub const PFN_IsWow64Process = *const fn (
+pub fn IsWow64Process(
     hProcess: HANDLE,
     Wow64Process: *BOOL,
-) callconv(.winapi) BOOL;
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(IsWow64Process), "IsWow64Process", "kernel32");
+    return f(hProcess, Wow64Process);
+}
 
-pub const PFN_GetExitCodeProcess = *const fn (
+pub fn GetExitCodeProcess(
     hProcess: HANDLE,
     lpExitCode: *DWORD,
-) callconv(.winapi) BOOL;
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(GetExitCodeProcess), "GetExitCodeProcess", "kernel32");
+    return f(hProcess, lpExitCode);
+}
 
-pub const PFN_GetModuleHandleA = *const fn (lpModuleName: ?LPCSTR) callconv(.winapi) ?HMODULE;
+pub fn GetModuleHandleA(lpModuleName: ?LPCSTR) linksection(section_name) callconv(.winapi) ?HMODULE {
+    const f = def(*const @TypeOf(GetModuleHandleA), "GetModuleHandleA", "kernel32");
+    return f(lpModuleName);
+}
 
-pub const PFN_LoadLibraryA = *const fn (lpLibFileName: LPCSTR) callconv(.winapi) ?HMODULE;
+pub fn LoadLibraryA(lpLibFileName: LPCSTR) linksection(section_name) callconv(.winapi) ?HMODULE {
+    const f = def(*const @TypeOf(LoadLibraryA), "LoadLibraryA", "kernel32");
+    return f(lpLibFileName);
+}
 
-pub const PFN_GetProcAddress = *const fn (
+pub fn GetProcAddress(
     hModule: HMODULE,
     lpProcName: LPCSTR,
-) callconv(.winapi) ?FARPROC;
+) linksection(section_name) callconv(.winapi) ?FARPROC {
+    const f = def(*const @TypeOf(GetProcAddress), "GetProcAddress", "kernel32");
+    return f(hModule, lpProcName);
+}
 
-pub const PFN_CreatePipe = *const fn (
+pub fn CreatePipe(
     hReadPipe: *HANDLE,
     hWritePipe: *HANDLE,
     lpPipeAttributes: ?*SECURITY_ATTRIBUTES,
     nSize: DWORD,
-) callconv(.winapi) BOOL;
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(CreatePipe), "CreatePipe", "kernel32");
+    return f(hReadPipe, hWritePipe, lpPipeAttributes, nSize);
+}
 
-pub const PFN_ResumeThread = *const fn (hThread: HANDLE) callconv(.winapi) DWORD;
+pub fn ResumeThread(hThread: HANDLE) linksection(section_name) callconv(.winapi) DWORD {
+    const f = def(*const @TypeOf(ResumeThread), "ResumeThread", "kernel32");
+    return f(hThread);
+}
 
-pub const PFN_SuspendThread = *const fn (hThread: HANDLE) callconv(.winapi) DWORD;
+pub fn SuspendThread(hThread: HANDLE) linksection(section_name) callconv(.winapi) DWORD {
+    const f = def(*const @TypeOf(SuspendThread), "SuspendThread", "kernel32");
+    return f(hThread);
+}
 
-pub const PFN_VirtualAllocEx = *const fn (
+pub fn VirtualAllocEx(
     hProcess: HANDLE,
     lpAddress: ?LPVOID,
     dwSize: SIZE_T,
     flAllocationType: DWORD,
     flProtect: DWORD,
-) callconv(.winapi) ?LPVOID;
+) linksection(section_name) callconv(.winapi) ?LPVOID {
+    const f = def(*const @TypeOf(VirtualAllocEx), "VirtualAllocEx", "kernel32");
+    return f(hProcess, lpAddress, dwSize, flAllocationType, flProtect);
+}
 
-pub const PFN_VirtualProtectEx = *const fn (
+pub fn VirtualProtectEx(
     hProcess: HANDLE,
     lpAddress: LPVOID,
     dwSize: SIZE_T,
     flNewProtect: DWORD,
     lpflOldProtect: *DWORD,
-) callconv(.winapi) BOOL;
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(VirtualProtectEx), "VirtualProtectEx", "kernel32");
+    return f(hProcess, lpAddress, dwSize, flNewProtect, lpflOldProtect);
+}
 
-pub const PFN_CreateFileMappingA = *const fn (
+pub fn CreateFileMappingA(
     hFile: HANDLE,
     lpFileMappingAttributes: ?*SECURITY_ATTRIBUTES,
     flProtect: DWORD,
     dwMaximumSizeHigh: DWORD,
     dwMaximumSizeLow: DWORD,
     lpName: ?LPCSTR,
-) callconv(.winapi) ?HANDLE;
+) linksection(section_name) callconv(.winapi) ?HANDLE {
+    const f = def(*const @TypeOf(CreateFileMappingA), "CreateFileMappingA", "kernel32");
+    return f(hFile, lpFileMappingAttributes, flProtect, dwMaximumSizeHigh, dwMaximumSizeLow, lpName);
+}
 
-pub const PFN_GetThreadContext = *const fn (
+pub fn GetThreadContext(
     hThread: HANDLE,
     lpContext: *CONTEXT,
-) callconv(.winapi) BOOL;
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(GetThreadContext), "GetThreadContext", "kernel32");
+    return f(hThread, lpContext);
+}
 
-pub const PFN_GetThreadId = *const fn (hThread: HANDLE) callconv(.winapi) DWORD;
+pub fn GetThreadId(hThread: HANDLE) linksection(section_name) callconv(.winapi) DWORD {
+    const f = def(*const @TypeOf(GetThreadId), "GetThreadId", "kernel32");
+    return f(hThread);
+}
 
-pub const PFN_SetThreadContext = *const fn (
+pub fn SetThreadContext(
     hThread: HANDLE,
     lpContext: *const CONTEXT,
-) callconv(.winapi) BOOL;
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(SetThreadContext), "SetThreadContext", "kernel32");
+    return f(hThread, lpContext);
+}
 
-pub const PFN_MapViewOfFile = *const fn (
+pub fn MapViewOfFile(
     hFileMappingObject: HANDLE,
     dwDesiredAccess: DWORD,
     dwFileOffsetHigh: DWORD,
     dwFileOffsetLow: DWORD,
     dwNumberOfBytesToMap: SIZE_T,
-) callconv(.winapi) LPVOID;
+) linksection(section_name) callconv(.winapi) LPVOID {
+    const f = def(*const @TypeOf(MapViewOfFile), "MapViewOfFile", "kernel32");
+    return f(hFileMappingObject, dwDesiredAccess, dwFileOffsetHigh, dwFileOffsetLow, dwNumberOfBytesToMap);
+}
 
-pub const PFN_UnmapViewOfFile = *const fn (lpBaseAddress: LPCVOID) callconv(.winapi) BOOL;
+pub fn UnmapViewOfFile(lpBaseAddress: LPCVOID) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(UnmapViewOfFile), "UnmapViewOfFile", "kernel32");
+    return f(lpBaseAddress);
+}
 
 pub const PFN_OpenProcess = *const fn (
     dwDesiredAccess: DWORD,
@@ -3117,22 +3165,6 @@ pub fn def(
 }
 
 pub fn init() void {
-    IsWow64Process = def(PFN_IsWow64Process, "IsWow64Process", "kernel32");
-    GetExitCodeProcess = def(PFN_GetExitCodeProcess, "GetExitCodeProcess", "kernel32");
-    GetModuleHandleA = def(PFN_GetModuleHandleA, "GetModuleHandleA", "kernel32");
-    LoadLibraryA = def(PFN_LoadLibraryA, "LoadLibraryA", "kernel32");
-    GetProcAddress = def(PFN_GetProcAddress, "GetProcAddress", "kernel32");
-    CreatePipe = def(PFN_CreatePipe, "CreatePipe", "kernel32");
-    ResumeThread = def(PFN_ResumeThread, "ResumeThread", "kernel32");
-    SuspendThread = def(PFN_ResumeThread, "SuspendThread", "kernel32");
-    VirtualAllocEx = def(PFN_VirtualAllocEx, "VirtualAllocEx", "kernel32");
-    VirtualProtectEx = def(PFN_VirtualProtectEx, "VirtualProtectEx", "kernel32");
-    CreateFileMappingA = def(PFN_CreateFileMappingA, "CreateFileMappingA", "kernel32");
-    GetThreadContext = def(PFN_GetThreadContext, "GetThreadContext", "kernel32");
-    GetThreadId = def(PFN_GetThreadId, "GetThreadId", "kernel32");
-    SetThreadContext = def(PFN_SetThreadContext, "SetThreadContext", "kernel32");
-    MapViewOfFile = def(PFN_MapViewOfFile, "MapViewOfFile", "kernel32");
-    UnmapViewOfFile = def(PFN_UnmapViewOfFile, "UnmapViewOfFile", "kernel32");
     OpenProcess = def(PFN_OpenProcess, "OpenProcess", "kernel32");
     OpenThread = def(PFN_OpenThread, "OpenThread", "kernel32");
     WriteProcessMemory = def(PFN_WriteProcessMemory, "WriteProcessMemory", "kernel32");
@@ -3205,22 +3237,6 @@ pub fn init() void {
 //
 // KERNEL32 function definitions
 //
-pub var IsWow64Process: PFN_IsWow64Process = undefined;
-pub var GetExitCodeProcess: PFN_GetExitCodeProcess = undefined;
-pub var GetModuleHandleA: PFN_GetModuleHandleA = undefined;
-pub var LoadLibraryA: PFN_LoadLibraryA = undefined;
-pub var GetProcAddress: PFN_GetProcAddress = undefined;
-pub var CreatePipe: PFN_CreatePipe = undefined;
-pub var ResumeThread: PFN_ResumeThread = undefined;
-pub var SuspendThread: PFN_ResumeThread = undefined;
-pub var VirtualAllocEx: PFN_VirtualAllocEx = undefined;
-pub var VirtualProtectEx: PFN_VirtualProtectEx = undefined;
-pub var CreateFileMappingA: PFN_CreateFileMappingA = undefined;
-pub var GetThreadContext: PFN_GetThreadContext = undefined;
-pub var GetThreadId: PFN_GetThreadId = undefined;
-pub var SetThreadContext: PFN_SetThreadContext = undefined;
-pub var MapViewOfFile: PFN_MapViewOfFile = undefined;
-pub var UnmapViewOfFile: PFN_UnmapViewOfFile = undefined;
 pub var OpenProcess: PFN_OpenProcess = undefined;
 pub var OpenThread: PFN_OpenThread = undefined;
 pub var WriteProcessMemory: PFN_WriteProcessMemory = undefined;
