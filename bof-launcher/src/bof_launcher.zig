@@ -2721,7 +2721,7 @@ fn zgateSetCodeProtect(section: []u8, new_protect: w32.DWORD) linksection(zgate_
 
 var zgateOutputDebugStringAPtr: w32.PFN_OutputDebugStringA linksection(zgate_dsection) = undefined;
 var zgateExitProcessPtr: *const @TypeOf(w32.ExitProcess) linksection(zgate_dsection) = undefined;
-var zgateFlushInstructionCachePtr: w32.PFN_FlushInstructionCache linksection(zgate_dsection) = undefined;
+var zgateFlushInstructionCachePtr: *const @TypeOf(w32.FlushInstructionCache) linksection(zgate_dsection) = undefined;
 var zgateVirtualAllocPtr: *const @TypeOf(w32.VirtualAlloc) linksection(zgate_dsection) = undefined;
 var zgateVirtualAllocExPtr: w32.PFN_VirtualAllocEx linksection(zgate_dsection) = undefined;
 var zgateVirtualFreePtr: *const @TypeOf(w32.VirtualFree) linksection(zgate_dsection) = undefined;
@@ -2729,7 +2729,7 @@ var zgateVirtualQueryPtr: *const @TypeOf(w32.VirtualQuery) linksection(zgate_dse
 var zgateVirtualProtectPtr: *const @TypeOf(w32.VirtualProtect) linksection(zgate_dsection) = undefined;
 var zgateVirtualProtectExPtr: w32.PFN_VirtualProtectEx linksection(zgate_dsection) = undefined;
 var zgateCreateFileMappingAPtr: w32.PFN_CreateFileMappingA linksection(zgate_dsection) = undefined;
-var zgateCloseHandlePtr: w32.PFN_CloseHandle linksection(zgate_dsection) = undefined;
+var zgateCloseHandlePtr: *const @TypeOf(w32.CloseHandle) linksection(zgate_dsection) = undefined;
 var zgateDuplicateHandlePtr: *const @TypeOf(w32.DuplicateHandle) linksection(zgate_dsection) = undefined;
 var zgateGetThreadContextPtr: w32.PFN_GetThreadContext linksection(zgate_dsection) = undefined;
 var zgateSetThreadContextPtr: w32.PFN_SetThreadContext linksection(zgate_dsection) = undefined;

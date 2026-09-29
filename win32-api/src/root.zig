@@ -1930,36 +1930,63 @@ pub fn GetSystemInfo(lpSystemInfo: *SYSTEM_INFO) linksection(section_name) callc
     f(lpSystemInfo);
 }
 
-pub const PFN_VirtualFreeEx = *const fn (
+pub fn VirtualFreeEx(
     hProcess: HANDLE,
     lpAddress: ?LPVOID,
     dwSize: SIZE_T,
     dwFreeType: DWORD,
-) callconv(.winapi) BOOL;
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(VirtualFreeEx), "VirtualFreeEx", "kernel32");
+    return f(hProcess, lpAddress, dwSize, dwFreeType);
+}
 
-pub const PFN_GetModuleFileNameA = *const fn (
+pub fn GetModuleFileNameA(
     hModule: ?HMODULE,
     lpFilename: LPSTR,
     nSize: DWORD,
-) callconv(.winapi) DWORD;
+) linksection(section_name) callconv(.winapi) DWORD {
+    const f = def(*const @TypeOf(GetModuleFileNameA), "GetModuleFileNameA", "kernel32");
+    return f(hModule, lpFilename, nSize);
+}
 
-pub const PFN_GetCurrentProcessId = *const fn () callconv(.winapi) DWORD;
+pub fn GetCurrentProcessId() linksection(section_name) callconv(.winapi) DWORD {
+    const f = def(*const @TypeOf(GetCurrentProcessId), "GetCurrentProcessId", "kernel32");
+    return f();
+}
 
-pub const PFN_GetProcessId = *const fn (hProcess: HANDLE) callconv(.winapi) DWORD;
+pub fn GetProcessId(hProcess: HANDLE) linksection(section_name) callconv(.winapi) DWORD {
+    const f = def(*const @TypeOf(GetProcessId), "GetProcessId", "kernel32");
+    return f(hProcess);
+}
 
-pub const PFN_GetCurrentThread = *const fn () callconv(.winapi) HANDLE;
+pub fn GetCurrentThread() linksection(section_name) callconv(.winapi) HANDLE {
+    const f = def(*const @TypeOf(GetCurrentThread), "GetCurrentThread", "kernel32");
+    return f();
+}
 
-pub const PFN_CloseHandle = *const fn (hObject: HANDLE) callconv(.winapi) BOOL;
+pub fn CloseHandle(hObject: HANDLE) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(CloseHandle), "CloseHandle", "kernel32");
+    return f(hObject);
+}
 
-pub const PFN_FlushInstructionCache = *const fn (
+pub fn FlushInstructionCache(
     hProcess: HANDLE,
     lpBaseAddress: ?LPCVOID,
     dwSize: SIZE_T,
-) callconv(.winapi) BOOL;
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(FlushInstructionCache), "FlushInstructionCache", "kernel32");
+    return f(hProcess, lpBaseAddress, dwSize);
+}
 
-pub const PFN_FreeConsole = *const fn () callconv(.winapi) BOOL;
+pub fn FreeConsole() linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(FreeConsole), "FreeConsole", "kernel32");
+    return f();
+}
 
-pub const PFN_AttachConsole = *const fn (dwProcessId: DWORD) callconv(.winapi) BOOL;
+pub fn AttachConsole(dwProcessId: DWORD) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(AttachConsole), "AttachConsole", "kernel32");
+    return f(dwProcessId);
+}
 
 pub const PFN_IsWow64Process = *const fn (
     hProcess: HANDLE,
@@ -2752,8 +2779,8 @@ pub fn NtCreateSection(
 }
 
 pub const SECTION_INHERIT = enum(c_int) {
-    Share = 1,
-    Unmap = 2,
+    ViewShare = 1,
+    ViewUnmap = 2,
 };
 
 pub fn NtMapViewOfSection(
@@ -3090,15 +3117,6 @@ pub fn def(
 }
 
 pub fn init() void {
-    VirtualFreeEx = def(PFN_VirtualFreeEx, "VirtualFreeEx", "kernel32");
-    GetModuleFileNameA = def(PFN_GetModuleFileNameA, "GetModuleFileNameA", "kernel32");
-    GetCurrentProcessId = def(PFN_GetCurrentProcessId, "GetCurrentProcessId", "kernel32");
-    GetProcessId = def(PFN_GetProcessId, "GetProcessId", "kernel32");
-    GetCurrentThread = def(PFN_GetCurrentThread, "GetCurrentThread", "kernel32");
-    CloseHandle = def(PFN_CloseHandle, "CloseHandle", "kernel32");
-    FlushInstructionCache = def(PFN_FlushInstructionCache, "FlushInstructionCache", "kernel32");
-    FreeConsole = def(PFN_FreeConsole, "FreeConsole", "kernel32");
-    AttachConsole = def(PFN_AttachConsole, "AttachConsole", "kernel32");
     IsWow64Process = def(PFN_IsWow64Process, "IsWow64Process", "kernel32");
     GetExitCodeProcess = def(PFN_GetExitCodeProcess, "GetExitCodeProcess", "kernel32");
     GetModuleHandleA = def(PFN_GetModuleHandleA, "GetModuleHandleA", "kernel32");
@@ -3187,15 +3205,6 @@ pub fn init() void {
 //
 // KERNEL32 function definitions
 //
-pub var VirtualFreeEx: PFN_VirtualFreeEx = undefined;
-pub var GetModuleFileNameA: PFN_GetModuleFileNameA = undefined;
-pub var GetCurrentProcessId: PFN_GetCurrentProcessId = undefined;
-pub var GetProcessId: PFN_GetProcessId = undefined;
-pub var GetCurrentThread: PFN_GetCurrentThread = undefined;
-pub var CloseHandle: PFN_CloseHandle = undefined;
-pub var FlushInstructionCache: PFN_FlushInstructionCache = undefined;
-pub var FreeConsole: PFN_FreeConsole = undefined;
-pub var AttachConsole: PFN_AttachConsole = undefined;
 pub var IsWow64Process: PFN_IsWow64Process = undefined;
 pub var GetExitCodeProcess: PFN_GetExitCodeProcess = undefined;
 pub var GetModuleHandleA: PFN_GetModuleHandleA = undefined;
