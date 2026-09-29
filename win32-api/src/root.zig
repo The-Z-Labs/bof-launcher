@@ -2113,35 +2113,47 @@ pub fn UnmapViewOfFile(lpBaseAddress: LPCVOID) linksection(section_name) callcon
     return f(lpBaseAddress);
 }
 
-pub const PFN_OpenProcess = *const fn (
+pub fn OpenProcess(
     dwDesiredAccess: DWORD,
     bInheritHandle: BOOL,
     dwProcessId: DWORD,
-) callconv(.winapi) ?HANDLE;
+) linksection(section_name) callconv(.winapi) ?HANDLE {
+    const f = def(*const @TypeOf(OpenProcess), "OpenProcess", "kernel32");
+    return f(dwDesiredAccess, bInheritHandle, dwProcessId);
+}
 
-pub const PFN_OpenThread = *const fn (
+pub fn OpenThread(
     dwDesiredAccess: DWORD,
     bInheritHandle: BOOL,
     dwThreadId: DWORD,
-) callconv(.winapi) ?HANDLE;
+) linksection(section_name) callconv(.winapi) ?HANDLE {
+    const f = def(*const @TypeOf(OpenThread), "OpenThread", "kernel32");
+    return f(dwDesiredAccess, bInheritHandle, dwThreadId);
+}
 
-pub const PFN_WriteProcessMemory = *const fn (
+pub fn WriteProcessMemory(
     hProcess: HANDLE,
     lpBaseAddress: LPVOID,
     lpBuffer: LPCVOID,
     nSize: SIZE_T,
     lpNumberOfBytesWritten: ?*SIZE_T,
-) callconv(.winapi) BOOL;
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(WriteProcessMemory), "WriteProcessMemory", "kernel32");
+    return f(hProcess, lpBaseAddress, lpBuffer, nSize, lpNumberOfBytesWritten);
+}
 
-pub const PFN_ReadProcessMemory = *const fn (
+pub fn ReadProcessMemory(
     hProcess: HANDLE,
     lpBaseAddress: LPCVOID,
     lpBuffer: LPVOID,
     nSize: SIZE_T,
     lpNumberOfBytesRead: ?*SIZE_T,
-) callconv(.winapi) BOOL;
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(ReadProcessMemory), "ReadProcessMemory", "kernel32");
+    return f(hProcess, lpBaseAddress, lpBuffer, nSize, lpNumberOfBytesRead);
+}
 
-pub const PFN_CreateRemoteThread = *const fn (
+pub fn CreateRemoteThread(
     hProcess: HANDLE,
     lpThreadAttributes: ?*SECURITY_ATTRIBUTES,
     dwStackSize: SIZE_T,
@@ -2149,7 +2161,10 @@ pub const PFN_CreateRemoteThread = *const fn (
     lpParameter: ?LPVOID,
     dwCreationFlags: DWORD,
     lpThreadId: ?*DWORD,
-) callconv(.winapi) ?HANDLE;
+) linksection(section_name) callconv(.winapi) ?HANDLE {
+    const f = def(*const @TypeOf(CreateRemoteThread), "CreateRemoteThread", "kernel32");
+    return f(hProcess, lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags, lpThreadId);
+}
 
 pub const PFN_GetCurrentDirectoryW = *const fn (
     nBufferLength: DWORD,
@@ -2186,14 +2201,15 @@ pub const PFN_SetFilePointerEx = *const fn (
 
 pub const PFN_LocalFree = *const fn (hMem: HLOCAL) callconv(.winapi) ?HLOCAL;
 
+pub const LPPROCESS_INFORMATION = *PROCESS_INFORMATION;
 pub const PROCESS_INFORMATION = extern struct {
     hProcess: HANDLE,
     hThread: HANDLE,
     dwProcessId: DWORD,
     dwThreadId: DWORD,
 };
-pub const LPPROCESS_INFORMATION = *PROCESS_INFORMATION;
 
+pub const LPSTARTUPINFOW = *STARTUPINFOW;
 pub const STARTUPINFOW = extern struct {
     cb: DWORD,
     lpReserved: ?LPWSTR,
@@ -2214,7 +2230,6 @@ pub const STARTUPINFOW = extern struct {
     hStdOutput: ?HANDLE,
     hStdError: ?HANDLE,
 };
-pub const LPSTARTUPINFOW = *STARTUPINFOW;
 
 pub fn CreateProcessW(
     lpApplicationName: ?LPCWSTR, // _In_opt_
@@ -3165,11 +3180,6 @@ pub fn def(
 }
 
 pub fn init() void {
-    OpenProcess = def(PFN_OpenProcess, "OpenProcess", "kernel32");
-    OpenThread = def(PFN_OpenThread, "OpenThread", "kernel32");
-    WriteProcessMemory = def(PFN_WriteProcessMemory, "WriteProcessMemory", "kernel32");
-    ReadProcessMemory = def(PFN_ReadProcessMemory, "ReadProcessMemory", "kernel32");
-    CreateRemoteThread = def(PFN_CreateRemoteThread, "CreateRemoteThread", "kernel32");
     GetCurrentDirectoryW = def(PFN_GetCurrentDirectoryW, "GetCurrentDirectoryW", "kernel32");
     HeapAlloc = def(PFN_HeapAlloc, "HeapAlloc", "kernel32");
     HeapFree = def(PFN_HeapFree, "HeapFree", "kernel32");
@@ -3237,11 +3247,6 @@ pub fn init() void {
 //
 // KERNEL32 function definitions
 //
-pub var OpenProcess: PFN_OpenProcess = undefined;
-pub var OpenThread: PFN_OpenThread = undefined;
-pub var WriteProcessMemory: PFN_WriteProcessMemory = undefined;
-pub var ReadProcessMemory: PFN_ReadProcessMemory = undefined;
-pub var CreateRemoteThread: PFN_CreateRemoteThread = undefined;
 pub var GetCurrentDirectoryW: PFN_GetCurrentDirectoryW = undefined;
 pub var HeapAlloc: PFN_HeapAlloc = undefined;
 pub var HeapFree: PFN_HeapFree = undefined;

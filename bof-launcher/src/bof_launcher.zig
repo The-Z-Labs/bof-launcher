@@ -2735,14 +2735,14 @@ var zgateGetThreadContextPtr: *const @TypeOf(w32.GetThreadContext) linksection(z
 var zgateSetThreadContextPtr: *const @TypeOf(w32.SetThreadContext) linksection(zgate_dsection) = undefined;
 var zgateUnmapViewOfFilePtr: *const @TypeOf(w32.UnmapViewOfFile) linksection(zgate_dsection) = undefined;
 var zgateMapViewOfFilePtr: *const @TypeOf(w32.MapViewOfFile) linksection(zgate_dsection) = undefined;
-var zgateOpenProcessPtr: w32.PFN_OpenProcess linksection(zgate_dsection) = undefined;
-var zgateOpenThreadPtr: w32.PFN_OpenThread linksection(zgate_dsection) = undefined;
-var zgateWriteProcessMemoryPtr: w32.PFN_WriteProcessMemory linksection(zgate_dsection) = undefined;
-var zgateReadProcessMemoryPtr: w32.PFN_ReadProcessMemory linksection(zgate_dsection) = undefined;
+var zgateOpenProcessPtr: *const @TypeOf(w32.OpenProcess) linksection(zgate_dsection) = undefined;
+var zgateOpenThreadPtr: *const @TypeOf(w32.OpenThread) linksection(zgate_dsection) = undefined;
+var zgateWriteProcessMemoryPtr: *const @TypeOf(w32.WriteProcessMemory) linksection(zgate_dsection) = undefined;
+var zgateReadProcessMemoryPtr: *const @TypeOf(w32.ReadProcessMemory) linksection(zgate_dsection) = undefined;
 var zgateResumeThreadPtr: *const @TypeOf(w32.ResumeThread) linksection(zgate_dsection) = undefined;
 var zgateSuspendThreadPtr: *const @TypeOf(w32.SuspendThread) linksection(zgate_dsection) = undefined;
 var zgateCreateThreadPtr: *const @TypeOf(w32.CreateThread) linksection(zgate_dsection) = undefined;
-var zgateCreateRemoteThreadPtr: w32.PFN_CreateRemoteThread linksection(zgate_dsection) = undefined;
+var zgateCreateRemoteThreadPtr: *const @TypeOf(w32.CreateRemoteThread) linksection(zgate_dsection) = undefined;
 
 const PFN_memfd_create = *const fn (name: [*:0]const u8, flags: c_uint) callconv(.c) c_int;
 
