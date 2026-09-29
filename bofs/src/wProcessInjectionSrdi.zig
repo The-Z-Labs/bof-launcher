@@ -41,6 +41,8 @@ comptime {
     @import("bof_api").embedFunctionCode("memset");
     @import("bof_api").embedFunctionCode("memmove");
     @import("bof_api").embedFunctionCode("__stackprobe__");
+    if (@import("builtin").cpu.arch == .x86_64) @import("bof_api").embedFunctionCode("__divti3");
+    if (@import("builtin").cpu.arch == .x86) @import("bof_api").embedFunctionCode("__udivdi3");
 }
 pub const panic = std.debug.no_panic;
 
