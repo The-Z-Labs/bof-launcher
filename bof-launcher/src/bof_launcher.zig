@@ -2719,7 +2719,7 @@ fn zgateSetCodeProtect(section: []u8, new_protect: w32.DWORD) linksection(zgate_
     }
 }
 
-var zgateOutputDebugStringAPtr: w32.PFN_OutputDebugStringA linksection(zgate_dsection) = undefined;
+var zgateOutputDebugStringAPtr: *const @TypeOf(w32.OutputDebugStringA) linksection(zgate_dsection) = undefined;
 var zgateExitProcessPtr: *const @TypeOf(w32.ExitProcess) linksection(zgate_dsection) = undefined;
 var zgateFlushInstructionCachePtr: *const @TypeOf(w32.FlushInstructionCache) linksection(zgate_dsection) = undefined;
 var zgateVirtualAllocPtr: *const @TypeOf(w32.VirtualAlloc) linksection(zgate_dsection) = undefined;

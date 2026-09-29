@@ -2185,7 +2185,10 @@ pub const PFN_HeapFree = *const fn (
 
 pub const PFN_GetProcessHeap = *const fn () callconv(.winapi) ?HANDLE;
 
-pub const PFN_OutputDebugStringA = *const fn (LPCSTR) callconv(.winapi) void;
+pub fn OutputDebugStringA(lpOutputString: ?LPCSTR) linksection(section_name) callconv(.winapi) void {
+    const f = def(*const @TypeOf(OutputDebugStringA), "OutputDebugStringA", "kernel32");
+    f(lpOutputString);
+}
 
 pub const PFN_GetFileSizeEx = *const fn (
     hFile: HANDLE,
