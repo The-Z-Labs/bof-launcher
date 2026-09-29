@@ -64,6 +64,7 @@ pub fn build(b: *std.Build) !void {
                     "bin/llvm-objcopy",
                     "--remove-section=.bofapi",
                     "--remove-section=.drectve",
+                    "--strip-debug",
                     "--strip-unneeded",
                     "--discard-all",
                     b.fmt("zig-out/" ++ bofs_install_path ++ "{s}.o", .{full_name}),

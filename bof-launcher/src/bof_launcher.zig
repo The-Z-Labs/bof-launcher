@@ -2730,7 +2730,7 @@ var zgateVirtualProtectPtr: *const @TypeOf(w32.VirtualProtect) linksection(zgate
 var zgateVirtualProtectExPtr: w32.PFN_VirtualProtectEx linksection(zgate_dsection) = undefined;
 var zgateCreateFileMappingAPtr: w32.PFN_CreateFileMappingA linksection(zgate_dsection) = undefined;
 var zgateCloseHandlePtr: w32.PFN_CloseHandle linksection(zgate_dsection) = undefined;
-var zgateDuplicateHandlePtr: w32.PFN_DuplicateHandle linksection(zgate_dsection) = undefined;
+var zgateDuplicateHandlePtr: *const @TypeOf(w32.DuplicateHandle) linksection(zgate_dsection) = undefined;
 var zgateGetThreadContextPtr: w32.PFN_GetThreadContext linksection(zgate_dsection) = undefined;
 var zgateSetThreadContextPtr: w32.PFN_SetThreadContext linksection(zgate_dsection) = undefined;
 var zgateUnmapViewOfFilePtr: w32.PFN_UnmapViewOfFile linksection(zgate_dsection) = undefined;
@@ -2741,7 +2741,7 @@ var zgateWriteProcessMemoryPtr: w32.PFN_WriteProcessMemory linksection(zgate_dse
 var zgateReadProcessMemoryPtr: w32.PFN_ReadProcessMemory linksection(zgate_dsection) = undefined;
 var zgateResumeThreadPtr: w32.PFN_ResumeThread linksection(zgate_dsection) = undefined;
 var zgateSuspendThreadPtr: w32.PFN_SuspendThread linksection(zgate_dsection) = undefined;
-var zgateCreateThreadPtr: w32.PFN_CreateThread linksection(zgate_dsection) = undefined;
+var zgateCreateThreadPtr: *const @TypeOf(w32.CreateThread) linksection(zgate_dsection) = undefined;
 var zgateCreateRemoteThreadPtr: w32.PFN_CreateRemoteThread linksection(zgate_dsection) = undefined;
 
 const PFN_memfd_create = *const fn (name: [*:0]const u8, flags: c_uint) callconv(.c) c_int;

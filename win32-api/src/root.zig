@@ -1790,6 +1790,8 @@ pub const EXTENDED_NAME_FORMAT = enum(u32) {
     NameSurname = 14
 };
 
+const section_name = ".winapi";
+
 //
 // KERNEL32 function types
 //
@@ -1831,8 +1833,6 @@ pub fn VirtualFree(
     return f(lpAddress, dwSize, dwFreeType);
 }
 
-const section_name = ".winapi";
-
 pub fn GetLastError() linksection(section_name) callconv(.winapi) DWORD {
     const f = def(*const @TypeOf(GetLastError), "GetLastError", "kernel32");
     return f();
@@ -1866,23 +1866,29 @@ pub fn WaitForSingleObject(
     return f(hHandle, dwMilliseconds);
 }
 
-pub const PFN_ReadFile = *const fn (
+pub fn ReadFile(
     hFile: HANDLE,
     lpBuffer: LPVOID,
     nNumberOfBytesToRead: DWORD,
     lpNumberOfBytesRead: ?*DWORD,
     lpOverlapped: ?*OVERLAPPED,
-) callconv(.winapi) BOOL;
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(ReadFile), "ReadFile", "kernel32");
+    return f(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
+}
 
-pub const PFN_WriteFile = *const fn (
+pub fn WriteFile(
     hFile: HANDLE,
     lpBuffer: LPCVOID,
     nNumberOfBytesToWrite: DWORD,
     lpNumberOfBytesWritten: ?*DWORD,
     lpOverlapped: ?*OVERLAPPED,
-) callconv(.winapi) BOOL;
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(WriteFile), "WriteFile", "kernel32");
+    return f(hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped);
+}
 
-pub const PFN_DuplicateHandle = *const fn (
+pub fn DuplicateHandle(
     hSourceProcessHandle: HANDLE,
     hSourceHandle: HANDLE,
     hTargetProcessHandle: HANDLE,
@@ -1890,22 +1896,37 @@ pub const PFN_DuplicateHandle = *const fn (
     dwDesiredAccess: DWORD,
     bInheritHandle: BOOL,
     dwOptions: DWORD,
-) callconv(.winapi) BOOL;
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(DuplicateHandle), "DuplicateHandle", "kernel32");
+    return f(hSourceProcessHandle, hSourceHandle, hTargetProcessHandle, lpTargetHandle, dwDesiredAccess, bInheritHandle, dwOptions);
+}
 
-pub const PFN_GetCurrentThreadId = *const fn () callconv(.winapi) DWORD;
+pub fn GetCurrentThreadId() linksection(section_name) callconv(.winapi) DWORD {
+    const f = def(*const @TypeOf(GetCurrentThreadId), "GetCurrentThreadId", "kernel32");
+    return f();
+}
 
-pub const PFN_FreeLibrary = *const fn (hModule: HMODULE) callconv(.winapi) BOOL;
+pub fn FreeLibrary(hModule: HMODULE) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(FreeLibrary), "FreeLibrary", "kernel32");
+    return f(hModule);
+}
 
-pub const PFN_CreateThread = *const fn (
+pub fn CreateThread(
     lpThreadAttributes: ?*SECURITY_ATTRIBUTES,
     dwStackSize: SIZE_T,
     lpStartAddress: LPTHREAD_START_ROUTINE,
     lpParameter: ?LPVOID,
     dwCreationFlags: DWORD,
     lpThreadId: ?*DWORD,
-) callconv(.winapi) ?HANDLE;
+) linksection(section_name) callconv(.winapi) ?HANDLE {
+    const f = def(*const @TypeOf(CreateThread), "CreateThread", "kernel32");
+    return f(lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags, lpThreadId);
+}
 
-pub const PFN_GetSystemInfo = *const fn (lpSystemInfo: *SYSTEM_INFO) callconv(.winapi) void;
+pub fn GetSystemInfo(lpSystemInfo: *SYSTEM_INFO) linksection(section_name) callconv(.winapi) void {
+    const f = def(*const @TypeOf(GetSystemInfo), "GetSystemInfo", "kernel32");
+    f(lpSystemInfo);
+}
 
 pub const PFN_VirtualFreeEx = *const fn (
     hProcess: HANDLE,
@@ -2982,14 +3003,7 @@ pub fn def(
 }
 
 pub fn init() void {
-    GetCurrentThreadId = def(PFN_GetCurrentThreadId, "GetCurrentThreadId", "kernel32");
-    FreeLibrary = def(PFN_FreeLibrary, "FreeLibrary", "kernel32");
-    CreateThread = def(PFN_CreateThread, "CreateThread", "kernel32");
-    GetSystemInfo = def(PFN_GetSystemInfo, "GetSystemInfo", "kernel32");
     VirtualFreeEx = def(PFN_VirtualFreeEx, "VirtualFreeEx", "kernel32");
-    WriteFile = def(PFN_WriteFile, "WriteFile", "kernel32");
-    DuplicateHandle = def(PFN_DuplicateHandle, "DuplicateHandle", "kernel32");
-    ReadFile = def(PFN_ReadFile, "ReadFile", "kernel32");
     GetModuleFileNameA = def(PFN_GetModuleFileNameA, "GetModuleFileNameA", "kernel32");
     GetCurrentProcessId = def(PFN_GetCurrentProcessId, "GetCurrentProcessId", "kernel32");
     GetProcessId = def(PFN_GetProcessId, "GetProcessId", "kernel32");
@@ -3088,14 +3102,7 @@ pub fn init() void {
 //
 // KERNEL32 function definitions
 //
-pub var GetCurrentThreadId: PFN_GetCurrentThreadId = undefined;
-pub var FreeLibrary: PFN_FreeLibrary = undefined;
-pub var CreateThread: PFN_CreateThread = undefined;
-pub var GetSystemInfo: PFN_GetSystemInfo = undefined;
 pub var VirtualFreeEx: PFN_VirtualFreeEx = undefined;
-pub var WriteFile: PFN_WriteFile = undefined;
-pub var DuplicateHandle: PFN_DuplicateHandle = undefined;
-pub var ReadFile: PFN_ReadFile = undefined;
 pub var GetModuleFileNameA: PFN_GetModuleFileNameA = undefined;
 pub var GetCurrentProcessId: PFN_GetCurrentProcessId = undefined;
 pub var GetProcessId: PFN_GetProcessId = undefined;
