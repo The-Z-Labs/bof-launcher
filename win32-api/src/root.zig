@@ -440,6 +440,7 @@ pub const LONG = i32;
 pub const ULONG64 = u64;
 pub const ULONGLONG = u64;
 pub const LONGLONG = i64;
+pub const PULONGLONG = *u64;
 pub const LANGID = c_ushort;
 pub const COLORREF = DWORD;
 
@@ -1547,6 +1548,7 @@ pub const PS_CREATE_STATE = enum(u32) {
     MaximumStates,
 };
 
+pub const PPS_CREATE_INFO = *PS_CREATE_INFO;
 pub const PS_CREATE_INFO = extern struct {
     Size: SIZE_T,
     State: PS_CREATE_STATE,
@@ -2225,21 +2227,106 @@ pub const PFN_NtSetInformationJobObject = *const fn (
     JobObjectInformationLength: ULONG,
 ) callconv(.winapi) NTSTATUS;
 
-pub const PFN_RtlWow64EnableFsRedirection = *const fn (Wow64FsEnableRedirection: BOOLEAN) callconv(.winapi) NTSTATUS;
+pub fn RtlWow64EnableFsRedirection(Wow64FsEnableRedirection: BOOLEAN) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(RtlWow64EnableFsRedirection), "RtlWow64EnableFsRedirection", "ntdll");
+    return f(Wow64FsEnableRedirection);
+}
 
-pub const PFN_NtCreateUserProcess = *const fn (
-    ProcessHandle: *HANDLE,
-    ThreadHandle: *HANDLE,
-    ProcessDesiredAccess: DWORD,
-    ThreadDesiredAccess: DWORD,
-    ProcessObjectAttributes: ?*OBJECT_ATTRIBUTES,
-    ThreadObjectAttributes: ?*OBJECT_ATTRIBUTES,
-    ProcessFlags: ULONG,
-    ThreadFlags: ULONG,
-    ProcessParameters: ?PVOID,
-    CreateInfo: *PS_CREATE_INFO,
-    AttributeList: ?*anyopaque, // TODO: ?*PS_ATTRIBUTE_LIST,
-) callconv(.winapi) NTSTATUS;
+pub const CURDIR = extern struct {
+    DosPath: UNICODE_STRING,
+    Handle: HANDLE,
+};
+
+pub const PRTL_USER_PROCESS_PARAMETERS = *RTL_USER_PROCESS_PARAMETERS;
+pub const RTL_USER_PROCESS_PARAMETERS = extern struct {
+    MaximumLength: ULONG,
+    Length: ULONG,
+
+    Flags: ULONG,
+    DebugFlags: ULONG,
+
+    ConsoleHandle: HANDLE,
+    ConsoleFlags: ULONG,
+    hStdInput: HANDLE,
+    hStdOutput: HANDLE,
+    hStdError: HANDLE,
+
+    CurrentDirectory: CURDIR,
+    DllPath: UNICODE_STRING,
+    ImagePathName: UNICODE_STRING,
+    CommandLine: UNICODE_STRING,
+    Environment: ?PVOID,
+
+    StartingX: ULONG,
+    StartingY: ULONG,
+    CountX: ULONG,
+    CountY: ULONG,
+    CountCharsX: ULONG,
+    CountCharsY: ULONG,
+    FillAttribute: ULONG,
+
+    WindowFlags: ULONG,
+    ShowWindowFlags: ULONG,
+    WindowTitle: UNICODE_STRING,
+    Desktop: UNICODE_STRING,
+    ShellInfo: UNICODE_STRING,
+    RuntimeData: UNICODE_STRING,
+    CurrentDirectories: [32]RTL_DRIVE_LETTER_CURDIR,
+
+    EnvironmentSize: ULONG_PTR,
+    EnvironmentVersion: ULONG_PTR,
+
+    PackageDependencyData: ?PVOID,
+    ProcessGroupId: ULONG,
+    LoaderThreads: ULONG, // THRESHOLD
+
+    RedirectionDllName: UNICODE_STRING, // REDSTONE5
+    HeapPartitionName: UNICODE_STRING, // 19H1
+    DefaultThreadpoolCpuSetMasks: PULONGLONG,
+    DefaultThreadpoolCpuSetMaskCount: ULONG,
+    DefaultThreadpoolThreadMaximum: ULONG, // 20H1
+    HeapMemoryTypeMask: ULONG, // WIN11 22H2
+};
+
+pub const RTL_DRIVE_LETTER_CURDIR = extern struct {
+    Flags: c_ushort,
+    Length: c_ushort,
+    TimeStamp: ULONG,
+    DosPath: UNICODE_STRING,
+};
+
+pub const PS_ATTRIBUTE = extern struct {
+    Attribute: ULONG_PTR,
+    Size: SIZE_T,
+    u: extern union {
+        Value: ULONG_PTR,
+        ValuePtr: ?PVOID,
+    },
+    ReturnLength: ?PSIZE_T,
+};
+
+pub const PPS_ATTRIBUTE_LIST = *PS_ATTRIBUTE_LIST;
+pub const PS_ATTRIBUTE_LIST = extern struct {
+    TotalLength: SIZE_T,
+    Attributes: [*]PS_ATTRIBUTE,
+};
+
+pub fn NtCreateUserProcess(
+    ProcessHandle: PHANDLE, // _Out_
+    ThreadHandle: PHANDLE, // _Out_
+    ProcessDesiredAccess: ACCESS_MASK, // _In_
+    ThreadDesiredAccess: ACCESS_MASK, // _In_
+    ProcessObjectAttributes: ?PCOBJECT_ATTRIBUTES, // _In_opt_
+    ThreadObjectAttributes: ?PCOBJECT_ATTRIBUTES, // _In_opt_
+    ProcessFlags: ULONG, // _In_ (PROCESS_CREATE_FLAGS_*)
+    ThreadFlags: ULONG, // _In_ (THREAD_CREATE_FLAGS_*)
+    ProcessParameters: ?PRTL_USER_PROCESS_PARAMETERS, // _In_opt_
+    CreateInfo: PPS_CREATE_INFO, // _Inout_
+    AttributeList: ?PPS_ATTRIBUTE_LIST, // _In_opt_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtCreateUserProcess), "NtCreateUserProcess", "ntdll");
+    return f(ProcessHandle, ThreadHandle, ProcessDesiredAccess, ThreadDesiredAccess, ProcessObjectAttributes, ThreadObjectAttributes, ProcessFlags, ThreadFlags, ProcessParameters, CreateInfo, AttributeList);
+}
 
 pub fn LdrLoadDll(
     DllPath: ?PCWSTR, // _In_opt_
@@ -3052,9 +3139,7 @@ pub fn init() void {
     NtIsProcessInJob = def(PFN_NtIsProcessInJob, "NtIsProcessInJob", "ntdll");
     NtSetInformationJobObject = def(PFN_NtSetInformationJobObject, "NtSetInformationJobObject", "ntdll");
     NtCreateThreadEx = def(PFN_NtCreateThreadEx, "NtCreateThreadEx", "ntdll");
-    NtCreateUserProcess = def(PFN_NtCreateUserProcess, "NtCreateUserProcess", "ntdll");
     RtlCloneUserProcess = def(PFN_RtlCloneUserProcess, "RtlCloneUserProcess", "ntdll");
-    RtlWow64EnableFsRedirection = def(PFN_RtlWow64EnableFsRedirection, "RtlWow64EnableFsRedirection", "ntdll");
 
     MessageBoxA = def(PFN_MessageBoxA, "MessageBoxA", "user32");
     MessageBoxW = def(PFN_MessageBoxW, "MessageBoxW", "user32");
@@ -3154,9 +3239,7 @@ pub var NtTerminateJobObject: PFN_NtTerminateJobObject = undefined;
 pub var NtIsProcessInJob: PFN_NtIsProcessInJob = undefined;
 pub var NtSetInformationJobObject: PFN_NtSetInformationJobObject = undefined;
 pub var NtCreateThreadEx: PFN_NtCreateThreadEx = undefined;
-pub var NtCreateUserProcess: PFN_NtCreateUserProcess = undefined;
 pub var RtlCloneUserProcess: PFN_RtlCloneUserProcess = undefined;
-pub var RtlWow64EnableFsRedirection: PFN_RtlWow64EnableFsRedirection = undefined;
 
 pub fn NtCurrentProcess() HANDLE {
     return @ptrFromInt(@as(usize, @bitCast(@as(isize, -1))));
