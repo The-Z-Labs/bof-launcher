@@ -2284,7 +2284,7 @@ pub const PFN_RtlCloneUserProcess = *const fn (
 
 pub fn RtlGetVersion(
     lpVersionInformation: *RTL_OSVERSIONINFOW,
-) callconv(.winapi) NTSTATUS {
+) linksection(section_name) callconv(.winapi) NTSTATUS {
     const f = def(*const @TypeOf(RtlGetVersion), "RtlGetVersion", "ntdll");
     return f(lpVersionInformation);
 }
@@ -2954,6 +2954,28 @@ pub fn NtCancelIoFileEx(
     return f(FileHandle, IoRequestToCancel, IoStatusBlock);
 }
 
+pub fn NtAllocateVirtualMemory(
+    ProcessHandle: HANDLE, // _In_
+    BaseAddress: *PVOID, // _Inout_
+    ZeroBits: ULONG_PTR, // _In_
+    RegionSize: *SIZE_T, // _Inout_
+    AllocationType: ULONG, // _In_
+    Protect: ULONG, // _In_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtAllocateVirtualMemory), "NtAllocateVirtualMemory", "ntdll");
+    return f(ProcessHandle, BaseAddress, ZeroBits, RegionSize, AllocationType, Protect);
+}
+
+pub fn NtFreeVirtualMemory(
+    ProcessHandle: HANDLE, // _In_
+    BaseAddress: *PVOID, // _Inout_
+    RegionSize: *SIZE_T, // _Inout_
+    FreeType: ULONG, // _In_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtFreeVirtualMemory), "NtFreeVirtualMemory", "ntdll");
+    return f(ProcessHandle, BaseAddress, RegionSize, FreeType);
+}
+
 pub const PFN_NtCreateThreadEx = *const @TypeOf(std.os.windows.ntdll.NtCreateThreadEx);
 pub const PFN_NtResumeThread = *const @TypeOf(std.os.windows.ntdll.NtResumeThread);
 
@@ -3399,26 +3421,4 @@ comptime {
         @export(&NtCancelIoFileEx, .{ .name = "NtCancelIoFileEx", .linkage = .strong });
         @export(&CreateProcessW, .{ .name = "CreateProcessW", .linkage = .strong });
     }
-}
-
-pub fn NtAllocateVirtualMemory(
-    ProcessHandle: HANDLE, // _In_
-    BaseAddress: *PVOID, // _Inout_
-    ZeroBits: ULONG_PTR, // _In_
-    RegionSize: *SIZE_T, // _Inout_
-    AllocationType: ULONG, // _In_
-    Protect: ULONG, // _In_
-) linksection(section_name) callconv(.winapi) NTSTATUS {
-    const f = def(*const @TypeOf(NtAllocateVirtualMemory), "NtAllocateVirtualMemory", "ntdll");
-    return f(ProcessHandle, BaseAddress, ZeroBits, RegionSize, AllocationType, Protect);
-}
-
-pub fn NtFreeVirtualMemory(
-    ProcessHandle: HANDLE, // _In_
-    BaseAddress: *PVOID, // _Inout_
-    RegionSize: *SIZE_T, // _Inout_
-    FreeType: ULONG, // _In_
-) linksection(section_name) callconv(.winapi) NTSTATUS {
-    const f = def(*const @TypeOf(NtFreeVirtualMemory), "NtFreeVirtualMemory", "ntdll");
-    return f(ProcessHandle, BaseAddress, RegionSize, FreeType);
 }
