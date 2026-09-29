@@ -2166,43 +2166,64 @@ pub fn CreateRemoteThread(
     return f(hProcess, lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags, lpThreadId);
 }
 
-pub const PFN_GetCurrentDirectoryW = *const fn (
+pub fn GetCurrentDirectoryW(
     nBufferLength: DWORD,
     lpBuffer: ?[*]WCHAR,
-) callconv(.winapi) DWORD;
+) linksection(section_name) callconv(.winapi) DWORD {
+    const f = def(*const @TypeOf(GetCurrentDirectoryW), "GetCurrentDirectoryW", "kernel32");
+    return f(nBufferLength, lpBuffer);
+}
 
-pub const PFN_HeapAlloc = *const fn (
+pub fn HeapAlloc(
     hHeap: ?HANDLE,
     dwFlags: DWORD,
     dwBytes: SIZE_T,
-) callconv(.winapi) ?LPVOID;
+) linksection(section_name) callconv(.winapi) ?LPVOID {
+    const f = def(*const @TypeOf(HeapAlloc), "HeapAlloc", "kernel32");
+    return f(hHeap, dwFlags, dwBytes);
+}
 
-pub const PFN_HeapFree = *const fn (
+pub fn HeapFree(
     hHeap: ?HANDLE,
     dwFlags: DWORD,
     lpMem: ?LPVOID,
-) callconv(.winapi) BOOL;
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(HeapFree), "HeapFree", "kernel32");
+    return f(hHeap, dwFlags, lpMem);
+}
 
-pub const PFN_GetProcessHeap = *const fn () callconv(.winapi) ?HANDLE;
+pub fn GetProcessHeap() linksection(section_name) callconv(.winapi) ?HANDLE {
+    const f = def(*const @TypeOf(GetProcessHeap), "GetProcessHeap", "kernel32");
+    return f();
+}
 
 pub fn OutputDebugStringA(lpOutputString: ?LPCSTR) linksection(section_name) callconv(.winapi) void {
     const f = def(*const @TypeOf(OutputDebugStringA), "OutputDebugStringA", "kernel32");
     f(lpOutputString);
 }
 
-pub const PFN_GetFileSizeEx = *const fn (
+pub fn GetFileSizeEx(
     hFile: HANDLE,
     lpFileSize: *LARGE_INTEGER,
-) callconv(.winapi) BOOL;
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(GetFileSizeEx), "GetFileSizeEx", "kernel32");
+    return f(hFile, lpFileSize);
+}
 
-pub const PFN_SetFilePointerEx = *const fn (
+pub fn SetFilePointerEx(
     hFile: HANDLE,
     liDistanceToMove: LARGE_INTEGER,
     lpNewFilePointer: ?*LARGE_INTEGER,
     dwMoveMethod: DWORD,
-) callconv(.winapi) BOOL;
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(SetFilePointerEx), "SetFilePointerEx", "kernel32");
+    return f(hFile, liDistanceToMove, lpNewFilePointer, dwMoveMethod);
+}
 
-pub const PFN_LocalFree = *const fn (hMem: HLOCAL) callconv(.winapi) ?HLOCAL;
+pub fn LocalFree(hMem: HLOCAL) linksection(section_name) callconv(.winapi) ?HLOCAL {
+    const f = def(*const @TypeOf(LocalFree), "LocalFree", "kernel32");
+    return f(hMem);
+}
 
 pub const LPPROCESS_INFORMATION = *PROCESS_INFORMATION;
 pub const PROCESS_INFORMATION = extern struct {
@@ -3183,14 +3204,6 @@ pub fn def(
 }
 
 pub fn init() void {
-    GetCurrentDirectoryW = def(PFN_GetCurrentDirectoryW, "GetCurrentDirectoryW", "kernel32");
-    HeapAlloc = def(PFN_HeapAlloc, "HeapAlloc", "kernel32");
-    HeapFree = def(PFN_HeapFree, "HeapFree", "kernel32");
-    GetProcessHeap = def(PFN_GetProcessHeap, "GetProcessHeap", "kernel32");
-    GetFileSizeEx = def(PFN_GetFileSizeEx, "GetFileSizeEx", "kernel32");
-    SetFilePointerEx = def(PFN_SetFilePointerEx, "SetFilePointerEx", "kernel32");
-    LocalFree = def(PFN_LocalFree, "LocalFree", "kernel32");
-
     NtResumeThread = def(PFN_NtResumeThread, "NtResumeThread", "ntdll");
     NtSuspendThread = def(PFN_NtSuspendThread, "NtSuspendThread", "ntdll");
     NtTerminateThread = def(PFN_NtTerminateThread, "NtTerminateThread", "ntdll");
@@ -3246,17 +3259,6 @@ pub fn init() void {
 
     GetUserNameExA = def(PFN_GetUserNameExA, "GetUserNameExA", "secur32");
 }
-
-//
-// KERNEL32 function definitions
-//
-pub var GetCurrentDirectoryW: PFN_GetCurrentDirectoryW = undefined;
-pub var HeapAlloc: PFN_HeapAlloc = undefined;
-pub var HeapFree: PFN_HeapFree = undefined;
-pub var GetProcessHeap: PFN_GetProcessHeap = undefined;
-pub var GetFileSizeEx: PFN_GetFileSizeEx = undefined;
-pub var SetFilePointerEx: PFN_SetFilePointerEx = undefined;
-pub var LocalFree: PFN_LocalFree = undefined;
 
 //
 // NTDLL function definitions
