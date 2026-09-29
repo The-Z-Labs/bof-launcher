@@ -667,7 +667,7 @@ description: "Concatenate and redirect sockets"
 author: Z-Labs
 Arch: ["x64", "x86", "aarch64", "arm"]
 tags: ['windows', 'linux','TA0007', 'T1083', 'z-labs']
-category: "POSTEX-BOF"
+category: "Postex-BOF"
 OS: cross-platform
 sources:
     - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/socat.zig'
@@ -701,6 +701,41 @@ arguments:
     desc: "offset in overwritten file"
     type: string
     required: true
+  - name: Buf
+    desc: "length of UDP probes buffer"
+    type: buffer
+    required: false
+errors:
+  - name: AccessDenied
+    code: 0x1
+    message: ""
+  - name: NoArgsProvided
+    code: 0x2
+    message: ""
+  - name: BadArgsProvided
+    code: 0x3
+    message: ""
+  - name: NotSupportedAddressType
+    code: 0x4
+    message: ""
+  - name: NoSuchFile
+    code: 0x5
+    message: ""
+  - name: ConnectionError
+    code: 0x7
+    message: ""
+  - name: DataTransferError
+    code: 0x8
+    message: ""
+  - name: ReadFailedError
+    code: 0x9
+    message: ""
+  - name: NoCaCertProvided
+    code: 0xa
+    message: ""
+  - name: UnknownError
+    code: 0xb
+    message: ""
 ---
 name: KillDefender
 description: "Make Windows Defender useless by removing its token privileges and lowering the token integrity"

