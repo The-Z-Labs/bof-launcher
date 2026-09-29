@@ -15,3 +15,13 @@ Example (z-beac0n):
 Example (cli4bofs):
 
     $ cli4bofs exec 'find ./ | grep shadow'
+
+## Milestone 3:
+
+Following core BOFs should be implemented:
+
+1. upload
+2. download
+3. portfwd
+4. rportfwd
+5. rsocks
