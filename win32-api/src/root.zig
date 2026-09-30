@@ -102,22 +102,26 @@ pub const OSVERSIONINFOW = extern struct {
 pub const RTL_OSVERSIONINFOW = OSVERSIONINFOW;
 pub const PSID = PVOID;
 pub const NTSTATUS = u32;
+
 pub const CLIENT_ID = extern struct {
     UniqueProcess: ?HANDLE,
     UniqueThread: ?HANDLE,
 };
+
+pub const PCANSI_STRING = *const ANSI_STRING;
 pub const ANSI_STRING = extern struct {
     Length: USHORT,
     MaximumLength: USHORT,
     Buffer: ?[*]CHAR,
 };
-pub const PCANSI_STRING = *const ANSI_STRING;
+
+pub const PCUNICODE_STRING = *const UNICODE_STRING;
 pub const UNICODE_STRING = extern struct {
     Length: USHORT,
     MaximumLength: USHORT,
     Buffer: ?[*]WCHAR,
 };
-pub const PCUNICODE_STRING = *const UNICODE_STRING;
+
 pub const INFINITE = 4294967295;
 pub const BOOLEAN = BYTE;
 pub const HRESULT = c_long;
@@ -433,6 +437,7 @@ pub const DWORD_PTR = ULONG_PTR;
 pub const WCHAR = u16;
 pub const WORD = u16;
 pub const DWORD = u32;
+pub const PDWORD = *DWORD;
 pub const DWORD64 = u64;
 pub const LARGE_INTEGER = i64;
 pub const PLARGE_INTEGER = *LARGE_INTEGER;
@@ -1761,11 +1766,10 @@ pub const IMAGE_SECTION_HEADER = extern struct {
     Characteristics: u32,
 };
 
-pub const _SID_IDENTIFIER_AUTHORITY = extern struct {
-    Value: [6]UCHAR = @import("std").mem.zeroes([6]u8),
+pub const PSID_IDENTIFIER_AUTHORITY = *SID_IDENTIFIER_AUTHORITY;
+pub const SID_IDENTIFIER_AUTHORITY = extern struct {
+    Value: [6]UCHAR,
 };
-pub const SID_IDENTIFIER_AUTHORITY = _SID_IDENTIFIER_AUTHORITY;
-pub const PSID_IDENTIFIER_AUTHORITY = [*c]_SID_IDENTIFIER_AUTHORITY;
 
 pub const SID_AND_ATTRIBUTES = extern struct {
     Sid: PSID,
@@ -3047,30 +3051,47 @@ pub fn NtCurrentSession() HANDLE {
     return @ptrFromInt(@as(usize, @bitCast(@as(isize, -3))));
 }
 
+pub fn RtlGenRandom(
+    RandomBuffer: PVOID,
+    RandomBufferLength: ULONG,
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(RtlGenRandom), "RtlGenRandom", "ntdll");
+    return f(RandomBuffer, RandomBufferLength);
+}
+
 //
 // ADVAPI32 function types
 //
-pub const PFN_OpenProcessToken = *const fn (
+pub fn OpenProcessToken(
     ProcessHandle: HANDLE,
     DesiredAccess: DWORD,
     TokenHandle: *HANDLE,
-) callconv(.winapi) BOOL;
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(OpenProcessToken), "OpenProcessToken", "advapi32");
+    return f(ProcessHandle, DesiredAccess, TokenHandle);
+}
 
-pub const PFN_GetTokenInformation = *const fn (
+pub fn GetTokenInformation(
     TokenHandle: HANDLE,
     TokenInformationClass: TOKEN_INFORMATION_CLASS,
-    TokenInformation: ?*anyopaque,
+    TokenInformation: ?LPVOID,
     TokenInformationLength: DWORD,
-    ReturnLength: *DWORD,
-) callconv(.winapi) BOOL;
+    ReturnLength: PDWORD,
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(GetTokenInformation), "GetTokenInformation", "advapi32");
+    return f(TokenHandle, TokenInformationClass, TokenInformation, TokenInformationLength, ReturnLength);
+}
 
-pub const PFN_CheckTokenMembership = *const fn (
+pub fn CheckTokenMembership(
     TokenHandle: ?HANDLE,
     SidToCheck: PSID,
     IsMember: PBOOL,
-) callconv(.winapi) BOOL;
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(CheckTokenMembership), "CheckTokenMembership", "advapi32");
+    return f(TokenHandle, SidToCheck, IsMember);
+}
 
-pub const PFN_AllocateAndInitializeSid = *const fn (
+pub fn AllocateAndInitializeSid(
     pIdentifierAuthority: PSID_IDENTIFIER_AUTHORITY,
     nSubAuthorityCount: BYTE,
     nSubAuthority0: DWORD,
@@ -3082,21 +3103,25 @@ pub const PFN_AllocateAndInitializeSid = *const fn (
     nSubAuthority6: DWORD,
     nSubAuthority7: DWORD,
     pSid: *PSID,
-) callconv(.winapi) BOOL;
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(AllocateAndInitializeSid), "AllocateAndInitializeSid", "advapi32");
+    return f(pIdentifierAuthority, nSubAuthorityCount, nSubAuthority0, nSubAuthority1, nSubAuthority2, nSubAuthority3, nSubAuthority4, nSubAuthority5, nSubAuthority6, nSubAuthority7, pSid);
+}
 
-pub const PFN_FreeSid = *const fn (
+pub fn FreeSid(
     pSid: PSID,
-) callconv(.winapi) PVOID;
+) linksection(section_name) callconv(.winapi) PVOID {
+    const f = def(*const @TypeOf(FreeSid), "FreeSid", "advapi32");
+    return f(pSid);
+}
 
-pub const PFN_ConvertSidToStringSidA = *const fn (
+pub fn ConvertSidToStringSidA(
     pSid: PSID,
     pStringSid: *LPSTR,
-) callconv(.winapi) BOOL;
-
-pub const PFN_RtlGenRandom = *const fn (
-    RandomBuffer: PVOID,
-    RandomBufferLength: ULONG,
-) callconv(.winapi) BOOL;
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(ConvertSidToStringSidA), "ConvertSidToStringSidA", "advapi32");
+    return f(pSid, pStringSid);
+}
 
 //
 // USER32 function types
@@ -3308,14 +3333,6 @@ pub fn init() void {
     CoGetCurrentProcess = def(PFN_CoGetCurrentProcess, "CoGetCurrentProcess", "ole32");
     CoGetCallerTID = def(PFN_CoGetCallerTID, "CoGetCallerTID", "ole32");
 
-    OpenProcessToken = def(PFN_OpenProcessToken, "OpenProcessToken", "advapi32");
-    GetTokenInformation = def(PFN_GetTokenInformation, "GetTokenInformation", "advapi32");
-    CheckTokenMembership = def(PFN_CheckTokenMembership, "CheckTokenMembership", "advapi32");
-    AllocateAndInitializeSid = def(PFN_AllocateAndInitializeSid, "AllocateAndInitializeSid", "advapi32");
-    FreeSid = def(PFN_FreeSid, "FreeSid", "advapi32");
-    ConvertSidToStringSidA = def(PFN_ConvertSidToStringSidA, "ConvertSidToStringSidA", "advapi32");
-    RtlGenRandom = def(PFN_RtlGenRandom, "SystemFunction036", "advapi32");
-
     WSAStartup = def(PFN_WSAStartup, "WSAStartup", "ws2_32");
     WSACleanup = def(PFN_WSACleanup, "WSACleanup", "ws2_32");
     WSAGetLastError = def(PFN_WSAGetLastError, "WSAGetLastError", "ws2_32");
@@ -3356,17 +3373,6 @@ pub var CoTaskMemAlloc: PFN_CoTaskMemAlloc = undefined;
 pub var CoTaskMemFree: PFN_CoTaskMemFree = undefined;
 pub var CoGetCurrentProcess: PFN_CoGetCurrentProcess = undefined;
 pub var CoGetCallerTID: PFN_CoGetCallerTID = undefined;
-
-//
-// ADVAPI32 function definitions
-//
-pub var OpenProcessToken: PFN_OpenProcessToken = undefined;
-pub var GetTokenInformation: PFN_GetTokenInformation = undefined;
-pub var CheckTokenMembership: PFN_CheckTokenMembership = undefined;
-pub var AllocateAndInitializeSid: PFN_AllocateAndInitializeSid = undefined;
-pub var FreeSid: PFN_FreeSid = undefined;
-pub var ConvertSidToStringSidA: PFN_ConvertSidToStringSidA = undefined;
-pub var RtlGenRandom: PFN_RtlGenRandom = undefined;
 
 //
 // WS2_32 function definitions
