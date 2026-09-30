@@ -9,7 +9,6 @@ OS: Windows
 entrypoint: "go"
 sources:
     - 'https://raw.githubusercontent.com/Adaptix-Framework/Extension-Kit/refs/heads/main/SAR-BOF/taskhound/taskhound.c'
-examples: "
+examples: |
  taskhound <target> [username] [password] [-save <directory>] [-unsaved-creds] [-grab-blobs]
  taskhound DC01 -u domain\admin -p P@ssw0rd -save C:\Output -grab-blobs
-"

@@ -2,6 +2,38 @@ const std = @import("std");
 
 pub const supported_zig_version = std.SemanticVersion{ .major = 0, .minor = 15, .patch = 2 };
 
+fn genDocYaml(b: *std.Build) !void {
+    var doc_file: std.io.Writer.Allocating = .init(b.allocator);
+    defer doc_file.deinit();
+
+    const yaml_files = [_][]const u8{
+        "examples/implant/BOF-manuals/AD-BOF.yaml",
+        "examples/implant/BOF-manuals/SAL-BOF.yaml",
+        "examples/implant/BOF-manuals/SAR-BOF.yaml",
+    };
+
+    for (yaml_files) |file_name| {
+        const file = try std.fs.cwd().openFile(file_name, .{ .mode = .read_only });
+        defer file.close();
+
+        const content = try file.readToEndAlloc(b.allocator, std.math.maxInt(u32));
+        defer b.allocator.free(content);
+
+        _ = std.mem.replace(u8, content, "\r\n", "\n", content);
+
+        try doc_file.writer.writeAll(content);
+        try doc_file.writer.flush();
+    }
+
+    const source = try std.mem.Allocator.dupeZ(b.allocator, u8, doc_file.written());
+    defer b.allocator.free(source);
+
+    const wf = b.addWriteFiles();
+    const doc_file_path = wf.add("BOF-all.yaml", doc_file.written());
+
+    b.getInstallStep().dependOn(&b.addInstallFile(doc_file_path, "../examples/implant/BOF-all.yaml").step);
+}
+
 pub fn build(b: *std.Build) !void {
     ensureZigVersion() catch return;
 
@@ -278,6 +310,11 @@ pub fn build(b: *std.Build) !void {
             b.getInstallStep().dependOn(&run.step);
         }
     }
+
+    //
+    // Generate one big BOF manual from examples/implant/BOF-manuals/
+    //
+    genDocYaml(b) catch return;
 
     //
     // Build, install and run tests

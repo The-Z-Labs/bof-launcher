@@ -200,7 +200,7 @@ examples: '
 ---
 name: PrivCheck-hijackablepath
 srcfile: "hijackablepath"
-description: "Checks the path env variable for writable dirs (FILE_ADD_FILE) that can be exploited to elevate privileges.
+description: "Checks the path env variable for writable dirs (FILE_ADD_FILE) that can be exploited to elevate privileges"
 author: "mertdas; ostrichgolf (bugfixes)"
 Arch: ["x64", "x86"]
 tags: ['windows', 'host-recon']
