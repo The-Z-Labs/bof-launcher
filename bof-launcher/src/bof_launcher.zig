@@ -2259,8 +2259,6 @@ fn initLauncher() !void {
     }
 
     if (@import("builtin").os.tag == .windows) {
-        w32.init();
-
         try gstate.func_lookup.put("memcpy", @intFromPtr(&memcpy));
         try gstate.func_lookup.put("memset", @intFromPtr(&memset));
         try gstate.func_lookup.put("memmove", @intFromPtr(&memmove));

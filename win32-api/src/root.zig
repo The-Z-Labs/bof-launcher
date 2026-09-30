@@ -1805,7 +1805,7 @@ pub const EXTENDED_NAME_FORMAT = enum(u32) {
 const section_name = ".winapi";
 
 //
-// KERNEL32 function types
+// kernel32 functions
 //
 pub fn VirtualAlloc(
     lpAddress: ?LPVOID,
@@ -2282,7 +2282,7 @@ pub fn CreateProcessW(
 }
 
 //
-// NTDLL function types
+// ntdll functions
 //
 pub fn RtlCloneUserProcess(
     ProcessFlags: ULONG, // _In_
@@ -3060,7 +3060,7 @@ pub fn RtlGenRandom(
 }
 
 //
-// ADVAPI32 function types
+// advapi32 functions
 //
 pub fn OpenProcessToken(
     ProcessHandle: HANDLE,
@@ -3124,7 +3124,7 @@ pub fn ConvertSidToStringSidA(
 }
 
 //
-// USER32 function types
+// user32 functions
 //
 pub fn MessageBoxA(
     hWnd: ?HWND,
@@ -3174,47 +3174,81 @@ pub fn GetForegroundWindow() linksection(section_name) callconv(.winapi) ?HWND {
 //
 // OLE32 function types
 //
-pub const PFN_CoInitializeEx = *const fn (
+pub fn CoInitializeEx(
     pvReserved: ?LPVOID,
     dwCoInit: DWORD,
-) callconv(.winapi) HRESULT;
+) linksection(section_name) callconv(.winapi) HRESULT {
+    const f = def(*const @TypeOf(CoInitializeEx), "CoInitializeEx", "ole32");
+    return f(pvReserved, dwCoInit);
+}
 
-pub const PFN_CoUninitialize = *const fn () callconv(.winapi) void;
-pub const PFN_CoTaskMemAlloc = *const fn (size: SIZE_T) callconv(.winapi) ?LPVOID;
-pub const PFN_CoTaskMemFree = *const fn (pv: LPVOID) callconv(.winapi) void;
-pub const PFN_CoGetCurrentProcess = *const fn () callconv(.winapi) DWORD;
-pub const PFN_CoGetCallerTID = *const fn (lpdwTID: *DWORD) callconv(.winapi) HRESULT;
+pub fn CoUninitialize() linksection(section_name) callconv(.winapi) void {
+    const f = def(*const @TypeOf(CoUninitialize), "CoUninitialize", "ole32");
+    f();
+}
+
+pub fn CoTaskMemAlloc(size: SIZE_T) linksection(section_name) callconv(.winapi) ?LPVOID {
+    const f = def(*const @TypeOf(CoTaskMemAlloc), "CoTaskMemAlloc", "ole32");
+    return f(size);
+}
+
+pub fn CoTaskMemFree(pv: LPVOID) linksection(section_name) callconv(.winapi) void {
+    const f = def(*const @TypeOf(CoTaskMemFree), "CoTaskMemFree", "ole32");
+    f(pv);
+}
+
+pub fn CoGetCurrentProcess() linksection(section_name) callconv(.winapi) DWORD {
+    const f = def(*const @TypeOf(CoGetCurrentProcess), "CoGetCurrentProcess", "ole32");
+    return f();
+}
+
+pub fn CoGetCallerTID(lpdwTID: *DWORD) linksection(section_name) callconv(.winapi) HRESULT {
+    const f = def(*const @TypeOf(CoGetCallerTID), "CoGetCallerTID", "ole32");
+    return f(lpdwTID);
+}
 
 //
-// WS2_32 function types
+// wS2_32 functions
 //
-pub const PFN_WSAStartup = *const fn (
+pub fn WSAStartup(
     wVersionRequired: WORD,
     lpWSAData: *WSADATA,
-) callconv(.winapi) i32;
+) linksection(section_name) callconv(.winapi) i32 {
+    const f = def(*const @TypeOf(WSAStartup), "WSAStartup", "ws2_32");
+    return f(wVersionRequired, lpWSAData);
+}
 
-pub const PFN_WSACleanup = *const fn () callconv(.winapi) i32;
+pub fn WSACleanup() linksection(section_name) callconv(.winapi) i32 {
+    const f = def(*const @TypeOf(WSACleanup), "WSACleanup", "ws2_32");
+    return f();
+}
 
-pub const PFN_WSASocketW = *const fn (
+pub fn WSASocketW(
     af: i32,
     @"type": i32,
     protocol: i32,
     lpProtocolInfo: ?*WSAPROTOCOL_INFOW,
     g: u32,
     dwFlags: u32,
-) callconv(.winapi) SOCKET;
+) linksection(section_name) callconv(.winapi) SOCKET {
+    const f = def(*const @TypeOf(WSASocketW), "WSASocketW", "ws2_32");
+    return f(af, @"type", protocol, lpProtocolInfo, g, dwFlags);
+}
 
-pub const PFN_closesocket = *const fn (s: SOCKET) callconv(.winapi) i32;
+pub fn closesocket(s: SOCKET) linksection(section_name) callconv(.winapi) i32 {
+    const f = def(*const @TypeOf(closesocket), "closesocket", "ws2_32");
+    return f(s);
+}
 
 //
-// SECUR_32 function types
+// secur32 functions
 //
 pub fn GetUserNameExA(
-    NameFormat: EXTENDED_NAME_FORMAT,
-    lpNameBuffer: ?LPSTR,
-    nSize: *ULONG,
+    NameFormat: EXTENDED_NAME_FORMAT, // _In_
+    lpNameBuffer: ?LPSTR, // _Out_opt_
+    nSize: PULONG, // _Inout_
 ) linksection(section_name) callconv(.winapi) BOOLEAN {
-    const f = def(*const @TypeOf(GetUserNameExA), "GetUserNameExA", "secur_32");
+    const f = def(*const @TypeOf(GetUserNameExA), "GetUserNameExA", "secur32");
     return f(NameFormat, lpNameBuffer, nSize);
 }
 
@@ -3235,38 +3269,6 @@ pub fn def(
         })
     else {};
 }
-
-pub fn init() void {
-    CoInitializeEx = def(PFN_CoInitializeEx, "CoInitializeEx", "ole32");
-    CoUninitialize = def(PFN_CoUninitialize, "CoUninitialize", "ole32");
-    CoTaskMemAlloc = def(PFN_CoTaskMemAlloc, "CoTaskMemAlloc", "ole32");
-    CoTaskMemFree = def(PFN_CoTaskMemFree, "CoTaskMemFree", "ole32");
-    CoGetCurrentProcess = def(PFN_CoGetCurrentProcess, "CoGetCurrentProcess", "ole32");
-    CoGetCallerTID = def(PFN_CoGetCallerTID, "CoGetCallerTID", "ole32");
-
-    WSAStartup = def(PFN_WSAStartup, "WSAStartup", "ws2_32");
-    WSACleanup = def(PFN_WSACleanup, "WSACleanup", "ws2_32");
-    WSASocketW = def(PFN_WSASocketW, "WSASocketW", "ws2_32");
-    closesocket = def(PFN_closesocket, "closesocket", "ws2_32");
-}
-
-//
-// OLE32 function definitions
-//
-pub var CoInitializeEx: PFN_CoInitializeEx = undefined;
-pub var CoUninitialize: PFN_CoUninitialize = undefined;
-pub var CoTaskMemAlloc: PFN_CoTaskMemAlloc = undefined;
-pub var CoTaskMemFree: PFN_CoTaskMemFree = undefined;
-pub var CoGetCurrentProcess: PFN_CoGetCurrentProcess = undefined;
-pub var CoGetCallerTID: PFN_CoGetCallerTID = undefined;
-
-//
-// WS2_32 function definitions
-//
-pub var WSAStartup: PFN_WSAStartup = undefined;
-pub var WSACleanup: PFN_WSACleanup = undefined;
-pub var WSASocketW: PFN_WSASocketW = undefined;
-pub var closesocket: PFN_closesocket = undefined;
 
 //
 // "Redirectors"
