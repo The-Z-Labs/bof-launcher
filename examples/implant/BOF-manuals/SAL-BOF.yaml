@@ -153,7 +153,7 @@ arguments:
 name: PrivCheck-alwayselevated
 srcfile: "alwaysinstallelevated"
 description: "Checks if 'Always Install Elevated' is enabled using the registry"
-author: "mertdas; ostrichgolf (bugfixes)"
+author: "mertdas"
 Arch: ["x64", "x86"]
 tags: ['windows', 'host-recon']
 category: "SAL-BOF"
@@ -169,7 +169,7 @@ examples: '
 name: PrivCheck-autologon
 srcfile: "autologon"
 description: "Checks the registry for autologon information"
-author: "mertdas; ostrichgolf (bugfixes)"
+author: "mertdas"
 Arch: ["x64", "x86"]
 tags: ['windows', 'host-recon']
 category: "SAL-BOF"
@@ -185,7 +185,7 @@ examples: '
 name: PrivCheck-credman
 srcfile: "credentialmanager"
 description: "Checks the current user's Windows Credential Manager for saved web passwords and returns them"
-author: "mertdas; ostrichgolf (bugfixes)"
+author: "mertdas"
 Arch: ["x64", "x86"]
 tags: ['windows', 'host-recon']
 category: "SAL-BOF"
@@ -201,7 +201,7 @@ examples: '
 name: PrivCheck-hijackablepath
 srcfile: "hijackablepath"
 description: "Checks the path env variable for writable dirs (FILE_ADD_FILE) that can be exploited to elevate privileges"
-author: "mertdas; ostrichgolf (bugfixes)"
+author: "mertdas"
 Arch: ["x64", "x86"]
 tags: ['windows', 'host-recon']
 category: "SAL-BOF"
@@ -217,7 +217,7 @@ examples: '
 name: PrivCheck-tokenpriv
 srcfile: "tokenprivileges"
 description: "Lists the current token privileges and highlights known vulnerable ones"
-author: "mertdas; ostrichgolf (bugfixes)"
+author: "mertdas"
 Arch: ["x64", "x86"]
 tags: ['windows', 'host-recon']
 category: "SAL-BOF"
@@ -233,7 +233,7 @@ examples: '
 name: PrivCheck-unattendfiles
 srcfile: "unattendfiles"
 description: "Checks for leftover unattend files that might contain sensitive information (New module)"
-author: "mertdas; ostrichgolf (bugfixes)"
+author: "mertdas"
 Arch: ["x64", "x86"]
 tags: ['windows', 'host-recon']
 category: "SAL-BOF"
@@ -249,7 +249,7 @@ examples: '
 name: PrivCheck-unquotedsvc
 srcfile: "unquotedsvcpath"
 description: "Checks for unquoted service paths"
-author: "mertdas; ostrichgolf (bugfixes)"
+author: "mertdas"
 Arch: ["x64", "x86"]
 tags: ['windows', 'host-recon']
 category: "SAL-BOF"
@@ -265,7 +265,7 @@ examples: '
 name: PrivCheck-vulndrivers
 srcfile: "vulnerabledrivers"
 description: "Checks if any service on the system uses a known vulnerable driver (list from: loldrivers.io/api/drivers.csv)"
-author: "mertdas; ostrichgolf (bugfixes)"
+author: "mertdas"
 Arch: ["x64", "x86"]
 tags: ['windows', 'host-recon']
 category: "SAL-BOF"
