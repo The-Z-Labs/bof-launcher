@@ -1,0 +1,22 @@
+.{
+    .name = .cli4bofs,
+    .version = "0.10.0",
+    .fingerprint = 0x24054146b73f1bd0,
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+    .dependencies = .{
+        .bof_launcher_lib = .{
+            .path = "../../bof-launcher",
+        },
+        .bof_launcher_bofs = .{
+            .path = "../../bofs",
+        },
+        .zig_yaml = .{
+            .url = "https://github.com/kubkon/zig-yaml/archive/a6c2cd8760bf45c49b17a3f6259c4dfe3ded528e.tar.gz",
+            .hash = "zig_yaml-0.2.0-C1161pmrAgDnipDTh_4v4RQD27XN5GNaVlzzvlXf1jfW",
+        },
+    },
+}

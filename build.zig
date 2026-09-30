@@ -314,6 +314,17 @@ pub fn build(b: *std.Build) !void {
     }
 
     //
+    // install cli4bofs
+    //
+    for (supported_targets) |target_query| {
+        const target = b.resolveTargetQuery(target_query);
+
+        const dep = b.dependency("cli4bofs", .{ .target = target, .optimize = optimize });
+        const exe = dep.artifact(b.fmt("cli4bofs_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }));
+        b.installArtifact(exe);
+    }
+
+    //
     // Generate one big BOF manual from examples/implant/BOF-manuals/
     //
     genDocYaml(b) catch return;
