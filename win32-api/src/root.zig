@@ -3195,8 +3195,6 @@ pub const PFN_WSAStartup = *const fn (
 
 pub const PFN_WSACleanup = *const fn () callconv(.winapi) i32;
 
-pub const PFN_WSAGetLastError = *const fn () callconv(.winapi) WinsockError;
-
 pub const PFN_WSASocketW = *const fn (
     af: i32,
     @"type": i32,
@@ -3206,117 +3204,19 @@ pub const PFN_WSASocketW = *const fn (
     dwFlags: u32,
 ) callconv(.winapi) SOCKET;
 
-pub const PFN_WSAPoll = *const fn (
-    fdArray: [*]WSAPOLLFD,
-    fds: u32,
-    timeout: i32,
-) callconv(.winapi) i32;
-
-pub const PFN_WSAGetOverlappedResult = *const fn (
-    s: SOCKET,
-    lpOverlapped: *OVERLAPPED,
-    lpcbTransfer: *DWORD,
-    fWait: BOOL,
-    lpdwFlags: *DWORD,
-) callconv(.winapi) BOOL;
-
-pub const PFN_WSASend = *const fn (
-    s: SOCKET,
-    lpBuffers: [*]WSABUF,
-    dwBufferCount: u32,
-    lpNumberOfBytesSent: ?*u32,
-    dwFlags: u32,
-    lpOverlapped: ?*OVERLAPPED,
-    lpCompletionRounte: ?LPWSAOVERLAPPED_COMPLETION_ROUTINE,
-) callconv(.winapi) i32;
-
-pub const PFN_WSASendTo = *const fn (
-    s: SOCKET,
-    lpBuffers: [*]WSABUF,
-    dwBufferCount: u32,
-    lpNumberOfBytesSent: ?*u32,
-    dwFlags: u32,
-    lpTo: ?*const sockaddr,
-    iToLen: i32,
-    lpOverlapped: ?*OVERLAPPED,
-    lpCompletionRounte: ?LPWSAOVERLAPPED_COMPLETION_ROUTINE,
-) callconv(.winapi) i32;
-
-pub const PFN_WSARecv = *const fn (
-    s: SOCKET,
-    lpBuffers: [*]WSABUF,
-    dwBuffercount: u32,
-    lpNumberOfBytesRecvd: ?*u32,
-    lpFlags: *u32,
-    lpOverlapped: ?*OVERLAPPED,
-    lpCompletionRoutine: ?LPWSAOVERLAPPED_COMPLETION_ROUTINE,
-) callconv(.winapi) i32;
-
-pub const PFN_WSARecvFrom = *const fn (
-    s: SOCKET,
-    lpBuffers: [*]WSABUF,
-    dwBuffercount: u32,
-    lpNumberOfBytesRecvd: ?*u32,
-    lpFlags: *u32,
-    lpFrom: ?*sockaddr,
-    lpFromlen: ?*i32,
-    lpOverlapped: ?*OVERLAPPED,
-    lpCompletionRoutine: ?LPWSAOVERLAPPED_COMPLETION_ROUTINE,
-) callconv(.winapi) i32;
-
 pub const PFN_closesocket = *const fn (s: SOCKET) callconv(.winapi) i32;
-
-pub const PFN_getaddrinfo = *const fn (
-    pNodeName: ?[*:0]const u8,
-    pServiceName: ?[*:0]const u8,
-    pHints: ?*const addrinfoa,
-    ppResult: *?*addrinfoa,
-) callconv(.winapi) i32;
-
-pub const PFN_freeaddrinfo = *const fn (pAddrInfo: ?*addrinfoa) callconv(.winapi) void;
-
-pub const PFN_bind = *const fn (
-    s: SOCKET,
-    name: *const sockaddr,
-    namelen: i32,
-) callconv(.winapi) i32;
-
-pub const PFN_connect = *const fn (
-    s: SOCKET,
-    name: *const sockaddr,
-    namelen: i32,
-) callconv(.winapi) i32;
-
-pub const PFN_ioctlsocket = *const fn (
-    s: SOCKET,
-    cmd: i32,
-    argp: *u32,
-) callconv(.winapi) i32;
-
-pub const PFN_getsockopt = *const fn (
-    s: SOCKET,
-    level: i32,
-    optname: i32,
-    optval: [*]u8,
-    optlen: *i32,
-) callconv(.winapi) i32;
-
-pub const PFN_setsockopt = *const fn (
-    s: SOCKET,
-    level: i32,
-    optname: i32,
-    optval: ?[*]const u8,
-    optlen: i32,
-) callconv(.winapi) i32;
 
 //
 // SECUR_32 function types
 //
-pub const PFN_GetUserNameExA = *const fn (
+pub fn GetUserNameExA(
     NameFormat: EXTENDED_NAME_FORMAT,
     lpNameBuffer: ?LPSTR,
     nSize: *ULONG,
-) callconv(.winapi) BOOLEAN;
+) linksection(section_name) callconv(.winapi) BOOLEAN {
+    const f = def(*const @TypeOf(GetUserNameExA), "GetUserNameExA", "secur_32");
+    return f(NameFormat, lpNameBuffer, nSize);
+}
 
 //
 // Define WIN32 function
@@ -3346,23 +3246,8 @@ pub fn init() void {
 
     WSAStartup = def(PFN_WSAStartup, "WSAStartup", "ws2_32");
     WSACleanup = def(PFN_WSACleanup, "WSACleanup", "ws2_32");
-    WSAGetLastError = def(PFN_WSAGetLastError, "WSAGetLastError", "ws2_32");
     WSASocketW = def(PFN_WSASocketW, "WSASocketW", "ws2_32");
-    WSAPoll = def(PFN_WSAPoll, "WSAPoll", "ws2_32");
-    WSAGetOverlappedResult = def(PFN_WSAGetOverlappedResult, "WSAGetOverlappedResult", "ws2_32");
-    WSASend = def(PFN_WSASend, "WSASend", "ws2_32");
-    WSASendTo = def(PFN_WSASendTo, "WSASendTo", "ws2_32");
-    WSARecvFrom = def(PFN_WSARecvFrom, "WSARecvFrom", "ws2_32");
     closesocket = def(PFN_closesocket, "closesocket", "ws2_32");
-    getaddrinfo = def(PFN_getaddrinfo, "getaddrinfo", "ws2_32");
-    freeaddrinfo = def(PFN_freeaddrinfo, "freeaddrinfo", "ws2_32");
-    bind = def(PFN_bind, "bind", "ws2_32");
-    connect = def(PFN_connect, "connect", "ws2_32");
-    ioctlsocket = def(PFN_ioctlsocket, "ioctlsocket", "ws2_32");
-    getsockopt = def(PFN_getsockopt, "getsockopt", "ws2_32");
-    setsockopt = def(PFN_setsockopt, "setsockopt", "ws2_32");
-
-    GetUserNameExA = def(PFN_GetUserNameExA, "GetUserNameExA", "secur32");
 }
 
 //
@@ -3380,27 +3265,8 @@ pub var CoGetCallerTID: PFN_CoGetCallerTID = undefined;
 //
 pub var WSAStartup: PFN_WSAStartup = undefined;
 pub var WSACleanup: PFN_WSACleanup = undefined;
-pub var WSAGetLastError: PFN_WSAGetLastError = undefined;
 pub var WSASocketW: PFN_WSASocketW = undefined;
-pub var WSAPoll: PFN_WSAPoll = undefined;
-pub var WSAGetOverlappedResult: PFN_WSAGetOverlappedResult = undefined;
-pub var WSASend: PFN_WSASend = undefined;
-pub var WSASendTo: PFN_WSASendTo = undefined;
-pub var WSARecv: PFN_WSARecv = undefined;
-pub var WSARecvFrom: PFN_WSARecvFrom = undefined;
 pub var closesocket: PFN_closesocket = undefined;
-pub var getaddrinfo: PFN_getaddrinfo = undefined;
-pub var freeaddrinfo: PFN_freeaddrinfo = undefined;
-pub var bind: PFN_bind = undefined;
-pub var connect: PFN_connect = undefined;
-pub var ioctlsocket: PFN_ioctlsocket = undefined;
-pub var getsockopt: PFN_getsockopt = undefined;
-pub var setsockopt: PFN_setsockopt = undefined;
-
-//
-// SECUR_32 function definitions
-//
-pub var GetUserNameExA: PFN_GetUserNameExA = undefined;
 
 //
 // "Redirectors"
