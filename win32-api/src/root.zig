@@ -3126,32 +3126,50 @@ pub fn ConvertSidToStringSidA(
 //
 // USER32 function types
 //
-pub const PFN_MessageBoxA = *const fn (
+pub fn MessageBoxA(
     hWnd: ?HWND,
     lpText: ?LPCSTR,
     lpCaption: ?LPCSTR,
     uType: UINT,
-) callconv(.winapi) i32;
+) linksection(section_name) callconv(.winapi) i32 {
+    const f = def(*const @TypeOf(MessageBoxA), "MessageBoxA", "user32");
+    return f(hWnd, lpText, lpCaption, uType);
+}
 
-pub const PFN_MessageBoxW = *const fn (
+pub fn MessageBoxW(
     hWnd: ?HWND,
     lpText: ?LPCWSTR,
     lpCaption: ?LPCWSTR,
     uType: UINT,
-) callconv(.winapi) i32;
+) linksection(section_name) callconv(.winapi) i32 {
+    const f = def(*const @TypeOf(MessageBoxW), "MessageBoxW", "user32");
+    return f(hWnd, lpText, lpCaption, uType);
+}
 
-pub const PFN_EnumWindows = *const fn (
+pub fn EnumWindows(
     lpEnumFunc: WNDENUMPROC,
     lParam: LPARAM,
-) callconv(.winapi) BOOL;
+) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(EnumWindows), "EnumWindows", "user32");
+    return f(lpEnumFunc, lParam);
+}
 
-pub const PFN_GetWindowThreadProcessId = *const fn (
+pub fn GetWindowThreadProcessId(
     hWnd: HWND,
     lpdwProcessId: ?*DWORD,
-) callconv(.winapi) DWORD;
+) linksection(section_name) callconv(.winapi) DWORD {
+    const f = def(*const @TypeOf(GetWindowThreadProcessId), "GetWindowThreadProcessId", "user32");
+    return f(hWnd, lpdwProcessId);
+}
 
-pub const PFN_SetForegroundWindow = *const fn (hWnd: HWND) callconv(.winapi) BOOL;
-pub const PFN_GetForegroundWindow = *const fn () callconv(.winapi) ?HWND;
+pub fn SetForegroundWindow(hWnd: ?HWND) linksection(section_name) callconv(.winapi) BOOL {
+    const f = def(*const @TypeOf(SetForegroundWindow), "SetForegroundWindow", "user32");
+    return f(hWnd);
+}
+pub fn GetForegroundWindow() linksection(section_name) callconv(.winapi) ?HWND {
+    const f = def(*const @TypeOf(GetForegroundWindow), "GetForegroundWindow", "user32");
+    return f();
+}
 
 //
 // OLE32 function types
@@ -3319,13 +3337,6 @@ pub fn def(
 }
 
 pub fn init() void {
-    MessageBoxA = def(PFN_MessageBoxA, "MessageBoxA", "user32");
-    MessageBoxW = def(PFN_MessageBoxW, "MessageBoxW", "user32");
-    EnumWindows = def(PFN_EnumWindows, "EnumWindows", "user32");
-    GetWindowThreadProcessId = def(PFN_GetWindowThreadProcessId, "GetWindowThreadProcessId", "user32");
-    SetForegroundWindow = def(PFN_SetForegroundWindow, "SetForegroundWindow", "user32");
-    GetForegroundWindow = def(PFN_GetForegroundWindow, "GetForegroundWindow", "user32");
-
     CoInitializeEx = def(PFN_CoInitializeEx, "CoInitializeEx", "ole32");
     CoUninitialize = def(PFN_CoUninitialize, "CoUninitialize", "ole32");
     CoTaskMemAlloc = def(PFN_CoTaskMemAlloc, "CoTaskMemAlloc", "ole32");
@@ -3353,16 +3364,6 @@ pub fn init() void {
 
     GetUserNameExA = def(PFN_GetUserNameExA, "GetUserNameExA", "secur32");
 }
-
-//
-// USER32 function definitions
-//
-pub var MessageBoxA: PFN_MessageBoxA = undefined;
-pub var MessageBoxW: PFN_MessageBoxW = undefined;
-pub var EnumWindows: PFN_EnumWindows = undefined;
-pub var GetWindowThreadProcessId: PFN_GetWindowThreadProcessId = undefined;
-pub var SetForegroundWindow: PFN_SetForegroundWindow = undefined;
-pub var GetForegroundWindow: PFN_GetForegroundWindow = undefined;
 
 //
 // OLE32 function definitions
