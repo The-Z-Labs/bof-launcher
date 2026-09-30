@@ -368,7 +368,12 @@ pub const CONTEXT = switch (native_arch) {
     },
     else => @compileError("CONTEXT is not defined for this architecture"),
 };
-pub const LPTHREAD_START_ROUTINE = *const fn (LPVOID) callconv(.winapi) DWORD;
+pub const THREAD_START_ROUTINE = fn (?LPVOID) callconv(.winapi) DWORD;
+pub const LPTHREAD_START_ROUTINE = *const THREAD_START_ROUTINE;
+
+pub const USER_THREAD_START_ROUTINE = fn (?PVOID) callconv(.winapi) NTSTATUS;
+pub const PUSER_THREAD_START_ROUTINE = *const USER_THREAD_START_ROUTINE;
+
 pub const WNDENUMPROC = *const fn (HWND, LPARAM) callconv(.winapi) BOOL;
 pub const FILE_BOTH_DIR_INFORMATION = extern struct {
     NextEntryOffset: ULONG,
@@ -1356,6 +1361,7 @@ pub const SECTION_IMAGE_INFORMATION = extern struct {
     CheckSum: ULONG,
 };
 
+pub const PRTL_USER_PROCESS_INFORMATION = *RTL_USER_PROCESS_INFORMATION;
 pub const RTL_USER_PROCESS_INFORMATION = extern struct {
     Length: ULONG,
     ProcessHandle: ?HANDLE,
@@ -2274,13 +2280,16 @@ pub fn CreateProcessW(
 //
 // NTDLL function types
 //
-pub const PFN_RtlCloneUserProcess = *const fn (
-    ProcessFlags: ULONG,
-    ProcessSecurityDescriptor: ?PSECURITY_DESCRIPTOR,
-    ThreadSecurityDescriptor: ?PSECURITY_DESCRIPTOR,
-    DebugPort: ?HANDLE,
-    ProcessInformation: *RTL_USER_PROCESS_INFORMATION,
-) callconv(.winapi) NTSTATUS;
+pub fn RtlCloneUserProcess(
+    ProcessFlags: ULONG, // _In_
+    ProcessSecurityDescriptor: ?PSECURITY_DESCRIPTOR, // _In_opt_
+    ThreadSecurityDescriptor: ?PSECURITY_DESCRIPTOR, // _In_opt_
+    DebugPort: ?HANDLE, // _In_opt_
+    ProcessInformation: PRTL_USER_PROCESS_INFORMATION, // _Out_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(RtlCloneUserProcess), "RtlCloneUserProcess", "ntdll");
+    return f(ProcessFlags, ProcessSecurityDescriptor, ThreadSecurityDescriptor, DebugPort, ProcessInformation);
+}
 
 pub fn RtlGetVersion(
     lpVersionInformation: *RTL_OSVERSIONINFOW,
@@ -2289,15 +2298,21 @@ pub fn RtlGetVersion(
     return f(lpVersionInformation);
 }
 
-pub const PFN_NtSuspendThread = *const fn (
+pub fn NtSuspendThread(
     ThreadHandle: HANDLE,
     PreviousSuspendCount: ?*ULONG,
-) callconv(.winapi) NTSTATUS;
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtSuspendThread), "NtSuspendThread", "ntdll");
+    return f(ThreadHandle, PreviousSuspendCount);
+}
 
-pub const PFN_NtTerminateThread = *const fn (
+pub fn NtTerminateThread(
     ThreadHandle: ?HANDLE,
     ExitStatus: NTSTATUS,
-) callconv(.winapi) NTSTATUS;
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtTerminateThread), "NtTerminateThread", "ntdll");
+    return f(ThreadHandle, ExitStatus);
+}
 
 pub fn NtOpenProcess(
     ProcessHandle: *HANDLE,
@@ -2309,37 +2324,58 @@ pub fn NtOpenProcess(
     return f(ProcessHandle, DesiredAccess, ObjectAttributes, ClientId);
 }
 
-pub const PFN_NtResumeProcess = *const fn (ProcessHandle: HANDLE) callconv(.winapi) NTSTATUS;
+pub fn NtResumeProcess(ProcessHandle: HANDLE) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtResumeProcess), "NtResumeProcess", "ntdll");
+    return f(ProcessHandle);
+}
 
-pub const PFN_NtSuspendProcess = *const fn (ProcessHandle: HANDLE) callconv(.winapi) NTSTATUS;
+pub fn NtSuspendProcess(ProcessHandle: HANDLE) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtSuspendProcess), "NtSuspendProcess", "ntdll");
+    return f(ProcessHandle);
+}
 
-pub const PFN_NtCreateJobObject = *const fn (
-    JobHandle: *HANDLE,
-    DesiredAccess: DWORD,
-    ObjectAttributes: ?*OBJECT_ATTRIBUTES,
-) callconv(.winapi) NTSTATUS;
+pub fn NtCreateJobObject(
+    JobHandle: PHANDLE, // _Out_
+    DesiredAccess: ACCESS_MASK, // _In_
+    ObjectAttributes: ?PCOBJECT_ATTRIBUTES, // _In_opt_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtCreateJobObject), "NtCreateJobObject", "ntdll");
+    return f(JobHandle, DesiredAccess, ObjectAttributes);
+}
 
-pub const PFN_NtAssignProcessToJobObject = *const fn (
+pub fn NtAssignProcessToJobObject(
     JobHandle: HANDLE,
     ProcessHandle: HANDLE,
-) callconv(.winapi) NTSTATUS;
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtAssignProcessToJobObject), "NtAssignProcessToJobObject", "ntdll");
+    return f(JobHandle, ProcessHandle);
+}
 
-pub const PFN_NtTerminateJobObject = *const fn (
+pub fn NtTerminateJobObject(
     JobHandle: HANDLE,
     ExitStatus: NTSTATUS,
-) callconv(.winapi) NTSTATUS;
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtTerminateJobObject), "NtTerminateJobObject", "ntdll");
+    return f(JobHandle, ExitStatus);
+}
 
-pub const PFN_NtIsProcessInJob = *const fn (
+pub fn NtIsProcessInJob(
     ProcessHandle: HANDLE,
     JobHandle: ?HANDLE,
-) callconv(.winapi) NTSTATUS;
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtIsProcessInJob), "NtIsProcessInJob", "ntdll");
+    return f(ProcessHandle, JobHandle);
+}
 
-pub const PFN_NtSetInformationJobObject = *const fn (
+pub fn NtSetInformationJobObject(
     JobHandle: HANDLE,
     JobObjectInformationClass: JOBOBJECTINFOCLASS,
     JobObjectInformation: PVOID,
     JobObjectInformationLength: ULONG,
-) callconv(.winapi) NTSTATUS;
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtSetInformationJobObject), "NtSetInformationJobObject", "ntdll");
+    return f(JobHandle, JobObjectInformationClass, JobObjectInformation, JobObjectInformationLength);
+}
 
 pub fn RtlWow64EnableFsRedirection(Wow64FsEnableRedirection: BOOLEAN) linksection(section_name) callconv(.winapi) NTSTATUS {
     const f = def(*const @TypeOf(RtlWow64EnableFsRedirection), "RtlWow64EnableFsRedirection", "ntdll");
@@ -2976,8 +3012,40 @@ pub fn NtFreeVirtualMemory(
     return f(ProcessHandle, BaseAddress, RegionSize, FreeType);
 }
 
-pub const PFN_NtCreateThreadEx = *const @TypeOf(std.os.windows.ntdll.NtCreateThreadEx);
-pub const PFN_NtResumeThread = *const @TypeOf(std.os.windows.ntdll.NtResumeThread);
+pub fn NtCreateThreadEx(
+    ThreadHandle: PHANDLE, // _Out_
+    DesiredAccess: ACCESS_MASK, // _In_
+    ObjectAttributes: ?PCOBJECT_ATTRIBUTES, // _In_opt_
+    ProcessHandle: HANDLE, // _In_
+    StartRoutine: PUSER_THREAD_START_ROUTINE, // _In_
+    Argument: ?PVOID, // _In_opt_
+    CreateFlags: ULONG, // _In_
+    ZeroBits: SIZE_T, // _In_
+    StackSize: SIZE_T, // _In_
+    MaximumStackSize: SIZE_T, // _In_
+    AttributeList: ?PPS_ATTRIBUTE_LIST, // _In_opt_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtCreateThreadEx), "NtCreateThreadEx", "ntdll");
+    return f(ThreadHandle, DesiredAccess, ObjectAttributes, ProcessHandle, StartRoutine, Argument, CreateFlags, ZeroBits, StackSize, MaximumStackSize, AttributeList);
+}
+
+pub fn NtResumeThread(
+    ThreadHandle: HANDLE, // _In_
+    PreviousSuspendCount: ?PULONG, // _Out_opt_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtResumeThread), "NtResumeThread", "ntdll");
+    return f(ThreadHandle, PreviousSuspendCount);
+}
+
+pub fn NtCurrentProcess() HANDLE {
+    return @ptrFromInt(@as(usize, @bitCast(@as(isize, -1))));
+}
+pub fn NtCurrentThread() HANDLE {
+    return @ptrFromInt(@as(usize, @bitCast(@as(isize, -2))));
+}
+pub fn NtCurrentSession() HANDLE {
+    return @ptrFromInt(@as(usize, @bitCast(@as(isize, -3))));
+}
 
 //
 // ADVAPI32 function types
@@ -3226,19 +3294,6 @@ pub fn def(
 }
 
 pub fn init() void {
-    NtResumeThread = def(PFN_NtResumeThread, "NtResumeThread", "ntdll");
-    NtSuspendThread = def(PFN_NtSuspendThread, "NtSuspendThread", "ntdll");
-    NtTerminateThread = def(PFN_NtTerminateThread, "NtTerminateThread", "ntdll");
-    NtResumeProcess = def(PFN_NtResumeProcess, "NtResumeProcess", "ntdll");
-    NtSuspendProcess = def(PFN_NtSuspendProcess, "NtSuspendProcess", "ntdll");
-    NtCreateJobObject = def(PFN_NtCreateJobObject, "NtCreateJobObject", "ntdll");
-    NtAssignProcessToJobObject = def(PFN_NtAssignProcessToJobObject, "NtAssignProcessToJobObject", "ntdll");
-    NtTerminateJobObject = def(PFN_NtTerminateJobObject, "NtTerminateJobObject", "ntdll");
-    NtIsProcessInJob = def(PFN_NtIsProcessInJob, "NtIsProcessInJob", "ntdll");
-    NtSetInformationJobObject = def(PFN_NtSetInformationJobObject, "NtSetInformationJobObject", "ntdll");
-    NtCreateThreadEx = def(PFN_NtCreateThreadEx, "NtCreateThreadEx", "ntdll");
-    RtlCloneUserProcess = def(PFN_RtlCloneUserProcess, "RtlCloneUserProcess", "ntdll");
-
     MessageBoxA = def(PFN_MessageBoxA, "MessageBoxA", "user32");
     MessageBoxW = def(PFN_MessageBoxW, "MessageBoxW", "user32");
     EnumWindows = def(PFN_EnumWindows, "EnumWindows", "user32");
@@ -3280,32 +3335,6 @@ pub fn init() void {
     setsockopt = def(PFN_setsockopt, "setsockopt", "ws2_32");
 
     GetUserNameExA = def(PFN_GetUserNameExA, "GetUserNameExA", "secur32");
-}
-
-//
-// NTDLL function definitions
-//
-pub var NtResumeThread: PFN_NtResumeThread = undefined;
-pub var NtSuspendThread: PFN_NtSuspendThread = undefined;
-pub var NtTerminateThread: PFN_NtTerminateThread = undefined;
-pub var NtResumeProcess: PFN_NtResumeProcess = undefined;
-pub var NtSuspendProcess: PFN_NtSuspendProcess = undefined;
-pub var NtCreateJobObject: PFN_NtCreateJobObject = undefined;
-pub var NtAssignProcessToJobObject: PFN_NtAssignProcessToJobObject = undefined;
-pub var NtTerminateJobObject: PFN_NtTerminateJobObject = undefined;
-pub var NtIsProcessInJob: PFN_NtIsProcessInJob = undefined;
-pub var NtSetInformationJobObject: PFN_NtSetInformationJobObject = undefined;
-pub var NtCreateThreadEx: PFN_NtCreateThreadEx = undefined;
-pub var RtlCloneUserProcess: PFN_RtlCloneUserProcess = undefined;
-
-pub fn NtCurrentProcess() HANDLE {
-    return @ptrFromInt(@as(usize, @bitCast(@as(isize, -1))));
-}
-pub fn NtCurrentThread() HANDLE {
-    return @ptrFromInt(@as(usize, @bitCast(@as(isize, -2))));
-}
-pub fn NtCurrentSession() HANDLE {
-    return @ptrFromInt(@as(usize, @bitCast(@as(isize, -3))));
 }
 
 //
