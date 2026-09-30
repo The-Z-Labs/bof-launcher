@@ -1,0 +1,350 @@
+---
+name: arp
+srcfile: "entry"
+description: "List ARP table"
+author: Trustedsec
+Arch: ["x64", "x86"]
+tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
+category: "SAL-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/arp/entry.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
+examples: '
+ arp
+'
+---
+name: cacls
+srcfile: "entry"
+description: "List user permissions for the specified file, wildcards supported"
+author: Trustedsec
+Arch: ["x64", "x86"]
+tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
+category: "SAL-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/cacls/entry.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/cacls/defines.h'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
+examples: '
+ cacls *
+ cacls .
+ cacls "C:\\windows\\system32"
+ cacls "C:\\windows\\system32\\notepad.exe"
+'
+arguments:
+  - name: filepath
+    desc: "Path to the filesystem entry"
+    type: wstring
+    required: true
+---
+name: dir
+srcfile: "entry"
+description: "List files in a directory. Supports wildcards"
+author: Trustedsec
+Arch: ["x64", "x86"]
+tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
+category: "SAL-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/dir/entry.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/queue.c'
+examples: '
+ dir "C:\\windows\\system32" 1
+'
+arguments:
+  - name: path
+    desc: "Path to the directory"
+    type: string
+    required: true
+  - name: subdirs
+    desc: "If set to non zero (e.g. 1) it will list subdirectories"
+    type: short
+    required: true
+---
+name: env
+srcfile: "entry"
+description: "List process environment variables"
+author: Trustedsec
+Arch: ["x64", "x86"]
+tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
+category: "SAL-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/env/entry.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
+examples: '
+ env
+'
+---
+name: ipconfig
+srcfile: "entry"
+description: "List IPv4 address, hostname, and DNS server"
+author: Trustedsec
+Arch: ["x64", "x86"]
+tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
+category: "SAL-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/ipconfig/entry.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
+examples: '
+ ipconfig
+'
+---
+name: listdns
+srcfile: "entry"
+description: "List DNS cache entries. Attempt to query and resolve each"
+author: Trustedsec
+Arch: ["x64", "x86"]
+tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
+category: "SAL-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/listdns/entry.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
+examples: '
+ listdns
+'
+---
+name: nslookup
+srcfile: "entry"
+description: "Make a DNS query"
+author: Trustedsec
+Arch: ["x64", "x86"]
+tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
+category: "SAL-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/nslookup/entry.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
+examples: '
+ nslookup "no.such.host.com" "1.1.1.1" 1
+'
+arguments:
+  - name: hostname
+    desc: "name to resolve"
+    type: string
+    required: true
+  - name: dnsServer
+    desc: "DNS server to query"
+    type: integer
+    required: true
+  - name: recordType
+    desc: "DNS record type: A = 1, NS = 2, CNAME = 5, AAAA = 28, ANY = 255"
+    type: short
+    required: true
+---
+name: PrivCheck-alwayselevated
+srcfile: "alwaysinstallelevated"
+description: "Checks if 'Always Install Elevated' is enabled using the registry"
+author: "mertdas; ostrichgolf (bugfixes)"
+Arch: ["x64", "x86"]
+tags: ['windows', 'host-recon']
+category: "SAL-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/Adaptix-Framework/Extension-Kit/refs/heads/main/SAL-BOF/privcheck/alwaysinstallelevated.c'
+    - 'https://raw.githubusercontent.com/ostrichgolf/PrivCheck/refs/heads/main/includes/bofdefs.h'
+examples: '
+ PrivCheck-alwayselevated
+'
+---
+name: PrivCheck-autologon
+srcfile: "autologon"
+description: "Checks the registry for autologon information"
+author: "mertdas; ostrichgolf (bugfixes)"
+Arch: ["x64", "x86"]
+tags: ['windows', 'host-recon']
+category: "SAL-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/Adaptix-Framework/Extension-Kit/refs/heads/main/SAL-BOF/privcheck/autologon.c'
+    - 'https://raw.githubusercontent.com/ostrichgolf/PrivCheck/refs/heads/main/includes/bofdefs.h'
+examples: '
+ PrivCheck-autologon
+'
+---
+name: PrivCheck-credman
+srcfile: "credentialmanager"
+description: "Checks the current user's Windows Credential Manager for saved web passwords and returns them"
+author: "mertdas; ostrichgolf (bugfixes)"
+Arch: ["x64", "x86"]
+tags: ['windows', 'host-recon']
+category: "SAL-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/Adaptix-Framework/Extension-Kit/refs/heads/main/SAL-BOF/privcheck/credentialmanager.c'
+    - 'https://raw.githubusercontent.com/ostrichgolf/PrivCheck/refs/heads/main/includes/bofdefs.h'
+examples: '
+ PrivCheck-credman
+'
+---
+name: PrivCheck-hijackablepath
+srcfile: "hijackablepath"
+description: "Checks the path env variable for writable dirs (FILE_ADD_FILE) that can be exploited to elevate privileges.
+author: "mertdas; ostrichgolf (bugfixes)"
+Arch: ["x64", "x86"]
+tags: ['windows', 'host-recon']
+category: "SAL-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/Adaptix-Framework/Extension-Kit/refs/heads/main/SAL-BOF/privcheck/hijackablepath.c'
+    - 'https://raw.githubusercontent.com/ostrichgolf/PrivCheck/refs/heads/main/includes/bofdefs.h'
+examples: '
+ PrivCheck-hijackablepath
+'
+---
+name: PrivCheck-tokenpriv
+srcfile: "tokenprivileges"
+description: "Lists the current token privileges and highlights known vulnerable ones"
+author: "mertdas; ostrichgolf (bugfixes)"
+Arch: ["x64", "x86"]
+tags: ['windows', 'host-recon']
+category: "SAL-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/Adaptix-Framework/Extension-Kit/refs/heads/main/SAL-BOF/privcheck/tokenprivileges.c'
+    - 'https://raw.githubusercontent.com/ostrichgolf/PrivCheck/refs/heads/main/includes/bofdefs.h'
+examples: '
+ PrivCheck-tokenpriv
+'
+---
+name: PrivCheck-unattendfiles
+srcfile: "unattendfiles"
+description: "Checks for leftover unattend files that might contain sensitive information (New module)"
+author: "mertdas; ostrichgolf (bugfixes)"
+Arch: ["x64", "x86"]
+tags: ['windows', 'host-recon']
+category: "SAL-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/Adaptix-Framework/Extension-Kit/refs/heads/main/SAL-BOF/privcheck/unattendfiles.c'
+    - 'https://raw.githubusercontent.com/ostrichgolf/PrivCheck/refs/heads/main/includes/bofdefs.h'
+examples: '
+ PrivCheck-unattendfiles
+'
+---
+name: PrivCheck-unquotedsvc
+srcfile: "unquotedsvcpath"
+description: "Checks for unquoted service paths"
+author: "mertdas; ostrichgolf (bugfixes)"
+Arch: ["x64", "x86"]
+tags: ['windows', 'host-recon']
+category: "SAL-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/Adaptix-Framework/Extension-Kit/refs/heads/main/SAL-BOF/privcheck/unquotedsvcpath.c'
+    - 'https://raw.githubusercontent.com/ostrichgolf/PrivCheck/refs/heads/main/includes/bofdefs.h'
+examples: '
+ PrivCheck-credman
+'
+---
+name: PrivCheck-vulndrivers
+srcfile: "vulnerabledrivers"
+description: "Checks if any service on the system uses a known vulnerable driver (list from: loldrivers.io/api/drivers.csv)"
+author: "mertdas; ostrichgolf (bugfixes)"
+Arch: ["x64", "x86"]
+tags: ['windows', 'host-recon']
+category: "SAL-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/Adaptix-Framework/Extension-Kit/refs/heads/main/SAL-BOF/privcheck/vulnerabledrivers.c'
+    - 'https://raw.githubusercontent.com/Adaptix-Framework/Extension-Kit/refs/heads/main/SAL-BOF/privcheck/vulndrivers.h'
+    - 'https://raw.githubusercontent.com/ostrichgolf/PrivCheck/refs/heads/main/includes/bofdefs.h'
+    - 'https://raw.githubusercontent.com/Adaptix-Framework/Extension-Kit/refs/heads/main/SAL-BOF/privcheck/download_vulnerable_driver_list.py'
+examples: '
+ PrivCheck-vulndrivers
+'
+---
+name: routeprint
+srcfile: "entry"
+description: "List IPv4 routes"
+author: Trustedsec
+Arch: ["x64", "x86"]
+tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
+category: "SAL-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/routeprint/entry.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
+examples: '
+ routeprint
+'
+---
+name: uptime
+srcfile: "entry"
+description: "List system boot time and how long it has been running"
+author: Trustedsec
+Arch: ["x64", "x86"]
+tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
+category: "SAL-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/uptime/entry.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
+examples: '
+ uptime
+'
+---
+name: useridletime
+srcfile: "entry"
+description: "Shows how long the user as been idle, displayed in seconds, minutes, hours and days"
+author: Trustedsec
+Arch: ["x64", "x86"]
+tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
+category: "SAL-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/useridletime/entry.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
+examples: '
+ useridletime
+'
+---
+name: whoami
+srcfile: "entry"
+description: "List whoami /all"
+author: Trustedsec
+Arch: ["x64", "x86"]
+tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
+category: "SAL-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/whoami/entry.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
+examples: '
+ whoami
+'
+---
