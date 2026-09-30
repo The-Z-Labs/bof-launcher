@@ -7,6 +7,9 @@ fn genDocYaml(b: *std.Build) !void {
     defer doc_file.deinit();
 
     const yaml_files = [_][]const u8{
+        // manuals for Z-Labs BOFs
+        "Z-Labs-BOF.yaml",
+        // manuals for 3rd party BOFs
         "examples/implant/BOF-manuals/AD-BOF.yaml",
         "examples/implant/BOF-manuals/SAL-BOF.yaml",
         "examples/implant/BOF-manuals/SAR-BOF.yaml",
@@ -22,7 +25,6 @@ fn genDocYaml(b: *std.Build) !void {
         _ = std.mem.replace(u8, content, "\r\n", "\n", content);
 
         try doc_file.writer.writeAll(content);
-        try doc_file.writer.flush();
     }
 
     const source = try std.mem.Allocator.dupeZ(b.allocator, u8, doc_file.written());
@@ -136,7 +138,7 @@ pub fn build(b: *std.Build) !void {
 
     b.getInstallStep().dependOn(&b.addInstallFile(
         bofs_dep.namedLazyPath("bof_collection_doc"),
-        "bof-collection.yaml",
+        "../Z-Labs-BOF.yaml",
     ).step);
 
     //
