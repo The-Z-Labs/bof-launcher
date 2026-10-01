@@ -14,7 +14,7 @@ const beacon = @import("bof_api").beacon;
 const posix = @import("bof_api").posix;
 
 pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
-    @import("bof_api").init(adata, alen, .{});
+    _ = .{ adata, alen };
 
     var name: [posix.HOST_NAME_MAX + 1]u8 = undefined;
     const namelen: usize = posix.HOST_NAME_MAX;
@@ -23,7 +23,7 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
     if (ret != 0)
         return 1;
 
-    _ = beacon.printf(.output, "%s\n", &name);
+    _ = beacon.printf(.output, "%s\n", .{&name});
 
     return 0;
 }

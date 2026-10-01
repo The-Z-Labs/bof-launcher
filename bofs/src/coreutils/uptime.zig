@@ -54,29 +54,29 @@ fn getUptimeLinux() !u8 {
     const SECONDS_PER_DAY = 86400;
     const uptimeSec = try std.fmt.parseInt(u64, uptimeStr, 10);
 
-    _ = printf(.output, "up: ");
+    _ = printf(.output, "up: ", .{});
 
     const days: u8 = @intCast(uptimeSec / SECONDS_PER_DAY);
     const hours: u8 = @intCast(uptimeSec % SECONDS_PER_DAY / 3600);
     const minutes: u8 = @intCast(uptimeSec % SECONDS_PER_DAY % 3600 / 60);
 
     if (days > 0) {
-        _ = printf(.output, "%d ", days);
+        _ = printf(.output, "%d ", .{days});
         if (days == 1) {
-            _ = printf(.output, "day ");
-        } else _ = printf(.output, "days ");
+            _ = printf(.output, "day ", .{});
+        } else _ = printf(.output, "days ", .{});
     }
     if (hours > 0) {
-        _ = printf(.output, "%d ", hours);
+        _ = printf(.output, "%d ", .{hours});
         if (hours == 1) {
-            _ = printf(.output, "hour ");
-        } else _ = printf(.output, "hours ");
+            _ = printf(.output, "hour ", .{});
+        } else _ = printf(.output, "hours ", .{});
     }
     if (minutes > 0) {
-        _ = printf(.output, "%d ", minutes);
+        _ = printf(.output, "%d ", .{minutes});
         if (minutes == 1) {
-            _ = printf(.output, "minute ");
-        } else _ = printf(.output, "minutes ");
+            _ = printf(.output, "minute ", .{});
+        } else _ = printf(.output, "minutes ", .{});
     }
 
     // get number of users on the system
@@ -91,15 +91,15 @@ fn getUptimeLinux() !u8 {
         ut_entry = posix.getutxent();
     }
     _ = posix.endutxent();
-    _ = printf(.output, " users: %d", nuser);
+    _ = printf(.output, " users: %d", .{nuser});
 
-    _ = printf(.output, "\n");
+    _ = printf(.output, "\n", .{});
 
     return 0;
 }
 
 pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
-    @import("bof_api").init(adata, alen, .{});
+    _ = .{ adata, alen };
 
     if (@import("builtin").os.tag == .linux) {
         return getUptimeLinux() catch |err| switch (err) {

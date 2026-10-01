@@ -135,8 +135,6 @@ fn prepare_pipe(p: *[2]i32) !void {
 }
 
 pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
-    @import("bof_api").init(adata, alen, .{});
-
     var parser = beacon.datap{};
     beacon.dataParse(&parser, adata, alen);
 

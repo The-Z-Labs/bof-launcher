@@ -36,8 +36,6 @@ pub extern fn getgrouplist(user: [*:0]const u8, group: c.gid_t, groups: [*]c.gid
 const NGROUPS_MAX = 32;
 
 pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
-    @import("bof_api").init(adata, alen, .{});
-
     const printf = beacon.printf;
 
     var ruid: c.uid_t = undefined;
@@ -99,46 +97,46 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
         return 1;
     }
 
-    _ = printf(.output, "uid=%d", ruid);
+    _ = printf(.output, "uid=%d", .{ruid});
     if (pwd) |p|
-        _ = printf(.output, "(%s)", p.name);
+        _ = printf(.output, "(%s)", .{p.name});
 
-    _ = printf(.output, " gid=%d", rgid);
+    _ = printf(.output, " gid=%d", .{rgid});
     grp = posix.getgrgid(rgid);
     if (grp) |gr|
-        _ = printf(.output, "(%s)", gr.gr_name);
+        _ = printf(.output, "(%s)", .{gr.gr_name});
 
     if (alen == 0) {
         if (euid != ruid) {
-            _ = printf(.output, " euid=%d", euid);
+            _ = printf(.output, " euid=%d", .{euid});
             pwd = posix.getpwuid(euid);
             if (pwd) |p| {
-                _ = printf(.output, "(%s)", p.name);
+                _ = printf(.output, "(%s)", .{p.name});
             }
         }
 
         if (egid != rgid) {
-            _ = printf(.output, " egid=%d", egid);
+            _ = printf(.output, " egid=%d", .{egid});
             grp = posix.getgrgid(egid);
             if (grp) |g| {
-                _ = printf(.output, "(%s)", g.gr_name);
+                _ = printf(.output, "(%s)", .{g.gr_name});
             }
         }
     }
 
-    _ = printf(.output, " groups=");
+    _ = printf(.output, " groups=", .{});
 
     var i: usize = 0;
     for (groups_names.items) |name| {
-        _ = printf(.output, "%d(%s)", groups_gids[i], name.ptr);
+        _ = printf(.output, "%d(%s)", .{ groups_gids[i], name.ptr });
 
         if (i != groups_names.items.len - 1)
-            _ = printf(.output, ",");
+            _ = printf(.output, ",", .{});
 
         i = i + 1;
         allocator.free(name);
     }
-    _ = printf(.output, "\n");
+    _ = printf(.output, "\n", .{});
 
     return 0;
 }

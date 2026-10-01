@@ -7,7 +7,7 @@ comptime {
 }
 
 pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
-    @import("bof_api").init(adata, alen, .{});
+    _ = .{ adata, alen };
 
     var name_buf: [128:0]u8 = undefined;
     const name_len = w32.GetModuleFileNameA(null, &name_buf, 128);

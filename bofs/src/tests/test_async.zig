@@ -3,9 +3,7 @@ const beacon = @import("bof_api").beacon;
 const w32 = @import("bof_api").win32;
 
 pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
-    @import("bof_api").init(adata, alen, .{});
-
-    _ = beacon.printf(.output, "--- test_async.zig ---\n");
+    _ = beacon.printf(.output, "--- test_async.zig ---\n", .{});
 
     var parser: beacon.datap = .{};
     beacon.dataParse(&parser, adata, alen);
@@ -14,7 +12,7 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
 
     if (@import("builtin").os.tag == .windows) {
         for (0..10) |_| {
-            _ = beacon.printf(.output, "Async bof #%d is running...\n", id);
+            _ = beacon.printf(.output, "Async bof #%d is running...\n", .{id});
             w32.Sleep(100);
         }
 

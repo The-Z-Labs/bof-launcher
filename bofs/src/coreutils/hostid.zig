@@ -14,10 +14,10 @@ const beacon = @import("bof_api").beacon;
 const posix = @import("bof_api").posix;
 
 pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
-    @import("bof_api").init(adata, alen, .{});
+    _ = .{ adata, alen };
 
     const id = posix.gethostid();
-    _ = beacon.printf(.output, "%08x\n", id);
+    _ = beacon.printf(.output, "%08x\n", .{id});
 
     return 0;
 }

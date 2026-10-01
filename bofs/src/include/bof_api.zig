@@ -7,15 +7,6 @@ pub const srdi = @import("srdi.zig");
 
 const std = @import("std");
 
-pub const InitOptions = struct{};
-
-pub fn init(adata: ?[*]u8, alen: i32, options: InitOptions) void {
-    _ = adata;
-    _ = alen;
-    _ = options;
-    beacon.init();
-}
-
 pub fn print(@"type": beacon.CallbackType, comptime fmt: []const u8, args: anytype) void {
     const len = std.fmt.count(fmt, args);
     if (len < 4096) {

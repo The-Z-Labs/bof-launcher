@@ -34,13 +34,11 @@ fn func() !void {
 }
 
 pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
-    @import("bof_api").init(adata, alen, .{});
-
     const printf = beacon.printf;
 
-    _ = printf(.output, "--- test_obj1.zig ---\n");
+    _ = printf(.output, "--- test_obj1.zig ---\n", .{});
 
-    _ = printf(.output, "BeaconPrintf %s\n", "has been called");
+    _ = printf(.output, "BeaconPrintf %s\n", .{"has been called"});
     var parser = beacon.datap{};
 
     beacon.dataParse(&parser, adata, alen);
@@ -50,26 +48,26 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
     const num = beacon.dataInt(&parser);
     const num_short = beacon.dataShort(&parser);
     if (alen > 0) {
-        _ = printf(.output, "arg_len (from go): %d\n", alen);
-        _ = printf(.output, "Length: (from go): %d\n", len);
+        _ = printf(.output, "arg_len (from go): %d\n", .{alen});
+        _ = printf(.output, "Length: (from go): %d\n", .{len});
 
         //const stdout = std.io.getStdErr().writer();
         //const slice = arg_data.?[0..@as(usize, @intCast(arg_len))];
         //const str = fmt.fmtSliceHexLower(slice);
         //stdout.print("bof debug: arg_data (slice): {any}\n", .{str}) catch unreachable;
 
-        _ = printf(.output, "permissions: (from go): %s\n", permissions);
-        _ = printf(.output, "path: (from go): %s\n", path);
-        _ = printf(.output, "number (int): (from go): %d\n", num);
-        _ = printf(.output, "number (short): (from go): %d\n", num_short);
+        _ = printf(.output, "permissions: (from go): %s\n", .{permissions});
+        _ = printf(.output, "path: (from go): %s\n", .{path});
+        _ = printf(.output, "number (int): (from go): %d\n", .{num});
+        _ = printf(.output, "number (short): (from go): %d\n", .{num_short});
     }
 
     func() catch unreachable;
 
-    _ = printf(.output, "BeaconPrintf %s\n", "has been called second time");
+    _ = printf(.output, "BeaconPrintf %s\n", .{"has been called second time"});
 
     const buf = "Hello world!";
-    _ = printf(.output, "aaaaaaaaaaaaaaa %s %d\n", buf, global_var);
+    _ = printf(.output, "aaaaaaaaaaaaaaa %s %d\n", .{ buf, global_var });
 
     global_var += 2;
     const ret = global_var;

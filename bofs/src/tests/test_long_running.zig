@@ -8,11 +8,10 @@ comptime {
 }
 
 pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
-    @import("bof_api").init(adata, alen, .{});
-
+    _ = .{ adata, alen };
     const printf = beacon.printf;
 
-    _ = printf(.output, "--- test_long_running.zig ---\n");
+    _ = printf(.output, "--- test_long_running.zig ---\n", .{});
 
     if (@import("builtin").os.tag == .windows) {
         const allocator = std.heap.page_allocator;
@@ -27,13 +26,13 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
             {
                 const mem = allocator.alloc(u8, 100 + 123 * i) catch return 1;
                 allocs1.append(mem) catch return 1;
-                _ = printf(.output, "alloc() returned: 0x%x\n", @intFromPtr(mem.ptr));
+                _ = printf(.output, "alloc() returned: 0x%x\n", .{@intFromPtr(mem.ptr)});
                 w32.Sleep(0);
             }
             {
                 const addr = w32.VirtualAlloc(null, 1024 + i * 1024, w32.MEM_COMMIT + w32.MEM_RESERVE, w32.PAGE_READWRITE);
                 if (addr == null) return 2;
-                _ = printf(.output, "VirtualAlloc() returned: 0x%x\n", @intFromPtr(addr));
+                _ = printf(.output, "VirtualAlloc() returned: 0x%x\n", .{@intFromPtr(addr)});
                 w32.Sleep(0);
                 _ = w32.VirtualFree(addr, 0, w32.MEM_RELEASE);
             }

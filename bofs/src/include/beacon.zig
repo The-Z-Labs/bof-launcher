@@ -12,50 +12,6 @@ pub const formatp = extern struct {
     size: i32 = 0,
 };
 
-pub fn init() void {
-    printf = def(PFN_BeaconPrintf, "BeaconPrintf");
-    output = def(PFN_BeaconOutput, "BeaconOutput");
-
-    dataInt = def(PFN_BeaconDataInt, "BeaconDataInt");
-    dataShort = def(PFN_BeaconDataShort, "BeaconDataShort");
-    dataLength = def(PFN_BeaconDataLength, "BeaconDataLength");
-
-    formatPrintf = def(PFN_BeaconFormatPrintf, "BeaconFormatPrintf");
-    formatAlloc = def(PFN_BeaconFormatAlloc, "BeaconFormatAlloc");
-    formatReset = def(PFN_BeaconFormatReset, "BeaconFormatReset");
-    formatFree = def(PFN_BeaconFormatFree, "BeaconFormatFree");
-    formatAppend = def(PFN_BeaconFormatAppend, "BeaconFormatAppend");
-    formatToString = def(PFN_BeaconFormatToString, "BeaconFormatToString");
-    formatInt = def(PFN_BeaconFormatInt, "BeaconFormatInt");
-    toWideChar = def(PFN_toWideChar, "toWideChar");
-
-    addValue = def(PFN_BeaconAddValue, "BeaconAddValue");
-    getValue = def(PFN_BeaconGetValue, "BeaconGetValue");
-    removeValue = def(PFN_BeaconRemoveValue, "BeaconRemoveValue");
-    isAdmin = def(PFN_BeaconIsAdmin, "BeaconIsAdmin");
-}
-
-pub var printf: PFN_BeaconPrintf = undefined;
-pub var output: PFN_BeaconOutput = undefined;
-
-pub var dataInt: PFN_BeaconDataInt = undefined;
-pub var dataShort: PFN_BeaconDataShort = undefined;
-pub var dataLength: PFN_BeaconDataLength = undefined;
-
-pub var formatPrintf: PFN_BeaconFormatPrintf = undefined;
-pub var formatAlloc: PFN_BeaconFormatAlloc = undefined;
-pub var formatReset: PFN_BeaconFormatReset = undefined;
-pub var formatFree: PFN_BeaconFormatFree = undefined;
-pub var formatAppend: PFN_BeaconFormatAppend = undefined;
-pub var formatToString: PFN_BeaconFormatToString = undefined;
-pub var formatInt: PFN_BeaconFormatInt = undefined;
-pub var toWideChar: PFN_toWideChar = undefined;
-
-pub var addValue: PFN_BeaconAddValue = undefined;
-pub var getValue: PFN_BeaconGetValue = undefined;
-pub var removeValue: PFN_BeaconRemoveValue = undefined;
-pub var isAdmin: PFN_BeaconIsAdmin = undefined;
-
 fn def(comptime T: type, comptime funcname: []const u8) T {
     return @extern(T, .{
         .name = funcname,
@@ -72,8 +28,20 @@ pub const CallbackType = enum(i32) {
     custom_last = 0x13ff,
 };
 
-const PFN_BeaconPrintf = *const fn (@"type": CallbackType, fmt: [*:0]const u8, ...) callconv(.c) i32;
-const PFN_BeaconOutput = *const fn (@"type": CallbackType, data: ?[*]u8, len: i32) callconv(.c) void;
+pub fn printf(@"type": CallbackType, fmt: [*:0]const u8, args: anytype) i32 {
+    const f = def(*const fn (CallbackType, [*:0]const u8, ...) callconv(.c) i32, "BeaconPrintf");
+    return @call(.auto, f, .{@"type", fmt} ++ args);
+}
+
+pub fn formatPrintf(parser: ?*formatp, fmt: [*:0]const u8, args: anytype) i32 {
+    const f = def(*const fn (?*formatp, [*:0]const u8, ...) callconv(.c) i32, "BeaconFormatPrintf");
+    return @call(.auto, f, .{parser, fmt} ++ args);
+}
+
+pub fn output(@"type": CallbackType, data: ?[*]u8, len: i32) callconv(.c) void {
+    const f = def(*const @TypeOf(output), "BeaconOutput");
+    f(@"type", data, len);
+}
 
 pub fn dataParse(parser: ?*datap, buffer: ?[*]u8, size: i32) callconv(.c) void {
     const f = def(*const @TypeOf(dataParse), "BeaconDataParse");
@@ -85,20 +53,72 @@ pub fn dataExtract(parser: ?*datap, size: ?*i32) callconv(.c) ?[*:0]u8 {
     return f(parser, size);
 }
 
-const PFN_BeaconDataInt = *const fn (parser: *datap) callconv(.c) i32;
-const PFN_BeaconDataShort = *const fn (parser: *datap) callconv(.c) i16;
-const PFN_BeaconDataLength = *const fn (parser: *datap) callconv(.c) i32;
+pub fn dataInt(parser: *datap) callconv(.c) i32 {
+    const f = def(*const @TypeOf(dataInt), "BeaconDataInt");
+    return f(parser);
+}
 
-const PFN_BeaconFormatPrintf = *const fn (parser: ?*formatp, fmt: [*:0]const u8, ...) callconv(.c) i32;
-const PFN_BeaconFormatAlloc = *const fn (format: ?*formatp, maxsz: i32) callconv(.c) void;
-const PFN_BeaconFormatReset = *const fn (format: ?*formatp) callconv(.c) void;
-const PFN_BeaconFormatFree = *const fn (format: ?*formatp) callconv(.c) void;
-const PFN_BeaconFormatAppend = *const fn (format: ?*formatp, text: [*]u8, len: i32) callconv(.c) void;
-const PFN_BeaconFormatToString = *const fn (format: ?*formatp, size: ?*i32) callconv(.c) [*]u8;
-const PFN_BeaconFormatInt = *const fn (format: ?*formatp, value: i32) callconv(.c) void;
-const PFN_toWideChar = *const fn (src: ?[*:0]const u8, dst: ?[*]u16, max: i32) callconv(.c) i32;
+pub fn dataShort(parser: *datap) callconv(.c) i16 {
+    const f = def(*const @TypeOf(dataShort), "BeaconDataShort");
+    return f(parser);
+}
 
-const PFN_BeaconAddValue = *const fn (key: ?[*:0]const u8, ptr: ?*anyopaque) callconv(.c) i32;
-const PFN_BeaconGetValue = *const fn (key: ?[*:0]const u8) callconv(.c) ?*anyopaque;
-const PFN_BeaconRemoveValue = *const fn (key: ?[*:0]const u8) callconv(.c) i32;
-const PFN_BeaconIsAdmin = *const fn () callconv(.c) bool;
+pub fn dataLength(parser: *datap) callconv(.c) i32 {
+    const f = def(*const @TypeOf(dataLength), "BeaconDataLength");
+    return f(parser);
+}
+
+pub fn formatAlloc(format: ?*formatp, maxsz: i32) callconv(.c) void {
+    const f = def(*const @TypeOf(formatAlloc), "BeaconFormatAlloc");
+    f(format, maxsz);
+}
+
+pub fn formatReset(format: ?*formatp) callconv(.c) void {
+    const f = def(*const @TypeOf(formatReset), "BeaconFormatReset");
+    f(format);
+}
+
+pub fn formatFree(format: ?*formatp) callconv(.c) void {
+    const f = def(*const @TypeOf(formatFree), "BeaconFormatFree");
+    f(format);
+}
+
+pub fn formatAppend(format: ?*formatp, text: [*]u8, len: i32) callconv(.c) void {
+    const f = def(*const @TypeOf(formatAppend), "BeaconFormatAppend");
+    f(format, text, len);
+}
+
+pub fn formatToString(format: ?*formatp, size: ?*i32) callconv(.c) [*]u8 {
+    const f = def(*const @TypeOf(formatToString), "BeaconFormatToString");
+    return f(format, size);
+}
+
+pub fn formatInt(format: ?*formatp, value: i32) callconv(.c) void {
+    const f = def(*const @TypeOf(formatInt), "BeaconFormatInt");
+    f(format, value);
+}
+
+pub fn toWideChar(src: ?[*:0]const u8, dst: ?[*]u16, max: i32) callconv(.c) i32 {
+    const f = def(*const @TypeOf(toWideChar), "toWideChar");
+    return f(src, dst, max);
+}
+
+pub fn addValue(key: ?[*:0]const u8, ptr: ?*anyopaque) callconv(.c) i32 {
+    const f = def(*const @TypeOf(addValue), "BeaconAddValue");
+    return f(key, ptr);
+}
+
+pub fn getValue(key: ?[*:0]const u8) callconv(.c) ?*anyopaque {
+    const f = def(*const @TypeOf(getValue), "BeaconGetValue");
+    return f(key);
+}
+
+pub fn removeValue(key: ?[*:0]const u8) callconv(.c) i32 {
+    const f = def(*const @TypeOf(removeValue), "BeaconRemoveValue");
+    return f(key);
+}
+
+pub fn isAdmin() callconv(.c) bool {
+    const f = def(*const @TypeOf(isAdmin), "BeaconIsAdmin");
+    return f();
+}
