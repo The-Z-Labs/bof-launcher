@@ -7,25 +7,6 @@ pub const srdi = @import("srdi.zig");
 
 const std = @import("std");
 
-pub fn print(@"type": beacon.CallbackType, comptime fmt: []const u8, args: anytype) void {
-    const len = std.fmt.count(fmt, args);
-    if (len < 4096) {
-        var buf: [4096]u8 = undefined;
-        const str = std.fmt.bufPrintZ(buf[0..], fmt, args) catch unreachable;
-        _ = beacon.printf(@"type", "%s", str.ptr);
-    } else {
-        var a: std.Io.Writer.Allocating = .init(std.heap.page_allocator);
-        defer a.deinit();
-
-        a.writer.print(fmt, args) catch unreachable;
-        a.writer.writeByte(0) catch unreachable;
-
-        //const str = std.fmt.allocPrintZ(std.heap.page_allocator, fmt, args) catch unreachable;
-        //defer std.heap.page_allocator.free(str);
-        _ = beacon.printf(@"type", "%s", a.written().ptr);
-    }
-}
-
 //
 // Functions that can be generated implicitly by the compiler
 //
