@@ -314,13 +314,13 @@ pub fn build(b: *std.Build) !void {
     }
 
     //
-    // install cli4bofs
+    // install 'bof' binary
     //
     for (supported_targets) |target_query| {
         const target = b.resolveTargetQuery(target_query);
 
         const dep = b.dependency("cli4bofs", .{ .target = target, .optimize = optimize });
-        const exe = dep.artifact(b.fmt("cli4bofs_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }));
+        const exe = dep.artifact(b.fmt("bof_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }));
         b.installArtifact(exe);
     }
 

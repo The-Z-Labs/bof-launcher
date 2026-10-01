@@ -20,7 +20,7 @@ pub fn build(b: *std.Build) void {
 
     const exe = b.addExecutable(.{
         .name = b.fmt(
-            "cli4bofs_{s}_{s}",
+            "bof_{s}_{s}",
             .{
                 @import("bof_launcher_lib").osTagStr(target),
                 @import("bof_launcher_lib").cpuArchStr(target),
