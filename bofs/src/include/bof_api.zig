@@ -739,9 +739,8 @@ fn strlen(s: [*:0]const u8) linksection(section_name) callconv(.c) usize {
 comptime {
     if (@import("builtin").mode != .Debug) {
         @export(&strlen, .{ .name = "strlen", .linkage = .strong });
-    }
-
-    if (@import("builtin").mode != .Debug and @import("builtin").os.tag == .windows) {
-        _ = win32;
+        if (@import("builtin").os.tag == .windows) {
+            _ = win32;
+        }
     }
 }
