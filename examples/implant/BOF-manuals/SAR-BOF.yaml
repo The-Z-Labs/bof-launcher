@@ -12,3 +12,55 @@ sources:
 examples: |
  taskhound <target> [username] [password] [-save <directory>] [-unsaved-creds] [-grab-blobs]
  taskhound DC01 -u domain\admin -p P@ssw0rd -save C:\Output -grab-blobs
+---
+name: quser
+description: "Query user sessions on a remote machine, providing session information"
+author: netero1010
+Arch: ["x64", "x86"]
+tags: ['windows', 'net-recon']
+category: "SAR-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/netero1010/Quser-BOF/refs/heads/main/quser.c'
+examples: '
+ quser <ip/hostname>
+---
+name: nbtscan
+description: "Name scanner that queries NetBIOS name service (port 137) to discover names, MAC addresses, and service information"
+author: shashinma
+Arch: ["x64", "x86"]
+tags: ['windows', 'net-recon']
+category: "SAR-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/shashinma/NBTscan-BOF/refs/heads/master/nbtscan/nbtscan.c'
+    - 'https://raw.githubusercontent.com/shashinma/NBTscan-BOF/refs/heads/master/nbtscan/nbtscan.h'
+examples: |
+ nbtscan <target> [-v] [-q] [-e] [-l] [-s <separator>] [-t <timeout>] [-no-targets]
+ nbtscan 192.168.1.0/24 -v -t 3000
+
+ - `target` (required): Destination IP address, range or CIDR format
+  - Single IP `192.168.1.1`
+  - IP range `192.168.1.1-192.168.1.20` or `192.168.1.1-20`
+  - CIDR `192.168.1.0/24`
+  - Comma-separated `192.168.1.1,192.168.1.5,192.168.1.10`
+ - `-v` (optional): Verbose output - shows detailed NetBIOS information including service types
+ - `-q` (optional): Quiet mode - suppresses error messages
+ - `-e` (optional): Output in `/etc/hosts` format
+ - `-l` (optional): Output in `lmhosts` format
+ - `-s <separator>` (optional): Script-friendly output with custom separator (enables script mode)
+ - `-t <timeout>` (optional): Response timeout in milliseconds (default: 1000, max: 600000)
+
+ NetBIOS Service Types
+
+ | Code | Service Type |
+ |------|--------------|
+ | `00` | Workstation Service |
+ | `03` | Messenger Service |
+ | `20` | File Server Service |
+ | `1B` | Domain Master Browser |
+ | `1C` | Domain Controller |
+ | `1D` | Master Browser |
+ | `1E` | Browser Service Elections |

