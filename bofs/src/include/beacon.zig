@@ -15,7 +15,7 @@ pub const formatp = extern struct {
 fn def(comptime T: type, comptime funcname: []const u8) T {
     return @extern(T, .{
         .name = funcname,
-        .is_dll_import = @import("builtin").mode != .Debug,
+        .is_dll_import = @import("builtin").mode != .debug,
     });
 }
 

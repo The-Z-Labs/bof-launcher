@@ -29,7 +29,7 @@ pub fn embedFunctionCode(name: []const u8) void {
             else => false,
         };
 
-        if (@import("builtin").mode != .Debug) {
+        if (@import("builtin").mode != .debug) {
             if (std.mem.eql(u8, name, "__stackprobe__")) {
                 if (@import("builtin").os.tag == .windows) {
                     if (arch == .x86) {
@@ -431,12 +431,14 @@ const native_endian = builtin.cpu.arch.endian();
 const is_test = builtin.is_test;
 const Log2Int = std.math.Log2Int;
 
+/// Allows to access underlying bits as two equally sized lower and higher
+/// signed or unsigned integers.
 fn HalveInt(comptime T: type, comptime signed_half: bool) type {
     return extern union {
-        const bits = @divExact(@typeInfo(T).int.bits, 2);
-        const HalfTU = std.meta.Int(.unsigned, bits);
-        const HalfTS = std.meta.Int(.signed, bits);
-        const HalfT = if (signed_half) HalfTS else HalfTU;
+        pub const bits = @divExact(@typeInfo(T).int.bits, 2);
+        pub const HalfTU = @Int(.unsigned, bits);
+        pub const HalfTS = @Int(.signed, bits);
+        pub const HalfT = if (signed_half) HalfTS else HalfTU;
 
         all: T,
         s: if (native_endian == .little)
@@ -596,7 +598,7 @@ fn udivmod(comptime T: type, a_: T, b_: T, maybe_rem: ?*T) T {
     @setRuntimeSafety(is_test);
 
     const HalfT = HalveInt(T, false).HalfT;
-    const SignedT = std.meta.Int(.signed, @bitSizeOf(T));
+    const SignedT = @Int(.signed, @bitSizeOf(T));
 
     if (b_ > a_) {
         if (maybe_rem) |rem| {
@@ -737,7 +739,7 @@ fn strlen(s: [*:0]const u8) linksection(section_name) callconv(.c) usize {
 }
 
 comptime {
-    if (@import("builtin").mode != .Debug) {
+    if (@import("builtin").mode != .debug) {
         @export(&strlen, .{ .name = "strlen", .linkage = .strong });
         if (@import("builtin").os.tag == .windows) {
             _ = win32;

@@ -110,7 +110,7 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
 
         // In Debug mode we restore memory protection to RW because Zig's memory allocator
         // does something like this: @memset(mem, undefined) when freeing it.
-        if (@import("builtin").mode == .Debug) {
+        if (@import("builtin").mode == .debug) {
             if (w32.VirtualProtect(
                 @constCast(shellcode_bytes.ptr),
                 4096,

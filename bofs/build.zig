@@ -110,10 +110,10 @@ pub fn build(b: *std.Build) !void {
 
         const full_name = bof.fullName(b.allocator);
 
-        if (bof.optimize == .Debug) {
+        if (bof.optimize == .debug) {
             const win32_dep = b.dependency("bof_launcher_win32", .{ .bof = false });
             const win32_module = win32_dep.module("bof_launcher_win32");
-            const bof_api_module = b.addModule("bof_api", .{
+            const bof_api_module = b.createModule(.{
                 .root_source_file = b.path("src/include/bof_api.zig"),
             });
             bof_api_module.addImport("bof_launcher_win32", win32_module);
@@ -130,7 +130,7 @@ pub fn build(b: *std.Build) !void {
                 .root_module = b.createModule(.{
                     .root_source_file = b.path("src/_debug_entry.zig"),
                     .target = target,
-                    .optimize = .Debug,
+                    .optimize = .debug,
                     .link_libc = true,
                     .single_threaded = true,
                     .sanitize_thread = false,
@@ -151,7 +151,7 @@ pub fn build(b: *std.Build) !void {
         } else {
             const win32_dep = b.dependency("bof_launcher_win32", .{ .bof = true });
             const win32_module = win32_dep.module("bof_launcher_win32");
-            const bof_api_module = b.addModule("bof_api", .{
+            const bof_api_module = b.createModule(.{
                 .root_source_file = b.path("src/include/bof_api.zig"),
             });
             bof_api_module.addImport("bof_launcher_win32", win32_module);
@@ -207,8 +207,8 @@ pub const Bof = struct {
         ) catch @panic("OOM");
 
         const lang: BofLang = blk: {
-            std.Io.Dir.cwd().access(io, b.fmt("{s}.zig", .{b.pathFromRoot(bof_src_path)}), .{}) catch {
-                std.Io.Dir.cwd().access(io, b.fmt("{s}.s", .{b.pathFromRoot(bof_src_path)}), .{}) catch break :blk .c;
+            std.Io.Dir.cwd().access(io, b.fmt("bofs/{s}.zig", .{bof_src_path}), .{}) catch {
+                std.Io.Dir.cwd().access(io, b.fmt("bofs/{s}.s", .{bof_src_path}), .{}) catch break :blk .c;
                 break :blk .@"asm";
             };
             break :blk .zig;
@@ -262,7 +262,7 @@ pub const Bof = struct {
     }
 
     pub fn fullName(bof: Bof, allocator: std.mem.Allocator) []const u8 {
-        if (bof.optimize == .Debug) {
+        if (bof.optimize == .debug) {
             return std.mem.join(
                 allocator,
                 ".",
@@ -295,8 +295,8 @@ fn genBofList(b: *std.Build, optimize: std.builtin.OptimizeMode) []const Bof {
                 static.bofs[index] = bof;
                 index += 1;
 
-                if (optimize == .Debug) {
-                    const dbof = Bof.init(b, item, format, arch, .Debug);
+                if (optimize == .debug) {
+                    const dbof = Bof.init(b, item, format, arch, .debug);
 
                     // TODO: Compile errors
                     if (dbof.lang == .c) continue;
@@ -344,6 +344,8 @@ fn addBofObj(
             // Put every function in its own section
             //obj.link_function_sections = true;
             //obj.link_gc_sections = true;
+            //obj.use_lld = false;
+            //obj.use_new_linker = true;
             if (bof.custom_build_fn) |customBuild| _ = customBuild(b, obj, bof);
             break :blk obj;
         },
@@ -377,8 +379,8 @@ fn addBofObj(
 
     obj.root_module.pic = true;
     obj.root_module.single_threaded = true;
-    obj.root_module.strip = if (bof.optimize == .Debug) false else true;
-    if (bof.optimize != .Debug) {
+    obj.root_module.strip = if (bof.optimize == .debug) false else true;
+    if (bof.optimize != .debug) {
         obj.root_module.unwind_tables = .none;
         obj.root_module.omit_frame_pointer = true;
         obj.root_module.stack_protector = false;
@@ -615,7 +617,7 @@ fn build_sniffer(b: *std.Build, obj: *std.Build.Step.Compile, bof: Bof) []const 
             .sinix = null,
         },
     );
-    if (bof.optimize == .Debug) {
+    if (bof.optimize == .debug) {
         pcap_config.addValue("BDEBUG", i32, 1);
         pcap_config.addValue("YYDEBUG", i32, 1);
     }
@@ -642,7 +644,7 @@ fn generateBofCollectionYaml(b: *std.Build) !void {
         const bof = Bof.init(b, item, item.formats[0], item.archs[0], .ReleaseSmall);
         if (bof.lang == .@"asm") continue;
 
-        const source_file = try std.Io.Dir.cwd().openFile(io, b.pathFromRoot(bof.source_file_path), .{});
+        const source_file = try std.Io.Dir.cwd().openFile(io, b.fmt("bofs/{s}", .{bof.source_file_path}), .{});
         defer source_file.close(io);
 
         var source_file_reader = source_file.reader(io, &.{});

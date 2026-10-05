@@ -42,7 +42,7 @@ fn getUptimeLinux() !u8 {
 
     var threaded: std.Io.Threaded = .init_single_threaded;
     const io = threaded.io();
-    var buffer = [_]u8{0} ** 100;
+    var buffer: [100]u8 = @splat(0);
 
     const f = try std.Io.Dir.openFileAbsolute(io, UPTIME_FILE, .{ .mode = .read_only });
     defer f.close(io);

@@ -14,7 +14,7 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
     const name = if (name_len == 0) "unknown" else name_buf[0..name_len];
 
     var buf: [1024]u8 = undefined;
-    const info = std.fmt.bufPrintZ(
+    const info = std.mem.printSentinel(
         buf[0..],
         \\Hi, I'm a simple BOF that has been injected to a process:
         \\
@@ -23,6 +23,7 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
         \\GetCurrentThreadId() --> {d}
     ,
         .{ name, w32.GetCurrentProcessId(), w32.GetCurrentThreadId() },
+        0,
     ) catch unreachable;
 
     // Try to find application window

@@ -3066,6 +3066,45 @@ pub fn RtlGenRandom(
     return f(RandomBuffer, RandomBufferLength);
 }
 
+pub fn NtSetInformationObject(
+    Handle: HANDLE, // _In_
+    ObjectInformationClass: OBJECT_INFORMATION_CLASS, // _In_
+    ObjectInformation: PVOID, // _In_reads_bytes_(ObjectInformationLength)
+    ObjectInformationLength: ULONG, // _In_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtSetInformationObject), "NtSetInformationObject", "ntdll");
+    return f(Handle, ObjectInformationClass, ObjectInformation, ObjectInformationLength);
+}
+
+pub const VIRTUAL_MEMORY_INFORMATION_CLASS = enum(c_int) {
+    VmPrefetchInformation = 0,                  // s: MEMORY_PREFETCH_INFORMATION
+    VmPagePriorityInformation,                  // s: MEMORY_PAGE_PRIORITY_INFORMATION
+    VmCfgCallTargetInformation,                 // s: CFG_CALL_TARGET_LIST_INFORMATION // REDSTONE2
+    VmPageDirtyStateInformation,                // s: MEMORY_PAGE_DIRTY_STATE_INFORMATION // REDSTONE3
+    VmImageHotPatchInformation,                 // s: 19H1
+    VmPhysicalContiguityInformation,            // s: MEMORY_PHYSICAL_CONTIGUITY_INFORMATION // 20H1 // (requires SeLockMemoryPrivilege)
+    VmVirtualMachinePrepopulateInformation,
+    VmRemoveFromWorkingSetInformation,          // s: MEMORY_REMOVE_WORKING_SET_INFORMATION
+    MaxVmInfoClass
+};
+
+pub const MEMORY_RANGE_ENTRY = extern struct {
+    VirtualAddress: PVOID,
+    NumberOfBytes: SIZE_T,
+};
+
+pub fn NtSetInformationVirtualMemory(
+    ProcessHandle: HANDLE, // _In_
+    VmInformationClass: VIRTUAL_MEMORY_INFORMATION_CLASS, // _In_
+    NumberOfEntries: SIZE_T, // _In_
+    VirtualAddresses: [*]MEMORY_RANGE_ENTRY, // _In_reads_(NumberOfEntries)
+    VmInformation: PVOID, // _In_reads_bytes_(VmInformationLength)
+    VmInformationLength: ULONG, // _In_
+) linksection(section_name) callconv(.winapi) NTSTATUS {
+    const f = def(*const @TypeOf(NtSetInformationVirtualMemory), "NtSetInformationVirtualMemory", "ntdll");
+    return f(ProcessHandle, VmInformationClass, NumberOfEntries, VirtualAddresses, VmInformation, VmInformationLength);
+}
+
 //
 // advapi32 functions
 //
@@ -3283,7 +3322,7 @@ pub fn def(
 // This is necessary because Zig's libstd does not use __declspec(dllimport).
 //
 comptime {
-    if (@import("builtin").mode != .Debug and @import("builtin").os.tag == .windows and bof) {
+    if (@import("builtin").mode != .debug and @import("builtin").os.tag == .windows and bof) {
         @export(&NtAllocateVirtualMemory, .{ .name = "NtAllocateVirtualMemory", .linkage = .strong });
         @export(&NtFreeVirtualMemory, .{ .name = "NtFreeVirtualMemory", .linkage = .strong });
         @export(&NtDeviceIoControlFile, .{ .name = "NtDeviceIoControlFile", .linkage = .strong });
@@ -3332,5 +3371,7 @@ comptime {
         @export(&NtCancelIoFileEx, .{ .name = "NtCancelIoFileEx", .linkage = .strong });
         @export(&CreateProcessW, .{ .name = "CreateProcessW", .linkage = .strong });
         @export(&RtlExitUserProcess, .{ .name = "RtlExitUserProcess", .linkage = .strong });
+        @export(&NtSetInformationObject, .{ .name = "NtSetInformationObject", .linkage = .strong });
+        @export(&NtSetInformationVirtualMemory, .{ .name = "NtSetInformationVirtualMemory", .linkage = .strong });
     }
 }

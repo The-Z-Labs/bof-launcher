@@ -264,7 +264,7 @@ const Bof = struct {
                 var maybe_func_addr = gstate.func_lookup.get(sym_name);
 
                 if (@import("builtin").cpu.arch == .x86) {
-                    if (maybe_func_addr == null and @intFromEnum(sym.symbol.section_number) == 0) {
+                    if (maybe_func_addr == null and @backingInt(sym.symbol.section_number) == 0) {
                         var it = std.mem.splitScalar(u8, sym_name, '@');
                         const func_name = it.first();
                         maybe_func_addr = gstate.func_lookup.get(func_name[1..]);
@@ -272,7 +272,7 @@ const Bof = struct {
                 }
 
                 if (maybe_func_addr == null and
-                    @intFromEnum(sym.symbol.section_number) == 0 and
+                    @backingInt(sym.symbol.section_number) == 0 and
                     std.mem.indexOfScalar(u8, sym_name, '$') != null)
                 {
                     var it = std.mem.splitScalar(u8, sym_name, '$');
@@ -317,7 +317,7 @@ const Bof = struct {
                     }
                 }
 
-                if (maybe_func_addr == null and @intFromEnum(sym.symbol.section_number) == 0) {
+                if (maybe_func_addr == null and @backingInt(sym.symbol.section_number) == 0) {
                     std.log.err(
                         "\nSYMBOL NAME: {s} NOT FOUND ({s})!",
                         .{ p_sym_name, @tagName(@import("builtin").cpu.arch) },
@@ -326,8 +326,8 @@ const Bof = struct {
                 }
 
                 const addr_p = @intFromPtr(section_mappings.items[section_index].ptr) + reloc.virtual_address;
-                const addr_s = if (@intFromEnum(sym.symbol.section_number) > 0)
-                    @intFromPtr(section_mappings.items[@intFromEnum(sym.symbol.section_number) - 1].ptr)
+                const addr_s = if (@backingInt(sym.symbol.section_number) > 0)
+                    @intFromPtr(section_mappings.items[@intCast(@backingInt(sym.symbol.section_number) - 1)].ptr)
                 else
                     undefined;
 
@@ -373,7 +373,7 @@ const Bof = struct {
                         }
                     } else {
                         // We need to copy entire trampoline
-                        var trampoline = [_]u8{0} ** thunk_trampoline.len;
+                        var trampoline: [thunk_trampoline.len]u8 = @splat(0);
                         @memcpy(trampoline[0..], thunk_trampoline[0..]);
                         @memcpy(trampoline[thunk_offset..][0..@sizeOf(usize)], std.mem.asBytes(&func_addr));
                         @memcpy(
@@ -460,7 +460,10 @@ const Bof = struct {
 
         var go: ?*const fn (arg_data: ?[*]u8, arg_len: i32) callconv(.c) u8 = null;
         for (0..header.number_of_symbols) |symbol_index| {
-            const sym = symtab.at(symbol_index, .symbol);
+            const sym = blk: {
+                @setRuntimeSafety(false);
+                break :blk symtab.at(symbol_index, .symbol);
+            };
             const sym_name = sym_name: {
                 if (sym.symbol.getName()) |sym_name| {
                     break :sym_name sym_name;
@@ -473,7 +476,7 @@ const Bof = struct {
             if ((sym_name.len == 2 and sym_name[0] == 'g' and sym_name[1] == 'o') or // 64-bit
                 (sym_name.len == 3 and sym_name[0] == '_' and sym_name[1] == 'g' and sym_name[2] == 'o')) // 32-bit
             {
-                const section_index = @intFromEnum(sym.symbol.section_number) - 1;
+                const section_index: usize = @intCast(@backingInt(sym.symbol.section_number) - 1);
                 std.log.debug("go() section index: {d}", .{section_index});
 
                 const section = section_mappings.items[section_index];
@@ -483,11 +486,11 @@ const Bof = struct {
                 );
             }
 
-            if (@intFromEnum(sym.symbol.section_number) != 0 and sym.symbol.storage_class == .EXTERNAL) {
+            if (@backingInt(sym.symbol.section_number) != 0 and sym.symbol.storage_class == .EXTERNAL) {
                 // TODO: We support only functions for now
                 if (sym.symbol.type.complex_type != .FUNCTION) continue;
 
-                const section_index = @intFromEnum(sym.symbol.section_number) - 1;
+                const section_index: usize = @intCast(@backingInt(sym.symbol.section_number) - 1);
                 const section = section_mappings.items[section_index];
                 const addr = @intFromPtr(section.ptr) + sym.symbol.value;
 
@@ -777,7 +780,7 @@ const Bof = struct {
 
                         const a1 = @intFromPtr(got.ptr) + got_entry * thunk_trampoline.len;
 
-                        var trampoline = [_]u8{0} ** thunk_trampoline.len;
+                        var trampoline: [thunk_trampoline.len]u8 = @splat(0);
                         @memcpy(trampoline[0..], thunk_trampoline[0..]);
                         @memcpy(trampoline[thunk_offset..][0..@sizeOf(usize)], std.mem.asBytes(&func_ptr));
                         @memcpy(@as([*]u8, @ptrFromInt(a1))[0..thunk_trampoline.len], trampoline[0..]);
@@ -1581,7 +1584,7 @@ fn threadFuncCloneProcessLinux(bof: *Bof, arg_data: ?[]u8, context: *BofContext)
     }
 
     // parent process
-    var child_result: u32 = undefined;
+    var child_result: i32 = undefined;
     if (std.os.linux.waitpid(pid, &child_result, 0) == std.math.maxInt(usize)) @panic("waitpid() filed");
 
     if (child_result == 0) {
@@ -1859,12 +1862,12 @@ export fn bofMemoryMaskKey(key: [*]const u8, key_len: c_int) callconv(.c) c_int 
 export fn bofMemoryMaskSysApiCall(api_name: [*:0]const u8, masking_enabled: c_int) callconv(.c) c_int {
     if (!gstate.is_valid) return -1;
     if (std.mem.eql(u8, std.mem.span(api_name), "all")) {
-        inline for (@typeInfo(ZGateSysApiCall).@"enum".fields, 0..) |_, i| {
+        inline for (@typeInfo(ZGateSysApiCall).@"enum".field_names, 0..) |_, i| {
             gstate.mask_win32_api[i] = if (masking_enabled == 0) false else true;
         }
     } else {
-        inline for (@typeInfo(ZGateSysApiCall).@"enum".fields, 0..) |field, i| {
-            if (std.mem.eql(u8, std.mem.span(api_name), field.name)) {
+        inline for (@typeInfo(ZGateSysApiCall).@"enum".field_names, 0..) |field, i| {
+            if (std.mem.eql(u8, std.mem.span(api_name), field)) {
                 gstate.mask_win32_api[i] = if (masking_enabled == 0) false else true;
                 return 0;
             }
@@ -2082,7 +2085,7 @@ fn queryPageSize() u32 {
         return @intCast(info.dwPageSize);
     }
     // TODO: Is it correct?
-    const page_size: u32 = if (with_libc) @intCast(linux.getauxval(std.elf.AT_PAGESZ)) else 0;
+    const page_size: u32 = if (with_libc) @intCast(linux.getauxval(std.elf.AT.PAGESZ)) else 0;
     return if (page_size != 0) page_size else 4096;
 }
 
@@ -2144,7 +2147,7 @@ const gstate = struct {
 
     var mask_key_data: [32]u8 linksection(zgate_dsection) = undefined;
     var mask_key: []const u8 linksection(zgate_dsection) = mask_key_data[0..13];
-    var mask_win32_api: [@typeInfo(ZGateSysApiCall).@"enum".fields.len]bool = undefined;
+    var mask_win32_api: [@typeInfo(ZGateSysApiCall).@"enum".field_names.len]bool = undefined;
 
     var process_id: u32 = 0;
     var main_thread_id: u32 = 0;
@@ -2607,7 +2610,7 @@ const zgate_dsection = ".zdata";
 
 fn zgateBegin(func: ZGateSysApiCall) linksection(zgate_csection) bool {
     if (getCurrentProcessId() == gstate.process_id and getCurrentThreadId() != gstate.main_thread_id) return false;
-    if (!gstate.mask_win32_api[@intFromEnum(func)]) return false;
+    if (!gstate.mask_win32_api[@backingInt(func)]) return false;
 
     if (false) std.debug.print("API mask: {s}\n", .{@tagName(func)});
 

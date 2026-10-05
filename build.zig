@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub const supported_zig_version = std.SemanticVersion{ .major = 0, .minor = 16, .patch = 0 };
+pub const supported_zig_version = std.SemanticVersion{ .major = 0, .minor = 17, .patch = 0 };
 
 pub fn build(b: *std.Build) !void {
     ensureZigVersion() catch return;
@@ -25,17 +25,17 @@ pub fn build(b: *std.Build) !void {
     };
 
     const optimize = b.option(
-        std.builtin.OptimizeMode,
+        std.lang.Optimize,
         "optimize",
         "Prioritize performance, safety, or binary size (-O flag)",
-    ) orelse .ReleaseSmall;
+    ) orelse .small;
 
     const osTagStr = @import("bof_launcher_lib").osTagStr;
     const cpuArchStr = @import("bof_launcher_lib").cpuArchStr;
     const libFileName = @import("bof_launcher_lib").libFileName;
 
     const has_python = blk: {
-        _ = b.findProgram(&.{"python"}, &.{}) catch break :blk false;
+        _ = b.findProgram(.{.names = &.{"python"}}) orelse break :blk false;
         break :blk true;
     };
 
@@ -51,7 +51,7 @@ pub fn build(b: *std.Build) !void {
             bofs_dep.artifact(full_name),
             .{
                 .dest_dir = .{ .override = .{ .custom = bofs_install_path } },
-                .dest_sub_path = if (bof.optimize != .Debug) b.fmt("{s}.o", .{full_name}) else null,
+                .dest_sub_path = if (bof.optimize != .debug) b.fmt("{s}.o", .{full_name}) else null,
             },
         ).step;
 
