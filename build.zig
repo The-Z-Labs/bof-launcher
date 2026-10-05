@@ -5,10 +5,7 @@ pub const supported_zig_version = std.SemanticVersion{ .major = 0, .minor = 17, 
 pub fn build(b: *std.Build) !void {
     ensureZigVersion() catch return;
 
-    var threaded: std.Io.Threaded = .init_single_threaded;
-    const io = threaded.io();
-
-    std.Io.Dir.cwd().deleteTree(io, "zig-out") catch {};
+    std.Io.Dir.cwd().deleteTree(b.graph.io, "zig-out") catch {};
 
     const supported_targets: []const std.Target.Query = &.{
         .{ .cpu_arch = .x86, .os_tag = .windows, .abi = .gnu },
