@@ -637,17 +637,14 @@ fn generateBofCollectionYaml(b: *std.Build) !void {
     var doc_file: std.Io.Writer.Allocating = .init(b.allocator);
     defer doc_file.deinit();
 
-    var threaded: std.Io.Threaded = .init_single_threaded;
-    const io = threaded.io();
-
     for (bof_tables) |item| {
         const bof = Bof.init(b, item, item.formats[0], item.archs[0], .ReleaseSmall);
         if (bof.lang == .@"asm") continue;
 
-        const source_file = try std.Io.Dir.cwd().openFile(io, b.fmt("bofs/{s}", .{bof.source_file_path}), .{});
-        defer source_file.close(io);
+        const source_file = try std.Io.Dir.cwd().openFile(b.graph.io, b.fmt("bofs/{s}", .{bof.source_file_path}), .{});
+        defer source_file.close(b.graph.io);
 
-        var source_file_reader = source_file.reader(io, &.{});
+        var source_file_reader = source_file.reader(b.graph.io, &.{});
 
         const source = try source_file_reader.interface.allocRemaining(b.allocator, .unlimited);
         defer b.allocator.free(source);
