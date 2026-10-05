@@ -1860,7 +1860,7 @@ pub fn Sleep(dwMilliseconds: DWORD) linksection(section_name) callconv(.winapi) 
     f(dwMilliseconds);
 }
 
-pub fn ExitProcess(uExitCode: UINT) linksection(section_name) callconv(.winapi) noreturn {
+pub fn ExitProcess(uExitCode: UINT) linksection(section_name) callconv(.winapi) void {
     const f = def(*const @TypeOf(ExitProcess), "ExitProcess", "kernel32");
     f(uExitCode);
 }
@@ -2284,6 +2284,13 @@ pub fn CreateProcessW(
 //
 // ntdll functions
 //
+pub fn RtlExitUserProcess(
+    ExitStatus: NTSTATUS,
+) linksection(section_name) callconv(.winapi) void {
+    const f = def(*const @TypeOf(RtlExitUserProcess), "RtlExitUserProcess", "ntdll");
+    f(ExitStatus);
+}
+
 pub fn RtlCloneUserProcess(
     ProcessFlags: ULONG, // _In_
     ProcessSecurityDescriptor: ?PSECURITY_DESCRIPTOR, // _In_opt_
@@ -3324,5 +3331,6 @@ comptime {
         @export(&NtQuerySystemInformation, .{ .name = "NtQuerySystemInformation", .linkage = .strong });
         @export(&NtCancelIoFileEx, .{ .name = "NtCancelIoFileEx", .linkage = .strong });
         @export(&CreateProcessW, .{ .name = "CreateProcessW", .linkage = .strong });
+        @export(&RtlExitUserProcess, .{ .name = "RtlExitUserProcess", .linkage = .strong });
     }
 }

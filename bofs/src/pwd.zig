@@ -50,8 +50,7 @@ fn getCwd() !u8 {
 }
 
 pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
-    @import("bof_api").init(adata, alen, .{});
-
+    _ = .{ adata, alen };
     return getCwd() catch |err| switch (err) {
         error.NameTooLong => @intFromEnum(BofErrors.NameTooLong),
         error.CurrentWorkingDirectoryUnlinked => @intFromEnum(BofErrors.CwdUnlinked),

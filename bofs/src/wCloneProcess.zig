@@ -2,7 +2,7 @@ const std = @import("std");
 const w32 = @import("bof_api").win32;
 
 pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
-    @import("bof_api").init(adata, alen, .{});
+    _ = .{ adata, alen };
 
     var process_handle: w32.HANDLE = undefined;
     var thread_handle: w32.HANDLE = undefined;
@@ -24,5 +24,5 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
         &create_info,
         null,
     );
-    return if (nt_status == .SUCCESS) 0 else 1;
+    return if (nt_status == w32.STATUS_SUCCESS) 0 else 1;
 }

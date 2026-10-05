@@ -33,18 +33,18 @@ const bofs_included_in_launcher = [_]BofTableItem{
     .{ .name = "uptime", .dir = "coreutils/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "id", .dir = "coreutils/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     .{ .name = "who", .dir = "coreutils/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    //.{ .name = "cat", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
+    .{ .name = "cat", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     //.{ .name = "pwd", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     //.{ .name = "cd", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     //.{ .name = "ls", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     //.{ .name = "grep", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_regex },
     //.{ .name = "find", .formats = &.{ .elf, .coff }, .archs = &.{ .x64, .x86, .aarch64, .arm }, .custom_build_fn = build_regex },
     //.{ .name = "ifconfig", .dir = "net-tools/", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
-    //.{ .name = "wCloneProcess", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    .{ .name = "wCloneProcess", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wInjectionChainStage0", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wInjectionChainStage1", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
-    //.{ .name = "wInjectionChainStage2", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
-    //.{ .name = "wInjectionChainStage3", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    .{ .name = "wInjectionChainStage2", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
+    .{ .name = "wInjectionChainStage3", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     .{ .name = "wInjectionChainStage2C", .dir = "process-injection-chain/", .formats = &.{.coff}, .archs = &.{ .x64, .x86 } },
     //.{ .name = "kmodLoader", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
     //.{ .name = "lskmod", .formats = &.{.elf}, .archs = &.{ .x64, .x86, .aarch64, .arm } },
@@ -340,6 +340,7 @@ fn addBofObj(
             });
             // Put every function in its own section
             //obj.link_function_sections = true;
+            //obj.link_gc_sections = true;
             if (bof.custom_build_fn) |customBuild| _ = customBuild(b, obj, bof);
             break :blk obj;
         },

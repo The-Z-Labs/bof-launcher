@@ -44,7 +44,8 @@ comptime {
     @import("bof_api").embedFunctionCode("memmove");
     @import("bof_api").embedFunctionCode("__aeabi_llsl");
     @import("bof_api").embedFunctionCode("__aeabi_uidiv");
-    @import("bof_api").embedFunctionCode("__udivdi3");
+    if (@import("builtin").cpu.arch == .x86_64) @import("bof_api").embedFunctionCode("__divti3");
+    if (@import("builtin").cpu.arch == .x86) @import("bof_api").embedFunctionCode("__udivdi3");
     @import("bof_api").embedFunctionCode("__ashldi3");
     @import("bof_api").embedFunctionCode("__stackprobe__");
 }
@@ -66,22 +67,17 @@ fn getFileContent(allocator: std.mem.Allocator, file_path: []const u8) !u8 {
     const file = try std.Io.Dir.openFileAbsolute(io, file_path, .{});
     defer file.close(io);
 
-    const file_stat = try file.stat(io);
+    var file_reader = file.reader(io, &.{});
 
-    const file_data = try allocator.alloc(u8, @intCast(file_stat.size));
+    const file_data = try file_reader.interface.allocRemainingAlignedSentinel(allocator, .unlimited, .of(u8), 0);
     defer allocator.free(file_data);
 
-    var file_reader = file.reader(io, &.{});
-    try file_reader.interface.readSliceAll(file_data);
-
-    bofapi.print(.output, "{s}", .{file_data});
+    _ = beacon.printf(.output, "%s", .{file_data.ptr});
 
     return 0;
 }
 
 pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
-    @import("bof_api").init(adata, alen, .{});
-
     const allocator = std.heap.page_allocator;
 
     var parser = beacon.datap{};
