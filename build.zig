@@ -159,9 +159,9 @@ pub fn build(b: *std.Build) !void {
         }
 
         // bof stager
-        //const dep = b.dependency("bof_stager", .{ .target = target, .optimize = optimize });
-        //const exe = dep.artifact(b.fmt("bof_stager_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }));
-        //b.installArtifact(exe);
+        const dep = b.dependency("bof_stager", .{ .target = target, .optimize = optimize });
+        const exe = dep.artifact(b.fmt("bof_stager_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }));
+        b.installArtifact(exe);
     }
 }
 
