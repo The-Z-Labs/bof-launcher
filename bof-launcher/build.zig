@@ -72,7 +72,7 @@ fn buildLib(
     //}
     lib.root_module.addCSourceFile(.{
         .file = b.path("src/beacon/beacon_impl.c"),
-        .flags = &.{ "-std=c99", "-fdeclspec" },
+        .flags = &.{ "-std=c99", "-fdeclspec", "-fno-sanitize=undefined" },
     });
     lib.root_module.addCSourceFile(.{
         .file = b.path("src/beacon/stb_sprintf.c"),
@@ -86,7 +86,7 @@ fn buildLib(
         lib.root_module.linkSystemLibrary("secur32", .{});
     }
     lib.bundle_compiler_rt = true;
-    //lib.want_lto = false;
+    lib.lto = .none;
     b.installArtifact(lib);
 }
 

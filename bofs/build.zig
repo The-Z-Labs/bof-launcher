@@ -132,6 +132,9 @@ pub fn build(b: *std.Build) !void {
                     .target = target,
                     .optimize = .Debug,
                     .link_libc = true,
+                    .single_threaded = true,
+                    .sanitize_thread = false,
+                    .sanitize_c = .off,
                 }),
             });
             debug_exe.root_module.linkLibrary(bof_launcher_lib);

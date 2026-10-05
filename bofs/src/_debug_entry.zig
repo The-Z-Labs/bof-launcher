@@ -1,20 +1,16 @@
 const std = @import("std");
 const bof_launcher = @import("bof_launcher_api");
 
-extern fn go(_: ?[*]u8, _: i32) callconv(.c) u8;
+extern fn go(?[*]u8, i32) callconv(.c) u8;
 
-pub fn main() !void {
+pub fn main(init: std.process.Init) !void {
     try bof_launcher.initLauncher();
     defer bof_launcher.releaseLauncher();
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    const arena = init.arena.allocator();
+    const allocator = init.gpa;
 
-    var cmd_args_iter = try std.process.argsWithAllocator(allocator);
-    defer cmd_args_iter.deinit();
-
-    _ = cmd_args_iter.skip(); // skip program name
+    const cmdline_args = (try init.minimal.args.toSlice(arena))[1..];
 
     const bof_args = try bof_launcher.Args.init();
     defer bof_args.release();
@@ -23,7 +19,7 @@ pub fn main() !void {
     defer if (file_data) |fd| allocator.free(fd);
 
     bof_args.begin();
-    while (cmd_args_iter.next()) |arg| {
+    for (cmdline_args) |arg| {
         // handle case when file:<filepath> argument is provided
         if (std.mem.indexOf(u8, arg, "file:") != null) {
             var iter = std.mem.tokenizeScalar(u8, arg, ':');
@@ -31,7 +27,7 @@ pub fn main() !void {
             _ = iter.next() orelse return error.BadData;
             const file_path = iter.next() orelse return error.BadData;
 
-            file_data = try loadFileContent(allocator, @ptrCast(file_path));
+            file_data = try loadFileContent(allocator, init.io, file_path);
 
             const len_str = try std.fmt.allocPrint(allocator, "i:{d}", .{file_data.?.len});
             defer allocator.free(len_str);
@@ -69,16 +65,17 @@ pub fn main() !void {
 
 fn loadFileContent(
     allocator: std.mem.Allocator,
-    file_path: [:0]const u8,
+    io: std.Io,
+    file_path: []const u8,
 ) ![]const u8 {
-    const file = try std.fs.openFileAbsoluteZ(file_path, .{});
-    defer file.close();
+    const file = try std.Io.Dir.openFileAbsolute(io, file_path, .{});
+    defer file.close(io);
 
-    const file_stat = try file.stat();
+    const file_stat = try file.stat(io);
     const file_data = try allocator.alloc(u8, @intCast(file_stat.size));
     errdefer allocator.free(file_data);
 
-    var file_reader = file.reader(&.{});
+    var file_reader = file.reader(io, &.{});
     try file_reader.interface.readSliceAll(file_data);
 
     return file_data;
