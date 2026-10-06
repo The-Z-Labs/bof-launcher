@@ -1,34 +1,29 @@
 const w32 = @import("bof_launcher_win32");
 const std = @import("std");
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+pub fn main(init: std.process.Init) !void {
+    const allocator = init.gpa;
+    const arena = init.arena.allocator();
+    const io = init.io;
 
-    var cmd_args_iter = try std.process.argsWithAllocator(allocator);
-    defer cmd_args_iter.deinit();
-
-    _ = cmd_args_iter.skip(); // skip program name
-
-    const shellcode_file = cmd_args_iter.next() orelse {
-        try usage();
+    const cmdline_args = (try init.minimal.args.toSlice(arena))[1..];
+    if (cmdline_args.len != 1) {
+        usage();
         return;
-    };
+    }
+    const shellcode_file = cmdline_args[0];
 
-    const file = try std.fs.cwd().openFile(shellcode_file, .{});
-    defer file.close();
+    const file = try std.Io.Dir.openFile(.cwd(), io, shellcode_file, .{});
+    defer file.close(io);
 
-    const file_stat = try file.stat();
+    const file_stat = try file.stat(io);
     const file_data = try allocator.alloc(u8, @intCast(file_stat.size));
     defer allocator.free(file_data);
 
-    var file_reader = file.reader(&.{});
+    var file_reader = file.reader(io, &.{});
     try file_reader.interface.readSliceAll(file_data);
 
     if (@import("builtin").os.tag == .windows) {
-        w32.init();
-
         // Extract .text section from input executable.
         const parser = try std.coff.Coff.init(file_data, false);
         const text_header = parser.getSectionByName(".text") orelse unreachable;
@@ -61,7 +56,7 @@ pub fn main() !void {
         const img = try std.posix.mmap(
             null,
             file_data.len,
-            std.posix.PROT.READ | std.posix.PROT.EXEC | std.posix.PROT.WRITE,
+            .{ .READ = true, .EXEC = true, .WRITE = true },
             .{ .TYPE = .PRIVATE, .ANONYMOUS = true },
             -1,
             0,
@@ -72,14 +67,11 @@ pub fn main() !void {
     }
 }
 
-fn usage() !void {
-    var stdout_writer = std.fs.File.stdout().writer(&.{});
-    const stdout = &stdout_writer.interface;
-    try stdout.print(
+fn usage() void {
+    std.log.info(
         \\
         \\ USAGE:
         \\      shellcode_launcher <shellcode_exe_file>
         \\
     , .{});
-    try stdout.flush();
 }

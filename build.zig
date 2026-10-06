@@ -167,6 +167,31 @@ pub fn build(b: *std.Build) !void {
         b.installArtifact(exe);
     }
 
+    // shellcode in zig
+    for ([_]std.Target.Query{
+        .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu },
+        .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
+    }) |target_query| {
+        const target = b.resolveTargetQuery(target_query);
+
+        const dep = b.dependency("shellcode_in_zig", .{ .target = target, .optimize = optimize });
+        const shellcode_launcher_exe = dep.artifact(b.fmt(
+            "shellcode_launcher_{s}_{s}",
+            .{ osTagStr(target), cpuArchStr(target) },
+        ));
+        b.installArtifact(shellcode_launcher_exe);
+
+        const shellcode_name = b.fmt("shellcode_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) });
+        const shellcode_exe = dep.artifact(shellcode_name);
+        b.installArtifact(shellcode_exe);
+
+        if (target.result.os.tag == .linux) {
+            const copy = b.addObjCopy(shellcode_exe.getEmittedBin(), .{ .format = .binary, .only_section = ".text" });
+            const install = b.addInstallBinFile(copy.getOutput(), b.fmt("{s}.bin", .{shellcode_name}));
+            b.getInstallStep().dependOn(&install.step);
+        }
+    }
+
     //
     // Build, install and run tests
     //

@@ -32,9 +32,9 @@
         .process_injection_chain = .{
             .path = "examples/process-injection-chain",
         },
-        //.shellcode_in_zig = .{
-        //    .path = "examples/shellcode-in-zig",
-        //},
+        .shellcode_in_zig = .{
+            .path = "examples/shellcode-in-zig",
+        },
         //.implant = .{
         //    .path = "examples/implant",
         //},

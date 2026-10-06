@@ -17,10 +17,10 @@ pub export fn _start() linksection(".startup") callconv(.naked) noreturn {
 }
 
 fn entry() noreturn {
-    var stdout_writer = std.fs.File.stdout().writer(&.{});
-    const stdout = &stdout_writer.interface;
+    //var stdout_writer = std.Io.File.stdout().writer(&.{});
+    //const stdout = &stdout_writer.interface;
 
-    stdout.print("Zig-based shellcode on Linux\n", .{}) catch {};
+    //stdout.print("Zig-based shellcode on Linux\n", .{}) catch {};
 
     _ = std.os.linux.syscall1(.exit, 0);
     unreachable;

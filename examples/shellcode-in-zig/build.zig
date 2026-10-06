@@ -15,7 +15,7 @@ pub fn build(b: *std.Build) void {
             .root_module = b.createModule(.{
                 .root_source_file = b.path("src/shellcode_win.zig"),
                 .target = target,
-                .optimize = .ReleaseSmall,
+                .optimize = .small,
                 .single_threaded = true,
                 .unwind_tables = .none,
                 .strip = true,
@@ -24,7 +24,7 @@ pub fn build(b: *std.Build) void {
             }),
         });
         shellcode_win_exe.pie = true;
-        shellcode_win_exe.subsystem = .Windows;
+        shellcode_win_exe.subsystem = .windows;
         shellcode_win_exe.entry = .{ .symbol_name = "wWinMainCRTStartup" };
         shellcode_win_exe.bundle_compiler_rt = false;
 
@@ -36,7 +36,7 @@ pub fn build(b: *std.Build) void {
             .root_module = b.createModule(.{
                 .root_source_file = b.path("src/shellcode_lin.zig"),
                 .target = target,
-                .optimize = .ReleaseSmall,
+                .optimize = .small,
                 .single_threaded = true,
             }),
         });
@@ -46,7 +46,7 @@ pub fn build(b: *std.Build) void {
         shellcode_lin_exe.pie = true;
         shellcode_lin_exe.setLinkerScript(b.path("src/linker.ld"));
 
-        const copy = b.addObjCopy(shellcode_lin_exe.getEmittedBin(), .{ .format = .bin, .only_section = ".text" });
+        const copy = b.addObjCopy(shellcode_lin_exe.getEmittedBin(), .{ .format = .binary, .only_section = ".text" });
         const install = b.addInstallBinFile(copy.getOutput(), b.fmt("{s}.bin", .{shellcode_name}));
         b.getInstallStep().dependOn(&install.step);
         b.installArtifact(shellcode_lin_exe);

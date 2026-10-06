@@ -1,21 +1,29 @@
-const std = @import("std");
-const w32 = std.os.windows;
-const HMODULE = w32.HMODULE;
-const HWND = w32.HWND;
-const LPCSTR = w32.LPCSTR;
-const UINT = w32.UINT;
-const LPVOID = w32.LPVOID;
-const SIZE_T = w32.SIZE_T;
-const DWORD = w32.DWORD;
-const BOOL = w32.BOOL;
+const builtin = @import("builtin");
 const w32_loader = @import("win32_api_loader.zig");
+
+const HMODULE = *opaque {};
+const HWND = *opaque {};
+const LPCSTR = [*:0]const u8;
+const UINT = c_uint;
+const LPVOID = *anyopaque;
+const SIZE_T = usize;
+const DWORD = u32;
+const BOOL = c_int;
+
+const MEM_COMMIT = 0x1000;
+const MEM_RESERVE = 0x2000;
+const MEM_RELEASE = 0x8000;
+const PAGE_READWRITE = 0x04;
 
 comptime {
     @export(&wWinMainCRTStartup, .{ .name = "wWinMainCRTStartup" });
 }
 
-pub fn wWinMainCRTStartup() callconv(.c) void {
-    const kernel32_base = w32_loader.getDllBase(w32_loader.hash_kernel32);
+pub fn wWinMainCRTStartup() callconv(.withStackAlign(.c, 1)) void {
+    // Switch from the x87 fpu state set by windows to the state expected by the gnu abi.
+    if (builtin.cpu.arch.isX86() and builtin.abi == .gnu) asm volatile ("fninit");
+
+    const kernel32_base: usize = 0x7ffb055e0000;//w32_loader.getDllBase(w32_loader.hash_kernel32);
 
     const LoadLibraryA: *const fn ([*:0]const u8) callconv(.winapi) ?HMODULE =
         @ptrFromInt(w32_loader.getProcAddress(kernel32_base, w32_loader.hash_LoadLibraryA));
@@ -37,10 +45,10 @@ pub fn wWinMainCRTStartup() callconv(.c) void {
     const mem_addr = VirtualAlloc(
         null,
         mem_size,
-        w32.MEM_COMMIT | w32.MEM_RESERVE,
-        w32.PAGE_READWRITE,
+        MEM_COMMIT | MEM_RESERVE,
+        PAGE_READWRITE,
     );
-    defer _ = VirtualFree(mem_addr, 0, w32.MEM_RELEASE);
+    defer _ = VirtualFree(mem_addr, 0, MEM_RELEASE);
 
     const mem = @as([*]u8, @ptrCast(mem_addr))[0..mem_size];
 
