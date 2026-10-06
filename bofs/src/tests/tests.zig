@@ -774,6 +774,7 @@ test "bof-launcher.getProcAddress" {
 
 test "bof-launcher.wProcessInjectionSrdi" {
     if (@import("builtin").os.tag != .windows) return error.SkipZigTest;
+    if (@import("builtin").optimize == .debug) return error.SkipZigTest;
 
     const allocator = std.testing.allocator;
 

@@ -132,9 +132,9 @@ pub fn build(b: *std.Build) !void {
                     .target = target,
                     .optimize = .debug,
                     .link_libc = true,
-                    .single_threaded = true,
-                    .sanitize_thread = false,
-                    .sanitize_c = .off,
+                    //.single_threaded = true,
+                    //.sanitize_thread = false,
+                    //.sanitize_c = .off,
                 }),
             });
             debug_exe.root_module.linkLibrary(bof_launcher_lib);
@@ -192,9 +192,8 @@ pub const Bof = struct {
     optimize: std.builtin.OptimizeMode,
     source_file_path: []const u8,
 
-    fn init(b: *std.Build, item: BofTableItem, format: BofFormat, arch: BofArch, optimize: std.builtin.OptimizeMode) Bof {
-        var threaded: std.Io.Threaded = .init_single_threaded;
-        const io = threaded.io();
+    fn init(b: *std.Build, item: BofTableItem, format: BofFormat, arch: BofArch, optimize: std.lang.Optimize) Bof {
+        const io = b.graph.io;
 
         const bof_src_path = std.mem.join(
             b.allocator,
@@ -277,7 +276,7 @@ pub const Bof = struct {
     }
 };
 
-fn genBofList(b: *std.Build, optimize: std.builtin.OptimizeMode) []const Bof {
+fn genBofList(b: *std.Build, optimize: std.lang.Optimize) []const Bof {
     const static = struct {
         // Mul by 16 because we have 2 formats, 4 archs and 2 optimize modes.
         var bofs: [bof_tables.len * 16]Bof = undefined;
@@ -290,7 +289,7 @@ fn genBofList(b: *std.Build, optimize: std.builtin.OptimizeMode) []const Bof {
                 if (format == .coff and arch == .aarch64) continue;
                 if (format == .coff and arch == .arm) continue;
 
-                const bof = Bof.init(b, item, format, arch, .ReleaseSmall);
+                const bof = Bof.init(b, item, format, arch, .small);
 
                 static.bofs[index] = bof;
                 index += 1;
@@ -377,12 +376,12 @@ fn addBofObj(
         },
     };
 
-    obj.root_module.sanitize_thread = false;
-    obj.root_module.sanitize_c = .off;
     obj.root_module.pic = true;
     obj.root_module.single_threaded = true;
     obj.root_module.strip = if (bof.optimize == .debug) false else true;
     if (bof.optimize != .debug) {
+        obj.root_module.sanitize_thread = false;
+        obj.root_module.sanitize_c = .off;
         obj.root_module.unwind_tables = .none;
         obj.root_module.omit_frame_pointer = true;
         obj.root_module.stack_protector = false;
@@ -399,18 +398,12 @@ fn addBofObj(
             .{ .root_source_file = bof_launcher_dep.path("src/bof_launcher_api.zig") },
         );
 
-        if (bof.target.result.cpu.arch == .x86 and
-            bof.target.result.os.tag == .linux)
-        {
-            // TODO: Shared library fails to build on Linux x86.
-        } else {
-            const bof_launcher_shared_lib = bof_launcher_dep.artifact(
-                @import("bof_launcher_lib").libFileName(b.allocator, bof.target, "shared"),
-            );
-            obj.root_module.addAnonymousImport("bof_launcher_lib_embed", .{
-                .root_source_file = bof_launcher_shared_lib.getEmittedBin(),
-            });
-        }
+        const bof_launcher_shared_lib = bof_launcher_dep.artifact(
+            @import("bof_launcher_lib").libFileName(b.allocator, bof.target, "shared"),
+        );
+        obj.root_module.addAnonymousImport("bof_launcher_lib_embed", .{
+            .root_source_file = bof_launcher_shared_lib.getEmittedBin(),
+        });
     }
 
     return obj;
