@@ -458,10 +458,11 @@ fn processPendingBofs(allocator: std.mem.Allocator, state: *State) !void {
 
 pub fn main(init: std.process.Init) !void {
     const allocator = init.gpa;
+    const io = init.io;
 
     std.log.info("BOF-stager launched", .{});
 
-    var state = try State.init(allocator, init.io);
+    var state = try State.init(allocator, io);
     defer state.deinit(allocator);
 
     try bof.initLauncher();
@@ -470,6 +471,6 @@ pub fn main(init: std.process.Init) !void {
     while (true) {
         processCommands(allocator, &state) catch {};
         processPendingBofs(allocator, &state) catch {};
-        init.io.sleep(.fromSeconds(jitter), .real) catch {};
+        io.sleep(.fromSeconds(jitter), .real) catch {};
     }
 }

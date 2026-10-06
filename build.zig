@@ -145,6 +145,9 @@ pub fn build(b: *std.Build) !void {
         }
     }
 
+    //
+    // Install examples
+    //
     for (supported_targets) |target_query| {
         const target = b.resolveTargetQuery(target_query);
 
@@ -162,6 +165,58 @@ pub fn build(b: *std.Build) !void {
         const dep = b.dependency("bof_stager", .{ .target = target, .optimize = optimize });
         const exe = dep.artifact(b.fmt("bof_stager_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }));
         b.installArtifact(exe);
+    }
+
+    //
+    // Build, install and run tests
+    //
+    const test_step = b.step("test", "Run all tests");
+
+    for (supported_targets) |target_query| {
+        const target = b.resolveTargetQuery(target_query);
+
+        const bof_launcher_dep = b.dependency(
+            "bof_launcher_lib",
+            .{ .target = target, .optimize = optimize },
+        );
+        const bof_launcher_api_module = bof_launcher_dep.module("bof_launcher_api");
+
+        const bof_launcher_lib = bof_launcher_dep.artifact(
+            libFileName(b.allocator, target, null),
+        );
+
+        const bof_api_module = b.createModule(.{
+            .root_source_file = b.path("bofs/src/include/bof_api.zig"),
+        });
+
+        const win32_dep = b.dependency("bof_launcher_win32", .{});
+        const win32_module = win32_dep.module("bof_launcher_win32");
+
+        const tests = b.addTest(.{
+            .name = "bof-launcher-tests",
+            //.filters = &.{"bof-launcher.basic"},
+            .root_module = b.createModule(.{
+                .root_source_file = bofs_dep.path("src/tests/tests.zig"),
+                .target = target,
+                .optimize = optimize,
+            }),
+        });
+        tests.root_module.addIncludePath(bof_launcher_dep.path("src"));
+        tests.root_module.linkLibrary(bof_launcher_lib);
+        tests.root_module.addCSourceFile(.{
+            .file = bofs_dep.path("src/tests/tests.c"),
+            .flags = &.{"-std=c99"},
+        });
+        tests.root_module.linkSystemLibrary("c", .{});
+        tests.root_module.addImport("bof_api", bof_api_module);
+        tests.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
+        tests.root_module.addImport("bof_launcher_win32", win32_module);
+
+        const run = b.addRunArtifact(tests);
+        run.skip_foreign_checks = true;
+        run.step.dependOn(b.getInstallStep());
+
+        test_step.dependOn(&run.step);
     }
 }
 
