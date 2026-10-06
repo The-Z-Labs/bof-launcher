@@ -19,7 +19,7 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .link_libc = target.result.os.tag == .linux,
-            .single_threaded = true,
+            //.single_threaded = true,
             //.strip = true,
         }),
     });
@@ -34,7 +34,7 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .link_libc = target.result.os.tag == .linux,
-            .single_threaded = true,
+            //.single_threaded = true,
             //.strip = true,
         }),
     });
@@ -50,7 +50,7 @@ pub fn build(b: *std.Build) void {
                 .target = target,
                 .optimize = optimize,
                 .link_libc = false,
-                .single_threaded = true,
+                //.single_threaded = true,
                 //.strip = true,
             }),
         });

@@ -377,6 +377,8 @@ fn addBofObj(
         },
     };
 
+    obj.root_module.sanitize_thread = false;
+    obj.root_module.sanitize_c = .off;
     obj.root_module.pic = true;
     obj.root_module.single_threaded = true;
     obj.root_module.strip = if (bof.optimize == .debug) false else true;

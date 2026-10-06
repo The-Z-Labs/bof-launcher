@@ -2180,13 +2180,13 @@ fn initLauncher() !void {
         gstate.gpa = null;
     }
 
-    {
-        var threaded: std.Io.Threaded = .init_single_threaded;
-        gstate.io = threaded.io();
-    }
-
     gstate.allocator = gstate.gpa.?.allocator();
     errdefer gstate.allocator = null;
+
+    {
+        var threaded: std.Io.Threaded = .init(gstate.allocator.?, .{});
+        gstate.io = threaded.io();
+    }
 
     gstate.allocations = std.AutoHashMap(usize, usize).init(gstate.allocator.?);
     errdefer {
