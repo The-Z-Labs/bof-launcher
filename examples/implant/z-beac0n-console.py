@@ -6,6 +6,7 @@ import urllib.parse
 from pathlib import Path
 import yaml
 import texttable
+import base64
 
 C2_HOST="127.0.0.1:8000"
 #YAML_FILE="BOF-Z-Labs.yaml"
@@ -58,6 +59,8 @@ def getArgSpecFromDoc(bof_doc_entry):
             argsSpec += "i"
         elif argument['type'] == "short":
             argsSpec += "s"
+        elif argument['type'] == "buffer":
+            argsSpec += "b"
 
     return argsSpec
 
@@ -320,8 +323,53 @@ def execBof(TYPE, bof, implantSN, argv):
             "header": bof_header,
         }
 
+        # adding proper prefixes to arguments based on its type taken from the manual
+        # OR (in case of 'b' - buffer type) adding additional field to the task: 'buffer0' : <base64(buffer_content)>
         if argv != "":
-            implant_task['argv'] = argv
+            new_argv = ""
+            i = 0
+            buf_number = 0
+
+            argv_array = argv.split(' ')
+
+            while i < len(argv_array):
+
+                print(argv_array[i])
+        
+                if len(new_argv) > 0:
+                    new_argv += " "
+
+                # zero-terminated string
+                if args_spec[i] == 'z':
+                    argv_array[i] = "z:" + argv_array[i]
+                    new_argv += argv_array[i]
+                # integer
+                elif args_spec[i] == 'i':
+                    argv_array[i] = "i:" + argv_array[i]
+                    new_argv += argv_array[i]
+                # short integer
+                elif args_spec[i] == 's':
+                    argv_array[i] = "s:" + argv_array[i]
+                    new_argv += argv_array[i]
+                # buffer
+                elif args_spec[i] == 'b':
+                    # prepare Instruction's field name
+                    field_name = "buffer" + str(buf_number)
+                    buf_number += 1
+ 
+                    # prepare Instruction's field content
+                    if 'file:' in argv_array[i]:
+                        _, path = argv_array[i].split(':')
+                        with open(path, 'rb') as f:
+                            implant_task[field_name] = base64.b64encode(f.read()).decode('utf-8')
+                    else:
+                        # field is expected to be already base64 encoded
+                        implant_task[field_name] = argv_array[i]
+
+                i += 1
+
+            # concatenate all argv[i]'s and base64 encode it before sending
+            implant_task['argv'] = base64.b64encode(new_argv.encode('utf-8')).decode('utf-8')
 
         task_json = json.dumps(implant_task)
 

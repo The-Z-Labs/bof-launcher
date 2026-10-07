@@ -671,13 +671,14 @@ fn generateBofCollectionYaml(b: *std.Build) !void {
 
                 try doc_file.writer.writeAll(source_line[3..]);
                 try doc_file.writer.writeAll("\n");
+                try doc_file.writer.flush();
             }
         }
     }
 
     const wf = b.addWriteFiles();
-    const doc_file_path = wf.add("bof-collection.yaml", doc_file.written());
+    const doc_file_path = wf.add("Z-Labs-BOF.yaml", doc_file.written());
     b.addNamedLazyPath("bof_collection_doc", doc_file_path);
 
-    b.getInstallStep().dependOn(&b.addInstallFile(doc_file_path, "bof-collection.yaml").step);
+    b.getInstallStep().dependOn(&b.addInstallFile(doc_file_path, "Z-Labs-BOF.yaml").step);
 }

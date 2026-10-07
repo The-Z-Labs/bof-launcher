@@ -1,0 +1,47 @@
+---
+name: ldapsearch
+srcfile: "entry"
+description: "Execute LDAP searches"
+author: Trustedsec
+Arch: ["x64", "x86"]
+tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
+category: "AD-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/ldapsearch/entry.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
+examples: '
+ ldapsearch z:"(objectclass=*)" z:"" i:0 i:0 z:"" z:"" i:0
+ ldapsearch z:"(objectclass=*)" "objectSID,name" i:0 i:0 z:"" z:""
+'
+arguments:
+  - name: ldap_filter
+    desc: "LDAP filter"
+    type: string
+    required: true
+  - name: ldap_attributes
+    desc: "LDAP attribute(s) or empty string (z:\"\")"
+    type: string
+    required: true
+  - name: results_count
+    desc: "Count of results or 0 for all results"
+    type: integer
+    required: true
+  - name: scope_of_search
+    desc: "LDAP attributes"
+    type: integer
+    required: true
+  - name: hostname
+    desc: "Domain Controller name or IP address or empty string (z:\"\")"
+    type: string
+    required: true
+  - name: domain
+    desc: "Distinguished Name or empty string (z:\"\")"
+    type: string
+    required: true
+  - name: ldaps
+    desc: "LDAPS support; set to 0 (false) by default"
+    type: integer
+    required: false

