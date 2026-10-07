@@ -6,7 +6,7 @@ pub const std_options = std.Options{
     .log_level = .info,
 };
 
-const yaml_file_embed = @embedFile("BOF-all.yaml");
+const yaml_file_embed = @embedFile("bof_all_yaml");
 
 const io = std.io;
 const mem = std.mem;

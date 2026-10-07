@@ -27,9 +27,6 @@ fn genDocYaml(b: *std.Build) !void {
         try doc_file.writer.writeAll(content);
     }
 
-    const source = try std.mem.Allocator.dupeZ(b.allocator, u8, doc_file.written());
-    defer b.allocator.free(source);
-
     const wf = b.addWriteFiles();
     const doc_file_path = wf.add("BOF-all.yaml", doc_file.written());
 

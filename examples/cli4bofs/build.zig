@@ -36,8 +36,8 @@ pub fn build(b: *std.Build) void {
     exe.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
     exe.root_module.addImport("yaml", zig_yaml_module);
 
-    exe.root_module.addAnonymousImport("BOF-all.yaml", .{
-        .root_source_file = b.path(b.fmt("../implant/BOF-all.yaml", .{})),
+    exe.root_module.addAnonymousImport("bof_all_yaml", .{
+        .root_source_file = b.path("../implant/BOF-all.yaml"),
     });
 
     if (target.result.os.tag == .windows) {
