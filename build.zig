@@ -3,7 +3,10 @@ const std = @import("std");
 pub const supported_zig_version = std.SemanticVersion{ .major = 0, .minor = 17, .patch = 0 };
 
 fn genDocYaml(b: *std.Build) !void {
-    var doc_file: std.io.Writer.Allocating = .init(b.allocator);
+    const allocator = b.allocator;
+    const io = b.graph.io;
+
+    var doc_file: std.Io.Writer.Allocating = .init(allocator);
     defer doc_file.deinit();
 
     const yaml_files = [_][]const u8{
@@ -16,10 +19,12 @@ fn genDocYaml(b: *std.Build) !void {
     };
 
     for (yaml_files) |file_name| {
-        const file = try std.fs.cwd().openFile(file_name, .{ .mode = .read_only });
-        defer file.close();
+        const file = try std.Io.Dir.openFile(.cwd(), io, file_name, .{});
+        defer file.close(io);
 
-        const content = try file.readToEndAlloc(b.allocator, std.math.maxInt(u32));
+        var file_reader = file.reader(io, &.{});
+
+        const content = try file_reader.interface.allocRemaining(allocator, .unlimited);
         defer b.allocator.free(content);
 
         _ = std.mem.replace(u8, content, "\r\n", "\n", content);
@@ -238,12 +243,14 @@ pub fn build(b: *std.Build) !void {
     //
     // install 'bof' binary
     //
+    if (false) {
     for (supported_targets) |target_query| {
         const target = b.resolveTargetQuery(target_query);
 
         const dep = b.dependency("cli4bofs", .{ .target = target, .optimize = optimize });
         const exe = dep.artifact(b.fmt("bof_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }));
         b.installArtifact(exe);
+    }
     }
 
     //

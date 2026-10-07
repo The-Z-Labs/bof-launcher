@@ -35,11 +35,11 @@
         .shellcode_in_zig = .{
             .path = "examples/shellcode-in-zig",
         },
-        .implant = .{
-            .path = "examples/implant",
-        },
-        .cli4bofs = .{
-            .path = "examples/cli4bofs",
-        },
+        //.implant = .{
+        //    .path = "examples/implant",
+        //},
+        //.cli4bofs = .{
+        //    .path = "examples/cli4bofs",
+        //},
     },
 }
