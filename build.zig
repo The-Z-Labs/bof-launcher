@@ -192,6 +192,18 @@ pub fn build(b: *std.Build) !void {
         }
     }
 
+    // process injection chain
+    for ([_]std.Target.Query{
+        .{ .cpu_arch = .x86, .os_tag = .windows, .abi = .gnu },
+        .{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .gnu },
+    }) |target_query| {
+        const target = b.resolveTargetQuery(target_query);
+
+        const dep = b.dependency("process_injection_chain", .{ .target = target, .optimize = optimize });
+        const exe = dep.artifact(b.fmt("process_injection_chain_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }));
+        b.installArtifact(exe);
+    }
+
     //
     // Build, install and run tests
     //
