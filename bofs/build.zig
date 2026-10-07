@@ -629,20 +629,23 @@ fn build_sniffer(b: *std.Build, obj: *std.Build.Step.Compile, bof: Bof) []const 
 }
 
 fn generateBofCollectionYaml(b: *std.Build) !void {
-    var doc_file: std.Io.Writer.Allocating = .init(b.allocator);
+    const allocator = b.allocator;
+    const io = b.graph.io;
+
+    var doc_file: std.Io.Writer.Allocating = .init(allocator);
     defer doc_file.deinit();
 
     for (bof_tables) |item| {
-        const bof = Bof.init(b, item, item.formats[0], item.archs[0], .ReleaseSmall);
+        const bof = Bof.init(b, item, item.formats[0], item.archs[0], .small);
         if (bof.lang == .@"asm") continue;
 
-        const source_file = try std.Io.Dir.cwd().openFile(b.graph.io, b.fmt("bofs/{s}", .{bof.source_file_path}), .{});
-        defer source_file.close(b.graph.io);
+        const source_file = try std.Io.Dir.cwd().openFile(io, b.fmt("bofs/{s}", .{bof.source_file_path}), .{});
+        defer source_file.close(io);
 
-        var source_file_reader = source_file.reader(b.graph.io, &.{});
+        var source_file_reader = source_file.reader(io, &.{});
 
-        const source = try source_file_reader.interface.allocRemaining(b.allocator, .unlimited);
-        defer b.allocator.free(source);
+        const source = try source_file_reader.interface.allocRemaining(allocator, .unlimited);
+        defer allocator.free(source);
 
         _ = std.mem.replace(u8, source, "\r\n", "\n", source);
 
@@ -673,7 +676,7 @@ fn generateBofCollectionYaml(b: *std.Build) !void {
     }
 
     const wf = b.addWriteFiles();
-    const doc_file_path = wf.add("bof-collection.yaml", doc_file.writer.buffer);
+    const doc_file_path = wf.add("bof-collection.yaml", doc_file.written());
     b.addNamedLazyPath("bof_collection_doc", doc_file_path);
 
     b.getInstallStep().dependOn(&b.addInstallFile(doc_file_path, "bof-collection.yaml").step);
