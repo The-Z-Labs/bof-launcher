@@ -688,11 +688,13 @@ fn generateBofCollectionYaml(b: *std.Build) !void {
     };
 
     for (yaml_files) |file_name| {
-        const file = try std.fs.cwd().openFile(file_name, .{});
-        defer file.close();
+        const file = try std.Io.Dir.openFile(.cwd(), io, file_name, .{});
+        defer file.close(io);
 
-        const content = try file.readToEndAlloc(b.allocator, std.math.maxInt(u32));
-        defer b.allocator.free(content);
+        var file_reader = file.reader(io, &.{});
+
+        const content = try file_reader.interface.allocRemaining(allocator, .unlimited);
+        defer allocator.free(content);
 
         _ = std.mem.replace(u8, content, "\r\n", "\n", content);
 
