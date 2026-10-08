@@ -25,6 +25,7 @@ sources:
     - 'https://raw.githubusercontent.com/netero1010/Quser-BOF/refs/heads/main/quser.c'
 examples: '
  quser <ip/hostname>
+'
 ---
 name: nbtscan
 description: "Name scanner that queries NetBIOS name service (port 137) to discover names, MAC addresses, and service information"
