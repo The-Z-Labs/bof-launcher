@@ -109,7 +109,7 @@ pub fn build(b: *std.Build) !void {
 
     b.getInstallStep().dependOn(&b.addInstallFile(
         bofs_dep.namedLazyPath("all_bof_yaml"),
-        "../All-BOF.yaml",
+        "../examples/implant/All-BOF.yaml",
     ).step);
 
     //
