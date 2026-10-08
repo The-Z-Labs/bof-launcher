@@ -9,7 +9,7 @@ The repository provides:
 1. [bof-launcher](#bof-launcher-library) - programming library for BOFs in-memory management (loading, keeping track of loaded BOFs, execution, masking).
 2. [z-beac0n](#z-beac0n) - a custom-written stage-1 (aka pre-C2) solution featuring bof-launcher. Engineered with a small footprint, stealth and modularity in mind.
 3. [Z-Labs BOFs collection](#z-Labs-bofs-collection) - growing collection of OS-specific and cross-platform BOFs for usage during a red team engagements.
-4. [bof command line tool](examples/cli4bofs) - a swiss army knife tool for running, injecting and organizing your BOFs collection.
+4. ['bof' command line tool](examples/cli4bofs) - a swiss army knife tool for running, injecting and organizing your BOFs collection.
 
 See [here](ROADMAP.md) for project's roadmap.
 
