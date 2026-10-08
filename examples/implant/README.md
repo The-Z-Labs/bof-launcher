@@ -51,7 +51,7 @@ Copy BOFs that will be served by the C2 server, you should put here binaries of 
 
 ```
 ~/bof-launcher$ cd examples/implant
-cp -r ../../zig-out/bin/bofs/ ./
+cp ../../zig-out/bin/bofs/* BOF-bin/
 ```
 
 It's time to launch the server (by default it will listen at `127.0.0.1:8000`):
