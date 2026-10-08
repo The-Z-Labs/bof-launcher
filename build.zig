@@ -2,37 +2,6 @@ const std = @import("std");
 
 pub const supported_zig_version = std.SemanticVersion{ .major = 0, .minor = 15, .patch = 2 };
 
-fn genDocYaml(b: *std.Build) !void {
-    var doc_file: std.io.Writer.Allocating = .init(b.allocator);
-    defer doc_file.deinit();
-
-    const yaml_files = [_][]const u8{
-        // manuals for Z-Labs BOFs
-        "Z-Labs-BOF.yaml",
-        // manuals for 3rd party BOFs
-        "examples/implant/BOF-manuals/AD-BOF.yaml",
-        "examples/implant/BOF-manuals/SAL-BOF.yaml",
-        "examples/implant/BOF-manuals/SAR-BOF.yaml",
-    };
-
-    for (yaml_files) |file_name| {
-        const file = try std.fs.cwd().openFile(file_name, .{ .mode = .read_only });
-        defer file.close();
-
-        const content = try file.readToEndAlloc(b.allocator, std.math.maxInt(u32));
-        defer b.allocator.free(content);
-
-        _ = std.mem.replace(u8, content, "\r\n", "\n", content);
-
-        try doc_file.writer.writeAll(content);
-    }
-
-    const wf = b.addWriteFiles();
-    const doc_file_path = wf.add("BOF-all.yaml", doc_file.written());
-
-    b.getInstallStep().dependOn(&b.addInstallFile(doc_file_path, "../examples/implant/BOF-all.yaml").step);
-}
-
 pub fn build(b: *std.Build) !void {
     ensureZigVersion() catch return;
 
@@ -134,8 +103,13 @@ pub fn build(b: *std.Build) !void {
     }
 
     b.getInstallStep().dependOn(&b.addInstallFile(
-        bofs_dep.namedLazyPath("bof_collection_doc"),
+        bofs_dep.namedLazyPath("zlabs_bof_yaml"),
         "../Z-Labs-BOF.yaml",
+    ).step);
+
+    b.getInstallStep().dependOn(&b.addInstallFile(
+        bofs_dep.namedLazyPath("all_bof_yaml"),
+        "../All-BOF.yaml",
     ).step);
 
     //
@@ -320,11 +294,6 @@ pub fn build(b: *std.Build) !void {
         const exe = dep.artifact(b.fmt("bof_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }));
         b.installArtifact(exe);
     }
-
-    //
-    // Generate one big BOF manual from examples/implant/BOF-manuals/
-    //
-    genDocYaml(b) catch return;
 
     //
     // Build, install and run tests

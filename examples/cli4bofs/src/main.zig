@@ -6,7 +6,7 @@ pub const std_options = std.Options{
     .log_level = .info,
 };
 
-const yaml_file_embed = @embedFile("bof_all_yaml");
+const yaml_file_embed = @embedFile("all_bof_yaml");
 
 const io = std.io;
 const mem = std.mem;
@@ -234,8 +234,10 @@ pub fn main() !u8 {
             source = try file.readToEndAlloc(allocator, std.math.maxInt(u32));
         }
         else {
-            source = @constCast(yaml_file_embed[0..yaml_file_embed.len]);
+            source = @constCast(yaml_file_embed);
         }
+
+        //std.log.info("{s}", .{source});
 
         var yaml_file: yaml.Yaml = .{ .source = source };
         errdefer yaml_file.deinit(allocator);
