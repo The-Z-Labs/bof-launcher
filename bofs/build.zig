@@ -674,6 +674,7 @@ fn generateBofCollectionYaml(b: *std.Build) !void {
         "examples/implant/BOF-manuals/AD-BOF.yaml",
         "examples/implant/BOF-manuals/SAL-BOF.yaml",
         "examples/implant/BOF-manuals/SAR-BOF.yaml",
+        "examples/implant/BOF-manuals/ADCS-BOF.yaml",
     };
 
     for (yaml_files) |file_name| {

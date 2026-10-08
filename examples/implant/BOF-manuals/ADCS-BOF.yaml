@@ -1,0 +1,67 @@
+---
+name: adcs_enum
+srcfile: "entry"
+description: "Enumerate CAs and templates in the AD using Win32 functions"
+author: Trustedsec
+Arch: ["x64", "x86"]
+tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
+category: "ADCS-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum/entry.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum/adcs_enum.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum/adcs_enum.h'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum/certca.h'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum/certenroll.h'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
+examples: '
+ adcs_enum <domain>
+'
+arguments:
+  - name: domain
+    desc: "Active directory domain name"
+    type: wstring
+    required: true
+---
+name: adcs_enum_com
+srcfile: "entry"
+description: "Enumerate CAs and templates in the AD using ICertConfig COM object"
+author: Trustedsec
+Arch: ["x64", "x86"]
+tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
+category: "ADCS-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum_com/entry.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum_com/adcs_enum_com.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum_com/adcs_enum_com.h'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum_com/certca.h'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum_com/certenroll.h'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
+examples: '
+ adcs_enum_com
+'
+---
+name: adcs_enum_com2
+srcfile: "entry"
+description: "Enumerate CAs and templates in the AD using IX509PolicyServerListManager COM object"
+author: Trustedsec
+Arch: ["x64", "x86"]
+tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
+category: "ADCS-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum_com2/entry.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum_com2/adcs_enum_com2.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum_com2/adcs_enum_com2.h'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/SA/adcs_enum_com2/certenroll.h'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/base.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Situational-Awareness-BOF/refs/heads/master/src/common/bofdefs.h'
+examples: '
+ adcs_enum_com2
+'
