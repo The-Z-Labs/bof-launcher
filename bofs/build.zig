@@ -689,6 +689,6 @@ fn generateBofCollectionYaml(b: *std.Build) !void {
     }
 
     const all_wf = b.addWriteFiles();
-    const all_path = all_wf.add("BOF-all.yaml", doc_file.written());
+    const all_path = all_wf.add("All-BOF.yaml", doc_file.written());
     b.addNamedLazyPath("all_bof_yaml", all_path);
 }
