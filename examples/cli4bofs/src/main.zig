@@ -107,7 +107,7 @@ fn usage(name: [:0]const u8) !void {
     try stdout.print("exec    <BOF>                       Execute given BOF from a filesystem\n", .{});
     try stdout.print("inject  file:<abs_bof_path> i:<PID> Inject given BOF to a process with a given pid\n", .{});
     try stdout.print("info    <BOF>                       Display BOF description and usage examples\n", .{});
-    try stdout.print("list    [TAG]                       List BOFs (all or based on provided TAG) from the BOF collection\n", .{});
+    try stdout.print("ls      [TAG]                       List BOFs (all or based on provided TAG) from the BOF collection\n", .{});
     try stdout.print("\nGeneral Options:\n\n", .{});
     try stdout.print("-c, --collection    Provide relative file path to alternative BOF YAML collection file\n", .{});
     try stdout.print("-h, --help          Print this help\n", .{});
@@ -265,7 +265,7 @@ pub fn main() !u8 {
     } else if (mem.eql(u8, "-v", command_name) or mem.eql(u8, "--version", command_name)) {
         try stdout.print("{d}.{d}.{d}\n", .{ version.major, version.minor, version.patch });
         return 0;
-    } else if (mem.eql(u8, "list", command_name)) {
+    } else if (mem.eql(u8, "ls", command_name)) {
         cmd = .list;
 
         if (cmd_args.len > cur_index) {
@@ -563,8 +563,8 @@ pub fn main() !u8 {
                 try stdout.print("inject file:<absolute_bof_path_to_inject> i:<PID> [--dump-shellcode]\n", .{});
             } else if (std.mem.eql(u8, cmd_help, "info")) {
                 try stdout.print("info <BOF>  - Display BOF description and usage examples\n", .{});
-            } else if (std.mem.eql(u8, cmd_help, "list")) {
-                try stdout.print("list [TAG]  - List BOFs (all or based on TAG) from BOF-collection.yaml file\n", .{});
+            } else if (std.mem.eql(u8, cmd_help, "ls")) {
+                try stdout.print("ls [TAG]  - List BOFs (all or based on provided TAG)\n", .{});
             } else if (std.mem.eql(u8, cmd_help, "help")) {
                 try stdout.print("help <COMMAND>  - Display help about given command\n", .{});
             } else {
