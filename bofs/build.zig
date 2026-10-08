@@ -676,9 +676,30 @@ fn generateBofCollectionYaml(b: *std.Build) !void {
         }
     }
 
-    const wf = b.addWriteFiles();
-    const doc_file_path = wf.add("Z-Labs-BOF.yaml", doc_file.written());
-    b.addNamedLazyPath("bof_collection_doc", doc_file_path);
+    const zlabs_wf = b.addWriteFiles();
+    const zlabs_path = zlabs_wf.add("Z-Labs-BOF.yaml", doc_file.written());
+    b.addNamedLazyPath("zlabs_bof_yaml", zlabs_path);
 
-    b.getInstallStep().dependOn(&b.addInstallFile(doc_file_path, "Z-Labs-BOF.yaml").step);
+    const yaml_files = [_][]const u8{
+        // manuals for 3rd party BOFs
+        "examples/implant/BOF-manuals/AD-BOF.yaml",
+        "examples/implant/BOF-manuals/SAL-BOF.yaml",
+        "examples/implant/BOF-manuals/SAR-BOF.yaml",
+    };
+
+    for (yaml_files) |file_name| {
+        const file = try std.fs.cwd().openFile(file_name, .{});
+        defer file.close();
+
+        const content = try file.readToEndAlloc(b.allocator, std.math.maxInt(u32));
+        defer b.allocator.free(content);
+
+        _ = std.mem.replace(u8, content, "\r\n", "\n", content);
+
+        try doc_file.writer.writeAll(content);
+    }
+
+    const all_wf = b.addWriteFiles();
+    const all_path = all_wf.add("All-BOF.yaml", doc_file.written());
+    b.addNamedLazyPath("all_bof_yaml", all_path);
 }

@@ -18,6 +18,7 @@ pub fn build(b: *std.Build) void {
         @import("bof_launcher_lib").libFileName(b.allocator, target, null),
     );
 
+
     const exe = b.addExecutable(.{
         .name = b.fmt(
             "bof_{s}_{s}",
@@ -36,8 +37,9 @@ pub fn build(b: *std.Build) void {
     exe.root_module.addImport("bof_launcher_api", bof_launcher_api_module);
     exe.root_module.addImport("yaml", zig_yaml_module);
 
-    exe.root_module.addAnonymousImport("bof_all_yaml", .{
-        .root_source_file = b.path("../implant/BOF-all.yaml"),
+    const bofs_dep = b.dependency("bof_launcher_bofs", .{ .optimize = optimize });
+    exe.root_module.addAnonymousImport("all_bof_yaml", .{
+        .root_source_file = bofs_dep.namedLazyPath("all_bof_yaml"),
     });
 
     if (target.result.os.tag == .windows) {

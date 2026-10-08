@@ -2,42 +2,6 @@ const std = @import("std");
 
 pub const supported_zig_version = std.SemanticVersion{ .major = 0, .minor = 17, .patch = 0 };
 
-fn genDocYaml(b: *std.Build) !void {
-    const allocator = b.allocator;
-    const io = b.graph.io;
-
-    var doc_file: std.Io.Writer.Allocating = .init(allocator);
-    defer doc_file.deinit();
-
-    const yaml_files = [_][]const u8{
-        // manuals for Z-Labs BOFs
-        "Z-Labs-BOF.yaml",
-        // manuals for 3rd party BOFs
-        "examples/implant/BOF-manuals/AD-BOF.yaml",
-        "examples/implant/BOF-manuals/SAL-BOF.yaml",
-        "examples/implant/BOF-manuals/SAR-BOF.yaml",
-    };
-
-    for (yaml_files) |file_name| {
-        const file = try std.Io.Dir.openFile(.cwd(), io, file_name, .{});
-        defer file.close(io);
-
-        var file_reader = file.reader(io, &.{});
-
-        const content = try file_reader.interface.allocRemaining(allocator, .unlimited);
-        defer b.allocator.free(content);
-
-        _ = std.mem.replace(u8, content, "\r\n", "\n", content);
-
-        try doc_file.writer.writeAll(content);
-    }
-
-    const wf = b.addWriteFiles();
-    const doc_file_path = wf.add("BOF-all.yaml", doc_file.written());
-
-    b.getInstallStep().dependOn(&b.addInstallFile(doc_file_path, "../examples/implant/BOF-all.yaml").step);
-}
-
 pub fn build(b: *std.Build) !void {
     ensureZigVersion() catch return;
 
@@ -152,8 +116,13 @@ pub fn build(b: *std.Build) !void {
     }
 
     b.getInstallStep().dependOn(&b.addInstallFile(
-        bofs_dep.namedLazyPath("bof_collection_doc"),
+        bofs_dep.namedLazyPath("zlabs_bof_yaml"),
         "../Z-Labs-BOF.yaml",
+    ).step);
+
+    b.getInstallStep().dependOn(&b.addInstallFile(
+        bofs_dep.namedLazyPath("all_bof_yaml"),
+        "../All-BOF.yaml",
     ).step);
 
     //
@@ -252,11 +221,6 @@ pub fn build(b: *std.Build) !void {
         b.installArtifact(exe);
     }
     }
-
-    //
-    // Generate one big BOF manual from examples/implant/BOF-manuals/
-    //
-    genDocYaml(b) catch return;
 
     //
     // Build, install and run tests
