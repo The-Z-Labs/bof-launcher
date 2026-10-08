@@ -10,7 +10,7 @@ import base64
 
 C2_HOST="127.0.0.1:8000"
 #YAML_FILE="BOF-Z-Labs.yaml"
-YAML_FILE="BOF-all.yaml"
+YAML_FILE="All-BOF.yaml"
 
 # BOFs' categorization adopted from https://github.com/Adaptix-Framework/Extension-Kit
 bofs_categories = [

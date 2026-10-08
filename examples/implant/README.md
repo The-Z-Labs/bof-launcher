@@ -30,6 +30,15 @@ For a description of implant's components depicted on the diagram see below:
 
 To run z-beac0n implant on o local machine for the testing/experimenting purposes, follow the steps below: 
 
+0. Make sure that you have `zig` binary installed, also following `python3` modules should be installed:
+```
+pyreadline3
+argcomplete
+texttable
+pyyaml
+flask
+```
+
 1. Build all components
 
 ```
@@ -42,7 +51,7 @@ Copy BOFs that will be served by the C2 server, you should put here binaries of 
 
 ```
 ~/bof-launcher$ cd examples/implant
-cp -r ../../zig-out/bin/bofs/ ./
+cp ../../zig-out/bin/bofs/* BOF-bin/
 ```
 
 It's time to launch the server (by default it will listen at `127.0.0.1:8000`):
