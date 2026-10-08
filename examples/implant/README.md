@@ -30,6 +30,15 @@ For a description of implant's components depicted on the diagram see below:
 
 To run z-beac0n implant on o local machine for the testing/experimenting purposes, follow the steps below: 
 
+0. Make sure that you have `zig` binary installed, also following `python3` modules should be installed:
+```
+pyreadline3
+argcomplete
+texttable
+pyyaml
+flask
+```
+
 1. Build all components
 
 ```
