@@ -198,7 +198,6 @@ fn processTlsOptions(parser: *beacon.datap, sink_addr_iter: *std.mem.SplitIterat
 
         // TLS CA certificate for server's cert verification
         if(std.mem.eql(u8, "cacert", opt)) {
-            bofapi.print(.output, "opt {s}", .{opt});
             cacert_bytes = blk: {
                 const cacert_len = beacon.dataInt(parser);
                 const cacert_ptr: *const [@sizeOf(usize)]u8 = @ptrCast(beacon.dataExtract(parser, null));
@@ -206,16 +205,15 @@ fn processTlsOptions(parser: *beacon.datap, sink_addr_iter: *std.mem.SplitIterat
             };
         }
         // client TLS certificate (mTLS)
-        else if(std.mem.eql(u8, "cert", opt)) {
-            bofapi.print(.output, "opt {s}", .{opt});
-        }
+        //else if(std.mem.eql(u8, "cert", opt)) {
+        //    bofapi.print(.output, "opt {s}", .{opt});
+        //}
     } 
 }
 
 pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
     @import("bof_api").init(adata, alen, .{});
 
-    bofapi.print(.output, "A tu? 1", .{});
     if (alen == 0) {
         return @intFromEnum(BofErrors.NoArgsProvided);
     }
@@ -265,7 +263,6 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
         //    return @intFromEnum(BofErrors.NotSupportedAddressType);
 
         const host = src_addr_iter.next() orelse return @intFromEnum(BofErrors.BadArgsProvided);
-        bofapi.print(.output, "Host: {s}", .{host});
         const port = std.fmt.parseUnsigned(u16, src_addr_iter.next() orelse return 17, 10) catch return 1;
 
         tcp_src = std.net.tcpConnectToHost(allocator, host, port) catch return @intFromEnum(BofErrors.ConnectionError);
@@ -331,7 +328,6 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
     else if (sinkAddrType == AddressType.TCP or sinkAddrType == AddressType.TLS) {
 
         const host = sink_addr_iter.next() orelse return @intFromEnum(BofErrors.BadArgsProvided);
-        bofapi.print(.output, "Host: {s}", .{host});
         const port = std.fmt.parseUnsigned(u16, sink_addr_iter.next() orelse return 17, 10) catch return 1;
 
         tcp_sink = std.net.tcpConnectToHost(allocator, host, port) catch return @intFromEnum(BofErrors.ConnectionError);
@@ -370,8 +366,6 @@ pub export fn go(adata: ?[*]u8, alen: i32) callconv(.c) u8 {
             n = conn_src.?.readAll(&temp_buf) catch return 34;
         } else
             n = r_iface.readSliceShort(&temp_buf) catch return 33;
-
-        bofapi.print(.output, "N: {d}\n", .{n});
 
         if(sinkAddrType == AddressType.TLS) {
             conn_sink.?.writeAll(temp_buf[0..n]) catch return 97;
