@@ -7,6 +7,10 @@ BOF is inspired by the original CLI version of the tool available at `http://www
 
 BOF source code: [socat code](../src/socat.zig)
 
+## Examples
+
+![socat in action](https://github.com/The-Z-Labs/bof-launcher/blob/main/bin/socat2.gif)
+
 ## Options
 
 ### BOF supports following invocation syntax
@@ -143,5 +147,3 @@ Running `z-beac0n console` and executing `socat` BOF on `terminal 4`:
 $ python z-beac0n-console.py
 z-beac0n> bof exec-inline Dbepb4bB socat --argv 'TLS:localhost:8888:cacert CREATE:/tmp/dkleSDy file=./cacert.pem'
 ```
-
-## Examples
