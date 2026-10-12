@@ -97,7 +97,7 @@ OUTPUT:
 ```
 
 ### Exfiltration of file content over TLS channel
-**Objective:** Downloading the file using ([CLI `bof` utility](../../examples/cli4bofs/)) via TLS channel.
+**Objective:** Uploading a file using ([CLI `bof` utility](../../examples/cli4bofs/)) via TLS channel.
 
 Running socat (original) as listener at `terminal 1`:
 
