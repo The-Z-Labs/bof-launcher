@@ -1,7 +1,7 @@
 
 # socat BOF
 
-BOF allows to establish arbitrary TCP or TLS connections between two machines to conduct file transfers. Transfers are conducted in an out-of-band manner meaning that separate connection is established for a duration of the transfer. Connection details are specified via `<src-address>` or `<sink-address>` arguments depending on the desired direction of the data flow (by convention connections are unidirectional and data flows from source to sink).
+BOF allows to establish arbitrary TCP or TLS connections between two machines to conduct file transfers. Transfers are conducted in an out-of-band manner meaning that separate connection is established for a duration of the transfer. Connection details are specified via `<src-address>` or `<sink-address>` arguments depending on the desired direction of the data flow (by convention connections are unidirectional and data flows from source to sink addresses).
 
 BOF is inspired by the original CLI version of the tool available at `http://www.dest-unreach.org/socat/`.
 
@@ -9,17 +9,17 @@ BOF source code: [socat code](../src/socat.zig)
 
 ## Options
 
-**BOF supports following invocation syntax:** 
+### BOF supports following invocation syntax
 
     socat <str:src-address> <str:sink-address> [[int:BUF_LEN str:BUF_ADDRESS_1] ... [int:BUF_LEN str:BUF_ADDRESS_N]]
 
-**Address specification:**
+### Address specification
 
 `<str:src-address>` - an address that acts as a data source
 
 `<str:sink-address>` - an address that acts as a data sink
 
-**Currently supported address types:**
+### Currently supported address types
 
 `OPEN:<filename>` - opens existing file in a read-only mode. Only allowed as `<src-address>`.
 
@@ -29,9 +29,13 @@ BOF source code: [socat code](../src/socat.zig)
 
 `TLS:<host:ssl-enabled-port>[:opt1,...,optN]` - establish TLS connection to `host` at `port`.
 
+### Optional arguments
 
+`[[int:BUF_LEN str:BUF_ADDRESS_1] ... [int:BUF_LEN str:BUF_ADDRESS_N]]` - arbitrary number of optional arguments. Specific address types (for example `TLS:`) could support additional arguments. Name of the argument is provided after the address specification: `TLS:host:port:cacert`, that means that BOF will expect following two additional arguments `int:BUF_LEN str:BUF_MEMORY_ADDRESS` which are meant to contain pointer to the buffer containing the certificate (`str:BUF_MEMORY_ADDRESS`) and its length `int:BUF_LEN`.
 
-`[[int:BUF_LEN str:BUF_ADDRESS_1] ... [int:BUF_LEN str:BUF_ADDRESS_N]]` - optional arguments
+**`TLS:` address type:**
+
+- `cacert` - provide TLS certificate for TLS connection. Example: `TLS:host:port:cacert`
 
 ## Use cases
 
