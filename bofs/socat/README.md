@@ -103,7 +103,7 @@ Running socat (original) as listener at `terminal 1`:
 
     terminal_1$ socat OPENSSL-LISTEN:2222,reuseaddr,cert=cert.pem,key=key.pem,verify=0 -
 
-Running `socat` bof using our CLI `bof` utility for sending content of the `/etc/issue` file over TLS tunnel with `cacert.pem` certificate:
+At `terminal 2` we're running `socat` bof using our CLI `bof` utility for sending content of the `/etc/issue` file over TLS tunnel with `cacert.pem` certificate:
 
     terminal_2$ bof -c BOF-Z-Labs.yaml exec socat.elf.x64.o OPEN:/etc/issue TLS:localhost:2222:cacert file:cacert.pem
 
