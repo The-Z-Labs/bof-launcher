@@ -131,6 +131,18 @@ pub fn run(bof_bytes: []const u8) Error!u8 {
     if (res < 0) return error.Unknown;
     return @intCast(res);
 }
+
+pub fn runPipeline(bof_handles: []Object, bof0_arg_data: ?[]u8) Error!*Context {
+    var context: *Context = undefined;
+    if (bofRunPipeline(
+        bof_handles.ptr,
+        @intCast(bof_handles.len),
+        if (bof0_arg_data) |d| d.ptr else null,
+        if (bof0_arg_data) |d| @intCast(d.len) else 0,
+        &context,
+    ) < 0) return error.Unknown;
+    return context;
+}
 //------------------------------------------------------------------------------
 //
 // Object
@@ -376,11 +388,6 @@ extern fn bofObjectIsValid(bof_handle: Object) callconv(.c) c_int;
 
 extern fn bofObjectGetProcAddress(bof_handle: Object, name: ?[*:0]const u8) callconv(.c) ?*anyopaque;
 
-extern fn bofRun(
-    file_data_ptr: [*]const u8,
-    file_data_len: c_int,
-) callconv(.c) c_int;
-
 extern fn bofObjectRun(
     bof_handle: Object,
     arg_data_ptr: ?[*]u8,
@@ -406,7 +413,20 @@ extern fn bofObjectRunAsyncProcess(
     out_context: **Context,
 ) callconv(.c) c_int;
 
-pub extern fn bofDebugRun(
+extern fn bofRun(
+    file_data_ptr: [*]const u8,
+    file_data_len: c_int,
+) callconv(.c) c_int;
+
+extern fn bofRunPipeline(
+    bof_handles: [*]Object,
+    bof_handles_len: c_int,
+    bof0_arg_data_ptr: ?[*]u8,
+    bof0_arg_data_len: c_int,
+    out_context: **Context,
+) callconv(.c) c_int;
+
+pub extern fn bofRunDebug(
     go_func: *const fn (?[*]u8, i32) callconv(.c) u8,
     arg_data_ptr: ?[*]u8,
     arg_data_len: c_int,

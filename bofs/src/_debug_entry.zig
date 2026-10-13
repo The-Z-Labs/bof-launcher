@@ -42,7 +42,7 @@ pub fn main(init: std.process.Init) !void {
     bof_args.end();
 
     var context: *bof_launcher.Context = undefined;
-    const res = bof_launcher.bofDebugRun(
+    const res = bof_launcher.bofRunDebug(
         go,
         if (bof_launcher.bofArgsGetBuffer(bof_args)) |args| args else null,
         bof_launcher.bofArgsGetBufferSize(bof_args),

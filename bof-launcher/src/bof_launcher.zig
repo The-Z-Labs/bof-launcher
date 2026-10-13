@@ -1500,7 +1500,39 @@ export fn bofObjectRun(
     return 0; // success
 }
 
-export fn bofDebugRun(
+export fn bofRunPipeline(
+    bof_handles: [*]BofHandle,
+    bof_handles_len: c_int,
+    bof0_arg_data_ptr: ?[*]u8,
+    bof0_arg_data_len: c_int,
+    out_context: **pubapi.Context,
+) callconv(.c) c_int {
+    if (!gstate.is_valid) return -1;
+    if (bof_handles_len < 2) return -1;
+    for (0..@intCast(bof_handles_len)) |i| {
+        if (!gstate.bof_pool.isBofValid(bof_handles[i])) return 0; // ignore (no error)
+    }
+
+    var prev_context: *pubapi.Context = undefined;
+    run(bof_handles[0], bof0_arg_data_ptr, bof0_arg_data_len, &prev_context) catch return -1;
+
+    for (1..@intCast(bof_handles_len)) |i| {
+        var prev_output_len: c_int = undefined;
+        const prev_output = bofContextGetOutput(@ptrCast(@alignCast(prev_context)), &prev_output_len);
+
+        var new_context: *pubapi.Context = undefined;
+        run(bof_handles[i], @constCast(prev_output), prev_output_len, &new_context) catch {
+            bofContextRelease(prev_context);
+            return -1;
+        };
+        bofContextRelease(prev_context);
+        prev_context = new_context;
+    }
+    out_context.* = prev_context;
+    return 0; // success
+}
+
+export fn bofRunDebug(
     go_func: *const fn (?[*]u8, i32) callconv(.c) u8,
     arg_data_ptr: ?[*]u8,
     arg_data_len: c_int,
