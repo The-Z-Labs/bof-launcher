@@ -93,7 +93,7 @@ int bofArgsGetBufferSize(BofArgs* args);
 
 # z-beac0n
 
-Extermely modular and versatile pre-C2 implant.
+Extremely modular and versatile pre-C2 implant for Windows and Linux.
 
 ![z-beac0n in action](https://github.com/The-Z-Labs/bof-launcher/blob/main/bin/ops.gif)
 
