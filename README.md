@@ -103,7 +103,7 @@ This is an open source project meant to be used with authorization to assess the
 
 # Z-Labs BOFs collection
 
-In addition to `bof-launcher` and `z-beac0n` projects, we maintain growing collection of our BOFs in this repository. Main differentiator of these BOFs is that they are implemented in `Zig` programming language. This, among other advantages like (modern language syntax, access to rich std library), brings the capability to implement truly cross-platform BOFs. Simultaneously, they are fully compatible with original `Cobalt Strike` BOFs and can be run in other tools as well. Specifically, [Sliver](https://github.com/BishopFox/sliver) and [Meterpreter](https://docs.metasploit.com/docs/using-metasploit/advanced/meterpreter/meterpreter-executebof-command.html) were [tested](bofs/socat).
+In addition to `bof-launcher` and `z-beac0n` projects, we maintain growing collection of our BOFs in this repository. Main differentiator of these BOFs is that they are implemented in `Zig` programming language. This, among other advantages like (modern language syntax, access to rich std library), brings the capability to implement truly cross-platform BOFs. Simultaneously, they are fully compatible with original `Cobalt Strike` BOFs and can be run in other tools as well. Specifically, [Sliver](https://github.com/BishopFox/sliver), [AdaptixC2](https://github.com/Adaptix-Framework/AdaptixC2) and [Meterpreter](https://docs.metasploit.com/docs/using-metasploit/advanced/meterpreter/meterpreter-executebof-command.html) were [tested](bofs/socat).
 
 ## Local Situational Awareness: SAL-BOF
 
