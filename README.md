@@ -93,7 +93,7 @@ int bofArgsGetBufferSize(BofArgs* args);
 
 # z-beac0n
 
-Pre-C2 implant.
+Extermely modular and versatile pre-C2 implant.
 
 ![z-beac0n in action](https://github.com/The-Z-Labs/bof-launcher/blob/main/bin/ops.gif)
 
@@ -107,6 +107,7 @@ This is an open source project meant to be used with authorization to assess the
 
 In addition to `bof-launcher` and `z-beac0n` projects, we maintain growing collection of our BOFs in this repository. Main differentiator of these BOFs is that they are implemented in `Zig` programming language. This, among other advantages like (modern language syntax, access to rich std library), brings the capability to implement truly cross-platform BOFs. Simultaneously, they are fully compatible with original `Cobalt Strike` BOFs and can be run in other tools as well. Specifically, [Sliver](https://github.com/BishopFox/sliver), [AdaptixC2](https://github.com/Adaptix-Framework/AdaptixC2) and [Meterpreter](https://docs.metasploit.com/docs/using-metasploit/advanced/meterpreter/meterpreter-executebof-command.html) were [tested](bofs/socat).
 
+Collection of BOFs:
 
 ## Local Situational Awareness: SAL-BOF
 
@@ -162,13 +163,14 @@ In addition to `bof-launcher` and `z-beac0n` projects, we maintain growing colle
 | ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
 | [processInjectionSrdi](bofs/src/wProcessInjectionSrdi.zig) | This BOF can inject any other BOF to any running process | `Windows x86/x86_64` | `cli4bofs inject file:abs_path_to_bof -i:<pid>` |
 
+Implant's core building blocks:
+
 ## Implant core: BOF0
 
 | BOF name  | Description | Supported platforms | Example
 | ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
 | [z-beac0n core](bofs/src/z-beac0n-core.zig) | Special purpose BOF so called `BOF zero`, it operates as standalone implant, manages other loaded BOFs; capable of executing other BOFs | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `z-beac0n` |
 
-Implant's core building blocks:
 
 ## Implant C2 channel: C2-BOF
 
