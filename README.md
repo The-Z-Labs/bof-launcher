@@ -30,7 +30,7 @@ Library features:
 
 - Capable of running [BOFs](https://hstechdocs.helpsystems.com/manuals/cobaltstrike/current/userguide/content/topics/beacon-object-files_main.htm) that adhere to [Windows BOF template](https://github.com/Cobalt-Strike/bof_template) and [Linux BOF template](https://github.com/outflanknl/nix_bof_template).
 - Fully integrable with programs written in C/C++/Zig/Go or Rust. See [examples](examples/) for sample integrations.
-- Adds capability to write BOFs in [Zig programming language](https://ziglang.org/) - which is a low-level langauge with a goal of being a "better C".
+- Adds capability to write BOFs in [Zig programming language](https://ziglang.org/) - which is a low-level language with a goal of being a "better C".
 - Access to [rich std library](https://ziglang.org/documentation/0.15.2/std/) during BOF development: lists, hash maps, cross-platform OS layer, http, networking, threading, crypto and compression.
 - Capability to implement cross-platform BOFs (see: [udpScanner]((bofs/src/udpScanner.zig)), [tcpScanner]((bofs/src/tcpScanner.zig)), [grep]((bofs/src/grep.zig)) and various other BOFs).
 - Provides modern sleepmasking functionality.
@@ -93,6 +93,8 @@ int bofArgsGetBufferSize(BofArgs* args);
 
 # z-beac0n
 
+Pre-C2 implant.
+
 ![z-beac0n in action](https://github.com/The-Z-Labs/bof-launcher/blob/main/bin/ops.gif)
 
 For details see here: [z-beac0n - Open Adversary Simulation Toolkit](https://github.com/The-Z-Labs/bof-launcher/tree/main/examples/implant)
@@ -104,6 +106,7 @@ This is an open source project meant to be used with authorization to assess the
 # Z-Labs BOFs collection
 
 In addition to `bof-launcher` and `z-beac0n` projects, we maintain growing collection of our BOFs in this repository. Main differentiator of these BOFs is that they are implemented in `Zig` programming language. This, among other advantages like (modern language syntax, access to rich std library), brings the capability to implement truly cross-platform BOFs. Simultaneously, they are fully compatible with original `Cobalt Strike` BOFs and can be run in other tools as well. Specifically, [Sliver](https://github.com/BishopFox/sliver), [AdaptixC2](https://github.com/Adaptix-Framework/AdaptixC2) and [Meterpreter](https://docs.metasploit.com/docs/using-metasploit/advanced/meterpreter/meterpreter-executebof-command.html) were [tested](bofs/socat).
+
 
 ## Local Situational Awareness: SAL-BOF
 
@@ -164,6 +167,8 @@ In addition to `bof-launcher` and `z-beac0n` projects, we maintain growing colle
 | BOF name  | Description | Supported platforms | Example
 | ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
 | [z-beac0n core](bofs/src/z-beac0n-core.zig) | Special purpose BOF so called `BOF zero`, it operates as standalone implant, manages other loaded BOFs; capable of executing other BOFs | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `z-beac0n` |
+
+Implant's core building blocks:
 
 ## Implant C2 channel: C2-BOF
 
