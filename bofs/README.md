@@ -35,7 +35,6 @@ BOFs developed and maintained by Z-Labs.
 | [cat](bofs/src/cat.zig) | print content of a file | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `cat /etc/passwd` |
 | [zcat](bofs/src/zcat.zig) | print content of a gzip compressed file | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `zcat /boot/config.gz` |
 | [ls](bofs/src/ls.zig) | list directory content | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `ls /etc` |
-| [grep](bofs/src/grep.zig) | Print lines that match patterns | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `grep root /etc/passwd` |
 | [find](bofs/src/find.zig) | Search for files in a directory hierarchy | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `find /dev -type b` |
 
 ### Networking: NET-BOF
@@ -62,6 +61,12 @@ BOFs developed and maintained by Z-Labs.
 | BOF name  | Description | Supported platforms | Example
 | ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
 | [processInjectionSrdi](bofs/src/wProcessInjectionSrdi.zig) | This BOF can inject any other BOF to any running process | `Windows x86/x86_64` | `cli4bofs inject file:abs_path_to_bof -i:<pid>` |
+
+### Text processing: TEXT-BOF
+
+| BOF name  | Description | Supported platforms | Example
+| ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
+| [grep](bofs/src/grep.zig) | Print lines that match patterns | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `grep root /etc/passwd` |
 
 <br>
 
