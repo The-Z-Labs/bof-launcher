@@ -1520,7 +1520,7 @@ export fn bofRunPipeline(
     assert(gstate.beacon_values.contains(stdbofin_hash) == false);
 
     var empty_slice: []const u8 = &.{};
-    gstate.beacon_values.put(stdbofin_hash, &empty_slice) catch return 0;
+    gstate.beacon_values.put(stdbofin_hash, @ptrCast(&empty_slice)) catch return 0;
 
     var prev_context: *pubapi.Context = undefined;
     run(bof_handles[0], bof0_arg_data_ptr, bof0_arg_data_len, &prev_context) catch return -1;
@@ -1606,7 +1606,7 @@ fn threadFuncCloneProcessLinux(bof: *Bof, arg_data: ?[]u8, context: *BofContext)
         // child process
         bof.run(context, arg_data);
 
-        const file = std.Io.File{ .handle = pipe[1], .flags = .{ .nonblocking = false }};
+        const file = std.Io.File{ .handle = pipe[1], .flags = .{ .nonblocking = false } };
 
         var file_writer = file.writer(gstate.io, &.{});
         file_writer.interface.writeByte(context.exit_code.load(.seq_cst)) catch @panic("OOM");
@@ -1629,7 +1629,7 @@ fn threadFuncCloneProcessLinux(bof: *Bof, arg_data: ?[]u8, context: *BofContext)
     if (std.os.linux.waitpid(pid, &child_result, 0) == std.math.maxInt(usize)) @panic("waitpid() filed");
 
     if (child_result == 0) {
-        const file = std.Io.File{ .handle = pipe[0], .flags = .{ .nonblocking = false }};
+        const file = std.Io.File{ .handle = pipe[0], .flags = .{ .nonblocking = false } };
 
         var file_reader = file.reader(gstate.io, &.{});
 
@@ -2214,7 +2214,7 @@ const gstate = struct {
     // BeaconAddValue()
     // BeaconGetValue()
     // BeaconRemoveValue()
-    var beacon_values: std.AutoHashMap(u64, *anyopaque) = undefined;
+    var beacon_values: std.AutoHashMap(u64, ?*anyopaque) = undefined;
     var beacon_values_mutex: std.Io.Mutex = .init;
 };
 
@@ -2248,7 +2248,7 @@ fn initLauncher() !void {
         gstate.func_lookup = undefined;
     }
 
-    gstate.beacon_values = std.AutoHashMap(u64, *anyopaque).init(gstate.allocator.?);
+    gstate.beacon_values = std.AutoHashMap(u64, ?*anyopaque).init(gstate.allocator.?);
     errdefer {
         gstate.beacon_values.deinit();
         gstate.beacon_values = undefined;
@@ -2511,7 +2511,7 @@ export fn bofLauncherRelease() callconv(.c) void {
 }
 
 // Returns 0 (FALSE) on error.
-pub export fn BeaconAddValue(key: ?[*:0]const u8, ptr: *anyopaque) callconv(.c) i32 {
+pub export fn BeaconAddValue(key: ?[*:0]const u8, ptr: ?*anyopaque) callconv(.c) i32 {
     if (!gstate.is_valid) return 0;
     if (key == null) return 0;
 
@@ -2554,18 +2554,10 @@ pub export fn BeaconIsAdmin() callconv(.c) bool {
     if (@import("builtin").os.tag == .linux) {
         if (linux.geteuid() == 0) return true;
     } else {
-        var NtAuthority: w32.SID_IDENTIFIER_AUTHORITY = .{
-           .Value = [6]u8{0,0,0,0,0,5}
-        };
+        var NtAuthority: w32.SID_IDENTIFIER_AUTHORITY = .{ .Value = [6]u8{ 0, 0, 0, 0, 0, 5 } };
         var AdministratorsGroup: w32.PSID = undefined;
 
-        var b = w32.AllocateAndInitializeSid(
-            &NtAuthority,
-            2,
-            w32.SECURITY_BUILTIN_DOMAIN_RID,
-            w32.DOMAIN_ALIAS_RID_ADMINS,
-            0, 0, 0, 0, 0, 0,
-            &AdministratorsGroup);
+        var b = w32.AllocateAndInitializeSid(&NtAuthority, 2, w32.SECURITY_BUILTIN_DOMAIN_RID, w32.DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &AdministratorsGroup);
 
         if (b == w32.TRUE) {
             if (w32.CheckTokenMembership(null, AdministratorsGroup, &b) == 0)

@@ -32,7 +32,7 @@ pub fn build(b: *std.Build) !void {
     const libFileName = @import("bof_launcher_lib").libFileName;
 
     const has_python = blk: {
-        _ = b.findProgram(.{.names = &.{"python"}}) orelse break :blk false;
+        _ = b.findProgram(.{ .names = &.{"python"} }) orelse break :blk false;
         break :blk true;
     };
 
@@ -213,13 +213,13 @@ pub fn build(b: *std.Build) !void {
     // install 'bof' binary
     //
     if (false) {
-    for (supported_targets) |target_query| {
-        const target = b.resolveTargetQuery(target_query);
+        for (supported_targets) |target_query| {
+            const target = b.resolveTargetQuery(target_query);
 
-        const dep = b.dependency("cli4bofs", .{ .target = target, .optimize = optimize });
-        const exe = dep.artifact(b.fmt("bof_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }));
-        b.installArtifact(exe);
-    }
+            const dep = b.dependency("cli4bofs", .{ .target = target, .optimize = optimize });
+            const exe = dep.artifact(b.fmt("bof_{s}_{s}", .{ osTagStr(target), cpuArchStr(target) }));
+            b.installArtifact(exe);
+        }
     }
 
     //
