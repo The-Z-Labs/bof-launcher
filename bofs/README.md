@@ -2,6 +2,9 @@
 
 BOFs developed and maintained by Z-Labs.
 
+- [Conventional BOFs](#conventional-bofs)
+- [Special purposes BOFs](#special-purposes-bofs)
+
 ## Conventional BOFs
 
 ### Local Situational Awareness: SAL-BOF
