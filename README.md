@@ -105,25 +105,21 @@ This is an open source project meant to be used with authorization to assess the
 
 # Z-Labs BOFs collection
 
-In addition to `bof-launcher` and `z-beac0n` projects, we maintain growing collection of our BOFs in this repository. Main differentiator of these BOFs is that they are implemented in `Zig` programming language. This, among other advantages like (modern language syntax, access to rich std library), brings the capability to implement truly cross-platform BOFs. Simultaneously, they are fully compatible with original `Cobalt Strike` BOFs and can be run in other tools as well. Specifically, [Sliver](https://github.com/BishopFox/sliver), [AdaptixC2](https://github.com/Adaptix-Framework/AdaptixC2) and [Meterpreter](https://docs.metasploit.com/docs/using-metasploit/advanced/meterpreter/meterpreter-executebof-command.html) were [tested](bofs/socat).
+In addition to `bof-launcher` and `z-beac0n` projects, we maintain growing collection of our BOFs in this repository. Main differentiator of these BOFs is that they are implemented in `Zig` programming language. This, among other advantages like (modern language syntax, access to rich std library), brings the capability to implement truly cross-platform BOFs. 
 
-Collection of BOFs:
+We have two types of BOFs here:
 
-## Local Situational Awareness: SAL-BOF
+1. Conventional BOFs that are fully compatible with original `Cobalt Strike` BOFs and can be run in other red teaming toolboxes as well. Specifically, [Sliver](https://github.com/BishopFox/sliver), [AdaptixC2](https://github.com/Adaptix-Framework/AdaptixC2) and [Meterpreter](https://docs.metasploit.com/docs/using-metasploit/advanced/meterpreter/meterpreter-executebof-command.html) were [tested](bofs/socat).
 
-| BOF name  | Description | Supported platforms | Example
+| Category  | Description | BOFs list | Documentation
 | ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
-| [lskmod](bofs/src/lskmod.zig) | list currently loaded kernel modules | `Linux x86/x86_64/ARMv6+/AArch64` | `lskmod` |
-| [hostname](bofs/src/coreutils/hostname.zig) | show the system's host name | `Linux x86/x86_64/ARMv6+/AArch64` | `hostname` |
-| [hostid](bofs/src/coreutils/hostid.zig) | print the numeric identifier for the current host | `Linux x86/x86_64/ARMv6+/AArch64` | `hostid` |
-| [id](bofs/src/coreutils/id.zig) | print real and effective user and group IDs | `Linux x86/x86_64/ARMv6+/AArch64` | `id www-data` |
-| [uname](bofs/src/coreutils/uname.zig) | print system information | `Linux x86/x86_64/ARMv6+/AArch64` | `uname -a` |
-| [uptime](bofs/src/coreutils/uptime.zig) | show how long the system has been running | `Linux x86/x86_64/ARMv6+/AArch64` | `uptime` |
-| [who](bofs/src/coreutils/who.zig) | print currently logged in users | `Linux x86/x86_64/ARMv6+/AArch64` | `who` |
-| [ifconfig](bofs/src/net-tools/ifconfig.zig) | Display the status of the currently active network interfaces. With root privileges: also manipulate current state of the device | `Linux x86/x86_64/ARMv6+/AArch64` | `ifconfig eth0 promisc` |
-| [whoami](bofs/src/whoami.zig) | On Linux: print effective user name; On Windows: output the current UserName and domain | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `whoami` |
-| [whereami](bofs/src/whereami.zig) | print hypervisor vendor signature from CPUID | `Linux x86/x86_64`; `Windows x86/x86_64` | `whereami` |
-| [winver](bofs/src/wWinver.zig) | show the edition, version, and system type of Windows operating system | `Windows x86/x86_64` | `winver` |
+| SAL-BOF | Local Situational Awareness BOFs | [lskmod](bofs/src/lskmod.zig),[hostname](bofs/src/coreutils/hostname.zig),[hostid](bofs/src/coreutils/hostid.zig),[id](bofs/src/coreutils/id.zig),[uname](bofs/src/coreutils/uname.zig),[uptime](bofs/src/coreutils/uptime.zig),[who](bofs/src/coreutils/who.zig),[ifconfig](bofs/src/net-tools/ifconfig.zig),[whoami](bofs/src/whoami.zig),[whereami](bofs/src/whereami.zig),[winver](bofs/src/wWinver.zig) | [SAL-BOF reference page](bofs/SAL-BOF.md) |
+
+2. Special purposes BOFs, that serve specifically as a buliding blocks for our `z-beac0n` implant.
+
+| Category  | Description | BOFs list | Documentation
+| ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
+| BOF0 | So called `BOF zero`. Those ones operate as standalone implants, managing and executing other loaded BOFs (botch conventional and API-style) | [z-beac0n core](bofs/src/z-beac0n-core.zig) | [BOF0 reference page](bofs/BOF0.md) |
 
 
 ## Filesystem interaction: FS-BOF
