@@ -62,7 +62,7 @@ We have two types of BOFs here:
 | ---------------- | ----------- | --------- | ------------- |
 | SAL-BOF | Local Situational Awareness BOFs | [lskmod](bofs/src/lskmod.zig), [hostname](bofs/src/coreutils/hostname.zig), [hostid](bofs/src/coreutils/hostid.zig), [id](bofs/src/coreutils/id.zig), [uname](bofs/src/coreutils/uname.zig),<br>[uptime](bofs/src/coreutils/uptime.zig), [who](bofs/src/coreutils/who.zig), [ifconfig](bofs/src/net-tools/ifconfig.zig), [whoami](bofs/src/whoami.zig), [whereami](bofs/src/whereami.zig), [winver](bofs/src/wWinver.zig) | [SAL-BOF reference](bofs/SAL-BOF.md) |
 | FS-BOF | Filesystem interaction BOFs | [pwd](bofs/src/pwd.zig), [cd](bofs/src/cd.zig), [cat](bofs/src/cat.zig), [zcat](bofs/src/zcat.zig), [ls](bofs/src/ls.zig), [grep](bofs/src/grep.zig), [find](bofs/src/find.zig) | [FS-BOF reference](bofs/FS-BOF.md) |
-| NET-BOF | Networking BOFs | [socat](bofs/socat/) | [NET-BOF reference](bofs/NET-BOF.md) |
+| NET-BOF | Networking BOFs | [socat](bofs/socat/) | [NET-BOF reference](bofs/socat/) |
 | SAR-BOF | Remote Situational Awareness BOFs | [tcpScanner](bofs/src/tcpScanner.zig), [udpScanner](bofs/src/udpScanner.zig) | [SAR-BOF reference](bofs/SAR-BOF.md) |
 | Elevation-BOF | Context elevation BOFs | [dirtypipe](bofs/src/dirtypipe.zig) | [Elevation-BOF reference](bofs/Elevation-BOF.md) |
 | Injection-BOF | Process injection BOFs | [processInjectionSrdi](bofs/src/wProcessInjectionSrdi.zig) | [Injection-BOF reference](bofs/Injection-BOF.md) |
