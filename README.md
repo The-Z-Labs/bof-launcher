@@ -69,6 +69,7 @@ We have two types of BOFs here:
 | Elevation-BOF | Context elevation BOFs | [dirtypipe](bofs/src/dirtypipe.zig) | [Elevation-BOF reference](bofs/Elevation-BOF.md) |
 | Injection-BOF | Process injection BOFs | [processInjectionSrdi](bofs/src/wProcessInjectionSrdi.zig) | [Injection-BOF reference](bofs/Injection-BOF.md) |
 
+<br>
 
 2. Special purposes BOFs, that serve specifically as a buliding blocks for our `z-beac0n` implant.<br>
 
