@@ -2,7 +2,7 @@
 ///description: "Search for files in a directory hierarchy. Simple version of find(1) utility"
 ///author: Z-Labs
 ///tags: ['windows', 'linux','TA0007', 'T1083', 'z-labs']
-///category: "FILES-BOF"
+///category: "FS-BOF"
 ///OS: cross-platform
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/find.zig'
