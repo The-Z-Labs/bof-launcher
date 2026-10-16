@@ -26,6 +26,7 @@ pub const CallbackType = enum(i32) {
     err = 0x0d,
     custom = 0x1000,
     custom_last = 0x13ff,
+    stdbofout = 0xffff,
 };
 
 pub fn printf(@"type": CallbackType, fmt: [*:0]const u8, args: anytype) i32 {

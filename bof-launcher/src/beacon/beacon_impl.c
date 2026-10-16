@@ -67,7 +67,7 @@ void BeaconPrintf(int type, char* fmt, ...) {
         }
         buffer[i] = 0;
 
-        outputBofData(0, buffer, len, 1);
+        outputBofData(type, buffer, len, 1);
     } else {
         va_start(args, fmt);
         int len = stbsp_vsnprintf(NULL, 0, fmt, args) + 1;
@@ -82,7 +82,7 @@ void BeaconPrintf(int type, char* fmt, ...) {
         len = stbsp_vsnprintf(data, len, fmt, args);
         va_end(args);
 
-        outputBofData(0, data, len, 1);
+        outputBofData(type, data, len, 1);
     }
 }
 

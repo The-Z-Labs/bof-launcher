@@ -1513,6 +1513,15 @@ export fn bofRunPipeline(
         if (!gstate.bof_pool.isBofValid(bof_handles[i])) return 0; // ignore (no error)
     }
 
+    gstate.beacon_values_mutex.lock(gstate.io) catch return 0;
+    defer gstate.beacon_values_mutex.unlock(gstate.io);
+
+    const stdbofin_hash = std.hash_map.hashString("__stdbofin__");
+    assert(gstate.beacon_values.contains(stdbofin_hash) == false);
+
+    var empty_slice: []const u8 = &.{};
+    gstate.beacon_values.put(stdbofin_hash, &empty_slice) catch return 0;
+
     var prev_context: *pubapi.Context = undefined;
     run(bof_handles[0], bof0_arg_data_ptr, bof0_arg_data_len, &prev_context) catch return -1;
 
@@ -1761,6 +1770,8 @@ const BofContext = struct {
     output_ring_num_written_bytes: usize = 0,
     output_mutex: std.Io.Mutex = .init,
 
+    stdbofout: std.ArrayList(u8) = .empty,
+
     fn init(allocator: std.mem.Allocator, handle: BofHandle) BofContext {
         return .{
             .allocator = allocator,
@@ -1772,6 +1783,7 @@ const BofContext = struct {
 
     fn deinit(context: *BofContext) void {
         context.output_ring.deinit(context.allocator);
+        context.stdbofout.deinit(context.allocator);
         context.output.deinit();
         context.* = undefined;
     }
@@ -2121,7 +2133,7 @@ fn queryPageSize() u32 {
     return if (page_size != 0) page_size else 4096;
 }
 
-export fn outputBofData(_: i32, data: [*]u8, len: i32, free_mem: i32) void {
+export fn outputBofData(data_stream_type: i32, data: [*]u8, len: i32, free_mem: i32) void {
     defer if (free_mem != 0) bofLauncherFreeMemory(data);
 
     var context = context: {
@@ -2142,8 +2154,12 @@ export fn outputBofData(_: i32, data: [*]u8, len: i32, free_mem: i32) void {
 
     const slice = data[0..@intCast(len)];
 
-    context.output_ring.writeSliceAssumeCapacity(slice);
-    context.output_ring_num_written_bytes += slice.len;
+    if (data_stream_type == 0xffff) {
+        context.stdbofout.appendSlice(context.allocator, slice) catch {};
+    } else {
+        context.output_ring.writeSliceAssumeCapacity(slice);
+        context.output_ring_num_written_bytes += slice.len;
+    }
 }
 
 const mem_alignment = 16;
@@ -2198,7 +2214,7 @@ const gstate = struct {
     // BeaconAddValue()
     // BeaconGetValue()
     // BeaconRemoveValue()
-    var beacon_values: std.AutoHashMap(u64, ?*anyopaque) = undefined;
+    var beacon_values: std.AutoHashMap(u64, *anyopaque) = undefined;
     var beacon_values_mutex: std.Io.Mutex = .init;
 };
 
@@ -2232,7 +2248,7 @@ fn initLauncher() !void {
         gstate.func_lookup = undefined;
     }
 
-    gstate.beacon_values = std.AutoHashMap(u64, ?*anyopaque).init(gstate.allocator.?);
+    gstate.beacon_values = std.AutoHashMap(u64, *anyopaque).init(gstate.allocator.?);
     errdefer {
         gstate.beacon_values.deinit();
         gstate.beacon_values = undefined;
@@ -2495,7 +2511,7 @@ export fn bofLauncherRelease() callconv(.c) void {
 }
 
 // Returns 0 (FALSE) on error.
-pub export fn BeaconAddValue(key: ?[*:0]const u8, ptr: ?*anyopaque) callconv(.c) i32 {
+pub export fn BeaconAddValue(key: ?[*:0]const u8, ptr: *anyopaque) callconv(.c) i32 {
     if (!gstate.is_valid) return 0;
     if (key == null) return 0;
 
