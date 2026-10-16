@@ -2,7 +2,7 @@
 ///description: "Concatenate and redirect sockets"
 ///author: Z-Labs
 ///tags: ['linux','TA0007', 'T1083', 'z-labs']
-///category: "POSTEX-BOF"
+///category: "NET-BOF"
 ///OS: cross-platform
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/socat.zig'

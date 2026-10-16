@@ -14,8 +14,9 @@ YAML_FILE="All-BOF.yaml"
 
 # BOFs' categorization adopted from https://github.com/Adaptix-Framework/Extension-Kit
 bofs_categories = [
-        {"FILES-BOF" : "Files and directories processing BOFs"},
+        {"FS-BOF" : "Files and directories interaction BOFs"},
         {"TEXT-BOF" : "Text processing BOFs"},
+        {"NET-BOF" : "Networking BOFs"},
         {"SAL-BOF" : "Local situational awareness BOFs"},
         {"SAR-BOF" : "Remote situational awareness BOFs"},
         {"AD-BOF" : "BOFs that contains common enumeration and attack methods for Windows Active Directory"},
