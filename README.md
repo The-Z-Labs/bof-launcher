@@ -48,9 +48,6 @@ Extremely modular and versatile pre-C2 implant for Windows and Linux.
 
 For details see here: [z-beac0n - Open Adversary Simulation Toolkit](https://github.com/The-Z-Labs/bof-launcher/tree/main/examples/implant)
 
-## Liability
-
-This is an open source project meant to be used with authorization to assess the security posture and for research purposes.
 
 # Z-Labs BOFs collection
 
@@ -99,3 +96,7 @@ To build and run test BOFs do:
 To run tests on foreign CPU architectures, you can use [QEMU](https://www.qemu.org/) which is nicely integrated in Zig:
 
     zig build test -fqemu --glibc-runtimes /usr
+
+# Liability
+
+This is an open source project meant to be used with authorization to assess the security posture and for research purposes.
