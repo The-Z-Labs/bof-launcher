@@ -1765,7 +1765,7 @@ const BofContext = struct {
     handle: BofHandle,
     exit_code: std.atomic.Value(u8) = .init(0xff),
 
-    output: std.array_list.Managed(u8),
+    output: std.ArrayList(u8),
     output_ring: RingBuffer,
     output_ring_num_written_bytes: usize = 0,
     output_mutex: std.Io.Mutex = .init,
@@ -1777,14 +1777,14 @@ const BofContext = struct {
             .allocator = allocator,
             .handle = handle,
             .output_ring = RingBuffer.init(allocator, max_output_len) catch @panic("OOM"),
-            .output = std.array_list.Managed(u8).initCapacity(allocator, max_output_len + 1) catch @panic("OOM"),
+            .output = std.ArrayList(u8).initCapacity(allocator, max_output_len + 1) catch @panic("OOM"),
         };
     }
 
     fn deinit(context: *BofContext) void {
         context.output_ring.deinit(context.allocator);
         context.stdbofout.deinit(context.allocator);
-        context.output.deinit();
+        context.output.deinit(context.allocator);
         context.* = undefined;
     }
 };
