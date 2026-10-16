@@ -9,7 +9,14 @@ BOF source code: [socat code](../src/socat.zig)
 
 ## Examples
 
+Example usage of `socat` BOF:
+
 ![socat in action](https://github.com/The-Z-Labs/bof-launcher/blob/main/bin/socat2.gif)
+
+
+It's perfectly fine to run our BOFs in other adversary simulation tools. Below running `socat` BOF in [Sliver implant](https://github.com/BishopFox/sliver) is shown:
+
+![socat in Sliver](https://github.com/The-Z-Labs/bof-launcher/blob/main/bin/socat_sliver.gif)
 
 ## Options
 

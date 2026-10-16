@@ -40,6 +40,8 @@ pub fn embedFunctionCode(name: []const u8) void {
                 }
             } else if (std.mem.eql(u8, name, "memcpy")) {
                 xexport(&memcpy, "memcpy");
+            } else if (std.mem.eql(u8, name, "pthread_atfork")) {
+                xexport(&memcpy, "pthread_atfork");
             } else if (std.mem.eql(u8, name, "memset")) {
                 xexport(&memset, "memset");
             } else if (std.mem.eql(u8, name, "memmove")) {

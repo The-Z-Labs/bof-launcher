@@ -2,7 +2,7 @@
 ///description: "Concatenate and redirect sockets"
 ///author: Z-Labs
 ///tags: ['linux','TA0007', 'T1083', 'z-labs']
-///category: "POSTEX-BOF"
+///category: "NET-BOF"
 ///OS: cross-platform
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/socat.zig'
@@ -103,6 +103,7 @@ comptime {
     @import("bof_api").embedFunctionCode("memcpy");
     @import("bof_api").embedFunctionCode("memmove");
     @import("bof_api").embedFunctionCode("memset");
+    @import("bof_api").embedFunctionCode("pthread_atfork");
     @import("bof_api").embedFunctionCode("__stackprobe__");
     @import("bof_api").embedFunctionCode("__divti3");
     @import("bof_api").embedFunctionCode("__ashlti3");
@@ -200,8 +201,14 @@ fn processTlsOptions(parser: *beacon.datap, sink_addr_iter: *std.mem.SplitIterat
         if(std.mem.eql(u8, "cacert", opt)) {
             cacert_bytes = blk: {
                 const cacert_len = beacon.dataInt(parser);
-                const cacert_ptr: *const [@sizeOf(usize)]u8 = @ptrCast(beacon.dataExtract(parser, null));
-                break :blk @as([*]const u8, @ptrFromInt(std.mem.readInt(usize, cacert_ptr, .little)))[0..@intCast(cacert_len)];
+                if(cacert_len > 0) {
+                    const cacert_ptr: *const [@sizeOf(usize)]u8 = @ptrCast(beacon.dataExtract(parser, null));
+                    break :blk @as([*]const u8, @ptrFromInt(std.mem.readInt(usize, cacert_ptr, .little)))[0..@intCast(cacert_len)];
+                }
+                else {
+                    const cacert_str = std.mem.sliceTo(beacon.dataExtract(parser, null).?, 0);
+                    break :blk cacert_str;
+                }
             };
         }
         // client TLS certificate (mTLS)
