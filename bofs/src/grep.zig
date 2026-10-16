@@ -2,7 +2,7 @@
 ///description: "Print lines that match patterns"
 ///author: Z-Labs
 ///tags: ['windows', 'linux','TA0007', 'T1083', 'z-labs']
-///category: "FS-BOF"
+///category: "TEXT-BOF"
 ///OS: cross-platform
 ///sources:
 ///    - 'https://raw.githubusercontent.com/The-Z-Labs/bof-launcher/main/bofs/src/grep.zig'
