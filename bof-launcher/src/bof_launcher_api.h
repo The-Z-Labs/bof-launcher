@@ -175,6 +175,13 @@ bofMemoryMaskSysApiCall(const char* api_name, int masking_enabled);
 int
 bofRun(const unsigned char* file_data_ptr,
        int file_data_len); // in bytes
+
+int
+bofRunPipeline(BofObjectHandle *bof_handles,
+               int bof_handles_len,
+               unsigned char** arg_data_ptr,
+               int* arg_data_len,
+               BofContext** out_context);
 //------------------------------------------------------------------------------
 //
 // Object functions

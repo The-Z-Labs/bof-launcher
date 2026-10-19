@@ -1517,36 +1517,50 @@ export fn bofRunPipeline(
         if (!gstate.bof_pool.isBofValid(bof_handles[i])) return 0; // ignore (no error)
     }
 
-    gstate.beacon_values_mutex.lock(gstate.io) catch return -1;
-    defer gstate.beacon_values_mutex.unlock(gstate.io);
-
     const stdbofin_hash = std.hash_map.hashString("__stdbofin__");
-    assert(gstate.beacon_values.contains(stdbofin_hash) == false);
 
-    var empty_slice: []u8 = &.{};
-    gstate.beacon_values.put(stdbofin_hash, @ptrCast(&empty_slice)) catch return -1;
-    defer _ = gstate.beacon_values.remove(stdbofin_hash);
+    {
+        gstate.beacon_values_mutex.lock(gstate.io) catch unreachable;
+        defer gstate.beacon_values_mutex.unlock(gstate.io);
+
+        assert(gstate.beacon_values.contains(stdbofin_hash) == false);
+
+        var empty_slice: []u8 = &.{};
+        gstate.beacon_values.put(stdbofin_hash, @ptrCast(&empty_slice)) catch return -1;
+    }
 
     var prev_context: *pubapi.Context = undefined;
-    run(bof_handles[0], arg_data_ptr[0], arg_data_len[0], true, &prev_context) catch return -1;
+    run(bof_handles[0], arg_data_ptr[0], arg_data_len[0], true, &prev_context) catch {
+        _ = gstate.beacon_values.remove(stdbofin_hash);
+        return -1;
+    };
 
     for (1..@intCast(bof_handles_len)) |i| {
-        const prev_bof_ctx = @as(*BofContext, @ptrCast(@alignCast(prev_context)));
-        gstate.beacon_values.put(stdbofin_hash, @ptrCast(&prev_bof_ctx.stdbofout.items)) catch {
-            bofContextRelease(prev_context);
-            return -1;
-        };
+        {
+            gstate.beacon_values_mutex.lock(gstate.io) catch unreachable;
+            defer gstate.beacon_values_mutex.unlock(gstate.io);
+
+            const prev_bof_ctx = @as(*BofContext, @ptrCast(@alignCast(prev_context)));
+            gstate.beacon_values.put(stdbofin_hash, @ptrCast(&prev_bof_ctx.stdbofout.items)) catch {
+                bofContextRelease(prev_context);
+                _ = gstate.beacon_values.remove(stdbofin_hash);
+                return -1;
+            };
+        }
 
         var new_context: *pubapi.Context = undefined;
         run(bof_handles[i], arg_data_ptr[i], arg_data_len[i], true, &new_context) catch {
             bofContextRelease(prev_context);
+            _ = gstate.beacon_values.remove(stdbofin_hash);
             return -1;
         };
 
         bofContextRelease(prev_context);
         prev_context = new_context;
     }
+    _ = gstate.beacon_values.remove(stdbofin_hash);
     out_context.* = prev_context;
+
     return 0; // success
 }
 
@@ -1983,20 +1997,36 @@ export fn bofContextGetOutput(context: *BofContext, len: ?*c_int) callconv(.c) ?
     context.output_mutex.lock(gstate.io) catch return null;
     defer context.output_mutex.unlock(gstate.io);
 
-    const output_len = @min(context.output_ring_num_written_bytes, BofContext.max_output_len);
-    if (len != null) len.?.* = @intCast(output_len);
-    if (output_len == 0) return null;
+    if (context.run_in_pipeline) {
+        if (context.stdbofout.items.len == 0) {
+            if (len != null) len.?.* = 0;
+            return null;
+        }
 
-    const slice = context.output_ring.sliceLast(output_len);
+        if (context.stdbofout.last().? != 0)
+            context.stdbofout.append(context.allocator, 0) catch return null;
 
-    context.output.clearRetainingCapacity();
-    context.output.appendSliceAssumeCapacity(slice.first);
-    context.output.appendSliceAssumeCapacity(slice.second);
+        if (len != null) len.?.* = @intCast(context.stdbofout.items.len - 1);
+        return @ptrCast(context.stdbofout.items.ptr);
+    } else {
+        const output_len = @min(context.output_ring_num_written_bytes, BofContext.max_output_len);
+        if (output_len == 0) {
+            if (len != null) len.?.* = 0;
+            return null;
+        }
 
-    context.output.items.len += 1;
-    context.output.items[output_len] = 0;
+        const slice = context.output_ring.sliceLast(output_len);
 
-    return @ptrCast(context.output.items.ptr);
+        context.output.clearRetainingCapacity();
+        context.output.appendSliceAssumeCapacity(slice.first);
+        context.output.appendSliceAssumeCapacity(slice.second);
+
+        context.output.items.len += 1;
+        context.output.items[output_len] = 0;
+
+        if (len != null) len.?.* = @intCast(output_len);
+        return @ptrCast(context.output.items.ptr);
+    }
 }
 
 const w32 = @import("bof_launcher_win32");
