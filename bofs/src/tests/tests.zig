@@ -884,6 +884,39 @@ test "bof-launcher.args" {
     }
 }
 
+test "bof-launcher.pipe" {
+    try bof.initLauncher();
+    defer bof.releaseLauncher();
+
+    const allocator = std.testing.allocator;
+
+    const bof_data0 = try loadBofFromFile(allocator, bofs_path ++ "test_pipe0");
+    defer allocator.free(bof_data0);
+
+    const bof_data1 = try loadBofFromFile(allocator, bofs_path ++ "test_pipe1");
+    defer allocator.free(bof_data1);
+
+    const object0 = try bof.Object.initFromMemory(bof_data0);
+    defer object0.release();
+
+    const object1 = try bof.Object.initFromMemory(bof_data1);
+    defer object1.release();
+
+    const args = try bof.Args.init();
+    defer args.release();
+
+    args.begin();
+    try args.add("z:hello");
+    try args.add("i:123");
+    args.end();
+
+    const context = try bof.runPipeline(&.{ object0, object1 }, &.{ args.getBuffer(), null });
+    defer context.release();
+    try expect(context.getExitCode() == 0);
+
+    try std.testing.expectEqualStrings("hello[pipe0]123[pipe1]15", context.getOutput().?[0..24]);
+}
+
 test "bof-launcher.nolibc_dynlib" {
     if (@import("builtin").os.tag != .linux) return error.SkipZigTest;
     if (@import("builtin").cpu.arch != .x86_64) return error.SkipZigTest;

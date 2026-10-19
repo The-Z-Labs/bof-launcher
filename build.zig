@@ -249,7 +249,7 @@ pub fn build(b: *std.Build) !void {
 
         const tests = b.addTest(.{
             .name = "bof-launcher-tests",
-            //.filters = &.{"bof-launcher.wProcessInjectionSrdi"},
+            //.filters = &.{"bof-launcher.pipe"},
             .root_module = b.createModule(.{
                 .root_source_file = bofs_dep.path("src/tests/tests.zig"),
                 .target = target,

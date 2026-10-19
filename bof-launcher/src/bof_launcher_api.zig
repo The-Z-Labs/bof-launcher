@@ -132,7 +132,7 @@ pub fn run(bof_bytes: []const u8) Error!u8 {
     return @intCast(res);
 }
 
-pub fn runPipeline(bof_handles: []Object, arg_data: []const ?[]u8) Error!*Context {
+pub fn runPipeline(bof_handles: []const Object, arg_data: []const ?[]u8) Error!*Context {
     const max_handles = 32;
     if (bof_handles.len > max_handles) return error.Unknown;
     if (bof_handles.len != arg_data.len) return error.Unknown;
@@ -147,7 +147,7 @@ pub fn runPipeline(bof_handles: []Object, arg_data: []const ?[]u8) Error!*Contex
 
     var context: *Context = undefined;
     if (bofRunPipeline(
-        bof_handles.ptr,
+        @constCast(bof_handles.ptr),
         @intCast(bof_handles.len),
         &arg_ptr,
         &arg_len,
