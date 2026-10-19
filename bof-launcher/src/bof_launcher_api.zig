@@ -132,13 +132,25 @@ pub fn run(bof_bytes: []const u8) Error!u8 {
     return @intCast(res);
 }
 
-pub fn runPipeline(bof_handles: []Object, bof0_arg_data: ?[]u8) Error!*Context {
+pub fn runPipeline(bof_handles: []Object, arg_data: []const ?[]u8) Error!*Context {
+    const max_handles = 32;
+    if (bof_handles.len > max_handles) return error.Unknown;
+    if (bof_handles.len != arg_data.len) return error.Unknown;
+
+    var arg_ptr: [max_handles]?[*]u8 = undefined;
+    var arg_len: [max_handles]c_int = undefined;
+
+    for (arg_data, 0..) |arg, i| {
+        arg_ptr[i] = if (arg) |a| @ptrCast(a.ptr) else null;
+        arg_len[i] = if (arg) |a| @intCast(a.len) else 0;
+    }
+
     var context: *Context = undefined;
     if (bofRunPipeline(
         bof_handles.ptr,
         @intCast(bof_handles.len),
-        if (bof0_arg_data) |d| d.ptr else null,
-        if (bof0_arg_data) |d| @intCast(d.len) else 0,
+        &arg_ptr,
+        &arg_len,
         &context,
     ) < 0) return error.Unknown;
     return context;
@@ -421,8 +433,8 @@ extern fn bofRun(
 extern fn bofRunPipeline(
     bof_handles: [*]Object,
     bof_handles_len: c_int,
-    bof0_arg_data_ptr: ?[*]u8,
-    bof0_arg_data_len: c_int,
+    arg_data_ptr: [*]?[*]u8,
+    arg_data_len: [*]c_int,
     out_context: **Context,
 ) callconv(.c) c_int;
 

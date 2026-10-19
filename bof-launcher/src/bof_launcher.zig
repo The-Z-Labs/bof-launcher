@@ -1358,6 +1358,8 @@ export fn bofRun(
 
     // TODO: For testing.
     if (false) {
+        //_ = pubapi.runPipeline(&.{}, &.{}) catch {};
+
         if (@import("builtin").os.tag == .windows) {
             if (init_res == 0 and run_res == 0) {
                 const ctx = @as(*BofContext, @ptrCast(@alignCast(bof_context)));
@@ -1438,10 +1440,12 @@ fn run(
     bof_handle: BofHandle,
     arg_data_ptr: ?[*]u8,
     arg_data_len: c_int,
+    run_in_pipeline: bool,
     out_context: **pubapi.Context,
 ) !void {
     const context = try gstate.allocator.?.create(BofContext);
     context.* = BofContext.init(gstate.allocator.?, bof_handle);
+    context.run_in_pipeline = run_in_pipeline;
     errdefer {
         context.deinit();
         gstate.allocator.?.destroy(context);
@@ -1496,15 +1500,15 @@ export fn bofObjectRun(
 ) callconv(.c) c_int {
     if (!gstate.is_valid) return -1;
     if (!gstate.bof_pool.isBofValid(bof_handle)) return 0; // ignore (no error)
-    run(bof_handle, arg_data_ptr, arg_data_len, out_context) catch return -1;
+    run(bof_handle, arg_data_ptr, arg_data_len, false, out_context) catch return -1;
     return 0; // success
 }
 
 export fn bofRunPipeline(
     bof_handles: [*]BofHandle,
     bof_handles_len: c_int,
-    bof0_arg_data_ptr: ?[*]u8,
-    bof0_arg_data_len: c_int,
+    arg_data_ptr: [*]?[*]u8,
+    arg_data_len: [*]c_int,
     out_context: **pubapi.Context,
 ) callconv(.c) c_int {
     if (!gstate.is_valid) return -1;
@@ -1513,27 +1517,32 @@ export fn bofRunPipeline(
         if (!gstate.bof_pool.isBofValid(bof_handles[i])) return 0; // ignore (no error)
     }
 
-    gstate.beacon_values_mutex.lock(gstate.io) catch return 0;
+    gstate.beacon_values_mutex.lock(gstate.io) catch return -1;
     defer gstate.beacon_values_mutex.unlock(gstate.io);
 
     const stdbofin_hash = std.hash_map.hashString("__stdbofin__");
     assert(gstate.beacon_values.contains(stdbofin_hash) == false);
 
-    var empty_slice: []const u8 = &.{};
-    gstate.beacon_values.put(stdbofin_hash, @ptrCast(&empty_slice)) catch return 0;
+    var empty_slice: []u8 = &.{};
+    gstate.beacon_values.put(stdbofin_hash, @ptrCast(&empty_slice)) catch return -1;
+    defer _ = gstate.beacon_values.remove(stdbofin_hash);
 
     var prev_context: *pubapi.Context = undefined;
-    run(bof_handles[0], bof0_arg_data_ptr, bof0_arg_data_len, &prev_context) catch return -1;
+    run(bof_handles[0], arg_data_ptr[0], arg_data_len[0], true, &prev_context) catch return -1;
 
     for (1..@intCast(bof_handles_len)) |i| {
-        var prev_output_len: c_int = undefined;
-        const prev_output = bofContextGetOutput(@ptrCast(@alignCast(prev_context)), &prev_output_len);
-
-        var new_context: *pubapi.Context = undefined;
-        run(bof_handles[i], @constCast(prev_output), prev_output_len, &new_context) catch {
+        const prev_bof_ctx = @as(*BofContext, @ptrCast(@alignCast(prev_context)));
+        gstate.beacon_values.put(stdbofin_hash, @ptrCast(&prev_bof_ctx.stdbofout.items)) catch {
             bofContextRelease(prev_context);
             return -1;
         };
+
+        var new_context: *pubapi.Context = undefined;
+        run(bof_handles[i], arg_data_ptr[i], arg_data_len[i], true, &new_context) catch {
+            bofContextRelease(prev_context);
+            return -1;
+        };
+
         bofContextRelease(prev_context);
         prev_context = new_context;
     }
@@ -1764,6 +1773,7 @@ const BofContext = struct {
     done_event: std.Io.Event = .unset,
     handle: BofHandle,
     exit_code: std.atomic.Value(u8) = .init(0xff),
+    run_in_pipeline: bool = false,
 
     output: std.ArrayList(u8),
     output_ring: RingBuffer,
@@ -2134,6 +2144,7 @@ fn queryPageSize() u32 {
 }
 
 export fn outputBofData(data_stream_type: i32, data: [*]u8, len: i32, free_mem: i32) void {
+    _ = data_stream_type;
     defer if (free_mem != 0) bofLauncherFreeMemory(data);
 
     var context = context: {
@@ -2154,7 +2165,7 @@ export fn outputBofData(data_stream_type: i32, data: [*]u8, len: i32, free_mem: 
 
     const slice = data[0..@intCast(len)];
 
-    if (data_stream_type == 0xffff) {
+    if (context.run_in_pipeline) {
         context.stdbofout.appendSlice(context.allocator, slice) catch {};
     } else {
         context.output_ring.writeSliceAssumeCapacity(slice);
@@ -2557,7 +2568,19 @@ pub export fn BeaconIsAdmin() callconv(.c) bool {
         var NtAuthority: w32.SID_IDENTIFIER_AUTHORITY = .{ .Value = [6]u8{ 0, 0, 0, 0, 0, 5 } };
         var AdministratorsGroup: w32.PSID = undefined;
 
-        var b = w32.AllocateAndInitializeSid(&NtAuthority, 2, w32.SECURITY_BUILTIN_DOMAIN_RID, w32.DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &AdministratorsGroup);
+        var b = w32.AllocateAndInitializeSid(
+            &NtAuthority,
+            2,
+            w32.SECURITY_BUILTIN_DOMAIN_RID,
+            w32.DOMAIN_ALIAS_RID_ADMINS,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            &AdministratorsGroup,
+        );
 
         if (b == w32.TRUE) {
             if (w32.CheckTokenMembership(null, AdministratorsGroup, &b) == 0)
