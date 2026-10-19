@@ -65,3 +65,17 @@ examples: |
  | `1C` | Domain Controller |
  | `1D` | Master Browser |
  | `1E` | Browser Service Elections |
+---
+name: quser
+description: "Simple implementation of quser.exe using Windows API"
+author: netero1010
+Arch: ["x64", "x86"]
+tags: ['windows', 'net-recon']
+category: "SAR-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/netero1010/Quser-BOF/refs/heads/main/quser.c'
+examples: '
+  quser <host>
+'

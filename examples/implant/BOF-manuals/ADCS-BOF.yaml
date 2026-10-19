@@ -4,7 +4,7 @@ srcfile: "entry"
 description: "Enumerate CAs and templates in the AD using Win32 functions"
 author: Trustedsec
 Arch: ["x64", "x86"]
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
+tags: ['windows', 'net-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
 category: "ADCS-BOF"
 OS: Windows
 entrypoint: "go"
@@ -30,7 +30,7 @@ srcfile: "entry"
 description: "Enumerate CAs and templates in the AD using ICertConfig COM object"
 author: Trustedsec
 Arch: ["x64", "x86"]
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
+tags: ['windows', 'net-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
 category: "ADCS-BOF"
 OS: Windows
 entrypoint: "go"
@@ -51,7 +51,7 @@ srcfile: "entry"
 description: "Enumerate CAs and templates in the AD using IX509PolicyServerListManager COM object"
 author: Trustedsec
 Arch: ["x64", "x86"]
-tags: ['windows', 'host-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
+tags: ['windows', 'net-recon', 'trustedsec', 'CS-Situational-Awareness-BOF']
 category: "ADCS-BOF"
 OS: Windows
 entrypoint: "go"
@@ -65,3 +65,85 @@ sources:
 examples: '
  adcs_enum_com2
 '
+---
+name: SpicyAD
+srcfile: "esc1-unpac"
+description: "Complete ADCS and unPAC-the-hash Attack Chain"
+author: RayRRT
+Arch: ["x64", "x86"]
+tags: ['windows', 'net-recon']
+category: "ADCS-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/RayRRT/ESC1-unPAC/refs/heads/main/src/adcs/esc1-unpac.c'
+examples: |
+ BOF performs complete attack chain:
+ 1. ESC1 - Request certificate with arbitrary SAN (Subject Alternative Name)
+ 2. PKINIT - Authenticate to KDC using the certificate
+ 3. UnPAC-the-hash - Extract NT hash from PAC credentials
+
+ esc1-unpac <CA> <Template> <UPN> [KDC]
+ esc1-unpac EVILCA1.evilcorp.net\evilcorp-EVILCA1-CA ESC1Template administrator@evilcorp.net
+---
+name: adcs_request
+srcfile: "entry"
+description: "Request an enrollment certificate"
+author: Trustedsec
+Arch: ["x64", "x86"]
+tags: ['windows', 'net-recon', 'trustedsec', 'CS-Remote-Ops-BOF']
+category: "ADCS-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Remote-OPs-BOF/refs/heads/main/src/Remote/adcs_request/CertCli.h'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Remote-OPs-BOF/refs/heads/main/src/Remote/adcs_request/CertPol.h'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Remote-OPs-BOF/refs/heads/main/src/Remote/adcs_request/adcs_request.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Remote-OPs-BOF/refs/heads/main/src/Remote/adcs_request/adcs_request.h'
+    - 'https://github.com/trustedsec/CS-Remote-OPs-BOF/blob/main/src/Remote/adcs_request/certca.h'
+    - 'https://github.com/trustedsec/CS-Remote-OPs-BOF/blob/main/src/Remote/adcs_request/certenroll.h'
+    - 'https://github.com/trustedsec/CS-Remote-OPs-BOF/blob/main/src/Remote/adcs_request/entry.c'
+examples: '
+ adcs_request [CA] [OPT:TEMPLATE] [OPT:SUBJECT] [OPT:ALTNAME] [OPT:INSTALL] [OPT:MACHINE] [OPT:ADD_APP_POLICY] [OPT:DNS]
+'
+---
+name: adcs_request_on_behalf
+srcfile: "entry"
+description: "Request an enrollment certificate on behalf of another user"
+author: Trustedsec
+Arch: ["x64", "x86"]
+tags: ['windows', 'net-recon', 'trustedsec', 'CS-Remote-Ops-BOF']
+category: "ADCS-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Remote-OPs-BOF/refs/heads/main/src/Remote/adcs_request_on_behalf/entry.c'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Remote-OPs-BOF/refs/heads/main/src/Remote/adcs_request_on_behalf/certenroll.h'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Remote-OPs-BOF/refs/heads/main/src/Remote/adcs_request_on_behalf/certca.h'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Remote-OPs-BOF/refs/heads/main/src/Remote/adcs_request_on_behalf/CertPol.h'
+    - 'https://raw.githubusercontent.com/trustedsec/CS-Remote-OPs-BOF/refs/heads/main/src/Remote/adcs_request_on_behalf/CertCli.h'
+examples: '
+ adcs_request_on_behalf [TEMPLATE] [REQUESTER] [ENROLLMENT_AGENT.pfx] [Download_Name]
+'
+---
+name: ShadowCreds-unPAC
+srcfile: "shadowcreds"
+description: "Shadow Credentials BOF - Complete Attack Chain"
+author: RayRRT
+Arch: ["x64", "x86"]
+tags: ['windows', 'net-recon']
+category: "ADCS-BOF"
+OS: Windows
+entrypoint: "go"
+sources:
+    - 'https://raw.githubusercontent.com/RayRRT/BOFs/refs/heads/main/ShadowCreds-unPAC-BOF/src/shadowcreds.c'
+examples: |
+ BOF performs complete attack chain:
+ 1. Generate RSA keypair and self-signed certificate with UPN/SID
+ 2. Build KeyCredential blob (msDS-KeyCredentialLink format)
+ 3. Write to target's msDS-KeyCredentialLink via LDAP
+ 4. PKINIT - Authenticate to KDC using the certificate
+ 5. UnPAC-the-hash - Extract NT hash from PAC credentials
+
+ shadowcreds <target> <domain> [kdc]
+ shadowcreds DC01$ corp.local dc01.corp.local
