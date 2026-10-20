@@ -905,16 +905,20 @@ test "bof-launcher.pipe" {
     const args = try bof.Args.init();
     defer args.release();
 
-    args.begin();
-    try args.add("z:hello");
-    try args.add("i:123");
-    args.end();
+    {
+        args.begin();
+        defer args.end();
+        try args.add("z:hello");
+        try args.add("i:123");
+    }
 
     const context = try bof.runPipeline(&.{ object0, object1 }, &.{ args.getBuffer(), null });
     defer context.release();
     try expect(context.getExitCode() == 0);
 
-    try std.testing.expectEqualStrings("hello[pipe0]123[pipe1]15\x00", context.getOutput().?[0..25]);
+    const output = context.getOutput().?;
+    try expect(output.len == 24);
+    try std.testing.expectEqualStrings("hello[pipe0]123[pipe1]15", output[0..24]);
 }
 
 test "bof-launcher.nolibc_dynlib" {
