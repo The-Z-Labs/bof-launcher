@@ -26,17 +26,16 @@ pub const CallbackType = enum(i32) {
     err = 0x0d,
     custom = 0x1000,
     custom_last = 0x13ff,
-    stdbofout = 0xffff,
 };
 
 pub fn printf(@"type": CallbackType, fmt: [*:0]const u8, args: anytype) i32 {
     const f = def(*const fn (CallbackType, [*:0]const u8, ...) callconv(.c) i32, "BeaconPrintf");
-    return @call(.auto, f, .{@"type", fmt} ++ args);
+    return @call(.auto, f, .{ @"type", fmt } ++ args);
 }
 
 pub fn formatPrintf(parser: ?*formatp, fmt: [*:0]const u8, args: anytype) i32 {
     const f = def(*const fn (?*formatp, [*:0]const u8, ...) callconv(.c) i32, "BeaconFormatPrintf");
-    return @call(.auto, f, .{parser, fmt} ++ args);
+    return @call(.auto, f, .{ parser, fmt } ++ args);
 }
 
 pub fn output(@"type": CallbackType, data: ?[*]u8, len: i32) callconv(.c) void {

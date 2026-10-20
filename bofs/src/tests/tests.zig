@@ -914,7 +914,7 @@ test "bof-launcher.pipe" {
     defer context.release();
     try expect(context.getExitCode() == 0);
 
-    try std.testing.expectEqualStrings("hello[pipe0]123[pipe1]15", context.getOutput().?[0..24]);
+    try std.testing.expectEqualStrings("hello[pipe0]123[pipe1]15\x00", context.getOutput().?[0..25]);
 }
 
 test "bof-launcher.nolibc_dynlib" {
