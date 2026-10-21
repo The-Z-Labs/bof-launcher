@@ -15,8 +15,8 @@
             .path = "../../bofs",
         },
         .zig_yaml = .{
-            .url = "https://github.com/kubkon/zig-yaml/archive/a6c2cd8760bf45c49b17a3f6259c4dfe3ded528e.tar.gz",
-            .hash = "zig_yaml-0.2.0-C1161pmrAgDnipDTh_4v4RQD27XN5GNaVlzzvlXf1jfW",
+            .url = "https://codeberg.org/michalziulek/zig-yaml/archive/a25449d19e5c0b8326626e41988515b5d780df78.tar.gz",
+            .hash = "zig_yaml-0.3.0-C1161tLdAgCLYH9x26T05DBISJt8TmgJ4CUkriZ-ThST",
         },
     },
 }

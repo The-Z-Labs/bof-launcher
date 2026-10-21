@@ -38,8 +38,8 @@
         //.implant = .{
         //    .path = "examples/implant",
         //},
-        //.cli4bofs = .{
-        //    .path = "examples/cli4bofs",
-        //},
+        .cli4bofs = .{
+            .path = "examples/cli4bofs",
+        },
     },
 }
