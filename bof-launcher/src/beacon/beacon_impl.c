@@ -32,9 +32,8 @@ void BeaconPrintf(int type, char* fmt, ...) {
                 len += 3;
             }
         }
-        len += 1;
 
-        char* buffer = bofLauncherAllocateMemory(len);
+        char* buffer = bofLauncherAllocateMemory(len + 1);
         if (buffer == NULL) {
             return;
         }
@@ -70,16 +69,16 @@ void BeaconPrintf(int type, char* fmt, ...) {
         outputBofData(type, buffer, len, 1);
     } else {
         va_start(args, fmt);
-        int len = stbsp_vsnprintf(NULL, 0, fmt, args) + 1;
+        int len = stbsp_vsnprintf(NULL, 0, fmt, args);
         va_end(args);
 
-        char* data = bofLauncherAllocateMemory(len);
+        char* data = bofLauncherAllocateMemory(len + 1);
         if (data == NULL) {
             return;
         }
 
         va_start(args, fmt);
-        len = stbsp_vsnprintf(data, len, fmt, args);
+        len = stbsp_vsnprintf(data, len + 1, fmt, args);
         va_end(args);
 
         outputBofData(type, data, len, 1);
