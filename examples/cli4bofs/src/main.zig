@@ -232,8 +232,7 @@ pub fn main() !u8 {
             defer file.close();
 
             source = try file.readToEndAlloc(allocator, std.math.maxInt(u32));
-        }
-        else {
+        } else {
             source = @constCast(yaml_file_embed);
         }
 
