@@ -37,6 +37,9 @@ bofs_tags_compl = []
 
 bofs = []
 implants = []
+tasks = []
+
+implant_commands = ['bof', 'ls']
 
 # dict of BOFs documentation. bofName is a key and dict of BOF yaml doc entry is a value
 # populated at startup in processBofDocYaml() function
@@ -168,7 +171,10 @@ def getImplantsList():
         conn.request("GET", "/tasking/implants")
         response = conn.getresponse()
 
-        records = json.loads(response.read())
+        try:
+            records = json.loads(response.read())
+        except json.JSONDecodeError as e:
+            print("Invalid JSON syntax:", e)
 
         tableObj = texttable.Texttable(140)
         tableObj.set_deco(texttable.Texttable.HEADER)
@@ -177,7 +183,21 @@ def getImplantsList():
         tableObj.add_rows([["Implant ID", "First seen at", "Last seen at", "Implant identity string"]], header=True)
 
         for keySN, record in records.items():
-            implants.append(keySN)
+            # add not yet seen implant to global implants list
+            # add new prompt section for the newly seen implant
+            if keySN not in implants:
+                implants.append(keySN)
+                #ap.sections[keySN] = []
+                ap.sections['implants'].append(keySN)
+                app = sp_implant.add_parser(keySN, help="Switch to implant with '" + keySN + "' ID")
+                spp = app.add_subparsers(dest='_type',
+                                       metavar='type',
+                                       help='Type')
+
+                parsingBofs(spp, False)
+                parsingTasks(spp, False)
+                parsingImplants(spp, False)
+
             tableObj.add_row([keySN, record['firstSeenAt'], record['lastSeenAt'], record['implantIdentity']])
 
         print(tableObj.draw())
@@ -508,39 +528,69 @@ class ComplBofs():
     def __call__(self, prefix, **kwargs):
         return bofs
 
+class ComplTasks():
+    def __call__(self, prefix, **kwargs):
+        return bofs
+
+class ComplImplantCmds():
+    def __call__(self, prefix, **kwargs):
+        return implant_commands
+
+
+
 class ArgumentParser(icli.ArgumentParser):
 
-    def run(self, _object, _type=None, _command=None, **kwargs):
-        if _object == 'bof':
-            if _command == 'list' or _command == 'ls':
-                cat = ""
-                tag = ""
-                if kwargs['category']:
-                    cat = kwargs['category']
-                if kwargs['tag']:
-                    tag = kwargs['tag']
-                listingBofs(cat, tag)
+    def processTasksCommands(self, _command, implantID, **kwargs):
+        if _command == 'info':
+            taskID = kwargs['taskID']
+            showTaskInfo(taskID)
+        if _command == 'list' or _command == 'ls':
+            if implantID != None:
+                implantSN = implantID
+            elif 'implant' in kwargs:
+                implantSN = kwargs['implant']
+            resp = getTasksList(implantSN)
+            print(resp)
+
+    def processBofsCommands(self, _command, implantID, **kwargs):
+
+        if implantID != None:
+            impID = implantID
+        elif 'implantSN' in kwargs:
+            impID = kwargs['implantSN']
+
+        if _command == 'list' or _command == 'ls':
+            cat = ""
+            tag = ""
+            if kwargs['category']:
+                cat = kwargs['category']
+            if kwargs['tag']:
+                tag = kwargs['tag']
+            listingBofs(cat, tag)
 
             if _command == 'info':
                 showBofInfo(kwargs['bofName'])
 
-            if _command == 'exec-inline':
-                argv = ""
-                if kwargs['argv']:
-                    argv = kwargs['argv']
-                execBof("inline", kwargs['bofName'], kwargs['implantSN'], argv)
+        if _command == 'exec-inline':
+            argv = ""
 
-            if _command == 'exec-thread':
-                argv = ""
-                if kwargs['argv']:
-                    argv = kwargs['argv']
-                execBof("thread", kwargs['bofName'], kwargs['implantSN'], argv)
+            if kwargs['argv']:
+                argv = kwargs['argv']
+            execBof("inline", kwargs['bofName'], impID, argv)
 
-            if _command == 'spawn':
-                argv = ""
-                if kwargs['argv']:
-                    argv = kwargs['argv']
-                execBof("spawn", kwargs['bofName'], kwargs['implantSN'], argv)
+        if _command == 'exec-async':
+            argv = ""
+            if kwargs['argv']:
+                argv = kwargs['argv']
+            execBof("thread", kwargs['bofName'], impID, argv)
+
+    def run(self, _object, _type=None, _command=None, **kwargs):
+        print("_object: " + str(_object) + "_type: " + str(_type) + "_command: " + str(_command))
+
+        # start processing commands
+
+        if _object == 'bof':
+            self.processBofsCommands(_command, None, **kwargs)
 
         elif _object == 'shellcode':
             print('exec_shellcode: TODO')
@@ -551,24 +601,29 @@ class ArgumentParser(icli.ArgumentParser):
         elif _object == 'link':
             print('links (connection) listing: TODO')
 
-        elif _object == 'implant':
-            if _command == 'list' or _command == 'ls':
-                resp = getImplantsList()
-            if _command == 'info':
-                showImplantInfo(kwargs['implantSN'])
-            if _command == 'last':
-                showImplantStatus(kwargs['implantSN'])
+        elif _object == 'implants':
+            # we're in global context
+            if _type == None:
+                if _command == 'list' or _command == 'ls':
+                    resp = getImplantsList()
+                if _command == 'info':
+                    showImplantInfo(kwargs['implantSN'])
+                if _command == 'last':
+                    showImplantStatus(kwargs['implantSN'])
+            # we're in implant-specific context
+            else:
+                print(" ImplantID: " + ap.current_section[-1])
+                if _type == 'bof':
+                    self.processBofsCommands(_command, ap.current_section[-1], **kwargs)
+                elif _type == 'task':
+                    self.processTasksCommands(_command, ap.current_section[-1], **kwargs)
+                elif _type == 'last':
+                    showImplantStatus(ap.current_section[-1])
+                elif _type == 'info':
+                    showImplantInfo(ap.current_section[-1])
 
         elif _object == 'task':
-            if _command == 'info':
-                taskID = kwargs['taskID']
-                showTaskInfo(taskID)
-            if _command == 'list' or _command == 'ls':
-                implantSN = ""
-                if kwargs['implant']:
-                    implantSN = kwargs['implant']
-                resp = getTasksList(implantSN)
-                print(resp)
+            self.processTasksCommands(_command, None, **kwargs)
 
     def print_global_help(self):
         print()
@@ -596,106 +651,136 @@ ap = ArgumentParser(prog='' if len(sys.argv) < 2 else None)
 
 sp = ap.add_subparsers(dest='_object', metavar='', help='')
 
-# Implant commands
+ap_global = sp.add_parser('global', help='Implants management')
+sp_global = ap_global.add_subparsers(dest='_type',
+                                       metavar='type',
+                                       help='Type')
 
-ap_implant = sp.add_parser('implant', help='Implants management')
+# Implant commands
+ap_implant = sp.add_parser('implants', help='Implants management')
 sp_implant = ap_implant.add_subparsers(dest='_command',
                                        metavar='command',
                                        help='Command')
 
-sp_implant_list = sp_implant.add_parser('list', help='Lists implants that beaconed at least once')
-sp_implant_list = sp_implant.add_parser('ls', help='The same as "list"')
+def parsingImplants(sp_implant, globalContext=True):
 
-sp_implant_info = sp_implant.add_parser('info', help='Show details about the implant')
-sp_implant_info.add_argument(
+    if globalContext == True:
+        sp_implant_list = sp_implant.add_parser('list', help='Lists implants that beaconed at least once')
+        sp_implant_list = sp_implant.add_parser('ls', help='The same as "list"')
+
+    sp_implant_info = sp_implant.add_parser('info', help='Show details about the implant')
+    if globalContext == True:
+        sp_implant_info.add_argument(
     'implantSN', metavar='IMPLANT', help='Implant SN').completer = ComplImplants()
 
-sp_implant_status = sp_implant.add_parser('last', help='Show status and output of recently completed task for a chosen IMPLANT')
-sp_implant_status.add_argument(
+    sp_implant_status = sp_implant.add_parser('last', help='Show status and output of recently completed task for a chosen IMPLANT')
+    if globalContext == True:
+        sp_implant_status.add_argument(
     'implantSN', metavar='IMPLANT', help='Implant SN').completer = ComplImplants()
+
+parsingImplants(sp_implant)
 
 # Task commands
 
-ap_task = sp.add_parser('task', help='Tasks history')
-sp_task = ap_task.add_subparsers(dest='_command',
+def parsingTasks(sp, globalContext=True):
+    ap_task = sp.add_parser('task', help='Tasks history')
+    sp_task = ap_task.add_subparsers(dest='_command',
                                        metavar='command',
                                        help='Command')
 
-sp_task_list = sp_task.add_parser('list', help='Lists implants that beaconed at least once')
-sp_task_ls = sp_task.add_parser('ls', help='The same as "list"')
-sp_task_list.add_argument('--implant',
+    sp_task_list = sp_task.add_parser('list', help='Lists implants that beaconed at least once')
+    sp_task_ls = sp_task.add_parser('ls', help='The same as "list"')
+    if globalContext == True:
+        sp_task_list.add_argument('--implant',
                                  metavar='IMPLANT',
                                  help='Implant serial number (SN)', required=False).completer = ComplImplants()
-sp_task_ls.add_argument('--implant',
+        sp_task_ls.add_argument('--implant',
                                  metavar='IMPLANT',
                                  help='Implant serial number (SN)', required=False).completer = ComplImplants()
 
-sp_task_info = sp_task.add_parser('info', help='Show details about the task')
-sp_task_info.add_argument(
-    'taskID', metavar='TASK', help='Task ID')
+    sp_task_info = sp_task.add_parser('info', help='Show details about the task')
+    sp_task_info.add_argument('taskID', metavar='TASK', help='Task ID')
+
+parsingTasks(sp)
 
 # BOF commands
 
-ap_bof = sp.add_parser('bof', help='BOF execution routines')
-sp_bof = ap_bof.add_subparsers(dest='_command',
+def parsingBofs(sp, globalContext=True):
+    ap_bof = sp.add_parser('bof', help='BOF execution routines')
+    sp_bof = ap_bof.add_subparsers(dest='_command',
                                        metavar='command',
                                        help='Command')
 
-sp_bof_list = sp_bof.add_parser('list', help='Lists available BOFs')
-sp_bof_ls = sp_bof.add_parser('ls', help='The same as "list"')
-sp_bof_list.add_argument('--category', '-c',
+    sp_bof_list = sp_bof.add_parser('list', help='Lists available BOFs')
+    sp_bof_ls = sp_bof.add_parser('ls', help='The same as "list"')
+    sp_bof_list.add_argument('--category', '-c',
                                  metavar='CATEGORY',
                                  help='Implant serial number (SN)', required=False).completer = ComplBofCategories()
-sp_bof_ls.add_argument('--category', '-c',
+    sp_bof_ls.add_argument('--category', '-c',
                                  metavar='CATEGORY',
                                  help='Implant serial number (SN)', required=False).completer = ComplBofCategories()
-sp_bof_list.add_argument('--tag', '-t',
+    sp_bof_list.add_argument('--tag', '-t',
                                  metavar='TAG',
                                  help='Implant serial number (SN)', required=False).completer = ComplBofTags()
-sp_bof_ls.add_argument('--tag', '-t',
+    sp_bof_ls.add_argument('--tag', '-t',
                                  metavar='TAG',
                                  help='Implant serial number (SN)', required=False).completer = ComplBofTags()
 
 
 
-sp_bof_info = sp_bof.add_parser('info', help='Show BOF details')
-sp_bof_info.add_argument(
+    sp_bof_info = sp_bof.add_parser('info', help='Show BOF details')
+    sp_bof_info.add_argument('bofName', metavar='BOF', help='BOF name').completer = ComplBofs()
+
+    sp_bof_exec = sp_bof.add_parser('exec-inline', help='Inline execution of a chosen BOF')
+    if globalContext == True:
+        sp_bof_exec.add_argument('implantSN', metavar='IMPLANT', help='Implant SN').completer = ComplImplants()
+    sp_bof_exec.add_argument(
     'bofName', metavar='BOF', help='BOF name').completer = ComplBofs()
 
-
-sp_bof_exec = sp_bof.add_parser('exec-inline', help='Inline execution of a chosen BOF')
-sp_bof_exec.add_argument(
-    'implantSN', metavar='IMPLANT', help='Implant SN').completer = ComplImplants()
-sp_bof_exec.add_argument(
-    'bofName', metavar='BOF', help='BOF name').completer = ComplBofs()
-
-sp_bof_exec.add_argument('--argv',
+    sp_bof_exec.add_argument('--argv',
                                  metavar='ARGV',
                                  help='BOF arguments', required=False)
 
-sp_bof_exec_thread = sp_bof.add_parser('exec-thread', help='Execution of a chosen BOF in a separate thread')
-sp_bof_exec_thread.add_argument(
+    sp_bof_exec_thread = sp_bof.add_parser('exec-async', help='Execution of a chosen BOF in a separate thread')
+    if globalContext == True:
+        sp_bof_exec_thread.add_argument(
     'implantSN', metavar='IMPLANT', help='Implant SN').completer = ComplImplants()
-sp_bof_exec_thread.add_argument(
+    sp_bof_exec_thread.add_argument(
     'bofName', metavar='BOF', help='BOF name').completer = ComplBofs()
 
-sp_bof_exec_thread.add_argument('--argv',
-                                 metavar='ARGV',
-                                 help='BOF arguments', required=False)
-
-
-sp_bof_exec_process = sp_bof.add_parser('spawn', help='Execution of a chosen BOF inside of a sacrificial process')
-sp_bof_exec_process.add_argument(
-    'implantSN', metavar='IMPLANT', help='Implant SN').completer = ComplImplants()
-sp_bof_exec_process.add_argument(
-    'bofName', metavar='BOF', help='BOF name').completer = ComplBofs()
-
-sp_bof_exec_process.add_argument('--argv',
+    sp_bof_exec_thread.add_argument('--argv',
                                  metavar='ARGV',
                                  help='BOF arguments', required=False)
 
 
-sp_bof_exec = sp_bof.add_parser('inject', help='Injecting chosen BOF to a chosen (running) process')
+    sp_bof_exec_process = sp_bof.add_parser('exec-spawn', help='Execution of a chosen BOF inside of a sacrificial process')
+    sp_bof_exec_process.add_argument(
+    'implantSN', metavar='IMPLANT', help='Implant SN').completer = ComplImplants()
+    sp_bof_exec_process.add_argument(
+    'bofName', metavar='BOF', help='BOF name').completer = ComplBofs()
+
+    sp_bof_exec_process.add_argument('--argv',
+                                 metavar='ARGV',
+                                 help='BOF arguments', required=False)
+
+
+    sp_bof_exec_pipe = sp_bof.add_parser('exec-pipeline', help='Execution of a chosen BOFs in a pipe')
+    sp_bof_exec_pipe.add_argument(
+    'implantSN', metavar='IMPLANT', help='Implant SN').completer = ComplImplants()
+    sp_bof_exec_pipe.add_argument(
+    'bofName', metavar='BOF', help='BOF name').completer = ComplBofs()
+
+    sp_bof_exec_pipe.add_argument('--argv',
+                                 metavar='ARGV',
+                                 help='BOF arguments', required=False)
+
+    sp_bof_exec = sp_bof.add_parser('exec-inject', help='Injecting chosen BOF to a chosen (running) process')
+
+parsingBofs(sp)
+
+# Docking commands
+
+# sp_docking = sp_bof.add_parser('dock', help='Apply chosen persistence mechanism')
 
 # Shellcode commands
 
@@ -719,7 +804,7 @@ sp_link = ap_link.add_subparsers(dest='_command',
                                        help='Command')
 
 
-ap.sections = {'implant': [], 'bof': [], 'task': []}
+ap.sections = {'implants': ['global']}
 
 print(
 """
